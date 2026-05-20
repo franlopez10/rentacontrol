@@ -510,10 +510,66 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   .kpi-value{font-size:16px;}
   .room-grid{grid-template-columns:repeat(2,1fr);}
 }
+
+/* ── LOGIN SCREEN ───────────────────────────────────────── */
+#login-screen{
+  position:fixed;inset:0;z-index:1000;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:0;
+}
+#login-screen.hidden{display:none;}
+.login-box{
+  background:var(--card);border:1px solid var(--line);
+  border-radius:16px;padding:40px 44px;
+  text-align:center;box-shadow:var(--shadow2);
+  max-width:380px;width:90%;
+}
+.login-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;
+  color:var(--ink);letter-spacing:-.5px;margin-bottom:4px;}
+.login-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);
+  text-transform:uppercase;letter-spacing:2px;margin-bottom:32px;}
+.login-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;
+  color:var(--ink);margin-bottom:6px;}
+.login-desc{font-size:12px;color:var(--ink3);margin-bottom:28px;line-height:1.6;}
+.login-google-btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;padding:12px 20px;border-radius:10px;border:1.5px solid var(--line2);
+  background:var(--card);cursor:pointer;font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:600;color:var(--ink);transition:.15s;
+}
+.login-google-btn:hover{background:var(--bg);border-color:var(--acc);box-shadow:0 2px 8px rgba(200,75,47,.1);}
+.login-google-btn svg{width:20px;height:20px;flex-shrink:0;}
+.login-error{background:var(--rd-l);border:1px solid rgba(200,75,47,.2);
+  color:var(--rd);padding:10px 14px;border-radius:8px;font-size:12px;
+  margin-top:16px;display:none;}
+.login-error.show{display:block;}
+.login-loading{font-size:12px;color:var(--ink3);margin-top:16px;display:none;}
+.login-loading.show{display:block;}
 </style>
 
 </head>
 <body>
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🏠 RentaControl</div>
+    <div class="login-sub">Gestión de alquiler</div>
+    <div class="login-title">Acceso privado</div>
+    <div class="login-desc">Esta aplicación es de uso privado.<br>Inicia sesión con tu cuenta de Google para continuar.</div>
+    <button class="login-google-btn" onclick="loginWithGoogle()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continuar con Google
+    </button>
+    <div class="login-error" id="login-error">⚠ Acceso denegado. Esta app es solo para uso privado.</div>
+    <div class="login-loading" id="login-loading">Verificando acceso...</div>
+  </div>
+</div>
 <div id="sb-overlay" onclick="closeSb()"></div>
 <button id="menu-toggle" onclick="toggleSb()">☰</button>
 <div id="gdrive-bar">
@@ -1910,6 +1966,87 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
   saveAndSync();
 });
+
+// ══════════════════════════════════════════════════════════════
+// AUTH / LOGIN
+// ══════════════════════════════════════════════════════════════
+// Only these emails can access the app
+const ALLOWED_EMAILS = ['fran@gentaury.com', 'mariaiborram@gmail.com'];
+
+let currentUser = null;
+
+function loginWithGoogle() {
+  document.getElementById('login-loading').classList.add('show');
+  document.getElementById('login-error').classList.remove('show');
+  loadGIS().then(() => {
+    if (!window.google || !window.google.accounts) {
+      document.getElementById('login-loading').classList.remove('show');
+      document.getElementById('login-error').textContent = '⚠ No se pudo cargar Google. Comprueba tu conexión.';
+      document.getElementById('login-error').classList.add('show');
+      return;
+    }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: 'email profile ' + SCOPES,
+      callback: async (resp) => {
+        if (resp.error) {
+          document.getElementById('login-loading').classList.remove('show');
+          document.getElementById('login-error').textContent = '⚠ Error al conectar con Google: ' + resp.error;
+          document.getElementById('login-error').classList.add('show');
+          return;
+        }
+        // Verify email
+        try {
+          const r = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + resp.access_token);
+          const info = await r.json();
+          const email = info.email || '';
+          console.log('Login attempt:', email);
+          if (!ALLOWED_EMAILS.includes(email.toLowerCase())) {
+            document.getElementById('login-loading').classList.remove('show');
+            document.getElementById('login-error').textContent = '⚠ Acceso denegado para ' + email + '. Esta app es de uso privado.';
+            document.getElementById('login-error').classList.add('show');
+            // Revoke token immediately
+            google.accounts.oauth2.revoke(resp.access_token, () => {});
+            return;
+          }
+          // Authorized!
+          currentUser = { email, token: resp.access_token };
+          gToken = resp.access_token;
+          sessionStorage.setItem('rc_auth_email', email);
+          sessionStorage.setItem('rc_auth_token', resp.access_token);
+          showApp();
+          // Init Drive with same token
+          await gdriveInit();
+        } catch(e) {
+          document.getElementById('login-loading').classList.remove('show');
+          document.getElementById('login-error').textContent = '⚠ Error verificando cuenta: ' + e.message;
+          document.getElementById('login-error').classList.add('show');
+        }
+      }
+    });
+    client.requestAccessToken({ prompt: 'select_account' });
+  });
+}
+
+function showApp() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('login-loading').classList.remove('show');
+}
+
+function checkExistingSession() {
+  const email = sessionStorage.getItem('rc_auth_email');
+  const token = sessionStorage.getItem('rc_auth_token');
+  if (email && token && ALLOWED_EMAILS.includes(email.toLowerCase())) {
+    currentUser = { email, token };
+    gToken = token;
+    showApp();
+    // Try to reconnect Drive silently
+    gdriveInit().catch(() => {});
+    return true;
+  }
+  return false;
+}
+
 // ══════════════════════════════════════════════════════════════
 // GOOGLE DRIVE / SHEETS INTEGRATION
 // Uses Google Identity Services (GIS) token model - current standard
@@ -1940,25 +2077,24 @@ function loadGIS() {
 
 // ── Connect ──────────────────────────────────────────────────
 async function gdriveConnect() {
+  // If we have a token from login, use it directly
+  if (gToken) {
+    await gdriveInit();
+    return;
+  }
   updateDriveUI('syncing');
-  document.getElementById('gdrive-label').textContent = 'Cargando...';
   await loadGIS();
   if (!window.google || !window.google.accounts) {
-    toast('No se pudo cargar la API de Google. Comprueba tu conexión.', false);
+    toast('No se pudo cargar la API de Google.', false);
     updateDriveUI(false);
     return;
   }
   _tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
-    scope: SCOPES,
+    scope: 'email profile ' + SCOPES,
     callback: async (response) => {
-      if (response.error) {
-        toast('Error: ' + response.error, false);
-        updateDriveUI(false);
-        return;
-      }
+      if (response.error) { toast('Error: ' + response.error, false); updateDriveUI(false); return; }
       gToken = response.access_token;
-      console.log('GIS token OK, length:', gToken.length);
       await gdriveInit();
     }
   });
