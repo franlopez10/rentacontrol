@@ -933,6 +933,49 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Capital hipoteca (€)</label><input id="pr-cap" type="number" placeholder="123500"></div>
     <div class="fgrp"><label>Valor construcción (€)</label><input id="pr-vc" type="number" placeholder="78000"></div>
   </div>
+  <div class="form-section" style="margin-top:18px;">Documentos de la propiedad (opcional)</div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div class="fgrp">
+      <label>📋 Nota simple registral</label>
+      <div class="pdf-upload-zone" id="pr-doc1-zone" onclick="document.getElementById('pr-doc1').click()">
+        <input type="file" id="pr-doc1" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handlePdfUpload('pr-doc1','pr-doc1-zone','pr-doc1-data')">
+        <input type="hidden" id="pr-doc1-data"><input type="hidden" id="pr-doc1-name">
+        <span class="pdf-upload-label">📎 Adjuntar nota simple</span>
+      </div>
+    </div>
+    <div class="fgrp">
+      <label>🤝 Contrato de arras</label>
+      <div class="pdf-upload-zone" id="pr-doc2-zone" onclick="document.getElementById('pr-doc2').click()">
+        <input type="file" id="pr-doc2" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handlePdfUpload('pr-doc2','pr-doc2-zone','pr-doc2-data')">
+        <input type="hidden" id="pr-doc2-data"><input type="hidden" id="pr-doc2-name">
+        <span class="pdf-upload-label">📎 Adjuntar contrato de arras</span>
+      </div>
+    </div>
+    <div class="fgrp">
+      <label>🏠 Contrato de compraventa</label>
+      <div class="pdf-upload-zone" id="pr-doc3-zone" onclick="document.getElementById('pr-doc3').click()">
+        <input type="file" id="pr-doc3" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handlePdfUpload('pr-doc3','pr-doc3-zone','pr-doc3-data')">
+        <input type="hidden" id="pr-doc3-data"><input type="hidden" id="pr-doc3-name">
+        <span class="pdf-upload-label">📎 Adjuntar compraventa</span>
+      </div>
+    </div>
+    <div class="fgrp">
+      <label>🏦 Escritura hipoteca</label>
+      <div class="pdf-upload-zone" id="pr-doc4-zone" onclick="document.getElementById('pr-doc4').click()">
+        <input type="file" id="pr-doc4" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handlePdfUpload('pr-doc4','pr-doc4-zone','pr-doc4-data')">
+        <input type="hidden" id="pr-doc4-data"><input type="hidden" id="pr-doc4-name">
+        <span class="pdf-upload-label">📎 Adjuntar escritura hipoteca</span>
+      </div>
+    </div>
+    <div class="fgrp">
+      <label>📄 Otros documentos</label>
+      <div class="pdf-upload-zone" id="pr-doc5-zone" onclick="document.getElementById('pr-doc5').click()">
+        <input type="file" id="pr-doc5" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handlePdfUpload('pr-doc5','pr-doc5-zone','pr-doc5-data')">
+        <input type="hidden" id="pr-doc5-data"><input type="hidden" id="pr-doc5-name">
+        <span class="pdf-upload-label">📎 Adjuntar otro documento</span>
+      </div>
+    </div>
+  </div>
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-prop')">Cancelar</button><button class="btn btn-primary" onclick="addProp()">Guardar</button></div>
 </div></div>
 
@@ -1275,9 +1318,16 @@ document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click
 // ══════════════════════════════════════════════════════════════
 function addProp(){
   const nom=gi('pr-n');if(!nom){toast('Introduce el nombre',false);return;}
-  D.props.push({id:uid(),nom,dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,precio:gn('pr-p'),anyo:gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')});
+  const docs={};
+  ['doc1','doc2','doc3','doc4','doc5'].forEach(d=>{
+    const data=$i('pr-'+d+'-data')?.value||'';
+    const name=$i('pr-'+d+'-name')?.value||'';
+    if(data)docs[d]={data,name};
+  });
+  D.props.push({id:uid(),nom,dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,precio:gn('pr-p'),anyo:gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc'),docs});
   saveAndSync();closeM('m-prop');rProps();toast('Propiedad añadida');
   ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-a','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['doc1','doc2','doc3','doc4','doc5'].forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
 }
 
 function rProps(){
@@ -1310,6 +1360,16 @@ function rProps(){
       <div style="font-size:11px;color:var(--ink3);margin-bottom:5px;">${iqs.length} de ${p.habs} habitaciones ocupadas</div>
       <div class="pbar"><div class="pbar-fill" style="width:${pc}%;background:${col};"></div></div>
       ${p.anyo?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;">Comprado ${p.anyo} · Hipoteca ${p.hipo||0}€/mes</div>`:''}
+    ${p.docs&&Object.keys(p.docs).length?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);">
+      <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px;">Documentos</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        ${p.docs.doc1?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc1.data}','${p.docs.doc1.name||'nota_simple.pdf'}')">📋 Nota simple</button>`:''}
+        ${p.docs.doc2?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc2.data}','${p.docs.doc2.name||'arras.pdf'}')">🤝 Arras</button>`:''}
+        ${p.docs.doc3?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc3.data}','${p.docs.doc3.name||'compraventa.pdf'}')">🏠 Compraventa</button>`:''}
+        ${p.docs.doc4?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc4.data}','${p.docs.doc4.name||'hipoteca.pdf'}')">🏦 Hipoteca</button>`:''}
+        ${p.docs.doc5?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc5.data}','${p.docs.doc5.name||'documento.pdf'}')">📄 Otros</button>`:''}
+      </div>
+    </div>`:''}
     </div>`;
   }).join('');
 }
