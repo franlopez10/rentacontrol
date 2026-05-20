@@ -1783,11 +1783,13 @@ function checkTokenInUrl() {
   if (token) {
     gToken = token;
     const expiresIn = parseInt(params.get('expires_in') || '3600');
+    const expTime = Date.now() + expiresIn * 1000;
     localStorage.setItem('rc_gtoken', token);
-    localStorage.setItem('rc_gtoken_exp', Date.now() + expiresIn * 1000);
+    localStorage.setItem('rc_gtoken_exp', String(expTime));
     window.history.replaceState(null, '', window.location.pathname);
-    console.log('Token from URL, length:', token.length);
-    gdriveInit();
+    console.log('Token from URL, length:', token.length, 'expires in:', expiresIn, 's');
+    // Small delay to ensure page is fully loaded
+    setTimeout(gdriveInit, 300);
     return true;
   }
   return false;
@@ -1797,7 +1799,7 @@ function checkTokenInUrl() {
 function checkSavedToken() {
   const saved = localStorage.getItem('rc_gtoken');
   const exp = parseInt(localStorage.getItem('rc_gtoken_exp') || '0');
-  if (saved && exp > Date.now() + 60000) {
+  if (saved && exp > Date.now()) {
     gToken = saved;
     console.log('Restored saved token, length:', gToken.length);
     gdriveInit();
@@ -1845,9 +1847,14 @@ async function gdriveInit() {
     console.log('Token test:', testRes.status);
 
     if (!testRes.ok) {
+      console.error('Token test failed, status:', testRes.status);
+      // Try to get error details
+      const errText = await testRes.text();
+      console.error('Error:', errText);
       localStorage.removeItem('rc_gtoken');
+      localStorage.removeItem('rc_gtoken_exp');
       gToken = null;
-      toast('Sesión expirada, vuelve a conectar', false);
+      toast('Sesión expirada, haz clic en conectar de nuevo', false);
       updateDriveUI(false);
       return;
     }
