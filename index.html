@@ -1776,7 +1776,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 // Uses Google Identity Services (GIS) token model - current standard
 // ══════════════════════════════════════════════════════════════
 const CLIENT_ID = '184703008619-fh1ds4msldo3i83p5udut8mhat1hjh0h.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file email profile';
 const SHEET_NAME = 'RentaControl_Data';
 const FOLDER_NAME = 'RentaControl';
 
@@ -1845,14 +1845,18 @@ async function gdriveInit() {
     gSheetId = localStorage.getItem('rc_gsheet_id');
     gFolderId = localStorage.getItem('rc_gfolder_id');
 
-    // Quick token test
-    const r = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { 'Authorization': 'Bearer ' + gToken }
-    });
-    if (!r.ok) throw new Error('Token inválido: ' + r.status);
-    const me = await r.json();
-    document.getElementById('gdrive-user').textContent = me.email || '';
-    console.log('Conectado como:', me.email);
+    // Skip userinfo test - just use token directly
+    // Get email from token info endpoint instead
+    let userEmail = '';
+    try {
+      const tokenInfo = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + gToken);
+      if (tokenInfo.ok) {
+        const info = await tokenInfo.json();
+        userEmail = info.email || '';
+        console.log('Token válido para:', userEmail);
+        document.getElementById('gdrive-user').textContent = userEmail;
+      }
+    } catch(e) { console.warn('Could not get token info:', e); }
 
     if (!gFolderId) gFolderId = await gFindOrCreateFolder();
     else gFolderId = await gVerifyFolder(gFolderId);
