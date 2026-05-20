@@ -374,7 +374,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 .pdf-badge.green{background:var(--gn-l);border-color:rgba(45,106,79,.2);color:var(--gn);}
 .pdf-badge.green:hover{background:rgba(45,106,79,.15);}
 </style>
-<script src="https://accounts.google.com/gsi/client"></script>
+
 </head>
 <body>
 <div id="gdrive-bar">
@@ -1732,6 +1732,8 @@ function clearAll(){if(!confirm('¿Borrar TODOS los datos?'))return;if(!confirm(
 // INIT
 // ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
+  // Check if returning from Google OAuth
+  if (!checkTokenInUrl()) { checkSavedToken(); }
   const d=new Date();
   $i('topbar-date').textContent=d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
   $i('hm').value=d.toISOString().slice(0,7);
@@ -1752,9 +1754,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   saveAndSync();
 });
 // ══════════════════════════════════════════════════════════════
-// GOOGLE DRIVE / SHEETS INTEGRATION
+// GOOGLE DRIVE / SHEETS INTEGRATION — Implicit OAuth Flow
 // ══════════════════════════════════════════════════════════════
 const CLIENT_ID = '184703008619-fh1ds4msldo3i83p5udut8mhat1hjh0h.apps.googleusercontent.com';
+const REDIRECT_URI = 'https://franlopez10.github.io/rentacontrol/';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
 const SHEET_NAME = 'RentaControl_Data';
 const FOLDER_NAME = 'RentaControl';
@@ -1765,75 +1768,86 @@ let gFolderId = null;
 let gSyncing = false;
 let gAutoSyncTimer = null;
 
-// ── Auth ────────────────────────────────────────────────────
-let _tokenClient = null;
+// ── Check token in URL hash on page load ────────────────────
+function checkTokenInUrl() {
+  const hash = window.location.hash;
+  if (!hash) return false;
+  const params = new URLSearchParams(hash.substring(1));
+  const token = params.get('access_token');
+  const error = params.get('error');
+  if (error) {
+    toast('Error de autorización: ' + error, false);
+    window.history.replaceState(null, '', window.location.pathname);
+    return false;
+  }
+  if (token) {
+    gToken = token;
+    const expiresIn = parseInt(params.get('expires_in') || '3600');
+    localStorage.setItem('rc_gtoken', token);
+    localStorage.setItem('rc_gtoken_exp', Date.now() + expiresIn * 1000);
+    window.history.replaceState(null, '', window.location.pathname);
+    console.log('Token from URL, length:', token.length);
+    gdriveInit();
+    return true;
+  }
+  return false;
+}
 
+// ── Check saved token ────────────────────────────────────────
+function checkSavedToken() {
+  const saved = localStorage.getItem('rc_gtoken');
+  const exp = parseInt(localStorage.getItem('rc_gtoken_exp') || '0');
+  if (saved && exp > Date.now() + 60000) {
+    gToken = saved;
+    console.log('Restored saved token, length:', gToken.length);
+    gdriveInit();
+    return true;
+  }
+  return false;
+}
+
+// ── Connect — redirect to Google OAuth ───────────────────────
 function gdriveConnect() {
-  // Wait for Google Identity Services to load
-  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-    document.getElementById('gdrive-label').textContent = 'Cargando APIs de Google...';
-    setTimeout(gdriveConnect, 800);
-    return;
-  }
-  if (!_tokenClient) {
-    _tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES,
-      callback: async (resp) => {
-        if (resp.error) {
-          toast('Error al conectar: ' + resp.error, false);
-          updateDriveUI(false);
-          return;
-        }
-        if (!resp.access_token) {
-          toast('No se recibió token de acceso', false);
-          updateDriveUI(false);
-          return;
-        }
-        gToken = resp.access_token;
-        console.log('Token received, length:', gToken.length);
-        await gdriveInit();
-      },
-      error_callback: (err) => {
-        toast('Error OAuth: ' + (err.message || JSON.stringify(err)), false);
-        updateDriveUI(false);
-      }
-    });
-  }
-  _tokenClient.requestAccessToken({ prompt: 'consent' });
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'token',
+    scope: SCOPES,
+    include_granted_scopes: 'true',
+    prompt: 'select_account'
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
 }
 
 function gdriveDisconnect() {
   if (!confirm('¿Desconectar Google Drive? Los datos locales se mantienen.')) return;
   gToken = null; gSheetId = null; gFolderId = null;
+  localStorage.removeItem('rc_gtoken');
+  localStorage.removeItem('rc_gtoken_exp');
   localStorage.removeItem('rc_gsheet_id');
   localStorage.removeItem('rc_gfolder_id');
-  localStorage.removeItem('rc_gtoken_exp');
   clearInterval(gAutoSyncTimer);
   updateDriveUI(false);
   toast('Desconectado de Google Drive');
 }
 
+// ── Init after token obtained ────────────────────────────────
 async function gdriveInit() {
   try {
     updateDriveUI('syncing');
     gSheetId = localStorage.getItem('rc_gsheet_id');
     gFolderId = localStorage.getItem('rc_gfolder_id');
 
-    console.log('Init with token:', gToken ? gToken.substring(0,20)+'...' : 'NULL');
-
-    // Test token
+    console.log('Testing token...');
     const testRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { 'Authorization': 'Bearer ' + gToken }
     });
-    console.log('Token test status:', testRes.status);
+    console.log('Token test:', testRes.status);
 
     if (!testRes.ok) {
-      const errText = await testRes.text();
-      console.error('Token test failed:', errText);
+      localStorage.removeItem('rc_gtoken');
       gToken = null;
-      _tokenClient = null;
-      toast('Token inválido, vuelve a conectar', false);
+      toast('Sesión expirada, vuelve a conectar', false);
       updateDriveUI(false);
       return;
     }
@@ -1853,14 +1867,13 @@ async function gdriveInit() {
     updateDriveUI(true);
     clearInterval(gAutoSyncTimer);
     gAutoSyncTimer = setInterval(syncToSheets, 120000);
-    toast('✓ Conectado a Google Drive');
+    toast('✓ Conectado a Google Drive — ' + (me.email || ''));
   } catch(e) {
     console.error('Drive init error:', e);
     toast('Error conectando: ' + (e.message || String(e)), false);
     updateDriveUI(false);
   }
 }
-
 
 // ── UI ──────────────────────────────────────────────────────
 function updateDriveUI(state) {
@@ -1869,27 +1882,32 @@ function updateDriveUI(state) {
   const connectBtn = document.getElementById('gdrive-connect-btn');
   const syncBtn = document.getElementById('gdrive-sync-btn');
   const disconnectBtn = document.getElementById('gdrive-disconnect-btn');
+  const shBtn = document.getElementById('gdrive-sheet-btn');
+  const foBtn = document.getElementById('gdrive-folder-btn');
   if (state === 'syncing') {
     lbl.textContent = '↻ Sincronizando...';
-    syncBtn.innerHTML = '<span class="sync-spin">↻</span> Sincronizando';
+    if (syncBtn) syncBtn.innerHTML = '↻ Sync...';
   } else if (state === true) {
     bar.classList.add('connected');
     lbl.textContent = '● Google Drive — Conectado';
-    connectBtn.style.display = 'none';
-    syncBtn.style.display = 'inline-block';
-    syncBtn.innerHTML = '↻ Sincronizar';
-    disconnectBtn.style.display = 'inline-block';
-    const shBtn=document.getElementById('gdrive-sheet-btn');if(shBtn)shBtn.style.display='inline-block';
-    const foBtn=document.getElementById('gdrive-folder-btn');if(foBtn)foBtn.style.display='inline-block';
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (syncBtn) { syncBtn.style.display = 'inline-block'; syncBtn.innerHTML = '↻ Sincronizar'; }
+    if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
+    if (shBtn) shBtn.style.display = 'inline-block';
+    if (foBtn) foBtn.style.display = 'inline-block';
     const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
-    document.getElementById('gdrive-lastsync').textContent = 'Última sync: ' + now;
+    const ls = document.getElementById('gdrive-lastsync');
+    if (ls) ls.textContent = 'Última sync: ' + now;
   } else {
     bar.classList.remove('connected');
     lbl.textContent = 'Google Drive — No conectado';
-    connectBtn.style.display = 'inline-block';
-    syncBtn.style.display = 'none';
-    disconnectBtn.style.display = 'none';
-    document.getElementById('gdrive-user').textContent = '';
+    if (connectBtn) connectBtn.style.display = 'inline-block';
+    if (syncBtn) syncBtn.style.display = 'none';
+    if (disconnectBtn) disconnectBtn.style.display = 'none';
+    if (shBtn) shBtn.style.display = 'none';
+    if (foBtn) foBtn.style.display = 'none';
+    const gu = document.getElementById('gdrive-user');
+    if (gu) gu.textContent = '';
   }
 }
 
@@ -1897,28 +1915,23 @@ function updateDriveUI(state) {
 async function gFetch(url, opts = {}) {
   const res = await fetch(url, {
     ...opts,
-    headers: { 'Authorization': 'Bearer ' + gToken, 'Content-Type': 'application/json', ...(opts.headers||{}) }
+    headers: {
+      'Authorization': 'Bearer ' + gToken,
+      'Content-Type': 'application/json',
+      ...(opts.headers || {})
+    }
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`API ${res.status}: ${err.slice(0,200)}`);
+    throw new Error('API ' + res.status + ': ' + err.slice(0, 300));
   }
   return res.json();
 }
 
-async function gFetchRaw(url, opts = {}) {
-  const res = await fetch(url, {
-    ...opts,
-    headers: { 'Authorization': 'Bearer ' + gToken, ...(opts.headers||{}) }
-  });
-  if (!res.ok) throw new Error('API error ' + res.status);
-  return res;
-}
-
 // ── Folder ──────────────────────────────────────────────────
 async function gFindOrCreateFolder() {
-  const q = encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const res = await gFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  const q = encodeURIComponent("name='" + FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+  const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)');
   if (res.files && res.files.length > 0) return res.files[0].id;
   const created = await gFetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
@@ -1928,225 +1941,145 @@ async function gFindOrCreateFolder() {
 }
 
 async function gVerifyFolder(id) {
-  try {
-    await gFetch(`https://www.googleapis.com/drive/v3/files/${id}?fields=id`);
-    return id;
-  } catch { return await gFindOrCreateFolder(); }
+  try { await gFetch('https://www.googleapis.com/drive/v3/files/' + id + '?fields=id'); return id; }
+  catch { return await gFindOrCreateFolder(); }
 }
 
 // ── Sheet ───────────────────────────────────────────────────
 async function gFindOrCreateSheet() {
-  const q = encodeURIComponent(`name='${SHEET_NAME}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`);
-  const res = await gFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  const q = encodeURIComponent("name='" + SHEET_NAME + "' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
+  const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)');
   if (res.files && res.files.length > 0) return res.files[0].id;
-  // Create new spreadsheet
   const created = await gFetch('https://www.googleapis.com/v4/spreadsheets', {
     method: 'POST',
     body: JSON.stringify({
       properties: { title: SHEET_NAME },
       sheets: [
-        { properties: { title: 'Propiedades' } },
-        { properties: { title: 'Inquilinos' } },
-        { properties: { title: 'Pagos' } },
-        { properties: { title: 'Gastos' } },
-        { properties: { title: 'Contratos' } },
-        { properties: { title: 'Incidencias' } },
-        { properties: { title: 'Proveedores' } },
-        { properties: { title: 'Potenciales' } },
-        { properties: { title: 'Facturas' } },
-        { properties: { title: 'Agenda' } },
+        { properties: { title: 'Propiedades' } }, { properties: { title: 'Inquilinos' } },
+        { properties: { title: 'Pagos' } }, { properties: { title: 'Gastos' } },
+        { properties: { title: 'Contratos' } }, { properties: { title: 'Incidencias' } },
+        { properties: { title: 'Proveedores' } }, { properties: { title: 'Potenciales' } },
+        { properties: { title: 'Facturas' } }, { properties: { title: 'Agenda' } },
       ]
     })
   });
-  // Move to RentaControl folder
-  await gFetch(`https://www.googleapis.com/drive/v3/files/${created.spreadsheetId}?addParents=${gFolderId}&fields=id`, {
+  await gFetch('https://www.googleapis.com/drive/v3/files/' + created.spreadsheetId + '?addParents=' + gFolderId + '&fields=id', {
     method: 'PATCH', body: JSON.stringify({})
   });
   return created.spreadsheetId;
 }
 
 async function gVerifySheet(id) {
-  try {
-    await gFetch(`https://www.googleapis.com/v4/spreadsheets/${id}?fields=spreadsheetId`);
-    return id;
-  } catch { return await gFindOrCreateSheet(); }
+  try { await gFetch('https://www.googleapis.com/v4/spreadsheets/' + id + '?fields=spreadsheetId'); return id; }
+  catch { return await gFindOrCreateSheet(); }
 }
 
-// ── SYNC TO SHEETS ──────────────────────────────────────────
+// ── Sync to Sheets ───────────────────────────────────────────
 async function syncNow() {
   if (!gToken) { toast('Conecta primero con Google Drive', false); return; }
   updateDriveUI('syncing');
-  try {
-    await syncToSheets();
-    updateDriveUI(true);
-    toast('✓ Datos sincronizados con Google Drive');
-  } catch(e) {
-    toast('Error al sincronizar: ' + (e.message||e), false);
-    updateDriveUI(true);
-  }
+  try { await syncToSheets(); updateDriveUI(true); toast('✓ Sincronizado con Google Drive'); }
+  catch(e) { toast('Error al sincronizar: ' + e.message, false); updateDriveUI(true); }
 }
 
 async function syncToSheets() {
   if (!gToken || !gSheetId || gSyncing) return;
   gSyncing = true;
   try {
-    const data = [
+    const sheets = [
       { sheet: 'Propiedades', headers: ['ID','Nombre','Dirección','Ciudad','CP','Habs','Precio','Año','Hipoteca/mes','Capital','Val.Construcción'], rows: D.props.map(p=>[p.id,p.nom,p.dir,p.ciu,p.cp,p.habs,p.precio,p.anyo,p.hipo,p.capital,p.vc]) },
       { sheet: 'Inquilinos', headers: ['ID','Nombre','Apellidos','DNI','Nac.','Email','Tel','WhatsApp','Estado','Piso ID','Hab.','Alquiler','Fianza','Día pago','Inicio','Fin','Valoración','Motivo','Notas'], rows: D.inqs.map(i=>[i.id,i.nom,i.ap,i.dni,i.nac,i.email,i.tel,i.wa,i.estado,i.propId,i.hab,i.alq,i.fia,i.dia,i.ini,i.fin,i.val,i.mot,i.notas]) },
-      { sheet: 'Pagos', headers: ['ID','Inquilino ID','Concepto','Mes','Importe','Estado','Fecha pago','Notas','PDF adjunto'], rows: D.pagos.map(p=>[p.id,p.inqId,p.con,p.mes,p.imp,p.estado,p.fecha,p.notas,p.pdfName||'']) },
-      { sheet: 'Gastos', headers: ['ID','Descripción','Categoría','Importe','Piso ID','Fecha','Deducible','Proveedor','Notas','PDF adjunto'], rows: D.gastos.map(g=>[g.id,g.desc,g.cat,g.imp,g.propId,g.fecha,g.ded,g.prov,g.notas,g.pdfName||'']) },
-      { sheet: 'Contratos', headers: ['ID','Inquilino ID','Inicio','Fin','Renta','Fianza','Garantía','Notas','PDF adjunto'], rows: D.conts.map(c=>[c.id,c.inqId,c.ini,c.fin,c.r,c.f,c.g,c.n,c.pdfName||'']) },
+      { sheet: 'Pagos', headers: ['ID','Inquilino ID','Concepto','Mes','Importe','Estado','Fecha pago','Notas','PDF'], rows: D.pagos.map(p=>[p.id,p.inqId,p.con,p.mes,p.imp,p.estado,p.fecha,p.notas,p.pdfName||'']) },
+      { sheet: 'Gastos', headers: ['ID','Descripción','Categoría','Importe','Piso ID','Fecha','Deducible','Proveedor','Notas','PDF'], rows: D.gastos.map(g=>[g.id,g.desc,g.cat,g.imp,g.propId,g.fecha,g.ded,g.prov,g.notas,g.pdfName||'']) },
+      { sheet: 'Contratos', headers: ['ID','Inquilino ID','Inicio','Fin','Renta','Fianza','Garantía','Notas','PDF'], rows: D.conts.map(c=>[c.id,c.inqId,c.ini,c.fin,c.r,c.f,c.g,c.n,c.pdfName||'']) },
       { sheet: 'Incidencias', headers: ['ID','Descripción','Piso ID','Hab.','Prioridad','Estado','Fecha','Coste','Proveedor','Notas'], rows: D.incs.map(i=>[i.id,i.desc,i.propId,i.hab,i.pri,i.estado,i.fecha,i.coste,i.prov,i.notas]) },
       { sheet: 'Proveedores', headers: ['ID','Nombre','Oficio','Tel','Email','Valoración','Precio','Notas'], rows: D.provs.map(p=>[p.id,p.nom,p.ofi,p.tel,p.email,p.val,p.precio,p.notas]) },
       { sheet: 'Potenciales', headers: ['ID','Nombre','URL','Precio','Alq/hab','Habs','EBITDA','ROCE','Yield','Inversión','Fecha'], rows: D.pots.map(p=>[p.id,p.nom,p.url,p.p,p.alq,p.h,p.ebitda,p.roce,p.yld,p.inv,p.fecha]) },
       { sheet: 'Facturas', headers: ['ID','Descripción','Piso ID','Importe','Por hab.','Habs','Cobros','Fecha'], rows: D.facturas.map(f=>[f.id,f.desc,f.propId,f.imp,f.porHab,f.habs,f.cobros,f.fecha]) },
       { sheet: 'Agenda', headers: ['ID','Título','Fecha','Tipo','Piso ID','Notas','Hecho'], rows: D.agenda.map(a=>[a.id,a.titulo,a.fecha,a.tipo,a.propId,a.notas,a.done?'SÍ':'NO']) },
     ];
+    const data = sheets.map(s => ({
+      range: s.sheet + '!A1',
+      values: [s.headers, ...s.rows].map(row => row.map(cell => cell === null || cell === undefined ? '' : String(cell)))
+    }));
+    await gFetch('https://www.googleapis.com/v4/spreadsheets/' + gSheetId + '/values:batchClear', {
+      method: 'POST', body: JSON.stringify({ ranges: sheets.map(s => s.sheet + '!A:Z') })
+    });
+    await gFetch('https://www.googleapis.com/v4/spreadsheets/' + gSheetId + '/values:batchUpdate', {
+      method: 'PUT', body: JSON.stringify({ valueInputOption: 'RAW', data })
+    });
+    await saveDriveBackup();
+  } finally { gSyncing = false; }
+}
 
-    // Build batch update: clear then write each sheet
-    const requests = [];
-    for (const s of data) {
-      const values = [s.headers, ...s.rows];
-      requests.push({
-        range: `${s.sheet}!A1`,
-        values: values.map(row => row.map(cell => cell === null || cell === undefined ? '' : String(cell)))
+// ── Drive backup (full JSON) ─────────────────────────────────
+async function saveDriveBackup() {
+  try {
+    const json = JSON.stringify(D);
+    const fileName = 'rentacontrol_backup.json';
+    const q = encodeURIComponent("name='" + fileName + "' and '" + gFolderId + "' in parents and trashed=false");
+    const existing = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id)');
+    const blob = new Blob([json], { type: 'application/json' });
+    const form = new FormData();
+    if (existing.files && existing.files.length > 0) {
+      form.append('file', blob);
+      await fetch('https://www.googleapis.com/upload/drive/v3/files/' + existing.files[0].id + '?uploadType=multipart', {
+        method: 'PATCH', headers: { 'Authorization': 'Bearer ' + gToken }, body: form
+      });
+    } else {
+      form.append('metadata', new Blob([JSON.stringify({ name: fileName, parents: [gFolderId] })], { type: 'application/json' }));
+      form.append('file', blob);
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + gToken }, body: form
       });
     }
-
-    // Clear all sheets first
-    await gFetch(`https://www.googleapis.com/v4/spreadsheets/${gSheetId}/values:batchClear`, {
-      method: 'POST',
-      body: JSON.stringify({ ranges: data.map(s => `${s.sheet}!A:Z`) })
-    });
-
-    // Write all data
-    await gFetch(`https://www.googleapis.com/v4/spreadsheets/${gSheetId}/values:batchUpdate`, {
-      method: 'PUT',
-      body: JSON.stringify({ valueInputOption: 'RAW', data: requests })
-    });
-
-    // Also save full JSON backup as a file in Drive
-    await saveDriveBackup();
-
-  } finally {
-    gSyncing = false;
-  }
+  } catch(e) { console.warn('Backup error:', e); }
 }
 
-// ── DRIVE FILE BACKUP (full JSON including PDFs) ─────────────
-async function saveDriveBackup() {
-  const json = JSON.stringify(D);
-  const blob = new Blob([json], { type: 'application/json' });
-  const fileName = 'rentacontrol_backup.json';
-
-  // Check if backup file already exists
-  const q = encodeURIComponent(`name='${fileName}' and '${gFolderId}' in parents and trashed=false`);
-  const existing = await gFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
-
-  const metadata = { name: fileName, mimeType: 'application/json' };
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  form.append('file', blob);
-
-  if (existing.files && existing.files.length > 0) {
-    // Update existing file
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.files[0].id}?uploadType=multipart`, {
-      method: 'PATCH',
-      headers: { 'Authorization': 'Bearer ' + gToken },
-      body: form
-    });
-  } else {
-    // Create new file
-    const metaWithParent = { ...metadata, parents: [gFolderId] };
-    const form2 = new FormData();
-    form2.append('metadata', new Blob([JSON.stringify(metaWithParent)], { type: 'application/json' }));
-    form2.append('file', blob);
-    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + gToken },
-      body: form2
-    });
-  }
-}
-
-// ── PDF UPLOAD TO DRIVE ──────────────────────────────────────
+// ── PDF upload to Drive ──────────────────────────────────────
 async function uploadPdfToDrive(dataUri, fileName) {
   if (!gToken || !gFolderId) return null;
   try {
-    // Convert dataURI to blob
-    const arr = dataUri.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    const u8arr = new Uint8Array(bstr.length);
+    const arr = dataUri.split(','), mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]), u8arr = new Uint8Array(bstr.length);
     for (let i = 0; i < bstr.length; i++) u8arr[i] = bstr.charCodeAt(i);
     const blob = new Blob([u8arr], { type: mime });
-
-    const metadata = { name: fileName || 'documento.pdf', parents: [gFolderId] };
     const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('metadata', new Blob([JSON.stringify({ name: fileName || 'documento.pdf', parents: [gFolderId] })], { type: 'application/json' }));
     form.append('file', blob);
-
     const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + gToken },
-      body: form
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + gToken }, body: form
     });
-    const data = await res.json();
-    return { fileId: data.id, webViewLink: data.webViewLink };
-  } catch(e) {
-    console.error('PDF upload error:', e);
-    return null;
-  }
+    return await res.json();
+  } catch(e) { console.error('PDF upload error:', e); return null; }
 }
 
-// ── PATCH save() to auto-sync ────────────────────────────────
-const _origSave = save;
-// Override save to trigger sync after local save
-function saveAndSync() {
-  localStorage.setItem(KEY, JSON.stringify(D));
-  if (gToken && gSheetId && !gSyncing) {
-    clearTimeout(window._syncDebounce);
-    window._syncDebounce = setTimeout(async () => {
-      try {
-        updateDriveUI('syncing');
-        await syncToSheets();
-        updateDriveUI(true);
-      } catch(e) { console.warn('Auto-sync error:', e); updateDriveUI(true); }
-    }, 2000); // 2 second debounce
-  }
-}
-
-// ── IMPORT FROM DRIVE ────────────────────────────────────────
+// ── Import from Drive ────────────────────────────────────────
 async function importFromDrive() {
   if (!gToken || !gFolderId) { toast('Conecta primero con Google Drive', false); return; }
   try {
-    const q = encodeURIComponent(`name='rentacontrol_backup.json' and '${gFolderId}' in parents and trashed=false`);
-    const res = await gFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`);
+    const q = encodeURIComponent("name='rentacontrol_backup.json' and '" + gFolderId + "' in parents and trashed=false");
+    const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)');
     if (!res.files || !res.files.length) { toast('No hay backup en Drive todavía', false); return; }
-    const fileId = res.files[0].id;
-    const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    const resp = await fetch('https://www.googleapis.com/drive/v3/files/' + res.files[0].id + '?alt=media', {
       headers: { 'Authorization': 'Bearer ' + gToken }
     });
-    const json = await resp.json();
-    D = json;
+    D = await resp.json();
     localStorage.setItem(KEY, JSON.stringify(D));
     rDash();
     toast('✓ Datos importados desde Google Drive');
-  } catch(e) {
-    toast('Error importando desde Drive: ' + e.message, false);
-  }
+  } catch(e) { toast('Error importando: ' + e.message, false); }
 }
 
-// ── OPEN SHEET IN BROWSER ────────────────────────────────────
+// ── Open sheet / folder ──────────────────────────────────────
 function openSheet() {
   if (!gSheetId) { toast('Conecta primero con Google Drive', false); return; }
-  window.open(`https://docs.google.com/spreadsheets/d/${gSheetId}`, '_blank');
+  window.open('https://docs.google.com/spreadsheets/d/' + gSheetId, '_blank');
 }
 
-// ── OPEN DRIVE FOLDER ────────────────────────────────────────
 function openDriveFolder() {
   if (!gFolderId) { toast('Conecta primero con Google Drive', false); return; }
-  window.open(`https://drive.google.com/drive/folders/${gFolderId}`, '_blank');
+  window.open('https://drive.google.com/drive/folders/' + gFolderId, '_blank');
 }
 
 </script>
