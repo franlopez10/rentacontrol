@@ -37,7 +37,7 @@
   --shadow:0 1px 3px rgba(26,23,20,.08),0 4px 16px rgba(26,23,20,.06);
   --shadow2:0 2px 8px rgba(26,23,20,.12),0 8px 32px rgba(26,23,20,.1);
 }
-html,body{height:100%;overflow:hidden;background:var(--bg);}
+html,body{height:100%;overflow:hidden;background:var(--bg);} @media(max-width:768px){html,body{overflow:auto;}#main{overflow:auto;}#content{overflow:visible;}}
 body{font-family:'DM Sans',sans-serif;color:var(--ink);display:flex;}
 
 /* ── SIDEBAR ─────────────────────────────────────────────── */
@@ -400,10 +400,122 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 .gdrive-btn-disconnect{background:transparent;color:rgba(239,68,68,.7);border:1px solid rgba(239,68,68,.3);font-size:8px;}
 @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 .sync-spin{display:inline-block;animation:spin .8s linear infinite;}
+
+/* ── RESPONSIVE MÓVIL ───────────────────────────────────── */
+#menu-toggle{
+  display:none;position:fixed;bottom:20px;right:20px;z-index:300;
+  width:48px;height:48px;border-radius:50%;
+  background:var(--acc);color:#fff;border:none;cursor:pointer;
+  font-size:20px;box-shadow:0 4px 16px rgba(200,75,47,.4);
+  align-items:center;justify-content:center;transition:.2s;
+}
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:98;backdrop-filter:blur(2px);}
+
+@media(max-width:768px){
+  body{flex-direction:column;}
+
+  #sb{
+    position:fixed;left:-240px;top:0;bottom:0;z-index:100;
+    transition:left .25s cubic-bezier(.4,0,.2,1);
+    width:240px;
+  }
+  #sb.mobile-open{left:0;}
+  #sb-overlay.show{display:block;}
+
+  #main{width:100%;overflow:hidden;}
+
+  #topbar{padding:0 14px 0 52px;height:52px;}
+  #topbar-title{font-size:15px;}
+  #topbar-date{display:none;}
+
+  #content{padding:14px 12px;}
+
+  /* Menu hamburger button */
+  #menu-toggle{display:flex;}
+
+  /* KPI grids */
+  .kpi-strip{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
+  .kpi-strip .kpi:last-child{grid-column:1/-1;}
+  .kpi-value{font-size:18px;}
+
+  /* Grids */
+  .g2,.g3,.g4{grid-template-columns:1fr;gap:12px;}
+
+  /* Tables - make scrollable */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{min-width:500px;}
+  th,td{padding:8px 10px;font-size:11px;}
+
+  /* Cards */
+  .card{padding:14px;}
+  .card-title{font-size:13px;}
+
+  /* Modals */
+  .modal{padding:18px;width:100%!important;max-width:100%!important;
+    position:fixed;bottom:0;left:0;right:0;border-radius:16px 16px 0 0;
+    max-height:90vh;margin:0;}
+  .modal-overlay{align-items:flex-end;}
+  .fg{grid-template-columns:1fr;}
+  .fg3{grid-template-columns:1fr;}
+  .fgf{grid-column:1;}
+
+  /* Drawer */
+  #drawer{width:100%!important;right:-100%!important;}
+  #drawer.open{right:0!important;}
+
+  /* Room grid */
+  .room-grid{grid-template-columns:repeat(3,1fr);gap:7px;}
+  .room-card{padding:10px;}
+  .room-num{font-size:18px;}
+
+  /* Buttons */
+  .ph{flex-direction:column;align-items:flex-start;gap:8px;}
+  .ph-acts{width:100%;}
+  .ph-acts .btn,.ph>.btn{width:100%;justify-content:center;}
+  .btn{font-size:12px;}
+
+  /* Filter bar */
+  .fb{flex-direction:column;}
+  .fb select,.fb input,.fi{width:100%!important;min-width:unset!important;}
+
+  /* Drive bar - more compact on mobile */
+  #gdrive-bar{
+    top:8px;right:8px;padding:5px 10px;font-size:9px;
+    max-width:calc(100vw - 16px);
+  }
+  #gdrive-lastsync{display:none;}
+
+  /* Pot cards */
+  .pot-card{padding:12px;}
+
+  /* Export bar */
+  .export-bar{flex-direction:column;align-items:flex-start;}
+
+  /* Profile stats */
+  .profile-stats{grid-template-columns:repeat(3,1fr);gap:6px;}
+  .profile-stat{padding:8px;}
+  .profile-stat-val{font-size:15px;}
+
+  /* Topbar hamburger space */
+  #topbar::before{
+    content:'☰';
+    position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    font-size:20px;cursor:pointer;color:var(--ink2);
+    width:32px;text-align:center;
+  }
+}
+
+@media(max-width:400px){
+  .kpi-strip{grid-template-columns:1fr 1fr;}
+  .kpi-value{font-size:16px;}
+  .room-grid{grid-template-columns:repeat(2,1fr);}
+}
 </style>
 
 </head>
 <body>
+<div id="sb-overlay" onclick="closeSb()"></div>
+<button id="menu-toggle" onclick="toggleSb()">☰</button>
 <div id="gdrive-bar">
   <div id="gdrive-status">
     <div id="gdrive-dot"></div>
@@ -2074,6 +2186,32 @@ function openDriveFolder() {
   if (!gFolderId) { toast('Conecta primero con Google Drive', false); return; }
   window.open('https://drive.google.com/drive/folders/'+gFolderId,'_blank');
 }
+
+
+// ── MOBILE SIDEBAR ───────────────────────────────────────────
+function toggleSb() {
+  const sb = document.getElementById('sb');
+  const ov = document.getElementById('sb-overlay');
+  const isOpen = sb.classList.contains('mobile-open');
+  if (isOpen) { closeSb(); } else {
+    sb.classList.add('mobile-open');
+    ov.classList.add('show');
+  }
+}
+function closeSb() {
+  document.getElementById('sb').classList.remove('mobile-open');
+  document.getElementById('sb-overlay').classList.remove('show');
+}
+// Close sidebar when nav item clicked on mobile
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeSb();
+  });
+});
+// Topbar hamburger click
+document.getElementById('topbar').addEventListener('click', function(e) {
+  if (e.offsetX < 52 && window.innerWidth <= 768) toggleSb();
+});
 
 </script>
 </body>
