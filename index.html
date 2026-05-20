@@ -1937,7 +1937,7 @@ async function gFindOrCreateSheet() {
   const q = encodeURIComponent("name='" + SHEET_NAME + "' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
   const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id)');
   if (res.files && res.files.length) return res.files[0].id;
-  const c = await gFetch('https://www.googleapis.com/v4/spreadsheets', {
+  const c = await gFetch('https://sheets.googleapis.com/v4/spreadsheets', {
     method:'POST',
     body: JSON.stringify({
       properties:{title:SHEET_NAME},
@@ -1950,7 +1950,7 @@ async function gFindOrCreateSheet() {
   return c.spreadsheetId;
 }
 async function gVerifySheet(id) {
-  try { await gFetch('https://www.googleapis.com/v4/spreadsheets/'+id+'?fields=spreadsheetId'); return id; }
+  try { await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+id+'?fields=spreadsheetId'); return id; }
   catch { return gFindOrCreateSheet(); }
 }
 
@@ -1982,8 +1982,8 @@ async function syncToSheets() {
       range: s.sheet+'!A1',
       values: [s.h, ...s.rows].map(row=>row.map(c=>c===null||c===undefined?'':String(c)))
     }));
-    await gFetch('https://www.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchClear',{method:'POST',body:JSON.stringify({ranges:sheets.map(s=>s.sheet+'!A:Z')})});
-    await gFetch('https://www.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate',{method:'PUT',body:JSON.stringify({valueInputOption:'RAW',data})});
+    await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchClear',{method:'POST',body:JSON.stringify({ranges:sheets.map(s=>s.sheet+'!A:Z')})});
+    await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate',{method:'PUT',body:JSON.stringify({valueInputOption:'RAW',data})});
     await saveDriveBackup();
   } finally { gSyncing = false; }
 }
