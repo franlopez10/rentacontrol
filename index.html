@@ -374,8 +374,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 .pdf-badge.green{background:var(--gn-l);border-color:rgba(45,106,79,.2);color:var(--gn);}
 .pdf-badge.green:hover{background:rgba(45,106,79,.15);}
 </style>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://apis.google.com/js/api.js" async defer></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
 <div id="gdrive-bar">
@@ -1767,43 +1766,41 @@ let gSyncing = false;
 let gAutoSyncTimer = null;
 
 // ── Auth ────────────────────────────────────────────────────
+let _tokenClient = null;
+
 function gdriveConnect() {
-  if (typeof google === 'undefined' || !google.accounts) {
-    toast('Cargando Google APIs, espera un momento...', false);
-    setTimeout(gdriveConnect, 1500);
+  // Wait for Google Identity Services to load
+  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+    document.getElementById('gdrive-label').textContent = 'Cargando APIs de Google...';
+    setTimeout(gdriveConnect, 800);
     return;
   }
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: async (resp) => {
-      if (resp.error) { toast('Error al conectar: ' + resp.error, false); return; }
-      gToken = resp.access_token;
-      localStorage.setItem('rc_gtoken_exp', Date.now() + (resp.expires_in * 1000));
-      // Load gapi client before using sheets API
-      await loadGapiAndInit();
-    }
-  });
-  client.requestAccessToken();
-}
-
-async function loadGapiAndInit() {
-  try {
-    // Load gapi if not loaded
-    if (typeof gapi === 'undefined') {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://apis.google.com/js/api.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    }
-    await gdriveInit();
-  } catch(e) {
-    console.error('GAPI load error:', e);
-    await gdriveInit(); // try anyway
+  if (!_tokenClient) {
+    _tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: async (resp) => {
+        if (resp.error) {
+          toast('Error al conectar: ' + resp.error, false);
+          updateDriveUI(false);
+          return;
+        }
+        if (!resp.access_token) {
+          toast('No se recibió token de acceso', false);
+          updateDriveUI(false);
+          return;
+        }
+        gToken = resp.access_token;
+        console.log('Token received, length:', gToken.length);
+        await gdriveInit();
+      },
+      error_callback: (err) => {
+        toast('Error OAuth: ' + (err.message || JSON.stringify(err)), false);
+        updateDriveUI(false);
+      }
+    });
   }
+  _tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
 function gdriveDisconnect() {
@@ -1820,40 +1817,46 @@ function gdriveDisconnect() {
 async function gdriveInit() {
   try {
     updateDriveUI('syncing');
-    // Restore cached IDs
     gSheetId = localStorage.getItem('rc_gsheet_id');
     gFolderId = localStorage.getItem('rc_gfolder_id');
-    // Verify token works with a simple test call
+
+    console.log('Init with token:', gToken ? gToken.substring(0,20)+'...' : 'NULL');
+
+    // Test token
     const testRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { 'Authorization': 'Bearer ' + gToken }
     });
+    console.log('Token test status:', testRes.status);
+
     if (!testRes.ok) {
+      const errText = await testRes.text();
+      console.error('Token test failed:', errText);
       gToken = null;
+      _tokenClient = null;
       toast('Token inválido, vuelve a conectar', false);
       updateDriveUI(false);
       return;
     }
-    // Get user info
+
     const me = await testRes.json();
     document.getElementById('gdrive-user').textContent = me.email || '';
-    // Find or create folder
+
     if (!gFolderId) gFolderId = await gFindOrCreateFolder();
     else gFolderId = await gVerifyFolder(gFolderId);
     localStorage.setItem('rc_gfolder_id', gFolderId);
-    // Find or create sheet
+
     if (!gSheetId) gSheetId = await gFindOrCreateSheet();
     else gSheetId = await gVerifySheet(gSheetId);
     localStorage.setItem('rc_gsheet_id', gSheetId);
-    // Initial sync
+
     await syncToSheets();
     updateDriveUI(true);
-    // Auto-sync every 2 minutes
     clearInterval(gAutoSyncTimer);
     gAutoSyncTimer = setInterval(syncToSheets, 120000);
     toast('✓ Conectado a Google Drive');
   } catch(e) {
     console.error('Drive init error:', e);
-    toast('Error conectando: ' + (e.message||e), false);
+    toast('Error conectando: ' + (e.message || String(e)), false);
     updateDriveUI(false);
   }
 }
