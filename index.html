@@ -953,6 +953,25 @@ const KEY='rc5';
 let D=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||def();}catch{return def();}})();
 function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
 const save=()=>localStorage.setItem(KEY,JSON.stringify(D));
+// ── Save + auto-sync to Drive ────────────────────────────────
+function saveAndSync() {
+  localStorage.setItem(KEY, JSON.stringify(D));
+  if (typeof gToken !== 'undefined' && gToken && typeof gSheetId !== 'undefined' && gSheetId) {
+    clearTimeout(window._syncDebounce);
+    window._syncDebounce = setTimeout(async () => {
+      try {
+        updateDriveUI('syncing');
+        await syncToSheets();
+        updateDriveUI(true);
+      } catch(e) {
+        console.warn('Auto-sync error:', e);
+        updateDriveUI(true);
+      }
+    }, 2000);
+  }
+}
+
+
 const eur=(n,d=0)=>(parseFloat(n)||0).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d})+'€';
 const pct=n=>(parseFloat(n)||0).toFixed(1)+'%';
 const fD=s=>s?new Date(s).toLocaleDateString('es-ES'):'–';
