@@ -1844,19 +1844,9 @@ async function gdriveInit() {
   try {
     gSheetId = localStorage.getItem('rc_gsheet_id');
     gFolderId = localStorage.getItem('rc_gfolder_id');
-
-    // Skip userinfo test - just use token directly
-    // Get email from token info endpoint instead
-    let userEmail = '';
-    try {
-      const tokenInfo = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + gToken);
-      if (tokenInfo.ok) {
-        const info = await tokenInfo.json();
-        userEmail = info.email || '';
-        console.log('Token válido para:', userEmail);
-        document.getElementById('gdrive-user').textContent = userEmail;
-      }
-    } catch(e) { console.warn('Could not get token info:', e); }
+    console.log('Init: token length =', gToken ? gToken.length : 0);
+    // Go straight to Drive API - no token verification needed
+    // The Drive API call itself will fail if token is bad
 
     if (!gFolderId) gFolderId = await gFindOrCreateFolder();
     else gFolderId = await gVerifyFolder(gFolderId);
