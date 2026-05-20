@@ -1862,7 +1862,7 @@ async function gdriveInit() {
     gAutoSyncTimer = setInterval(() => {
       if (gToken) syncToSheets();
     }, 120000);
-    toast('✓ Google Drive conectado — ' + me.email);
+    toast('✓ Google Drive conectado correctamente');
   } catch(e) {
     console.error('Drive init error:', e);
     toast('Error: ' + (e.message || String(e)), false);
