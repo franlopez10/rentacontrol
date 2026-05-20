@@ -373,6 +373,33 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 .pdf-badge:hover{background:rgba(200,75,47,.15);}
 .pdf-badge.green{background:var(--gn-l);border-color:rgba(45,106,79,.2);color:var(--gn);}
 .pdf-badge.green:hover{background:rgba(45,106,79,.15);}
+
+/* ── GOOGLE DRIVE BAR ───────────────────────────────────── */
+#gdrive-bar{
+  position:fixed;top:12px;right:16px;z-index:500;
+  background:var(--ink);color:#fff;
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:20px;
+  font-family:'DM Mono',monospace;font-size:10px;
+  box-shadow:0 2px 12px rgba(0,0,0,.4);
+  border:1px solid rgba(255,255,255,.1);
+  transition:all .3s;max-width:420px;
+}
+#gdrive-bar.connected{background:#0a1f12;border-color:rgba(16,185,129,.4);}
+#gdrive-dot{width:7px;height:7px;border-radius:50%;background:var(--ye);flex-shrink:0;}
+#gdrive-bar.connected #gdrive-dot{background:var(--gn);}
+#gdrive-status{display:flex;align-items:center;gap:6px;}
+#gdrive-user{font-size:9px;color:rgba(255,255,255,.4);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#gdrive-lastsync{font-size:8px;color:rgba(255,255,255,.25);}
+#gdrive-actions{display:flex;gap:5px;align-items:center;}
+.gdrive-btn{padding:3px 10px;border-radius:10px;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:9px;font-weight:600;transition:.15s;}
+.gdrive-btn-connect{background:var(--acc);color:#fff;}
+.gdrive-btn-connect:hover{background:var(--acc2);}
+.gdrive-btn-sync{background:rgba(255,255,255,.12);color:#fff;}
+.gdrive-btn-sync:hover{background:rgba(255,255,255,.2);}
+.gdrive-btn-disconnect{background:transparent;color:rgba(239,68,68,.7);border:1px solid rgba(239,68,68,.3);font-size:8px;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.sync-spin{display:inline-block;animation:spin .8s linear infinite;}
 </style>
 
 </head>
@@ -1884,7 +1911,7 @@ function updateDriveUI(state) {
     if (lbl) lbl.textContent = '↻ Conectando...';
   } else if (state === true) {
     if (bar) bar.classList.add('connected');
-    if (lbl) lbl.textContent = '● Google Drive';
+    if (lbl) lbl.textContent = '';
     if (connectBtn) connectBtn.style.display = 'none';
     if (syncBtn) { syncBtn.style.display = 'inline-block'; syncBtn.textContent = '↻ Sync'; }
     if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
