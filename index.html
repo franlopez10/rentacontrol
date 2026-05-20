@@ -1983,7 +1983,7 @@ async function syncToSheets() {
       values: [s.h, ...s.rows].map(row=>row.map(c=>c===null||c===undefined?'':String(c)))
     }));
     await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchClear',{method:'POST',body:JSON.stringify({ranges:sheets.map(s=>s.sheet+'!A:Z')})});
-    await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate',{method:'PUT',body:JSON.stringify({valueInputOption:'RAW',data})});
+    await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate',{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data:data})});
     await saveDriveBackup();
   } finally { gSyncing = false; }
 }
