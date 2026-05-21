@@ -582,7 +582,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <span id="gdrive-lastsync" style="font-size:9px;color:rgba(255,255,255,.35);"></span>
     <button class="gdrive-btn" onclick="openSheet()" id="gdrive-sheet-btn" style="display:none;background:rgba(255,255,255,.08);color:#fff;">📊 Ver Sheets</button>
     <button class="gdrive-btn" onclick="openDriveFolder()" id="gdrive-folder-btn" style="display:none;background:rgba(255,255,255,.08);color:#fff;">📁 Ver Drive</button>
-    <button class="gdrive-btn gdrive-btn-sync" id="gdrive-sync-btn" onclick="syncNow()" style="display:none;">↻ Sincronizar</button>
+    <button class="gdrive-btn gdrive-btn-sync" id="gdrive-sync-btn" onclick="syncNow()" style="display:none;">↻ Sync</button>
     <button class="gdrive-btn gdrive-btn-connect" id="gdrive-connect-btn" onclick="gdriveConnect()">🔗 Conectar con Google Drive</button>
     <button class="gdrive-btn gdrive-btn-disconnect" id="gdrive-disconnect-btn" onclick="gdriveDisconnect()" style="display:none;">Desconectar</button>
   </div>
@@ -903,7 +903,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button class="btn btn-success" onclick="exportAll()">⬇ Exportar backup JSON local</button>
         <label class="btn btn-ghost" style="cursor:pointer;">⬆ Importar backup JSON local<input type="file" accept=".json" onchange="importData(event)" style="display:none;"></label>
-        <button class="btn btn-ghost" onclick="importFromDrive()" style="border-color:var(--gn);color:var(--gn);">☁ Restaurar desde Google Drive</button>
+        <button class="btn btn-ghost" onclick="pullFromDrive()" style="border-color:var(--gn);color:var(--gn);">☁ Restaurar desde Google Drive</button>
         <button class="btn btn-danger" onclick="clearAll()">🗑 Borrar todos los datos</button>
       </div>
     </div>
@@ -2337,9 +2337,75 @@ async function loadFromDriveIfNewer() {
 // ── Sync ─────────────────────────────────────────────────────
 async function syncNow() {
   if (!gToken) { toast('Conecta primero con Google Drive', false); return; }
+  const btn = document.getElementById('gdrive-sync-btn');
+  if (btn) btn.textContent = '↻ Sincronizando...';
   updateDriveUI('syncing');
-  try { await syncToSheets(); updateDriveUI(true); toast('✓ Sincronizado'); }
-  catch(e) { toast('Error: ' + e.message, false); updateDriveUI(true); }
+  try {
+    // Step 1: Download latest from Drive
+    let driveData = null;
+    try {
+      const q = encodeURIComponent("name='rentacontrol_backup.json' and '" + gFolderId + "' in parents and trashed=false");
+      const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id)');
+      if (res.files && res.files.length) {
+        const r = await fetch('https://www.googleapis.com/drive/v3/files/' + res.files[0].id + '?alt=media', {
+          headers: { 'Authorization': 'Bearer ' + gToken }
+        });
+        if (r.ok) driveData = await r.json();
+      }
+    } catch(e) { console.warn('Could not pull from Drive:', e); }
+
+    // Step 2: Merge Drive data with local (keep whichever has more records per collection)
+    if (driveData) {
+      const collections = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas'];
+      collections.forEach(col => {
+        const local = D[col] || [];
+        const drive = driveData[col] || [];
+        if (drive.length === 0 && local.length === 0) return;
+        // Merge: combine both, deduplicate by id, keep most recent
+        const merged = [...local];
+        drive.forEach(driveItem => {
+          if (!merged.find(l => l.id === driveItem.id)) {
+            merged.push(driveItem);
+          }
+        });
+        D[col] = merged;
+      });
+      // Keep local cfg unless Drive has a name set and local doesn't
+      if (!D.cfg.nom && driveData.cfg && driveData.cfg.nom) D.cfg = driveData.cfg;
+      localStorage.setItem(KEY, JSON.stringify(D));
+      rDash();
+    }
+
+    // Step 3: Push merged data back up to Drive
+    await syncToSheets();
+    updateDriveUI(true);
+    toast('✓ Sincronizado con Google Drive');
+  }
+  catch(e) { 
+    console.error('Sync error:', e);
+    toast('Error al sincronizar: ' + e.message, false); 
+    updateDriveUI(true); 
+  }
+}
+
+async function pullFromDrive() {
+  if (!gToken || !gFolderId) { toast('Conecta primero con Google Drive', false); return; }
+  updateDriveUI('syncing');
+  try {
+    const q = encodeURIComponent("name='rentacontrol_backup.json' and '" + gFolderId + "' in parents and trashed=false");
+    const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,modifiedTime)');
+    if (!res.files || !res.files.length) { toast('No hay datos en Drive todavía', false); updateDriveUI(true); return; }
+    const r = await fetch('https://www.googleapis.com/drive/v3/files/' + res.files[0].id + '?alt=media', {
+      headers: { 'Authorization': 'Bearer ' + gToken }
+    });
+    if (!r.ok) throw new Error('Error descargando datos');
+    const driveData = await r.json();
+    D = driveData;
+    localStorage.setItem(KEY, JSON.stringify(D));
+    rDash();
+    updateDriveUI(true);
+    toast('✓ Datos actualizados desde Google Drive');
+  } catch(e) { toast('Error: ' + e.message, false); updateDriveUI(true); }
 }
 
 async function syncToSheets() {
