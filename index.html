@@ -2191,7 +2191,12 @@ async function gdriveInit() {
     else gSheetId = await gVerifySheet(gSheetId);
     localStorage.setItem('rc_gsheet_id', gSheetId);
 
-    await syncToSheets();
+    // Try to load latest data from Drive backup first
+    const loaded = await loadFromDriveIfNewer();
+    if (!loaded) {
+      // No Drive data yet or local is newer — push local to Drive
+      await syncToSheets();
+    }
     updateDriveUI(true);
     clearInterval(gAutoSyncTimer);
     gAutoSyncTimer = setInterval(() => {
@@ -2287,6 +2292,46 @@ async function gFindOrCreateSheet() {
 async function gVerifySheet(id) {
   try { await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+id+'?fields=spreadsheetId'); return id; }
   catch { return gFindOrCreateSheet(); }
+}
+
+
+// ── Load from Drive on connect ───────────────────────────────
+async function loadFromDriveIfNewer() {
+  try {
+    const q = encodeURIComponent("name='rentacontrol_backup.json' and '" + gFolderId + "' in parents and trashed=false");
+    const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,modifiedTime)');
+    if (!res.files || !res.files.length) return false; // No backup in Drive yet
+
+    const fileId = res.files[0].id;
+    const r = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', {
+      headers: { 'Authorization': 'Bearer ' + gToken }
+    });
+    if (!r.ok) return false;
+    const driveData = await r.json();
+
+    // Check if Drive has more data than local
+    const localInqs = D.inqs ? D.inqs.length : 0;
+    const driveInqs = driveData.inqs ? driveData.inqs.length : 0;
+    const localProps = D.props ? D.props.length : 0;
+    const driveProps = driveData.props ? driveData.props.length : 0;
+
+    // Use Drive data if it has more records, or if local is empty
+    const localEmpty = localProps === 0 && localInqs === 0;
+    const driveHasMore = driveProps > localProps || driveInqs > localInqs;
+
+    if (localEmpty || driveHasMore) {
+      D = driveData;
+      localStorage.setItem(KEY, JSON.stringify(D));
+      rDash(); // Refresh UI
+      console.log('Loaded data from Drive backup');
+      toast('✓ Datos cargados desde Google Drive');
+      return true;
+    }
+    return false;
+  } catch(e) {
+    console.warn('Could not load from Drive:', e);
+    return false;
+  }
 }
 
 // ── Sync ─────────────────────────────────────────────────────
