@@ -2437,20 +2437,46 @@ async function syncToSheets() {
 // ── Backup JSON to Drive ──────────────────────────────────────
 async function saveDriveBackup() {
   try {
-    const blob = new Blob([JSON.stringify(D)],{type:'application/json'});
+    const json = JSON.stringify(D);
     const fileName = 'rentacontrol_backup.json';
     const q = encodeURIComponent("name='"+fileName+"' and '"+gFolderId+"' in parents and trashed=false");
     const ex = await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)');
-    const form = new FormData();
+
     if (ex.files && ex.files.length) {
-      form.append('file', blob);
-      await fetch('https://www.googleapis.com/upload/drive/v3/files/'+ex.files[0].id+'?uploadType=multipart',{method:'PATCH',headers:{'Authorization':'Bearer '+gToken},body:form});
+      // Update existing file - use media upload only
+      const res = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files/'+ex.files[0].id+'?uploadType=media',
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': 'Bearer '+gToken,
+            'Content-Type': 'application/json'
+          },
+          body: json
+        }
+      );
+      if (!res.ok) throw new Error('PATCH failed: ' + res.status);
+      console.log('Backup updated in Drive');
     } else {
-      form.append('metadata', new Blob([JSON.stringify({name:fileName,parents:[gFolderId]})],{type:'application/json'}));
-      form.append('file', blob);
-      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{'Authorization':'Bearer '+gToken},body:form});
+      // Create new file with multipart
+      const metadata = JSON.stringify({name: fileName, parents: [gFolderId]});
+      const body = '--boundary\r\nContent-Type: application/json\r\n\r\n' + metadata +
+        '\r\n--boundary\r\nContent-Type: application/json\r\n\r\n' + json + '\r\n--boundary--';
+      const res = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer '+gToken,
+            'Content-Type': 'multipart/related; boundary=boundary'
+          },
+          body: body
+        }
+      );
+      if (!res.ok) throw new Error('POST failed: ' + res.status);
+      console.log('Backup created in Drive');
     }
-  } catch(e) { console.warn('Backup error:', e); }
+  } catch(e) { console.warn('Backup error:', e.message); }
 }
 
 // ── PDF to Drive ──────────────────────────────────────────────
