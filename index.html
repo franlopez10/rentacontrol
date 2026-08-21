@@ -955,6 +955,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
         <button class="btn btn-success" onclick="exportAll()">⬇ Exportar backup JSON local</button>
         <label class="btn btn-ghost" style="cursor:pointer;">⬆ Importar backup JSON local<input type="file" accept=".json" onchange="importData(event)" style="display:none;"></label>
         <button class="btn btn-ghost" onclick="pullFromDrive()" style="border-color:var(--gn);color:var(--gn);">☁ Restaurar desde Google Drive</button>
+        <button class="btn btn-ghost" onclick="forzarActualizacion()" style="border-color:var(--bl);color:var(--bl);">🔄 Forzar actualización de la app</button>
         <button class="btn btn-danger" onclick="clearAll()">🗑 Borrar todos los datos</button>
       </div>
     </div>
@@ -2677,12 +2678,42 @@ document.getElementById('topbar').addEventListener('click', function(e) {
 
 
 // ── SERVICE WORKER (PWA) ─────────────────────────────────────
+const APP_VERSION = '2026.05.22';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('SW registered'))
-      .catch(err => console.log('SW error:', err));
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.update();
+      // Si detecta versión nueva, recarga automáticamente
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        if (!sw) return;
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+            console.log('Nueva versión disponible, recargando...');
+            window.location.reload();
+          }
+        });
+      });
+      // Comprobar actualizaciones cada vez que se abre la app
+      setInterval(() => reg.update(), 60000);
+    }).catch(err => console.log('SW error:', err));
   });
+}
+
+// Botón de forzar actualización (por si acaso)
+async function forzarActualizacion(){
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    toast('Actualizando...');
+    setTimeout(() => window.location.reload(true), 600);
+  } catch(e) { window.location.reload(true); }
 }
 
 </script>
