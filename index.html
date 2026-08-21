@@ -555,6 +555,47 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 .login-error.show{display:block;}
 .login-loading{font-size:12px;color:var(--ink3);margin-top:16px;display:none;}
 .login-loading.show{display:block;}
+
+/* ── MÓVIL: barra superior unificada ──────────────────── */
+#mob-menu-btn{display:none;}
+@media(max-width:768px){
+  /* Barra Drive pasa a ser barra superior completa */
+  #gdrive-bar{
+    top:0;right:0;left:0;
+    border-radius:0;
+    padding:7px 10px;
+    justify-content:flex-start;
+    gap:6px;
+    max-width:100%;
+    border:none;
+    border-bottom:1px solid rgba(255,255,255,.12);
+    font-size:9px;
+  }
+  /* Botón hamburguesa dentro de la barra, a la izquierda */
+  #mob-menu-btn{
+    display:flex;align-items:center;justify-content:center;
+    width:28px;height:28px;flex-shrink:0;
+    background:rgba(255,255,255,.12);color:#fff;
+    border:none;border-radius:7px;cursor:pointer;
+    font-size:15px;line-height:1;padding:0;
+  }
+  #mob-menu-btn:active{background:rgba(255,255,255,.25);}
+  #gdrive-status{gap:4px;}
+  #gdrive-label{display:none;}
+  #gdrive-user{max-width:80px;font-size:8px;}
+  #gdrive-actions{margin-left:auto;gap:4px;}
+  .gdrive-btn{padding:4px 7px;font-size:8px;border-radius:6px;}
+  #gdrive-lastsync{display:none;}
+
+  /* Contenido baja para dejar sitio a la barra */
+  #main{padding-top:42px;}
+  #sb{top:42px;}
+  #topbar{padding:0 14px;}
+  #topbar::before{content:none;}
+
+  /* Fuera el botón flotante de antes */
+  #menu-toggle{display:none!important;}
+}
 </style>
 
 </head>
@@ -582,6 +623,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <div id="sb-overlay" onclick="closeSb()"></div>
 <button id="menu-toggle" onclick="toggleSb()">☰</button>
 <div id="gdrive-bar">
+  <button id="mob-menu-btn" onclick="toggleSb()">&#9776;</button>
   <div id="gdrive-status">
     <div id="gdrive-dot"></div>
     <span id="gdrive-label">Google Drive — No conectado</span>
@@ -717,7 +759,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- ═══════════════ PROPIEDADES ═══════════════ -->
 <section class="sec" id="sec-props">
   <div class="ph"><div class="ph-title">🏢 Propiedades</div>
-    <button class="btn btn-primary" onclick="openM('m-prop')">+ Nueva propiedad</button>
+    <button class="btn btn-primary" onclick="newProp()">+ Nueva propiedad</button>
   </div>
   <div class="g2" id="props-grid"></div>
 </section>
@@ -929,7 +971,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 <!-- PROPIEDAD -->
 <div class="modal-overlay" id="m-prop"><div class="modal">
-  <h2>🏢 Nueva Propiedad</h2>
+  <h2 id="m-prop-title">🏢 Nueva Propiedad</h2>
+  <input type="hidden" id="pr-edit-id">
   <div class="fg">
     <div class="fgrp fgf"><label>Nombre *</label><input id="pr-n" placeholder="Ej: Piso Gran Vía 1"></div>
     <div class="fgrp fgf"><label>Dirección</label><input id="pr-d" placeholder="Calle, número, piso, puerta"></div>
@@ -977,6 +1020,14 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       </div>
     </div>
     <div class="fgrp">
+      <label>🧾 Factura intermediación inmobiliaria</label>
+      <div class="pdf-upload-zone" id="pr-doc6-zone" onclick="document.getElementById('pr-doc6').click()">
+        <input type="file" id="pr-doc6" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handlePdfUpload('pr-doc6','pr-doc6-zone','pr-doc6-data')">
+        <input type="hidden" id="pr-doc6-data"><input type="hidden" id="pr-doc6-name">
+        <span class="pdf-upload-label">📎 Adjuntar factura inmobiliaria</span>
+      </div>
+    </div>
+    <div class="fgrp">
       <label>📄 Otros documentos</label>
       <div class="pdf-upload-zone" id="pr-doc5-zone" onclick="document.getElementById('pr-doc5').click()">
         <input type="file" id="pr-doc5" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handlePdfUpload('pr-doc5','pr-doc5-zone','pr-doc5-data')">
@@ -985,7 +1036,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       </div>
     </div>
   </div>
-  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-prop')">Cancelar</button><button class="btn btn-primary" onclick="addProp()">Guardar</button></div>
+  <div id="pr-docs-actuales"></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-prop')">Cancelar</button><button class="btn btn-primary" onclick="saveProp()">Guardar</button></div>
 </div></div>
 
 <!-- INQUILINO -->
@@ -1267,11 +1319,22 @@ function openPdf(dataUri, name) {
   link.click();
 }
 
+const PDF_PLACEHOLDERS = {
+  'pr-doc1-zone':'📎 Adjuntar nota simple',
+  'pr-doc2-zone':'📎 Adjuntar contrato de arras',
+  'pr-doc3-zone':'📎 Adjuntar compraventa',
+  'pr-doc4-zone':'📎 Adjuntar escritura hipoteca',
+  'pr-doc6-zone':'📎 Adjuntar factura inmobiliaria',
+  'pr-doc5-zone':'📎 Adjuntar otro documento',
+  'ga-pdf-zone':'📎 Haz clic para adjuntar PDF o imagen',
+  'pa-pdf-zone':'📎 Haz clic para adjuntar recibo o factura',
+  'co-pdf-zone':'📎 Adjuntar contrato firmado (PDF o imagen)'
+};
 function clearPdfZone(zoneId, dataId) {
   const zone = document.getElementById(zoneId);
   if (zone) {
     zone.classList.remove('has-file');
-    zone.querySelector('.pdf-upload-label').textContent = zone.getAttribute('data-placeholder') || '📎 Adjuntar archivo';
+    zone.querySelector('.pdf-upload-label').textContent = PDF_PLACEHOLDERS[zoneId] || '📎 Adjuntar archivo';
   }
   const d = document.getElementById(dataId);
   if (d) d.value = '';
@@ -1325,19 +1388,80 @@ document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click
 // ══════════════════════════════════════════════════════════════
 // PROPIEDADES
 // ══════════════════════════════════════════════════════════════
-function addProp(){
-  const nom=gi('pr-n');if(!nom){toast('Introduce el nombre',false);return;}
-  const docs={};
-  ['doc1','doc2','doc3','doc4','doc5'].forEach(d=>{
+const DOC_KEYS = ['doc1','doc2','doc3','doc4','doc6','doc5'];
+const DOC_INFO = {
+  doc1:{ico:'📋',nom:'Nota simple'},
+  doc2:{ico:'🤝',nom:'Arras'},
+  doc3:{ico:'🏠',nom:'Compraventa'},
+  doc4:{ico:'🏦',nom:'Hipoteca'},
+  doc6:{ico:'🧾',nom:'Factura inmobiliaria'},
+  doc5:{ico:'📄',nom:'Otros'}
+};
+
+function newProp(){
+  $i('pr-edit-id').value='';
+  $i('m-prop-title').textContent='🏢 Nueva Propiedad';
+  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-a','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
+  $i('pr-docs-actuales').innerHTML='';
+  openM('m-prop');
+}
+
+function editProp(id){
+  const p=D.props.find(x=>x.id==id); if(!p) return;
+  $i('pr-edit-id').value=p.id;
+  $i('m-prop-title').textContent='✏️ Editar Propiedad';
+  $i('pr-n').value=p.nom||''; $i('pr-d').value=p.dir||''; $i('pr-c').value=p.ciu||'';
+  $i('pr-cp').value=p.cp||''; $i('pr-h').value=p.habs||''; $i('pr-p').value=p.precio||'';
+  $i('pr-a').value=p.anyo||''; $i('pr-hip').value=p.hipo||''; $i('pr-cap').value=p.capital||'';
+  $i('pr-vc').value=p.vc||'';
+  DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
+  // Mostrar documentos ya guardados
+  const docs=p.docs||{};
+  const guardados=DOC_KEYS.filter(d=>docs[d]&&docs[d].data);
+  $i('pr-docs-actuales').innerHTML = guardados.length ? `
+    <div class="form-section" style="margin-top:18px;">Documentos guardados</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${guardados.map(d=>`<button class="pdf-badge green" onclick="openPdf('${docs[d].data}','${docs[d].name||DOC_INFO[d].nom+'.pdf'}')">${DOC_INFO[d].ico} ${DOC_INFO[d].nom}</button>
+      <button class="pdf-badge" onclick="borrarDocProp('${p.id}','${d}')" title="Eliminar">✕</button>`).join('')}
+    </div>
+    <div style="font-size:10px;color:var(--ink3);margin-top:8px;">Para sustituir uno, adjunta un archivo nuevo arriba en su casilla.</div>` : '';
+  openM('m-prop');
+}
+
+function borrarDocProp(pid,dkey){
+  if(!confirm('¿Eliminar este documento?'))return;
+  const p=D.props.find(x=>x.id==pid); if(!p||!p.docs)return;
+  delete p.docs[dkey];
+  saveAndSync(); rProps(); editProp(pid); toast('Documento eliminado');
+}
+
+function saveProp(){
+  const nom=gi('pr-n'); if(!nom){toast('Introduce el nombre',false);return;}
+  const editId=gi('pr-edit-id');
+  const nuevosDocs={};
+  DOC_KEYS.forEach(d=>{
     const data=$i('pr-'+d+'-data')?.value||'';
     const name=$i('pr-'+d+'-name')?.value||'';
-    if(data)docs[d]={data,name};
+    if(data) nuevosDocs[d]={data,name};
   });
-  D.props.push({id:uid(),nom,dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,precio:gn('pr-p'),anyo:gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc'),docs});
-  saveAndSync();closeM('m-prop');rProps();toast('Propiedad añadida');
+  const campos={nom,dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,
+    precio:gn('pr-p'),anyo:gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
+  if(editId){
+    const p=D.props.find(x=>x.id==editId);
+    if(p){ Object.assign(p,campos); p.docs=Object.assign({},p.docs||{},nuevosDocs); }
+    toast('Propiedad actualizada');
+  } else {
+    D.props.push(Object.assign({id:uid(),docs:nuevosDocs},campos));
+    toast('Propiedad añadida');
+  }
+  saveAndSync(); closeM('m-prop'); rProps(); rHabs();
+  $i('pr-edit-id').value='';
   ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-a','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
-  ['doc1','doc2','doc3','doc4','doc5'].forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
+  DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
+  $i('pr-docs-actuales').innerHTML='';
 }
+
 
 function rProps(){
   const g=$i('props-grid');
@@ -1358,7 +1482,7 @@ function rProps(){
         </div>
         <div style="display:flex;gap:5px;align-items:center;">
           ${incC?`<span class="badge badge-r">${incC} inc.</span>`:''}
-          <button class="btn btn-danger btn-xs" onclick="delProp('${p.id}')">🗑</button>
+          <button class="btn btn-secondary btn-xs" onclick="editProp('${p.id}')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="delProp('${p.id}')">🗑</button>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;text-align:center;">
@@ -1372,11 +1496,7 @@ function rProps(){
     ${p.docs&&Object.keys(p.docs).length?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);">
       <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px;">Documentos</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;">
-        ${p.docs.doc1?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc1.data}','${p.docs.doc1.name||'nota_simple.pdf'}')">📋 Nota simple</button>`:''}
-        ${p.docs.doc2?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc2.data}','${p.docs.doc2.name||'arras.pdf'}')">🤝 Arras</button>`:''}
-        ${p.docs.doc3?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc3.data}','${p.docs.doc3.name||'compraventa.pdf'}')">🏠 Compraventa</button>`:''}
-        ${p.docs.doc4?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc4.data}','${p.docs.doc4.name||'hipoteca.pdf'}')">🏦 Hipoteca</button>`:''}
-        ${p.docs.doc5?`<button class="pdf-badge green" onclick="openPdf('${p.docs.doc5.data}','${p.docs.doc5.name||'documento.pdf'}')">📄 Otros</button>`:''}
+        ${DOC_KEYS.filter(k=>p.docs[k]&&p.docs[k].data).map(k=>`<button class="pdf-badge green" onclick="openPdf('${p.docs[k].data}','${p.docs[k].name||DOC_INFO[k].nom+'.pdf'}')">${DOC_INFO[k].ico} ${DOC_INFO[k].nom}</button>`).join('')}
       </div>
     </div>`:''}
     </div>`;
