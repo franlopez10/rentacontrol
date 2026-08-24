@@ -2937,6 +2937,26 @@ async function pullFromDrive() {
   } catch(e) { toast('Error: ' + e.message, false); updateDriveUI(true); }
 }
 
+
+// ── Crear pestañas que falten en el Sheet ────────────────────
+async function ensureSheets(nombres){
+  try{
+    const meta = await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'?fields=sheets.properties.title');
+    const existentes = (meta.sheets||[]).map(s=>s.properties.title);
+    const faltan = nombres.filter(n=>!existentes.includes(n));
+    if(!faltan.length) return existentes;
+    console.log('Creando pestañas nuevas:', faltan);
+    await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+':batchUpdate',{
+      method:'POST',
+      body: JSON.stringify({ requests: faltan.map(t=>({addSheet:{properties:{title:t}}})) })
+    });
+    return existentes.concat(faltan);
+  }catch(e){
+    console.warn('No se pudieron crear pestañas:', e.message);
+    return null;
+  }
+}
+
 async function syncToSheets() {
   if (!gToken || !gSheetId || gSyncing) return;
   gSyncing = true;
@@ -2955,11 +2975,15 @@ async function syncToSheets() {
       {sheet:'FacturasCompra', h:['ID','Fecha','Concepto','Empresa','Categoria','PisoID','Hab','Importe','NumFactura','FormaPago','Deducible','GarantiaHasta','Notas','PDF'], rows:(D.compras||[]).map(x=>[x.id,x.fecha,x.con,x.emp,x.cat,x.propId,x.hab,x.imp,x.num,x.pago,x.ded,x.gar,x.notas,x.pdfName||''])},
       {sheet:'Anuncios', h:['ID','Titulo','PisoID','Hab','Precio','m2','Estado','GastosIncl','URL','Caracteristicas','NumFotos','Descripcion'], rows:(D.anuncios||[]).map(a=>[a.id,a.tit,a.propId,a.hab,a.precio,a.m2,a.est,a.gastos,a.url,a.carac,(a.fotos||[]).length,a.desc])},
     ];
-    const data = sheets.map(s=>({
+    // Asegurar que existen todas las pestañas
+    const disponibles = await ensureSheets(sheets.map(s=>s.sheet));
+    const activos = disponibles ? sheets.filter(s=>disponibles.includes(s.sheet)) : sheets;
+
+    const data = activos.map(s=>({
       range: s.sheet+'!A1',
       values: [s.h, ...s.rows].map(row=>row.map(c=>c===null||c===undefined?'':String(c)))
     }));
-    await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchClear',{method:'POST',body:JSON.stringify({ranges:sheets.map(s=>s.sheet+'!A:Z')})});
+    await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchClear',{method:'POST',body:JSON.stringify({ranges:activos.map(s=>s.sheet+'!A:Z')})});
     await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate',{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data:data})});
     await saveDriveBackup();
   } finally { gSyncing = false; }
