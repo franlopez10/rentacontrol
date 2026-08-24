@@ -934,12 +934,18 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   </div>
   <div class="fb">
     <div class="fi"><span class="fi-icon">🔍</span><input id="cp-q" placeholder="Buscar por concepto, empresa, nº factura..." oninput="rCompras()"></div>
-    <select id="cp-cat-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
-      <option value="">Todas categorías</option><option>Mobiliario</option><option>Electrodomésticos</option><option>Colchones y textil</option><option>Menaje</option><option>Reforma y obra</option><option>Decoración</option><option>Herramientas</option><option>Suministros</option><option>Otros</option>
+    <select id="cp-cat-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todas categorías</option></select>
+    <select id="cp-fis-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
+      <option value="">Todo tratamiento fiscal</option>
+      <option value="corriente">✅ Deducible</option>
+      <option value="no">❌ No deducible</option>
+      <option value="amort10">🪑 Amortizable 10%</option>
+      <option value="amort3">🏠 Amortizable 3%</option>
+      <option value="mejora">🏗️ Mejora</option>
     </select>
     <select id="cp-prop-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:160px;outline:none;"></select>
   </div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Empresa</th><th>Categoría</th><th>Piso / Hab.</th><th>Importe</th><th>Garantía</th><th>Ded.</th><th>Factura</th><th></th></tr></thead><tbody id="cp-tb"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Empresa</th><th>Categoría</th><th>Piso / Hab.</th><th>Importe</th><th>Garantía</th><th>Fiscal</th><th>Factura</th><th></th></tr></thead><tbody id="cp-tb"></tbody></table></div></div>
 </section>
 
 <!-- ═══════════════ ANUNCIOS IDEALISTA ═══════════════ -->
@@ -1325,7 +1331,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Fecha de compra</label><input id="cp-fecha" type="date" onchange="autoNumFactura()"></div>
     <div class="fgrp"><label>Importe total (€) *</label><input id="cp-imp" type="number" step="0.01" placeholder="459.90"></div>
     <div class="fgrp"><label>Categoría</label>
-      <select id="cp-cat"><option>Mobiliario</option><option>Electrodomésticos</option><option>Colchones y textil</option><option>Menaje</option><option>Reforma y obra</option><option>Decoración</option><option>Herramientas</option><option>Suministros</option><option>Otros</option></select>
+      <select id="cp-cat" onchange="toggleCatOtros()"><option>Mobiliario</option><option>Electrodomésticos</option><option>Colchones y textil</option><option>Menaje</option><option>Reforma y obra</option><option>Decoración</option><option>Herramientas</option><option>Suministros</option><option>Notaría y registro</option><option>Gestoría y asesoría</option><option>Comisión inmobiliaria</option><option>Impuestos compra (ITP/AJD)</option><option>Otros</option></select>
+      <input id="cp-cat-otros" placeholder="Escribe la categoría…" style="display:none;margin-top:6px;border-color:var(--acc);">
     </div>
     <div class="fgrp"><label>Propiedad</label><select id="cp-prop"></select></div>
     <div class="fgrp"><label>Habitación nº (opcional)</label><input id="cp-hab" type="number" placeholder="3"></div>
@@ -1333,7 +1340,16 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Forma de pago</label>
       <select id="cp-pago"><option>Tarjeta</option><option>Transferencia</option><option>Efectivo</option><option>Bizum</option><option>Financiado</option><option>Otro</option></select>
     </div>
-    <div class="fgrp"><label>¿Deducible IRPF?</label><select id="cp-ded"><option value="si">✅ Sí, deducible</option><option value="no">❌ No deducible</option></select></div>
+    <div class="fgrp fgf"><label>Tratamiento fiscal (IRPF)</label>
+      <select id="cp-ded" onchange="pintarAyudaFiscal()">
+        <option value="corriente">✅ Deducible (gasto corriente)</option>
+        <option value="no">❌ No deducible</option>
+        <option value="amort10">🪑 Amortizable – mobiliario y electrodomésticos (10% anual)</option>
+        <option value="amort3">🏠 Amortizable – inmueble / gasto de adquisición (≈3% anual)</option>
+        <option value="mejora">🏗️ Inversión / mejora (no deducible directa, aumenta valor)</option>
+      </select>
+      <div id="cp-ded-ayuda" style="font-size:10.5px;color:var(--ink3);line-height:1.5;margin-top:2px;"></div>
+    </div>
     <div class="fgrp"><label>Garantía hasta</label><input id="cp-gar" type="date"></div>
     <div class="fgrp fgf"><label>Notas</label><textarea id="cp-notas" rows="2" placeholder="Modelo, color, dónde está instalado, referencia..."></textarea></div>
     <div class="fgrp fgf"><label>Adjuntar factura (PDF o foto)</label>
@@ -2099,6 +2115,38 @@ function rFacturas(){
 // ══════════════════════════════════════════════════════════════
 const CP_ICONS={'Mobiliario':'🪑','Electrodomésticos':'🔌','Colchones y textil':'🛏️','Menaje':'🍽️','Reforma y obra':'🏗️','Decoración':'🖼️','Herramientas':'🔧','Suministros':'💡','Otros':'📦'};
 
+
+// ── Tratamiento fiscal ────────────────────────────────────────
+const FISCAL = {
+  corriente:{et:'Deducible',ico:'✅',col:'g',ayuda:'Se resta entero en el IRPF de este año: suministros, mantenimiento, reparaciones, comunidad, IBI, seguros, intereses de hipoteca…'},
+  no:{et:'No deducible',ico:'❌',col:'r',ayuda:'Sin ningún efecto fiscal: gastos personales, multas o cualquier cosa no ligada al alquiler.'},
+  amort10:{et:'Amortiz. 10%',ico:'🪑',col:'b',ayuda:'Muebles y electrodomésticos (camas, armarios, nevera, lavadora, vitro…). Se deducen al 10% anual, no de golpe.'},
+  amort3:{et:'Amortiz. 3%',ico:'🏠',col:'p',ayuda:'Comisión inmobiliaria, notaría, registro, gestoría, ITP. Suma al valor de compra: se amortiza al ~3% anual y reduce la plusvalía en la venta.'},
+  mejora:{et:'Mejora',ico:'🏗️',col:'y',ayuda:'Reformas que son mejora, no reparación. No se deducen como gasto, pero aumentan el valor del inmueble.'}
+};
+const CATS_FIJAS=['Mobiliario','Electrodomésticos','Colchones y textil','Menaje','Reforma y obra','Decoración','Herramientas','Suministros','Notaría y registro','Gestoría y asesoría','Comisión inmobiliaria','Impuestos compra (ITP/AJD)','Otros'];
+
+// Compatibilidad con facturas antiguas (si / no)
+function fiscalKey(v){
+  if(v==='si'||v===undefined||v==='') return 'corriente';
+  return FISCAL[v] ? v : 'no';
+}
+function fiscalBadge(v){
+  const f=FISCAL[fiscalKey(v)];
+  return `<span class="badge badge-${f.col}" title="${f.ayuda}">${f.ico} ${f.et}</span>`;
+}
+function pintarAyudaFiscal(){
+  const el=$i('cp-ded-ayuda'); if(!el)return;
+  el.textContent=FISCAL[fiscalKey($i('cp-ded').value)].ayuda;
+}
+function toggleCatOtros(){
+  const sel=$i('cp-cat'), inp=$i('cp-cat-otros');
+  if(!sel||!inp)return;
+  const esOtros = sel.value==='Otros';
+  inp.style.display = esOtros ? 'block' : 'none';
+  if(esOtros) inp.focus(); else inp.value='';
+}
+
 function newCompra(){
   $i('cp-edit-id').value='';
   $i('m-compra-title').textContent='🧾 Nueva Factura';
@@ -2109,7 +2157,8 @@ function newCompra(){
   else if(cpAnyo && cpAnyo!=='TODO' && cpAnyo!==String(new Date().getFullYear())) fd=`${cpAnyo}-01-01`;
   $i('cp-fecha').value=fd;
   $i('cp-num').value=siguienteNumFactura(fd);
-  $i('cp-cat').value='Mobiliario'; $i('cp-ded').value='si'; $i('cp-pago').value='Tarjeta';
+  $i('cp-cat').value='Mobiliario'; $i('cp-ded').value='corriente'; $i('cp-pago').value='Tarjeta';
+  $i('cp-cat-otros').value=''; toggleCatOtros(); pintarAyudaFiscal();
   clearPdfZone('cp-pdf-zone','cp-pdf-data');
   $i('cp-doc-actual').innerHTML='';
   openM('m-compra');
@@ -2131,10 +2180,15 @@ function editCompra(id){
   $i('cp-edit-id').value=x.id;
   $i('m-compra-title').textContent='✏️ Editar Factura';
   $i('cp-con').value=x.con||''; $i('cp-emp').value=x.emp||''; $i('cp-fecha').value=x.fecha||'';
-  $i('cp-imp').value=x.imp||''; $i('cp-cat').value=x.cat||'Mobiliario';
+  $i('cp-imp').value=x.imp||'';
+  // Categoría: si no está en la lista fija es personalizada
+  if(x.cat && !CATS_FIJAS.includes(x.cat)){ $i('cp-cat').value='Otros'; $i('cp-cat-otros').value=x.cat; }
+  else { $i('cp-cat').value=x.cat||'Mobiliario'; $i('cp-cat-otros').value=''; }
+  toggleCatOtros();
   $i('cp-prop').value=x.propId||''; $i('cp-hab').value=x.hab||'';
   $i('cp-num').value=x.num||''; $i('cp-pago').value=x.pago||'Tarjeta';
-  $i('cp-ded').value=x.ded||'si'; $i('cp-gar').value=x.gar||''; $i('cp-notas').value=x.notas||'';
+  $i('cp-ded').value=fiscalKey(x.ded); pintarAyudaFiscal();
+  $i('cp-gar').value=x.gar||''; $i('cp-notas').value=x.notas||'';
   clearPdfZone('cp-pdf-zone','cp-pdf-data');
   $i('cp-doc-actual').innerHTML = x.pdfData ? `<div class="form-section" style="margin-top:16px;">Factura guardada</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -2156,7 +2210,9 @@ function saveCompra(){
   const con=gi('cp-con'), emp=gi('cp-emp'), imp=gn('cp-imp');
   if(!con||!emp||!imp){toast('Completa concepto, empresa e importe',false);return;}
   const editId=gi('cp-edit-id');
-  const campos={con,emp,fecha:gi('cp-fecha'),imp,cat:$i('cp-cat').value,propId:gi('cp-prop'),
+  let cat=$i('cp-cat').value;
+  if(cat==='Otros'){ const libre=gi('cp-cat-otros'); if(libre) cat=libre; }
+  const campos={con,emp,fecha:gi('cp-fecha'),imp,cat,propId:gi('cp-prop'),
     hab:gi('cp-hab'),num:gi('cp-num'),pago:$i('cp-pago').value,ded:$i('cp-ded').value,
     gar:gi('cp-gar'),notas:gi('cp-notas')};
   const pdfData=$i('cp-pdf-data')?.value||'', pdfName=$i('cp-pdf-name')?.value||'';
@@ -2224,7 +2280,16 @@ function rCompras(){
   }
 
   // ── Filtrado ──
-  const q=gi('cp-q').toLowerCase(), catF=gi('cp-cat-f'), propF=gi('cp-prop-f');
+  // Desplegable de categorías con las personalizadas incluidas
+  const selCat=$i('cp-cat-f');
+  if(selCat){
+    const usadas=[...new Set(compras.map(x=>x.cat).filter(Boolean))].sort();
+    const todas=[...new Set([...CATS_FIJAS.filter(x=>x!=='Otros'),...usadas])];
+    const v=selCat.value;
+    selCat.innerHTML='<option value="">Todas categorías</option>'+todas.map(t=>`<option>${t}</option>`).join('');
+    selCat.value=v;
+  }
+  const q=gi('cp-q').toLowerCase(), catF=gi('cp-cat-f'), propF=gi('cp-prop-f'), fisF=gi('cp-fis-f');
   const list=compras.filter(x=>{
     const f=x.fecha||'';
     if(cpAnyo!=='TODO'){
@@ -2232,21 +2297,26 @@ function rCompras(){
       if(cpMes && f.slice(5,7)!==cpMes)return false;
     }
     if(catF&&x.cat!==catF)return false;
+    if(fisF&&fiscalKey(x.ded)!==fisF)return false;
     if(propF&&x.propId!=propF)return false;
-    if(q&&!`${x.con} ${x.emp} ${x.num} ${x.notas}`.toLowerCase().includes(q))return false;
+    if(q&&!`${x.con} ${x.emp} ${x.num} ${x.notas} ${x.cat}`.toLowerCase().includes(q))return false;
     return true;
   }).slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
 
   // ── KPIs ──
   const total=list.reduce((s,x)=>s+parseFloat(x.imp||0),0);
-  const ded=list.filter(x=>x.ded==='si').reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  const sumaFis=k=>list.filter(x=>fiscalKey(x.ded)===k).reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  const ded=sumaFis('corriente'), a10=sumaFis('amort10'), a3=sumaFis('amort3'), mej=sumaFis('mejora');
   const hoy=new Date().toISOString().split('T')[0];
   const conGar=list.filter(x=>x.gar&&x.gar>=hoy).length;
   const periodo = cpAnyo==='TODO' ? 'Histórico completo' : (cpMes ? MESES_L[parseInt(cpMes)-1]+' '+cpAnyo : 'Año '+cpAnyo);
   $i('cp-kpis').innerHTML=`
-    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">${periodo}</div><div class="kpi-value">${eur(total)}</div><div class="kpi-sub">${list.length} factura${list.length!==1?'s':''}</div></div>
-    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">Deducible IRPF</div><div class="kpi-value">${eur(ded)}</div></div>
-    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">En garantía</div><div class="kpi-value">${conGar}</div><div class="kpi-sub">productos</div></div>`;
+    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:125px;"><div class="kpi-accent"></div><div class="kpi-label">${periodo}</div><div class="kpi-value">${eur(total)}</div><div class="kpi-sub">${list.length} factura${list.length!==1?'s':''}</div></div>
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:125px;"><div class="kpi-accent"></div><div class="kpi-label">✅ Deducible</div><div class="kpi-value">${eur(ded)}</div><div class="kpi-sub">gasto corriente</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:125px;"><div class="kpi-accent"></div><div class="kpi-label">🪑 Amortiz. 10%</div><div class="kpi-value">${eur(a10)}</div><div class="kpi-sub">${eur(a10*0.10)}/año</div></div>
+    <div class="kpi" style="--kc:var(--pu);flex:1;min-width:125px;"><div class="kpi-accent"></div><div class="kpi-label">🏠 Amortiz. 3%</div><div class="kpi-value">${eur(a3)}</div><div class="kpi-sub">${eur(a3*0.03)}/año</div></div>
+    <div class="kpi" style="--kc:var(--ye);flex:1;min-width:125px;"><div class="kpi-accent"></div><div class="kpi-label">🏗️ Mejoras</div><div class="kpi-value">${eur(mej)}</div><div class="kpi-sub">suman al valor</div></div>
+    <div class="kpi" style="--kc:var(--ink2);flex:1;min-width:125px;"><div class="kpi-accent"></div><div class="kpi-label">En garantía</div><div class="kpi-value">${conGar}</div><div class="kpi-sub">productos</div></div>`;
 
   // ── Tabla ──
   const tb=$i('cp-tb');
@@ -2275,7 +2345,7 @@ function rCompras(){
       <td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:'General'}${x.hab?`<br>Hab. ${x.hab}`:''}</td>
       <td class="mono" style="font-weight:700;color:var(--acc);white-space:nowrap;">${eur(x.imp,2)}</td>
       <td style="font-size:10px;">${x.gar?(garOk?`<span class="badge badge-g">${fD(x.gar)}</span>`:`<span class="badge badge-r">Caducada</span>`):'–'}</td>
-      <td>${x.ded==='si'?'<span class="badge badge-g">✅</span>':'<span class="badge badge-r">❌</span>'}</td>
+      <td>${fiscalBadge(x.ded)}</td>
       <td>${x.pdfData?`<button class="pdf-badge green" onclick="openPdf('${x.pdfData}','${x.pdfName||'factura.pdf'}')">📄 Ver</button>`:'<span style="font-size:10px;color:var(--ink3);">–</span>'}</td>
       <td style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editCompra('${x.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCompra('${x.id}')">🗑</button></td>
     </tr>`);
@@ -3068,7 +3138,7 @@ async function syncToSheets() {
       {sheet:'Potenciales', h:['ID','Nom','URL','Precio','Alq','Habs','EBITDA','ROCE','Yield','Inv','Fecha'], rows:D.pots.map(p=>[p.id,p.nom,p.url,p.p,p.alq,p.h,p.ebitda,p.roce,p.yld,p.inv,p.fecha])},
       {sheet:'Facturas', h:['ID','Desc','PisoID','Imp','PorHab','Habs','Cobros','Fecha'], rows:D.facturas.map(f=>[f.id,f.desc,f.propId,f.imp,f.porHab,f.habs,f.cobros,f.fecha])},
       {sheet:'Agenda', h:['ID','Titulo','Fecha','Tipo','PisoID','Notas','Hecho'], rows:D.agenda.map(a=>[a.id,a.titulo,a.fecha,a.tipo,a.propId,a.notas,a.done?'SI':'NO'])},
-      {sheet:'FacturasCompra', h:['ID','Fecha','Concepto','Empresa','Categoria','PisoID','Hab','Importe','NumFactura','FormaPago','Deducible','GarantiaHasta','Notas','PDF'], rows:(D.compras||[]).map(x=>[x.id,x.fecha,x.con,x.emp,x.cat,x.propId,x.hab,x.imp,x.num,x.pago,x.ded,x.gar,x.notas,x.pdfName||''])},
+      {sheet:'FacturasCompra', h:['ID','Fecha','NumFactura','Concepto','Empresa','Categoria','PisoID','Hab','Importe','FormaPago','TratamientoFiscal','GarantiaHasta','Notas','PDF'], rows:(D.compras||[]).map(x=>[x.id,x.fecha,x.num,x.con,x.emp,x.cat,x.propId,x.hab,x.imp,x.pago,FISCAL[fiscalKey(x.ded)].et,x.gar,x.notas,x.pdfName||''])},
       {sheet:'Anuncios', h:['ID','Titulo','PisoID','Hab','Precio','m2','Estado','GastosIncl','URL','Caracteristicas','NumFotos','Descripcion'], rows:(D.anuncios||[]).map(a=>[a.id,a.tit,a.propId,a.hab,a.precio,a.m2,a.est,a.gastos,a.url,a.carac,(a.fotos||[]).length,a.desc])},
     ];
     // Asegurar que existen todas las pestañas
