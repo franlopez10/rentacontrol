@@ -657,6 +657,16 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   </div>
 
   <div class="nav-group">
+    <div class="nav-label">Archivo</div>
+    <div class="nav-item" data-s="compras" onclick="go(this)">
+      <span class="nav-icon">🧾</span> Facturas
+    </div>
+    <div class="nav-item" data-s="anuncios" onclick="go(this)">
+      <span class="nav-icon">📸</span> Anuncios Idealista
+    </div>
+  </div>
+
+  <div class="nav-group">
     <div class="nav-label">Inmuebles</div>
     <div class="nav-item" data-s="props" onclick="go(this)">
       <span class="nav-icon">🏢</span> Propiedades
@@ -889,6 +899,47 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <div id="facturas-list"></div>
     </div>
   </div>
+</section>
+
+
+<!-- ═══════════════ FACTURAS DE COMPRA ═══════════════ -->
+<section class="sec" id="sec-compras">
+  <div class="ph">
+    <div>
+      <div class="ph-title">🧾 Facturas</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Archivo de compras: muebles, electrodomésticos, reformas…</div>
+    </div>
+    <button class="btn btn-primary" onclick="newCompra()">+ Nueva factura</button>
+  </div>
+  <div id="cp-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="fb">
+    <div class="fi"><span class="fi-icon">🔍</span><input id="cp-q" placeholder="Buscar por concepto, empresa, nº factura..." oninput="rCompras()"></div>
+    <select id="cp-cat-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
+      <option value="">Todas categorías</option><option>Mobiliario</option><option>Electrodomésticos</option><option>Colchones y textil</option><option>Menaje</option><option>Reforma y obra</option><option>Decoración</option><option>Herramientas</option><option>Suministros</option><option>Otros</option>
+    </select>
+    <select id="cp-prop-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:160px;outline:none;"></select>
+    <select id="cp-anyo-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos los años</option></select>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Empresa</th><th>Categoría</th><th>Piso / Hab.</th><th>Importe</th><th>Garantía</th><th>Ded.</th><th>Factura</th><th></th></tr></thead><tbody id="cp-tb"></tbody></table></div></div>
+</section>
+
+<!-- ═══════════════ ANUNCIOS IDEALISTA ═══════════════ -->
+<section class="sec" id="sec-anuncios">
+  <div class="ph">
+    <div>
+      <div class="ph-title">📸 Anuncios Idealista</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Biblioteca de anuncios listos para publicar cuando quede una habitación libre</div>
+    </div>
+    <button class="btn btn-primary" onclick="newAnuncio()">+ Nuevo anuncio</button>
+  </div>
+  <div class="fb">
+    <div class="fi"><span class="fi-icon">🔍</span><input id="an-q" placeholder="Buscar anuncio..." oninput="rAnuncios()"></div>
+    <select id="an-prop-f" onchange="rAnuncios()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:160px;outline:none;"></select>
+    <select id="an-est-f" onchange="rAnuncios()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
+      <option value="">Todos los estados</option><option value="publicado">🟢 Publicado</option><option value="borrador">📝 Borrador</option><option value="pausado">⏸ Pausado</option>
+    </select>
+  </div>
+  <div id="an-grid" class="g2"></div>
 </section>
 
 <!-- ═══════════════ HISTÓRICO ═══════════════ -->
@@ -1244,6 +1295,78 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-ag')">Cancelar</button><button class="btn btn-primary" onclick="addAgenda()">Guardar</button></div>
 </div></div>
 
+
+<!-- MODAL FACTURA DE COMPRA -->
+<div class="modal-overlay" id="m-compra"><div class="modal modal-lg">
+  <h2 id="m-compra-title">🧾 Nueva Factura</h2>
+  <input type="hidden" id="cp-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Concepto / Descripción *</label><input id="cp-con" placeholder="Ej: 3 escritorios + 3 sillas oficina"></div>
+    <div class="fgrp"><label>Empresa / Tienda *</label><input id="cp-emp" placeholder="IKEA, Leroy Merlin, Amazon..."></div>
+    <div class="fgrp"><label>Fecha de compra</label><input id="cp-fecha" type="date"></div>
+    <div class="fgrp"><label>Importe total (€) *</label><input id="cp-imp" type="number" step="0.01" placeholder="459.90"></div>
+    <div class="fgrp"><label>Categoría</label>
+      <select id="cp-cat"><option>Mobiliario</option><option>Electrodomésticos</option><option>Colchones y textil</option><option>Menaje</option><option>Reforma y obra</option><option>Decoración</option><option>Herramientas</option><option>Suministros</option><option>Otros</option></select>
+    </div>
+    <div class="fgrp"><label>Propiedad</label><select id="cp-prop"></select></div>
+    <div class="fgrp"><label>Habitación nº (opcional)</label><input id="cp-hab" type="number" placeholder="3"></div>
+    <div class="fgrp"><label>Nº de factura / pedido</label><input id="cp-num" placeholder="FA-2024-00123"></div>
+    <div class="fgrp"><label>Forma de pago</label>
+      <select id="cp-pago"><option>Tarjeta</option><option>Transferencia</option><option>Efectivo</option><option>Bizum</option><option>Financiado</option><option>Otro</option></select>
+    </div>
+    <div class="fgrp"><label>¿Deducible IRPF?</label><select id="cp-ded"><option value="si">✅ Sí, deducible</option><option value="no">❌ No deducible</option></select></div>
+    <div class="fgrp"><label>Garantía hasta</label><input id="cp-gar" type="date"></div>
+    <div class="fgrp fgf"><label>Notas</label><textarea id="cp-notas" rows="2" placeholder="Modelo, color, dónde está instalado, referencia..."></textarea></div>
+    <div class="fgrp fgf"><label>Adjuntar factura (PDF o foto)</label>
+      <div class="pdf-upload-zone" id="cp-pdf-zone" onclick="document.getElementById('cp-pdf').click()">
+        <input type="file" id="cp-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('cp-pdf','cp-pdf-zone','cp-pdf-data')">
+        <input type="hidden" id="cp-pdf-data"><input type="hidden" id="cp-pdf-name">
+        <span class="pdf-upload-label">📎 Adjuntar factura en PDF o foto</span>
+      </div>
+    </div>
+  </div>
+  <div id="cp-doc-actual"></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-compra')">Cancelar</button><button class="btn btn-primary" onclick="saveCompra()">Guardar</button></div>
+</div></div>
+
+<!-- MODAL ANUNCIO IDEALISTA -->
+<div class="modal-overlay" id="m-anuncio"><div class="modal modal-lg">
+  <h2 id="m-anuncio-title">📸 Nuevo Anuncio</h2>
+  <input type="hidden" id="an-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Título del anuncio *</label><input id="an-tit" placeholder="Habitación luminosa en piso reformado — Alicante centro"></div>
+    <div class="fgrp"><label>Propiedad</label><select id="an-prop"></select></div>
+    <div class="fgrp"><label>Habitación nº</label><input id="an-hab" type="number" placeholder="3"></div>
+    <div class="fgrp"><label>Precio (€/mes)</label><input id="an-precio" type="number" placeholder="350"></div>
+    <div class="fgrp"><label>Estado</label>
+      <select id="an-est"><option value="borrador">📝 Borrador</option><option value="publicado">🟢 Publicado</option><option value="pausado">⏸ Pausado</option></select>
+    </div>
+    <div class="fgrp"><label>m² habitación</label><input id="an-m2" type="number" placeholder="14"></div>
+    <div class="fgrp"><label>Gastos incluidos</label>
+      <select id="an-gastos"><option value="si">✅ Sí, todo incluido</option><option value="no">❌ Aparte</option><option value="parcial">➗ Parcialmente</option></select>
+    </div>
+    <div class="fgrp fgf"><label>URL del anuncio publicado (si ya está online)</label><input id="an-url" placeholder="https://www.idealista.com/inmueble/..."></div>
+    <div class="fgrp fgf"><label>Descripción completa del anuncio *</label>
+      <textarea id="an-desc" rows="9" placeholder="Se alquila habitación amplia y luminosa en piso totalmente reformado...&#10;&#10;• Cama de 135 con colchón nuevo&#10;• Escritorio y silla de oficina&#10;• Armario empotrado&#10;• Wifi fibra 600Mb incluido&#10;&#10;Zona bien comunicada, cerca de..."></textarea>
+    </div>
+    <div class="fgrp fgf"><label>Características (separadas por comas)</label><input id="an-carac" placeholder="Exterior, Balcón, Aire acondicionado, Wifi fibra, Amueblada"></div>
+    <div class="fgrp fgf"><label>Fotos del anuncio (puedes seleccionar varias a la vez)</label>
+      <div class="pdf-upload-zone" id="an-fotos-zone" onclick="document.getElementById('an-fotos').click()">
+        <input type="file" id="an-fotos" accept="image/*" multiple style="display:none;" onchange="subirFotosAnuncio(event)">
+        <span class="pdf-upload-label">📷 Añadir fotos (JPG/PNG) — se comprimen solas</span>
+      </div>
+      <div id="an-fotos-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"></div>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-anuncio')">Cancelar</button><button class="btn btn-primary" onclick="saveAnuncio()">Guardar</button></div>
+</div></div>
+
+<!-- VISOR DE FOTO -->
+<div class="modal-overlay" id="m-foto" onclick="closeM('m-foto')"><div style="max-width:92vw;max-height:92vh;">
+  <img id="m-foto-img" style="max-width:92vw;max-height:88vh;border-radius:10px;display:block;box-shadow:0 8px 40px rgba(0,0,0,.5);">
+  <div style="text-align:center;margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="closeM('m-foto')">✕ Cerrar</button></div>
+</div></div>
+
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -1251,7 +1374,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 // ══════════════════════════════════════════════════════════════
 const KEY='rc5';
 let D=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||def();}catch{return def();}})();
-function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
+function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
+if(!D.compras)D.compras=[];
+if(!D.anuncios)D.anuncios=[];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(D));
 // ── Save + auto-sync to Drive ────────────────────────────────
 function saveAndSync() {
@@ -1329,7 +1454,8 @@ const PDF_PLACEHOLDERS = {
   'pr-doc5-zone':'📎 Adjuntar otro documento',
   'ga-pdf-zone':'📎 Haz clic para adjuntar PDF o imagen',
   'pa-pdf-zone':'📎 Haz clic para adjuntar recibo o factura',
-  'co-pdf-zone':'📎 Adjuntar contrato firmado (PDF o imagen)'
+  'co-pdf-zone':'📎 Adjuntar contrato firmado (PDF o imagen)',
+  'cp-pdf-zone':'📎 Adjuntar factura en PDF o foto'
 };
 function clearPdfZone(zoneId, dataId) {
   const zone = document.getElementById(zoneId);
@@ -1347,7 +1473,7 @@ function clearPdfZone(zoneId, dataId) {
 // ══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════
-const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,
+const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,
   activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rPagos,
   gastos:rGastos,facturas:rFacturas,hist:rHist,fiscal:rFiscal,
   informes:rInfs,incs:rIncs,provs:rProvs,cfg:rCfg};
@@ -1366,9 +1492,9 @@ function go(el){
 function populateSels(){
   const pO='<option value="">Sin asignar</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');
   const iO='<option value="">— Seleccionar —</option>'+D.inqs.map(i=>`<option value="${i.id}">${i.nom} ${i.ap} (${i.estado})</option>`).join('');
-  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=pO;});
+  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=pO;});
   ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=iO;});
-  ['ap2','pp2','gpf','hpf','hf'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
+  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
   const pmf=$i('pamf');if(pmf){const ms=[...new Set(D.pagos.map(p=>p.mes).filter(Boolean))].sort().reverse();pmf.innerHTML='<option value="">Todos los meses</option>'+ms.map(m=>`<option value="${m}">${m}</option>`).join('');}
   const fy=$i('fy');if(fy){const ys=[...new Set([...D.pagos.map(p=>p.mes?.slice(0,4)),...D.gastos.map(g=>g.fecha?.slice(0,4))].filter(Boolean))].sort().reverse();if(!ys.includes(String(new Date().getFullYear())))ys.unshift(String(new Date().getFullYear()));fy.innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');}
 }
@@ -1948,6 +2074,279 @@ function rFacturas(){
   }).join('');
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// FACTURAS DE COMPRA
+// ══════════════════════════════════════════════════════════════
+const CP_ICONS={'Mobiliario':'🪑','Electrodomésticos':'🔌','Colchones y textil':'🛏️','Menaje':'🍽️','Reforma y obra':'🏗️','Decoración':'🖼️','Herramientas':'🔧','Suministros':'💡','Otros':'📦'};
+
+function newCompra(){
+  $i('cp-edit-id').value='';
+  $i('m-compra-title').textContent='🧾 Nueva Factura';
+  ['cp-con','cp-emp','cp-imp','cp-hab','cp-num','cp-notas','cp-gar'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('cp-fecha').value=new Date().toISOString().split('T')[0];
+  $i('cp-cat').value='Mobiliario'; $i('cp-ded').value='si'; $i('cp-pago').value='Tarjeta';
+  clearPdfZone('cp-pdf-zone','cp-pdf-data');
+  $i('cp-doc-actual').innerHTML='';
+  openM('m-compra');
+}
+
+function editCompra(id){
+  const x=D.compras.find(o=>o.id==id); if(!x)return;
+  $i('cp-edit-id').value=x.id;
+  $i('m-compra-title').textContent='✏️ Editar Factura';
+  $i('cp-con').value=x.con||''; $i('cp-emp').value=x.emp||''; $i('cp-fecha').value=x.fecha||'';
+  $i('cp-imp').value=x.imp||''; $i('cp-cat').value=x.cat||'Mobiliario';
+  $i('cp-prop').value=x.propId||''; $i('cp-hab').value=x.hab||'';
+  $i('cp-num').value=x.num||''; $i('cp-pago').value=x.pago||'Tarjeta';
+  $i('cp-ded').value=x.ded||'si'; $i('cp-gar').value=x.gar||''; $i('cp-notas').value=x.notas||'';
+  clearPdfZone('cp-pdf-zone','cp-pdf-data');
+  $i('cp-doc-actual').innerHTML = x.pdfData ? `<div class="form-section" style="margin-top:16px;">Factura guardada</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="pdf-badge green" onclick="openPdf('${x.pdfData}','${x.pdfName||'factura.pdf'}')">📄 ${x.pdfName||'Ver factura'}</button>
+      <button class="pdf-badge" onclick="borrarPdfCompra('${x.id}')">✕ Eliminar</button>
+    </div>
+    <div style="font-size:10px;color:var(--ink3);margin-top:6px;">Adjunta un archivo nuevo arriba para sustituirla.</div>` : '';
+  openM('m-compra');
+}
+
+function borrarPdfCompra(id){
+  if(!confirm('¿Eliminar la factura adjunta?'))return;
+  const x=D.compras.find(o=>o.id==id); if(!x)return;
+  delete x.pdfData; delete x.pdfName;
+  saveAndSync(); rCompras(); editCompra(id); toast('Factura eliminada');
+}
+
+function saveCompra(){
+  const con=gi('cp-con'), emp=gi('cp-emp'), imp=gn('cp-imp');
+  if(!con||!emp||!imp){toast('Completa concepto, empresa e importe',false);return;}
+  const editId=gi('cp-edit-id');
+  const campos={con,emp,fecha:gi('cp-fecha'),imp,cat:$i('cp-cat').value,propId:gi('cp-prop'),
+    hab:gi('cp-hab'),num:gi('cp-num'),pago:$i('cp-pago').value,ded:$i('cp-ded').value,
+    gar:gi('cp-gar'),notas:gi('cp-notas')};
+  const pdfData=$i('cp-pdf-data')?.value||'', pdfName=$i('cp-pdf-name')?.value||'';
+  if(editId){
+    const x=D.compras.find(o=>o.id==editId);
+    if(x){ Object.assign(x,campos); if(pdfData){x.pdfData=pdfData;x.pdfName=pdfName;} }
+    toast('Factura actualizada');
+  } else {
+    D.compras.push(Object.assign({id:uid(),pdfData,pdfName},campos));
+    toast('Factura guardada');
+  }
+  saveAndSync(); closeM('m-compra'); rCompras();
+}
+
+function delCompra(id){
+  if(!confirm('¿Eliminar esta factura?'))return;
+  D.compras=D.compras.filter(o=>o.id!==id); saveAndSync(); rCompras(); toast('Eliminada');
+}
+
+function rCompras(){
+  const anyoSel=$i('cp-anyo-f');
+  if(anyoSel){
+    const anyos=[...new Set(D.compras.map(x=>x.fecha?.slice(0,4)).filter(Boolean))].sort().reverse();
+    const val=anyoSel.value;
+    anyoSel.innerHTML='<option value="">Todos los años</option>'+anyos.map(a=>`<option value="${a}">${a}</option>`).join('');
+    anyoSel.value=val;
+  }
+  const q=gi('cp-q').toLowerCase(), catF=gi('cp-cat-f'), propF=gi('cp-prop-f'), anyoF=gi('cp-anyo-f');
+  const list=D.compras.filter(x=>{
+    if(catF&&x.cat!==catF)return false;
+    if(propF&&x.propId!=propF)return false;
+    if(anyoF&&!(x.fecha||'').startsWith(anyoF))return false;
+    if(q&&!`${x.con} ${x.emp} ${x.num} ${x.notas}`.toLowerCase().includes(q))return false;
+    return true;
+  }).slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  const total=list.reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  const ded=list.filter(x=>x.ded==='si').reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  const hoy=new Date().toISOString().split('T')[0];
+  const conGar=D.compras.filter(x=>x.gar&&x.gar>=hoy).length;
+  $i('cp-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Total facturas</div><div class="kpi-value">${eur(total)}</div><div class="kpi-sub">${list.length} registros</div></div>
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Deducible IRPF</div><div class="kpi-value">${eur(ded)}</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">En garantía</div><div class="kpi-value">${conGar}</div><div class="kpi-sub">productos</div></div>`;
+
+  const tb=$i('cp-tb');
+  if(!list.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-icon">🧾</div><p>Sin facturas registradas</p></div></td></tr>';return;}
+  tb.innerHTML=list.map(x=>{
+    const pr=D.props.find(p=>p.id==x.propId);
+    const garOk=x.gar&&x.gar>=hoy;
+    return `<tr>
+      <td class="mono" style="font-size:11px;white-space:nowrap;">${x.fecha?fD(x.fecha):'–'}</td>
+      <td><div style="font-size:12px;font-weight:600;">${x.con}</div>${x.num?`<div style="font-size:10px;color:var(--ink3);">nº ${x.num}</div>`:''}${x.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${x.notas}</div>`:''}</td>
+      <td style="font-size:12px;">${x.emp}</td>
+      <td style="font-size:11px;white-space:nowrap;">${CP_ICONS[x.cat]||''} ${x.cat}</td>
+      <td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:'General'}${x.hab?`<br>Hab. ${x.hab}`:''}</td>
+      <td class="mono" style="font-weight:700;color:var(--acc);white-space:nowrap;">${eur(x.imp,2)}</td>
+      <td style="font-size:10px;">${x.gar?(garOk?`<span class="badge badge-g">${fD(x.gar)}</span>`:`<span class="badge badge-r">Caducada</span>`):'–'}</td>
+      <td>${x.ded==='si'?'<span class="badge badge-g">✅</span>':'<span class="badge badge-r">❌</span>'}</td>
+      <td>${x.pdfData?`<button class="pdf-badge green" onclick="openPdf('${x.pdfData}','${x.pdfName||'factura.pdf'}')">📄 Ver</button>`:'<span style="font-size:10px;color:var(--ink3);">–</span>'}</td>
+      <td style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editCompra('${x.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCompra('${x.id}')">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// ANUNCIOS IDEALISTA
+// ══════════════════════════════════════════════════════════════
+let _fotosTmp=[];
+
+function comprimirImagen(file,maxLado=1500,calidad=0.72){
+  return new Promise((resolve,reject)=>{
+    const fr=new FileReader();
+    fr.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let {width:w,height:h}=img;
+        if(w>maxLado||h>maxLado){ const r=Math.min(maxLado/w,maxLado/h); w=Math.round(w*r); h=Math.round(h*r); }
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(cv.toDataURL('image/jpeg',calidad));
+      };
+      img.onerror=reject; img.src=e.target.result;
+    };
+    fr.onerror=reject; fr.readAsDataURL(file);
+  });
+}
+
+async function subirFotosAnuncio(ev){
+  const files=[...ev.target.files]; if(!files.length)return;
+  const zona=$i('an-fotos-zone').querySelector('.pdf-upload-label');
+  zona.textContent='⏳ Comprimiendo fotos...';
+  for(const f of files){
+    if(!f.type.startsWith('image/'))continue;
+    try{ _fotosTmp.push(await comprimirImagen(f)); }catch(e){ console.warn('Foto no procesada',e); }
+  }
+  ev.target.value='';
+  zona.textContent='📷 Añadir más fotos';
+  pintarFotosTmp();
+}
+
+function pintarFotosTmp(){
+  const box=$i('an-fotos-preview');
+  box.innerHTML=_fotosTmp.map((f,i)=>`
+    <div style="position:relative;width:82px;height:82px;border-radius:8px;overflow:hidden;border:1px solid var(--line2);">
+      <img src="${f}" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="verFoto('${i}')">
+      <button onclick="quitarFotoTmp(${i})" style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(200,75,47,.9);color:#fff;font-size:11px;cursor:pointer;line-height:1;padding:0;">✕</button>
+      ${i===0?'<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(200,75,47,.9);color:#fff;font-size:8px;text-align:center;padding:2px;font-family:\'DM Mono\',monospace;">PORTADA</div>':''}
+    </div>`).join('');
+}
+function verFoto(i){ $i('m-foto-img').src=_fotosTmp[i]; openM('m-foto'); }
+function verFotoAnuncio(id,i){ const a=D.anuncios.find(x=>x.id==id); if(!a)return; $i('m-foto-img').src=a.fotos[i]; openM('m-foto'); }
+function quitarFotoTmp(i){ _fotosTmp.splice(i,1); pintarFotosTmp(); }
+
+function newAnuncio(){
+  $i('an-edit-id').value='';
+  $i('m-anuncio-title').textContent='📸 Nuevo Anuncio';
+  ['an-tit','an-hab','an-precio','an-m2','an-url','an-desc','an-carac'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('an-est').value='borrador'; $i('an-gastos').value='si';
+  _fotosTmp=[]; pintarFotosTmp();
+  $i('an-fotos-zone').querySelector('.pdf-upload-label').textContent='📷 Añadir fotos (JPG/PNG) — se comprimen solas';
+  openM('m-anuncio');
+}
+
+function editAnuncio(id){
+  const a=D.anuncios.find(x=>x.id==id); if(!a)return;
+  $i('an-edit-id').value=a.id;
+  $i('m-anuncio-title').textContent='✏️ Editar Anuncio';
+  $i('an-tit').value=a.tit||''; $i('an-prop').value=a.propId||''; $i('an-hab').value=a.hab||'';
+  $i('an-precio').value=a.precio||''; $i('an-est').value=a.est||'borrador';
+  $i('an-m2').value=a.m2||''; $i('an-gastos').value=a.gastos||'si';
+  $i('an-url').value=a.url||''; $i('an-desc').value=a.desc||''; $i('an-carac').value=a.carac||'';
+  _fotosTmp=[...(a.fotos||[])]; pintarFotosTmp();
+  $i('an-fotos-zone').querySelector('.pdf-upload-label').textContent='📷 Añadir más fotos';
+  openM('m-anuncio');
+}
+
+function saveAnuncio(){
+  const tit=gi('an-tit'), desc=gi('an-desc');
+  if(!tit||!desc){toast('Completa título y descripción',false);return;}
+  const editId=gi('an-edit-id');
+  const campos={tit,propId:gi('an-prop'),hab:gi('an-hab'),precio:gn('an-precio'),
+    est:$i('an-est').value,m2:gi('an-m2'),gastos:$i('an-gastos').value,
+    url:gi('an-url'),desc,carac:gi('an-carac'),fotos:[..._fotosTmp]};
+  if(editId){
+    const a=D.anuncios.find(x=>x.id==editId);
+    if(a)Object.assign(a,campos);
+    toast('Anuncio actualizado');
+  } else {
+    D.anuncios.push(Object.assign({id:uid(),fecha:new Date().toISOString().split('T')[0]},campos));
+    toast('Anuncio guardado');
+  }
+  saveAndSync(); closeM('m-anuncio'); _fotosTmp=[]; rAnuncios();
+}
+
+function delAnuncio(id){
+  if(!confirm('¿Eliminar este anuncio y sus fotos?'))return;
+  D.anuncios=D.anuncios.filter(x=>x.id!==id); saveAndSync(); rAnuncios(); toast('Eliminado');
+}
+
+function copiarAnuncio(id){
+  const a=D.anuncios.find(x=>x.id==id); if(!a)return;
+  const pr=D.props.find(p=>p.id==a.propId);
+  const txt=`${a.tit}\n${'─'.repeat(40)}\n${a.desc}\n\n`+
+    (a.carac?`Características: ${a.carac}\n`:'')+
+    (a.precio?`Precio: ${a.precio} €/mes${a.gastos==='si'?' (gastos incluidos)':a.gastos==='parcial'?' (gastos parcialmente incluidos)':' + gastos'}\n`:'')+
+    (a.m2?`Superficie habitación: ${a.m2} m²\n`:'')+
+    (pr?`Ubicación: ${pr.dir||''}${pr.ciu?', '+pr.ciu:''}\n`:'');
+  copyT(txt,'Anuncio copiado — ya puedes pegarlo en Idealista');
+}
+
+function descargarFotos(id){
+  const a=D.anuncios.find(x=>x.id==id); if(!a||!a.fotos||!a.fotos.length){toast('Este anuncio no tiene fotos',false);return;}
+  a.fotos.forEach((f,i)=>{
+    setTimeout(()=>{
+      const link=document.createElement('a');
+      link.href=f;
+      link.download=`${a.tit.replace(/[^a-z0-9]/gi,'_').slice(0,30)}_foto${i+1}.jpg`;
+      link.click();
+    }, i*350);
+  });
+  toast(`Descargando ${a.fotos.length} fotos...`);
+}
+
+function rAnuncios(){
+  const q=gi('an-q').toLowerCase(), propF=gi('an-prop-f'), estF=gi('an-est-f');
+  const list=D.anuncios.filter(a=>{
+    if(propF&&a.propId!=propF)return false;
+    if(estF&&a.est!==estF)return false;
+    if(q&&!`${a.tit} ${a.desc} ${a.carac}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const g=$i('an-grid');
+  if(!list.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📸</div><p>Sin anuncios guardados. Crea uno para tenerlo listo cuando quede una habitación libre.</p></div>';return;}
+  const estB={publicado:'<span class="badge badge-g">🟢 Publicado</span>',borrador:'<span class="badge badge-y">📝 Borrador</span>',pausado:'<span class="badge badge-b">⏸ Pausado</span>'};
+  g.innerHTML=list.map(a=>{
+    const pr=D.props.find(p=>p.id==a.propId);
+    const fotos=a.fotos||[];
+    return `<div class="card">
+      ${fotos.length?`<div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px;">
+        ${fotos.map((f,i)=>`<img src="${f}" onclick="verFotoAnuncio('${a.id}',${i})" style="height:92px;width:120px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:pointer;border:1px solid var(--line);">`).join('')}
+      </div>`:`<div style="height:92px;background:var(--bg);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:11px;margin-bottom:12px;">Sin fotos</div>`}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+        <div style="flex:1;">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;line-height:1.3;">${a.tit}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:4px;">${pr?pr.nom:'Sin piso'}${a.hab?' · Hab. '+a.hab:''}${a.m2?' · '+a.m2+' m²':''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          ${estB[a.est]||''}
+          ${a.precio?`<div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--gn);margin-top:5px;">${a.precio}€</div>`:''}
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink2);line-height:1.6;max-height:74px;overflow:hidden;white-space:pre-wrap;">${a.desc}</div>
+      ${a.carac?`<div class="tag-list">${a.carac.split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="badge badge-b">${t}</span>`).join('')}</div>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);">
+        <button class="btn btn-primary btn-sm" onclick="copiarAnuncio('${a.id}')">📋 Copiar texto</button>
+        ${fotos.length?`<button class="btn btn-secondary btn-sm" onclick="descargarFotos('${a.id}')">⬇ Fotos (${fotos.length})</button>`:''}
+        ${a.url?`<a href="${a.url}" target="_blank" class="btn btn-ghost btn-sm">🔗 Ver online</a>`:''}
+        <button class="btn btn-secondary btn-xs" onclick="editAnuncio('${a.id}')">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="delAnuncio('${a.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ══════════════════════════════════════════════════════════════
 // HISTÓRICO
 // ══════════════════════════════════════════════════════════════
@@ -2411,7 +2810,7 @@ async function gFindOrCreateSheet() {
     method:'POST',
     body: JSON.stringify({
       properties:{title:SHEET_NAME},
-      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda'].map(t=>({properties:{title:t}}))
+      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios'].map(t=>({properties:{title:t}}))
     })
   });
   try {
@@ -2486,7 +2885,7 @@ async function syncNow() {
 
     // Step 2: Merge Drive data with local (keep whichever has more records per collection)
     if (driveData) {
-      const collections = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas'];
+      const collections = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios'];
       collections.forEach(col => {
         const local = D[col] || [];
         const drive = driveData[col] || [];
@@ -2553,6 +2952,8 @@ async function syncToSheets() {
       {sheet:'Potenciales', h:['ID','Nom','URL','Precio','Alq','Habs','EBITDA','ROCE','Yield','Inv','Fecha'], rows:D.pots.map(p=>[p.id,p.nom,p.url,p.p,p.alq,p.h,p.ebitda,p.roce,p.yld,p.inv,p.fecha])},
       {sheet:'Facturas', h:['ID','Desc','PisoID','Imp','PorHab','Habs','Cobros','Fecha'], rows:D.facturas.map(f=>[f.id,f.desc,f.propId,f.imp,f.porHab,f.habs,f.cobros,f.fecha])},
       {sheet:'Agenda', h:['ID','Titulo','Fecha','Tipo','PisoID','Notas','Hecho'], rows:D.agenda.map(a=>[a.id,a.titulo,a.fecha,a.tipo,a.propId,a.notas,a.done?'SI':'NO'])},
+      {sheet:'FacturasCompra', h:['ID','Fecha','Concepto','Empresa','Categoria','PisoID','Hab','Importe','NumFactura','FormaPago','Deducible','GarantiaHasta','Notas','PDF'], rows:(D.compras||[]).map(x=>[x.id,x.fecha,x.con,x.emp,x.cat,x.propId,x.hab,x.imp,x.num,x.pago,x.ded,x.gar,x.notas,x.pdfName||''])},
+      {sheet:'Anuncios', h:['ID','Titulo','PisoID','Hab','Precio','m2','Estado','GastosIncl','URL','Caracteristicas','NumFotos','Descripcion'], rows:(D.anuncios||[]).map(a=>[a.id,a.tit,a.propId,a.hab,a.precio,a.m2,a.est,a.gastos,a.url,a.carac,(a.fotos||[]).length,a.desc])},
     ];
     const data = sheets.map(s=>({
       range: s.sheet+'!A1',
