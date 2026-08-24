@@ -596,6 +596,22 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   /* Fuera el botón flotante de antes */
   #menu-toggle{display:none!important;}
 }
+
+/* ── NAVEGADOR AÑO / MES ────────────────────────────────── */
+.periodo-nav{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow);}
+.periodo-fila{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.periodo-fila + .periodo-fila{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+.periodo-lbl{font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);width:44px;flex-shrink:0;}
+.pill{padding:6px 13px;border-radius:20px;border:1.5px solid var(--line2);background:var(--card);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--ink2);transition:.15s;white-space:nowrap;line-height:1.3;}
+.pill:hover{border-color:var(--acc);color:var(--acc);}
+.pill.on{background:var(--acc);border-color:var(--acc);color:#fff;}
+.pill .pill-sub{display:block;font-family:'DM Mono',monospace;font-size:8.5px;font-weight:400;opacity:.7;margin-top:1px;}
+.pill.vacio{opacity:.4;}
+@media(max-width:768px){
+  .periodo-fila{gap:5px;}
+  .periodo-lbl{width:100%;margin-bottom:2px;}
+  .pill{padding:5px 10px;font-size:11px;}
+}
 </style>
 
 </head>
@@ -912,13 +928,16 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <button class="btn btn-primary" onclick="newCompra()">+ Nueva factura</button>
   </div>
   <div id="cp-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="periodo-nav">
+    <div class="periodo-fila"><span class="periodo-lbl">Año</span><div id="cp-anyos" style="display:flex;gap:6px;flex-wrap:wrap;"></div></div>
+    <div class="periodo-fila"><span class="periodo-lbl">Mes</span><div id="cp-meses" style="display:flex;gap:6px;flex-wrap:wrap;"></div></div>
+  </div>
   <div class="fb">
     <div class="fi"><span class="fi-icon">🔍</span><input id="cp-q" placeholder="Buscar por concepto, empresa, nº factura..." oninput="rCompras()"></div>
     <select id="cp-cat-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
       <option value="">Todas categorías</option><option>Mobiliario</option><option>Electrodomésticos</option><option>Colchones y textil</option><option>Menaje</option><option>Reforma y obra</option><option>Decoración</option><option>Herramientas</option><option>Suministros</option><option>Otros</option>
     </select>
     <select id="cp-prop-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:160px;outline:none;"></select>
-    <select id="cp-anyo-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos los años</option></select>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Empresa</th><th>Categoría</th><th>Piso / Hab.</th><th>Importe</th><th>Garantía</th><th>Ded.</th><th>Factura</th><th></th></tr></thead><tbody id="cp-tb"></tbody></table></div></div>
 </section>
@@ -1303,14 +1322,14 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="fg">
     <div class="fgrp fgf"><label>Concepto / Descripción *</label><input id="cp-con" placeholder="Ej: 3 escritorios + 3 sillas oficina"></div>
     <div class="fgrp"><label>Empresa / Tienda *</label><input id="cp-emp" placeholder="IKEA, Leroy Merlin, Amazon..."></div>
-    <div class="fgrp"><label>Fecha de compra</label><input id="cp-fecha" type="date"></div>
+    <div class="fgrp"><label>Fecha de compra</label><input id="cp-fecha" type="date" onchange="autoNumFactura()"></div>
     <div class="fgrp"><label>Importe total (€) *</label><input id="cp-imp" type="number" step="0.01" placeholder="459.90"></div>
     <div class="fgrp"><label>Categoría</label>
       <select id="cp-cat"><option>Mobiliario</option><option>Electrodomésticos</option><option>Colchones y textil</option><option>Menaje</option><option>Reforma y obra</option><option>Decoración</option><option>Herramientas</option><option>Suministros</option><option>Otros</option></select>
     </div>
     <div class="fgrp"><label>Propiedad</label><select id="cp-prop"></select></div>
     <div class="fgrp"><label>Habitación nº (opcional)</label><input id="cp-hab" type="number" placeholder="3"></div>
-    <div class="fgrp"><label>Nº de factura / pedido</label><input id="cp-num" placeholder="FA-2024-00123"></div>
+    <div class="fgrp"><label>Nº de factura <span style="color:var(--acc);">(auto: 1/08.26)</span></label><input id="cp-num" placeholder="1/08.26"></div>
     <div class="fgrp"><label>Forma de pago</label>
       <select id="cp-pago"><option>Tarjeta</option><option>Transferencia</option><option>Efectivo</option><option>Bizum</option><option>Financiado</option><option>Otro</option></select>
     </div>
@@ -2084,11 +2103,27 @@ function newCompra(){
   $i('cp-edit-id').value='';
   $i('m-compra-title').textContent='🧾 Nueva Factura';
   ['cp-con','cp-emp','cp-imp','cp-hab','cp-num','cp-notas','cp-gar'].forEach(id=>{const e=$i(id);if(e)e.value='';});
-  $i('cp-fecha').value=new Date().toISOString().split('T')[0];
+  // Fecha por defecto: dentro del mes que estés viendo
+  let fd=new Date().toISOString().split('T')[0];
+  if(cpAnyo && cpAnyo!=='TODO' && cpMes) fd=`${cpAnyo}-${cpMes}-01`;
+  else if(cpAnyo && cpAnyo!=='TODO' && cpAnyo!==String(new Date().getFullYear())) fd=`${cpAnyo}-01-01`;
+  $i('cp-fecha').value=fd;
+  $i('cp-num').value=siguienteNumFactura(fd);
   $i('cp-cat').value='Mobiliario'; $i('cp-ded').value='si'; $i('cp-pago').value='Tarjeta';
   clearPdfZone('cp-pdf-zone','cp-pdf-data');
   $i('cp-doc-actual').innerHTML='';
   openM('m-compra');
+}
+
+
+function autoNumFactura(){
+  if(gi('cp-edit-id')) return;           // al editar no tocamos el número
+  const f=gi('cp-fecha'); if(!f) return;
+  const actual=gi('cp-num');
+  // Solo reescribe si está vacío o si tiene el formato automático
+  if(!actual || /^\d+\/\d{2}\.\d{2}$/.test(actual)){
+    $i('cp-num').value=siguienteNumFactura(f);
+  }
 }
 
 function editCompra(id){
@@ -2141,40 +2176,100 @@ function delCompra(id){
   D.compras=D.compras.filter(o=>o.id!==id); saveAndSync(); rCompras(); toast('Eliminada');
 }
 
+const MESES_N=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_L=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let cpAnyo='', cpMes='';
+
+function setCpAnyo(a){ cpAnyo=a; cpMes=''; rCompras(); }
+function setCpMes(m){ cpMes=m; rCompras(); }
+
+// Genera el nº de factura siguiente con formato N/MM.AA
+function siguienteNumFactura(fecha){
+  if(!fecha) return '';
+  const [y,m] = fecha.split('-');
+  const delMes = (D.compras||[]).filter(x=>x.fecha && x.fecha.slice(0,7)===y+'-'+m);
+  return (delMes.length+1)+'/'+m+'.'+y.slice(2);
+}
+
 function rCompras(){
-  const anyoSel=$i('cp-anyo-f');
-  if(anyoSel){
-    const anyos=[...new Set(D.compras.map(x=>x.fecha?.slice(0,4)).filter(Boolean))].sort().reverse();
-    const val=anyoSel.value;
-    anyoSel.innerHTML='<option value="">Todos los años</option>'+anyos.map(a=>`<option value="${a}">${a}</option>`).join('');
-    anyoSel.value=val;
+  const compras = D.compras||[];
+  const anyos=[...new Set(compras.map(x=>(x.fecha||'').slice(0,4)).filter(Boolean))].sort().reverse();
+
+  // Año por defecto: el más reciente con datos
+  if(cpAnyo && !anyos.includes(cpAnyo) && cpAnyo!=='TODO') cpAnyo='';
+  if(!cpAnyo) cpAnyo = anyos.length ? anyos[0] : String(new Date().getFullYear());
+
+  // ── Pestañas de año ──
+  const totalAnyo = a => compras.filter(x=>(x.fecha||'').startsWith(a)).reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  let htmlAnyos = anyos.map(a=>`<button class="pill ${cpAnyo===a?'on':''}" onclick="setCpAnyo('${a}')">${a}<span class="pill-sub">${eur(totalAnyo(a))}</span></button>`).join('');
+  htmlAnyos += `<button class="pill ${cpAnyo==='TODO'?'on':''}" onclick="setCpAnyo('TODO')">Todo<span class="pill-sub">${eur(compras.reduce((s,x)=>s+parseFloat(x.imp||0),0))}</span></button>`;
+  if(!anyos.length) htmlAnyos = `<span style="font-size:11px;color:var(--ink3);">Aún no hay facturas</span>` + htmlAnyos;
+  $i('cp-anyos').innerHTML = htmlAnyos;
+
+  // ── Pestañas de mes ──
+  const boxMeses=$i('cp-meses');
+  if(cpAnyo==='TODO'){
+    boxMeses.innerHTML='<span style="font-size:11px;color:var(--ink3);">Mostrando todos los años</span>';
+    cpMes='';
+  } else {
+    const delAnyo = compras.filter(x=>(x.fecha||'').startsWith(cpAnyo));
+    let htmlMeses = `<button class="pill ${cpMes===''?'on':''}" onclick="setCpMes('')">Todo el año<span class="pill-sub">${delAnyo.length} fact.</span></button>`;
+    htmlMeses += MESES_N.map((mn,idx)=>{
+      const mm=String(idx+1).padStart(2,'0');
+      const delMes = delAnyo.filter(x=>x.fecha.slice(5,7)===mm);
+      const tot = delMes.reduce((s,x)=>s+parseFloat(x.imp||0),0);
+      return `<button class="pill ${cpMes===mm?'on':''} ${delMes.length?'':'vacio'}" onclick="setCpMes('${mm}')">${mn}<span class="pill-sub">${delMes.length?eur(tot):'–'}</span></button>`;
+    }).join('');
+    boxMeses.innerHTML=htmlMeses;
   }
-  const q=gi('cp-q').toLowerCase(), catF=gi('cp-cat-f'), propF=gi('cp-prop-f'), anyoF=gi('cp-anyo-f');
-  const list=D.compras.filter(x=>{
+
+  // ── Filtrado ──
+  const q=gi('cp-q').toLowerCase(), catF=gi('cp-cat-f'), propF=gi('cp-prop-f');
+  const list=compras.filter(x=>{
+    const f=x.fecha||'';
+    if(cpAnyo!=='TODO'){
+      if(!f.startsWith(cpAnyo))return false;
+      if(cpMes && f.slice(5,7)!==cpMes)return false;
+    }
     if(catF&&x.cat!==catF)return false;
     if(propF&&x.propId!=propF)return false;
-    if(anyoF&&!(x.fecha||'').startsWith(anyoF))return false;
     if(q&&!`${x.con} ${x.emp} ${x.num} ${x.notas}`.toLowerCase().includes(q))return false;
     return true;
   }).slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
 
+  // ── KPIs ──
   const total=list.reduce((s,x)=>s+parseFloat(x.imp||0),0);
   const ded=list.filter(x=>x.ded==='si').reduce((s,x)=>s+parseFloat(x.imp||0),0);
   const hoy=new Date().toISOString().split('T')[0];
-  const conGar=D.compras.filter(x=>x.gar&&x.gar>=hoy).length;
+  const conGar=list.filter(x=>x.gar&&x.gar>=hoy).length;
+  const periodo = cpAnyo==='TODO' ? 'Histórico completo' : (cpMes ? MESES_L[parseInt(cpMes)-1]+' '+cpAnyo : 'Año '+cpAnyo);
   $i('cp-kpis').innerHTML=`
-    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Total facturas</div><div class="kpi-value">${eur(total)}</div><div class="kpi-sub">${list.length} registros</div></div>
-    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Deducible IRPF</div><div class="kpi-value">${eur(ded)}</div></div>
-    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">En garantía</div><div class="kpi-value">${conGar}</div><div class="kpi-sub">productos</div></div>`;
+    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">${periodo}</div><div class="kpi-value">${eur(total)}</div><div class="kpi-sub">${list.length} factura${list.length!==1?'s':''}</div></div>
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">Deducible IRPF</div><div class="kpi-value">${eur(ded)}</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">En garantía</div><div class="kpi-value">${conGar}</div><div class="kpi-sub">productos</div></div>`;
 
+  // ── Tabla ──
   const tb=$i('cp-tb');
-  if(!list.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-icon">🧾</div><p>Sin facturas registradas</p></div></td></tr>';return;}
-  tb.innerHTML=list.map(x=>{
+  if(!list.length){
+    tb.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="empty-icon">🧾</div><p>Sin facturas en ${periodo.toLowerCase()}</p></div></td></tr>`;
+    return;
+  }
+  let mesActual='';
+  const filas=[];
+  list.forEach(x=>{
+    const mm=(x.fecha||'').slice(0,7);
+    // Cabecera de mes cuando se ven varios meses juntos
+    if(!cpMes && mm && mm!==mesActual){
+      mesActual=mm;
+      const [yy,m2]=mm.split('-');
+      const tm=list.filter(o=>(o.fecha||'').slice(0,7)===mm).reduce((s,o)=>s+parseFloat(o.imp||0),0);
+      filas.push(`<tr style="background:var(--bg2);"><td colspan="10" style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink2);font-weight:600;">${MESES_L[parseInt(m2)-1]} ${yy} · ${eur(tm)}</td></tr>`);
+    }
     const pr=D.props.find(p=>p.id==x.propId);
     const garOk=x.gar&&x.gar>=hoy;
-    return `<tr>
+    filas.push(`<tr>
       <td class="mono" style="font-size:11px;white-space:nowrap;">${x.fecha?fD(x.fecha):'–'}</td>
-      <td><div style="font-size:12px;font-weight:600;">${x.con}</div>${x.num?`<div style="font-size:10px;color:var(--ink3);">nº ${x.num}</div>`:''}${x.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${x.notas}</div>`:''}</td>
+      <td><div style="font-size:12px;font-weight:600;">${x.con}</div>${x.num?`<div class="mono" style="font-size:10px;color:var(--acc);font-weight:600;">${x.num}</div>`:''}${x.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${x.notas}</div>`:''}</td>
       <td style="font-size:12px;">${x.emp}</td>
       <td style="font-size:11px;white-space:nowrap;">${CP_ICONS[x.cat]||''} ${x.cat}</td>
       <td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:'General'}${x.hab?`<br>Hab. ${x.hab}`:''}</td>
@@ -2183,8 +2278,9 @@ function rCompras(){
       <td>${x.ded==='si'?'<span class="badge badge-g">✅</span>':'<span class="badge badge-r">❌</span>'}</td>
       <td>${x.pdfData?`<button class="pdf-badge green" onclick="openPdf('${x.pdfData}','${x.pdfName||'factura.pdf'}')">📄 Ver</button>`:'<span style="font-size:10px;color:var(--ink3);">–</span>'}</td>
       <td style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editCompra('${x.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCompra('${x.id}')">🗑</button></td>
-    </tr>`;
-  }).join('');
+    </tr>`);
+  });
+  tb.innerHTML=filas.join('');
 }
 
 // ══════════════════════════════════════════════════════════════
