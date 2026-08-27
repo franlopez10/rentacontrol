@@ -697,6 +697,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
   <div class="nav-group">
     <div class="nav-label">Personas</div>
+    <div class="nav-item" data-s="propietarios" onclick="go(this)">
+      <span class="nav-icon">👑</span> Propietarios
+    </div>
     <div class="nav-item" data-s="activos" onclick="go(this)">
       <span class="nav-icon">🟢</span> Inquilinos Activos
     </div>
@@ -943,9 +946,10 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <option value="amort3">🏠 Amortizable 3%</option>
       <option value="mejora">🏗️ Mejora</option>
     </select>
+    <select id="cp-owner-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:150px;outline:none;"></select>
     <select id="cp-prop-f" onchange="rCompras()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:160px;outline:none;"></select>
   </div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Empresa</th><th>Categoría</th><th>Piso / Hab.</th><th>Importe</th><th>Garantía</th><th>Fiscal</th><th>Factura</th><th></th></tr></thead><tbody id="cp-tb"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Empresa</th><th>Categoría</th><th>Propietario</th><th>Piso / Hab.</th><th>Importe</th><th>Garantía</th><th>Fiscal</th><th>Factura</th><th></th></tr></thead><tbody id="cp-tb"></tbody></table></div></div>
 </section>
 
 <!-- ═══════════════ ANUNCIOS IDEALISTA ═══════════════ -->
@@ -967,6 +971,19 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div id="an-grid" class="g2"></div>
 </section>
 
+
+<!-- ═══════════════ PROPIETARIOS ═══════════════ -->
+<section class="sec" id="sec-propietarios">
+  <div class="ph">
+    <div>
+      <div class="ph-title">👑 Propietarios</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Cada propiedad y cada factura se asigna a un propietario para separar la fiscalidad</div>
+    </div>
+    <button class="btn btn-primary" onclick="newPropietario()">+ Nuevo propietario</button>
+  </div>
+  <div class="g2" id="pt-grid"></div>
+</section>
+
 <!-- ═══════════════ HISTÓRICO ═══════════════ -->
 <section class="sec" id="sec-hist">
   <div class="ph"><div class="ph-title">📆 Histórico Mensual</div></div>
@@ -980,8 +997,13 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- ═══════════════ FISCAL ═══════════════ -->
 <section class="sec" id="sec-fiscal">
   <div class="ph"><div class="ph-title">💶 Fiscal / IRPF</div>
-    <select id="fy" onchange="rFiscal()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"></select>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <select id="fi-owner" onchange="rFiscal()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:170px;"></select>
+      <select id="fy" onchange="rFiscal()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"></select>
+    </div>
   </div>
+  <div id="fi-owner-tabs" class="periodo-nav" style="margin-bottom:16px;"></div>
+  <div id="fi-amort" class="mb"></div>
   <div class="g2 mb"><div class="card" id="fi-res"></div><div class="card" id="fi-ded"></div></div>
   <div class="card mb"><div class="card-title">Tabla mensual</div><div class="tbl-wrap"><table><thead><tr><th>Mes</th><th>Ingresos</th><th>Gastos deducibles</th><th>Hipoteca</th><th>Amortización</th><th>Resultado neto</th><th>Acumulado</th></tr></thead><tbody id="fi-tb"></tbody></table></div></div>
   <div class="card"><div class="card-title">⚠️ Nota fiscal</div><p style="font-size:12px;color:var(--ink3);line-height:1.7;">Los ingresos tributan como <strong style="color:var(--ink);">Rendimiento de Capital Inmobiliario</strong>. Deducibles: intereses de hipoteca, IBI, seguros, reparaciones, gestoría y amortización (3% del valor de construcción, sin suelo). La reducción del 60% por vivienda habitual puede <strong style="color:var(--ye);">no aplicar al alquiler por habitaciones</strong>. Consulta siempre con tu asesor fiscal.</p></div>
@@ -1052,6 +1074,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <input type="hidden" id="pr-edit-id">
   <div class="fg">
     <div class="fgrp fgf"><label>Nombre *</label><input id="pr-n" placeholder="Ej: Piso Gran Vía 1"></div>
+    <div class="fgrp fgf"><label>Propietario</label><select id="pr-owner"></select></div>
     <div class="fgrp fgf"><label>Dirección</label><input id="pr-d" placeholder="Calle, número, piso, puerta"></div>
     <div class="fgrp"><label>Ciudad</label><input id="pr-c" placeholder="Alicante"></div>
     <div class="fgrp"><label>Código postal</label><input id="pr-cp" placeholder="03001"></div>
@@ -1334,7 +1357,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <select id="cp-cat" onchange="toggleCatOtros()"><option>Mobiliario</option><option>Electrodomésticos</option><option>Colchones y textil</option><option>Menaje</option><option>Reforma y obra</option><option>Decoración</option><option>Herramientas</option><option>Suministros</option><option>Notaría y registro</option><option>Gestoría y asesoría</option><option>Comisión inmobiliaria</option><option>Impuestos compra (ITP/AJD)</option><option>Otros</option></select>
       <input id="cp-cat-otros" placeholder="Escribe la categoría…" style="display:none;margin-top:6px;border-color:var(--acc);">
     </div>
-    <div class="fgrp"><label>Propiedad</label><select id="cp-prop"></select></div>
+    <div class="fgrp"><label>Propietario *</label><select id="cp-owner"></select></div>
+    <div class="fgrp"><label>Propiedad</label><select id="cp-prop" onchange="autoOwnerFactura()"></select></div>
     <div class="fgrp"><label>Habitación nº (opcional)</label><input id="cp-hab" type="number" placeholder="3"></div>
     <div class="fgrp"><label>Nº de factura <span style="color:var(--acc);">(auto: 1/08.26)</span></label><input id="cp-num" placeholder="1/08.26"></div>
     <div class="fgrp"><label>Forma de pago</label>
@@ -1402,6 +1426,26 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div style="text-align:center;margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="closeM('m-foto')">✕ Cerrar</button></div>
 </div></div>
 
+
+<!-- MODAL PROPIETARIO -->
+<div class="modal-overlay" id="m-propietario"><div class="modal">
+  <h2 id="m-pt-title">👑 Nuevo Propietario</h2>
+  <input type="hidden" id="pt-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Nombre completo *</label><input id="pt-nom" placeholder="Ej: Manuela Francés Francés"></div>
+    <div class="fgrp"><label>Alias corto</label><input id="pt-alias" placeholder="Mamá, Yo, Suegra..."></div>
+    <div class="fgrp"><label>DNI / NIE</label><input id="pt-dni" placeholder="12345678A"></div>
+    <div class="fgrp"><label>Parentesco / relación</label>
+      <select id="pt-rel"><option>Yo mismo</option><option>Madre</option><option>Padre</option><option>Pareja</option><option>Suegra</option><option>Suegro</option><option>Hermano/a</option><option>Cuñado/a</option><option>Sociedad</option><option>Otro</option></select>
+    </div>
+    <div class="fgrp"><label>% IRPF estimado</label><input id="pt-irpf" type="number" placeholder="24"></div>
+    <div class="fgrp"><label>Email</label><input id="pt-email" placeholder="email@ejemplo.com"></div>
+    <div class="fgrp"><label>Teléfono</label><input id="pt-tel" placeholder="600 000 000"></div>
+    <div class="fgrp fgf"><label>Notas</label><textarea id="pt-notas" rows="2" placeholder="Gestoría que lleva su declaración, particularidades..."></textarea></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-propietario')">Cancelar</button><button class="btn btn-primary" onclick="savePropietario()">Guardar</button></div>
+</div></div>
+
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -1409,8 +1453,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 // ══════════════════════════════════════════════════════════════
 const KEY='rc5';
 let D=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||def();}catch{return def();}})();
-function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
+function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
 if(!D.compras)D.compras=[];
+if(!D.propietarios)D.propietarios=[];
 if(!D.anuncios)D.anuncios=[];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(D));
 // ── Save + auto-sync to Drive ────────────────────────────────
@@ -1508,7 +1553,7 @@ function clearPdfZone(zoneId, dataId) {
 // ══════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════
-const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,
+const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,propietarios:rPropietarios,
   activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rPagos,
   gastos:rGastos,facturas:rFacturas,hist:rHist,fiscal:rFiscal,
   informes:rInfs,incs:rIncs,provs:rProvs,cfg:rCfg};
@@ -1527,11 +1572,16 @@ function go(el){
 function populateSels(){
   const pO='<option value="">Sin asignar</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');
   const iO='<option value="">— Seleccionar —</option>'+D.inqs.map(i=>`<option value="${i.id}">${i.nom} ${i.ap} (${i.estado})</option>`).join('');
-  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=pO;});
+  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
+  // Selectores de propietario
+  const oO='<option value="">— Sin asignar —</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
+  ['pr-owner','cp-owner'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oO;e.value=v;}});
+  const oF='<option value="">Todos los propietarios</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
+  ['cp-owner-f','fi-owner'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oF;e.value=v;}});
   ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=iO;});
   ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
   const pmf=$i('pamf');if(pmf){const ms=[...new Set(D.pagos.map(p=>p.mes).filter(Boolean))].sort().reverse();pmf.innerHTML='<option value="">Todos los meses</option>'+ms.map(m=>`<option value="${m}">${m}</option>`).join('');}
-  const fy=$i('fy');if(fy){const ys=[...new Set([...D.pagos.map(p=>p.mes?.slice(0,4)),...D.gastos.map(g=>g.fecha?.slice(0,4))].filter(Boolean))].sort().reverse();if(!ys.includes(String(new Date().getFullYear())))ys.unshift(String(new Date().getFullYear()));fy.innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');}
+  const fy=$i('fy');if(fy){const ys=[...new Set([...D.pagos.map(p=>p.mes?.slice(0,4)),...D.gastos.map(g=>g.fecha?.slice(0,4)),...(D.compras||[]).map(x=>x.fecha?.slice(0,4))].filter(Boolean))].sort().reverse();if(!ys.includes(String(new Date().getFullYear())))ys.unshift(String(new Date().getFullYear()));fy.innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');}
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1566,6 +1616,7 @@ function newProp(){
   ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-a','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   $i('pr-docs-actuales').innerHTML='';
+  $i('pr-owner').value='';
   openM('m-prop');
 }
 
@@ -1576,7 +1627,7 @@ function editProp(id){
   $i('pr-n').value=p.nom||''; $i('pr-d').value=p.dir||''; $i('pr-c').value=p.ciu||'';
   $i('pr-cp').value=p.cp||''; $i('pr-h').value=p.habs||''; $i('pr-p').value=p.precio||'';
   $i('pr-a').value=p.anyo||''; $i('pr-hip').value=p.hipo||''; $i('pr-cap').value=p.capital||'';
-  $i('pr-vc').value=p.vc||'';
+  $i('pr-vc').value=p.vc||''; $i('pr-owner').value=p.ownerId||'';
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   // Mostrar documentos ya guardados
   const docs=p.docs||{};
@@ -1607,7 +1658,7 @@ function saveProp(){
     const name=$i('pr-'+d+'-name')?.value||'';
     if(data) nuevosDocs[d]={data,name};
   });
-  const campos={nom,dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,
+  const campos={nom,ownerId:gi('pr-owner'),dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,
     precio:gn('pr-p'),anyo:gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
   if(editId){
     const p=D.props.find(x=>x.id==editId);
@@ -1641,6 +1692,7 @@ function rProps(){
         <div>
           <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">${p.nom}</div>
           <div style="font-size:11px;color:var(--ink3);margin-top:2px;">${p.dir||''}${p.ciu?', '+p.ciu:''}</div>
+          ${p.ownerId?`<div style="margin-top:5px;"><span class="badge badge-p">👑 ${ownerNom(p.ownerId)}</span></div>`:''}
         </div>
         <div style="display:flex;gap:5px;align-items:center;">
           ${incC?`<span class="badge badge-r">${incC} inc.</span>`:''}
@@ -2110,6 +2162,108 @@ function rFacturas(){
 }
 
 
+
+// ══════════════════════════════════════════════════════════════
+// PROPIETARIOS
+// ══════════════════════════════════════════════════════════════
+function ownerNom(id){
+  const o=(D.propietarios||[]).find(x=>x.id==id);
+  return o ? (o.alias||o.nom) : 'Sin asignar';
+}
+function ownerDe(obj){
+  // Propietario efectivo: el suyo propio, o el de su propiedad
+  if(obj.ownerId) return obj.ownerId;
+  if(obj.propId){ const p=D.props.find(x=>x.id==obj.propId); if(p&&p.ownerId) return p.ownerId; }
+  return '';
+}
+function autoOwnerFactura(){
+  const pid=gi('cp-prop'); if(!pid) return;
+  const p=D.props.find(x=>x.id==pid);
+  if(p&&p.ownerId) $i('cp-owner').value=p.ownerId;
+}
+
+function newPropietario(){
+  $i('pt-edit-id').value='';
+  $i('m-pt-title').textContent='👑 Nuevo Propietario';
+  ['pt-nom','pt-alias','pt-dni','pt-email','pt-tel','pt-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('pt-rel').value='Yo mismo'; $i('pt-irpf').value=D.cfg.irpf||24;
+  openM('m-propietario');
+}
+function editPropietario(id){
+  const o=D.propietarios.find(x=>x.id==id); if(!o)return;
+  $i('pt-edit-id').value=o.id;
+  $i('m-pt-title').textContent='✏️ Editar Propietario';
+  $i('pt-nom').value=o.nom||''; $i('pt-alias').value=o.alias||''; $i('pt-dni').value=o.dni||'';
+  $i('pt-rel').value=o.rel||'Otro'; $i('pt-irpf').value=o.irpf||24;
+  $i('pt-email').value=o.email||''; $i('pt-tel').value=o.tel||''; $i('pt-notas').value=o.notas||'';
+  openM('m-propietario');
+}
+function savePropietario(){
+  const nom=gi('pt-nom'); if(!nom){toast('Introduce el nombre',false);return;}
+  const editId=gi('pt-edit-id');
+  const campos={nom,alias:gi('pt-alias'),dni:gi('pt-dni'),rel:$i('pt-rel').value,
+    irpf:gn('pt-irpf')||24,email:gi('pt-email'),tel:gi('pt-tel'),notas:gi('pt-notas')};
+  if(editId){ const o=D.propietarios.find(x=>x.id==editId); if(o)Object.assign(o,campos); toast('Propietario actualizado'); }
+  else { D.propietarios.push(Object.assign({id:uid()},campos)); toast('Propietario añadido'); }
+  saveAndSync(); closeM('m-propietario'); populateSels(); rPropietarios();
+}
+function delPropietario(id){
+  const nProps=D.props.filter(p=>p.ownerId==id).length;
+  const nFact=(D.compras||[]).filter(x=>x.ownerId==id).length;
+  if(nProps||nFact){ if(!confirm(`Este propietario tiene ${nProps} propiedad(es) y ${nFact} factura(s). Se quedarán sin asignar. ¿Continuar?`))return; }
+  else if(!confirm('¿Eliminar propietario?'))return;
+  D.props.forEach(p=>{if(p.ownerId==id)p.ownerId='';});
+  (D.compras||[]).forEach(x=>{if(x.ownerId==id)x.ownerId='';});
+  D.propietarios=D.propietarios.filter(x=>x.id!==id);
+  saveAndSync(); populateSels(); rPropietarios(); toast('Eliminado');
+}
+
+function rPropietarios(){
+  const g=$i('pt-grid');
+  const lista=D.propietarios||[];
+  if(!lista.length){
+    g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">👑</div><p>Añade los propietarios (tú, tu madre, tu pareja…) para separar la fiscalidad de cada uno</p></div>';
+    return;
+  }
+  g.innerHTML=lista.map(o=>{
+    const props=D.props.filter(p=>p.ownerId==o.id);
+    const habs=props.reduce((s,p)=>s+(p.habs||0),0);
+    const inqs=D.inqs.filter(i=>i.estado==='ACTIVO'&&props.some(p=>p.id==i.propId));
+    const renta=inqs.reduce((s,i)=>s+parseFloat(i.alq||0),0);
+    const facts=(D.compras||[]).filter(x=>ownerDe(x)==o.id);
+    const totalFact=facts.reduce((s,x)=>s+parseFloat(x.imp||0),0);
+    const valor=props.reduce((s,p)=>s+parseFloat(p.precio||0),0);
+    const ini=(o.alias||o.nom||'?').trim()[0].toUpperCase();
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div class="profile-avatar" style="width:44px;height:44px;font-size:17px;">${ini}</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${o.nom}</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:2px;">${o.rel||''}${o.alias?' · "'+o.alias+'"':''}${o.dni?' · '+o.dni:''}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;">
+          <button class="btn btn-secondary btn-xs" onclick="editPropietario('${o.id}')">✏️</button>
+          <button class="btn btn-danger btn-xs" onclick="delPropietario('${o.id}')">🗑</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;">
+        <div><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--acc);">${props.length}</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-top:2px;">Pisos</div></div>
+        <div><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--bl);">${habs}</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-top:2px;">Habs</div></div>
+        <div><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--gn);">${renta}€</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-top:2px;">Renta/mes</div></div>
+        <div><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--pu);">${facts.length}</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-top:2px;">Facturas</div></div>
+      </div>
+      ${props.length?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px;">Sus propiedades</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">${props.map(p=>`<span class="badge badge-b">${p.nom}</span>`).join('')}</div>
+      </div>`:''}
+      <div style="margin-top:10px;font-size:11px;color:var(--ink3);">Cartera: <strong style="color:var(--ink2);">${eur(valor)}</strong> · Facturado: <strong style="color:var(--ink2);">${eur(totalFact)}</strong> · IRPF ${o.irpf||24}%</div>
+      ${o.notas?`<div style="font-size:10px;color:var(--ink3);margin-top:6px;font-style:italic;">${o.notas}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
 // ══════════════════════════════════════════════════════════════
 // FACTURAS DE COMPRA
 // ══════════════════════════════════════════════════════════════
@@ -2158,7 +2312,7 @@ function newCompra(){
   $i('cp-fecha').value=fd;
   $i('cp-num').value=siguienteNumFactura(fd);
   $i('cp-cat').value='Mobiliario'; $i('cp-ded').value='corriente'; $i('cp-pago').value='Tarjeta';
-  $i('cp-cat-otros').value=''; toggleCatOtros(); pintarAyudaFiscal();
+  $i('cp-cat-otros').value=''; toggleCatOtros(); pintarAyudaFiscal(); $i('cp-owner').value='';
   clearPdfZone('cp-pdf-zone','cp-pdf-data');
   $i('cp-doc-actual').innerHTML='';
   openM('m-compra');
@@ -2185,7 +2339,7 @@ function editCompra(id){
   if(x.cat && !CATS_FIJAS.includes(x.cat)){ $i('cp-cat').value='Otros'; $i('cp-cat-otros').value=x.cat; }
   else { $i('cp-cat').value=x.cat||'Mobiliario'; $i('cp-cat-otros').value=''; }
   toggleCatOtros();
-  $i('cp-prop').value=x.propId||''; $i('cp-hab').value=x.hab||'';
+  $i('cp-prop').value=x.propId||''; $i('cp-owner').value=x.ownerId||''; $i('cp-hab').value=x.hab||'';
   $i('cp-num').value=x.num||''; $i('cp-pago').value=x.pago||'Tarjeta';
   $i('cp-ded').value=fiscalKey(x.ded); pintarAyudaFiscal();
   $i('cp-gar').value=x.gar||''; $i('cp-notas').value=x.notas||'';
@@ -2212,7 +2366,7 @@ function saveCompra(){
   const editId=gi('cp-edit-id');
   let cat=$i('cp-cat').value;
   if(cat==='Otros'){ const libre=gi('cp-cat-otros'); if(libre) cat=libre; }
-  const campos={con,emp,fecha:gi('cp-fecha'),imp,cat,propId:gi('cp-prop'),
+  const campos={con,emp,fecha:gi('cp-fecha'),imp,cat,ownerId:gi('cp-owner'),propId:gi('cp-prop'),
     hab:gi('cp-hab'),num:gi('cp-num'),pago:$i('cp-pago').value,ded:$i('cp-ded').value,
     gar:gi('cp-gar'),notas:gi('cp-notas')};
   const pdfData=$i('cp-pdf-data')?.value||'', pdfName=$i('cp-pdf-name')?.value||'';
@@ -2289,7 +2443,7 @@ function rCompras(){
     selCat.innerHTML='<option value="">Todas categorías</option>'+todas.map(t=>`<option>${t}</option>`).join('');
     selCat.value=v;
   }
-  const q=gi('cp-q').toLowerCase(), catF=gi('cp-cat-f'), propF=gi('cp-prop-f'), fisF=gi('cp-fis-f');
+  const q=gi('cp-q').toLowerCase(), catF=gi('cp-cat-f'), propF=gi('cp-prop-f'), fisF=gi('cp-fis-f'), ownF=gi('cp-owner-f');
   const list=compras.filter(x=>{
     const f=x.fecha||'';
     if(cpAnyo!=='TODO'){
@@ -2298,6 +2452,7 @@ function rCompras(){
     }
     if(catF&&x.cat!==catF)return false;
     if(fisF&&fiscalKey(x.ded)!==fisF)return false;
+    if(ownF&&ownerDe(x)!=ownF)return false;
     if(propF&&x.propId!=propF)return false;
     if(q&&!`${x.con} ${x.emp} ${x.num} ${x.notas} ${x.cat}`.toLowerCase().includes(q))return false;
     return true;
@@ -2321,7 +2476,7 @@ function rCompras(){
   // ── Tabla ──
   const tb=$i('cp-tb');
   if(!list.length){
-    tb.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="empty-icon">🧾</div><p>Sin facturas en ${periodo.toLowerCase()}</p></div></td></tr>`;
+    tb.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="empty-icon">🧾</div><p>Sin facturas en ${periodo.toLowerCase()}</p></div></td></tr>`;
     return;
   }
   let mesActual='';
@@ -2333,7 +2488,7 @@ function rCompras(){
       mesActual=mm;
       const [yy,m2]=mm.split('-');
       const tm=list.filter(o=>(o.fecha||'').slice(0,7)===mm).reduce((s,o)=>s+parseFloat(o.imp||0),0);
-      filas.push(`<tr style="background:var(--bg2);"><td colspan="10" style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink2);font-weight:600;">${MESES_L[parseInt(m2)-1]} ${yy} · ${eur(tm)}</td></tr>`);
+      filas.push(`<tr style="background:var(--bg2);"><td colspan="11" style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink2);font-weight:600;">${MESES_L[parseInt(m2)-1]} ${yy} · ${eur(tm)}</td></tr>`);
     }
     const pr=D.props.find(p=>p.id==x.propId);
     const garOk=x.gar&&x.gar>=hoy;
@@ -2342,7 +2497,8 @@ function rCompras(){
       <td><div style="font-size:12px;font-weight:600;">${x.con}</div>${x.num?`<div class="mono" style="font-size:10px;color:var(--acc);font-weight:600;">${x.num}</div>`:''}${x.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${x.notas}</div>`:''}</td>
       <td style="font-size:12px;">${x.emp}</td>
       <td style="font-size:11px;white-space:nowrap;">${CP_ICONS[x.cat]||''} ${x.cat}</td>
-      <td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:'General'}${x.hab?`<br>Hab. ${x.hab}`:''}</td>
+      <td style="font-size:11px;"><span class="badge badge-p">${ownerNom(ownerDe(x))}</span></td>
+      <td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:'Varios / general'}${x.hab?`<br>Hab. ${x.hab}`:''}</td>
       <td class="mono" style="font-weight:700;color:var(--acc);white-space:nowrap;">${eur(x.imp,2)}</td>
       <td style="font-size:10px;">${x.gar?(garOk?`<span class="badge badge-g">${fD(x.gar)}</span>`:`<span class="badge badge-r">Caducada</span>`):'–'}</td>
       <td>${fiscalBadge(x.ded)}</td>
@@ -2540,31 +2696,111 @@ function rHist(){
 // ══════════════════════════════════════════════════════════════
 function rFiscal(){
   const anyo=$i('fy')?.value||String(new Date().getFullYear());
-  const irpf=parseFloat(D.cfg.irpf)||24,amPct=parseFloat(D.cfg.amorti)||3;
-  const amAnual=D.props.reduce((s,p)=>s+(parseFloat(p.vc||0)*amPct/100),0),amMes=amAnual/12;
+  const ownF=gi('fi-owner');
+
+  // ── Pestañas de propietario con su rendimiento ──
+  const owners=D.propietarios||[];
+  $i('fi-owner-tabs').innerHTML = owners.length ? `
+    <div class="periodo-fila"><span class="periodo-lbl">Dueño</span><div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="pill ${!ownF?'on':''}" onclick="setFiOwner('')">Todos<span class="pill-sub">conjunto</span></button>
+      ${owners.map(o=>`<button class="pill ${ownF==o.id?'on':''}" onclick="setFiOwner('${o.id}')">${o.alias||o.nom}<span class="pill-sub">${D.props.filter(p=>p.ownerId==o.id).length} pisos</span></button>`).join('')}
+    </div></div>` : '<div style="font-size:11.5px;color:var(--ink3);">Añade propietarios en la sección 👑 Propietarios para ver la fiscalidad separada por persona.</div>';
+
+  // ── Conjuntos filtrados por propietario ──
+  const propsOwner = ownF ? D.props.filter(p=>p.ownerId==ownF) : D.props;
+  const idsProps = propsOwner.map(p=>p.id);
+  const perteneceProp = pid => !ownF || idsProps.includes(pid);
+  const inqsOwner = D.inqs.filter(i=>perteneceProp(i.propId));
+  const idsInqs = inqsOwner.map(i=>i.id);
+  const pagosOwner = D.pagos.filter(p=>!ownF || idsInqs.includes(p.inqId));
+  const gastosOwner = D.gastos.filter(g=>!ownF || (g.propId ? idsProps.includes(g.propId) : false));
+  const comprasOwner = (D.compras||[]).filter(x=>!ownF || ownerDe(x)==ownF);
+
+  // ── Tipo de IRPF ──
+  let irpf=parseFloat(D.cfg.irpf)||24;
+  if(ownF){ const o=owners.find(x=>x.id==ownF); if(o&&o.irpf) irpf=parseFloat(o.irpf); }
+  const amPct=parseFloat(D.cfg.amorti)||3;
+
+  // ── Amortizaciones anuales ──
+  const amInmueble = propsOwner.reduce((s,p)=>s+(parseFloat(p.vc||0)*amPct/100),0);
+  const compraAnyo = x => (x.fecha||'')<=anyo+'-12-31';   // ya adquirido a fin de año
+  const base10 = comprasOwner.filter(x=>fiscalKey(x.ded)==='amort10'&&compraAnyo(x)).reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  const base3  = comprasOwner.filter(x=>fiscalKey(x.ded)==='amort3'&&compraAnyo(x)).reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  const baseMej= comprasOwner.filter(x=>fiscalKey(x.ded)==='mejora').reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  const am10 = base10*0.10;
+  const am3  = base3*0.03;
+  const amTotalAnual = amInmueble+am10+am3;
+  const amMes = amTotalAnual/12;
+
+  // ── Tabla mensual ──
   const mNom=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   let acum=0,tI=0,tGd=0,tH=0,tAm=0,tN=0;
   const rows=Array.from({length:12},(_,mi)=>{
     const mm=String(mi+1).padStart(2,'0'),mk=`${anyo}-${mm}`;
-    const ing=D.pagos.filter(p=>p.mes===mk&&p.estado==='pagado').reduce((s,p)=>s+p.imp,0);
-    const gd=D.gastos.filter(g=>g.fecha&&g.fecha.startsWith(mk)&&g.ded==='si').reduce((s,g)=>s+g.imp,0);
-    const hipo=D.gastos.filter(g=>g.fecha&&g.fecha.startsWith(mk)&&g.cat==='Hipoteca').reduce((s,g)=>s+g.imp,0);
+    const ing=pagosOwner.filter(p=>p.mes===mk&&p.estado==='pagado').reduce((s,p)=>s+p.imp,0);
+    const gdG=gastosOwner.filter(g=>g.fecha&&g.fecha.startsWith(mk)&&g.ded==='si'&&g.cat!=='Hipoteca').reduce((s,g)=>s+g.imp,0);
+    const gdF=comprasOwner.filter(x=>x.fecha&&x.fecha.startsWith(mk)&&fiscalKey(x.ded)==='corriente').reduce((s,x)=>s+parseFloat(x.imp||0),0);
+    const gd=gdG+gdF;
+    const hipo=gastosOwner.filter(g=>g.fecha&&g.fecha.startsWith(mk)&&g.cat==='Hipoteca').reduce((s,g)=>s+g.imp,0);
     const neto=ing-gd-hipo-amMes;acum+=neto;tI+=ing;tGd+=gd;tH+=hipo;tAm+=amMes;tN+=neto;
     return `<tr><td style="font-weight:500;">${mNom[mi]}</td><td class="mono" style="color:var(--gn);">${eur(ing)}</td><td class="mono" style="color:var(--rd);">${eur(gd)}</td><td class="mono" style="color:var(--rd);">${eur(hipo)}</td><td class="mono" style="color:var(--ink3);">${eur(amMes)}</td><td class="mono" style="font-weight:600;color:${neto>=0?'var(--gn)':'var(--rd)'};">${eur(neto)}</td><td class="mono" style="color:${acum>=0?'var(--bl)':'var(--rd)'};">${eur(acum)}</td></tr>`;
   });
   $i('fi-tb').innerHTML=rows.join('')+`<tr style="background:var(--bg2);font-weight:700;"><td>TOTAL ${anyo}</td><td class="mono" style="color:var(--gn);">${eur(tI)}</td><td class="mono" style="color:var(--rd);">${eur(tGd)}</td><td class="mono" style="color:var(--rd);">${eur(tH)}</td><td class="mono" style="color:var(--ink3);">${eur(tAm)}</td><td class="mono" style="color:${tN>=0?'var(--gn)':'var(--rd)'};">${eur(tN)}</td><td></td></tr>`;
+
+  // ── Panel de amortizaciones ──
+  const quien = ownF ? (owners.find(o=>o.id==ownF)?.alias || owners.find(o=>o.id==ownF)?.nom || '') : 'todos los propietarios';
+  $i('fi-amort').innerHTML=`<div class="card">
+    <div class="card-title">📐 Bases de amortización — ${quien}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;">
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">🏠 Inmueble (${amPct}%)</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--pu);margin-top:4px;">${eur(amInmueble)}<span style="font-size:11px;color:var(--ink3);font-weight:400;">/año</span></div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:2px;">Base: ${eur(propsOwner.reduce((s,p)=>s+parseFloat(p.vc||0),0))} construcción</div>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">🪑 Mobiliario (10%)</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--bl);margin-top:4px;">${eur(am10)}<span style="font-size:11px;color:var(--ink3);font-weight:400;">/año</span></div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:2px;">Base: ${eur(base10)} en facturas</div>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">🏠 Adquisición (3%)</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--pu);margin-top:4px;">${eur(am3)}<span style="font-size:11px;color:var(--ink3);font-weight:400;">/año</span></div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:2px;">Base: ${eur(base3)} notaría, ITP, comisión…</div>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">🏗️ Mejoras acumuladas</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--ye);margin-top:4px;">${eur(baseMej)}</div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:2px;">No deducible — suma al valor</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding:10px 12px;background:var(--acc-l);border:1px solid rgba(200,75,47,.15);border-radius:var(--r2);font-size:11.5px;color:var(--ink2);">
+      Amortización total deducible este año: <strong>${eur(amTotalAnual)}</strong> (${eur(amMes)}/mes, ya repartida en la tabla de abajo).
+    </div>
+  </div>`;
+
+  // ── Resumen IRPF ──
   const cuota=tN>0?tN*irpf/100:0;
-  $i('fi-res').innerHTML=`<div class="card-title">💶 Resumen IRPF ${anyo}</div>
-    <div class="fiscal-row"><span class="fiscal-label">Ingresos brutos</span><span class="fiscal-val" style="color:var(--gn);">${eur(tI)}</span></div>
-    <div class="fiscal-row"><span class="fiscal-label">Gastos deducibles</span><span class="fiscal-val" style="color:var(--rd);">– ${eur(tGd)}</span></div>
-    <div class="fiscal-row"><span class="fiscal-label">Intereses hipoteca</span><span class="fiscal-val" style="color:var(--rd);">– ${eur(tH)}</span></div>
-    <div class="fiscal-row"><span class="fiscal-label">Amortización (${amPct}%)</span><span class="fiscal-val" style="color:var(--ink3);">– ${eur(tAm)}</span></div>
+  $i('fi-res').innerHTML=`<div class="card-title">💶 Resumen IRPF ${anyo}${ownF?' — '+quien:''}</div>
+    <div class="fiscal-row"><span class="fiscal-label">Ingresos brutos cobrados</span><span class="fiscal-val" style="color:var(--gn);">${eur(tI)}</span></div>
+    <div class="fiscal-row"><span class="fiscal-label">Gastos deducibles (gastos + facturas)</span><span class="fiscal-val" style="color:var(--rd);">– ${eur(tGd)}</span></div>
+    <div class="fiscal-row"><span class="fiscal-label">Cuotas / intereses hipoteca</span><span class="fiscal-val" style="color:var(--rd);">– ${eur(tH)}</span></div>
+    <div class="fiscal-row"><span class="fiscal-label">Amortizaciones (${amPct}% + 10% + 3%)</span><span class="fiscal-val" style="color:var(--ink3);">– ${eur(tAm)}</span></div>
     <div class="fiscal-row" style="border-top:1.5px solid var(--line2);padding-top:12px;margin-top:4px;"><span class="fiscal-label" style="font-weight:700;color:var(--ink);">Rendimiento neto</span><span class="fiscal-val" style="font-size:17px;color:${tN>=0?'var(--gn)':'var(--rd)'};">${eur(tN)}</span></div>
     <div class="fiscal-row"><span class="fiscal-label">IRPF estimado (${irpf}%)</span><span class="fiscal-val" style="color:var(--ye);">${eur(cuota)}</span></div>
-    <div style="margin-top:12px;padding:10px;background:var(--ye-l);border:1px solid rgba(181,118,42,.2);border-radius:var(--r2);font-size:11px;color:var(--ye);">⚠️ Estimación orientativa. Consulta tu asesor fiscal.</div>`;
-  const deds=D.gastos.filter(g=>g.ded==='si'&&g.fecha&&g.fecha.startsWith(anyo));
-  $i('fi-ded').innerHTML=`<div class="card-title">✅ Gastos deducibles ${anyo}</div>${deds.length?deds.map(g=>`<div class="fiscal-row"><span class="fiscal-label">${GI[g.cat]||''} ${g.desc}</span><span class="fiscal-val" style="color:var(--rd);">${eur(g.imp)}</span></div>`).join(''):'<div class="empty" style="padding:20px;"><p>Sin gastos deducibles en '+anyo+'</p></div>'}`;
+    <div style="margin-top:12px;padding:10px;background:var(--ye-l);border:1px solid rgba(181,118,42,.2);border-radius:var(--r2);font-size:11px;color:var(--ye);">⚠️ Estimación orientativa. Consulta con tu asesor fiscal.</div>`;
+
+  // ── Detalle de gastos deducibles del año ──
+  const gDed=gastosOwner.filter(g=>g.ded==='si'&&g.fecha&&g.fecha.startsWith(anyo));
+  const fDed=comprasOwner.filter(x=>fiscalKey(x.ded)==='corriente'&&x.fecha&&x.fecha.startsWith(anyo));
+  const filas=[
+    ...gDed.map(g=>({t:(GI[g.cat]||'')+' '+g.desc,i:g.imp,o:'Gastos'})),
+    ...fDed.map(x=>({t:(CP_ICONS[x.cat]||'🧾')+' '+x.con+(x.num?' ('+x.num+')':''),i:x.imp,o:'Factura'}))
+  ];
+  $i('fi-ded').innerHTML=`<div class="card-title">✅ Deducibles corrientes ${anyo} (${filas.length})</div>
+    ${filas.length?filas.map(f=>`<div class="fiscal-row"><span class="fiscal-label">${f.t} <span class="badge badge-b" style="font-size:8px;">${f.o}</span></span><span class="fiscal-val" style="color:var(--rd);">${eur(f.i)}</span></div>`).join(''):'<div class="empty" style="padding:20px;"><p>Sin gastos deducibles registrados en '+anyo+'</p></div>'}`;
 }
+
+function setFiOwner(id){ $i('fi-owner').value=id; rFiscal(); }
 
 // ══════════════════════════════════════════════════════════════
 // INFORMES
@@ -2976,7 +3212,7 @@ async function gFindOrCreateSheet() {
     method:'POST',
     body: JSON.stringify({
       properties:{title:SHEET_NAME},
-      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios'].map(t=>({properties:{title:t}}))
+      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios'].map(t=>({properties:{title:t}}))
     })
   });
   try {
@@ -3051,7 +3287,7 @@ async function syncNow() {
 
     // Step 2: Merge Drive data with local (keep whichever has more records per collection)
     if (driveData) {
-      const collections = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios'];
+      const collections = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios'];
       collections.forEach(col => {
         const local = D[col] || [];
         const drive = driveData[col] || [];
@@ -3128,7 +3364,8 @@ async function syncToSheets() {
   gSyncing = true;
   try {
     const sheets = [
-      {sheet:'Propiedades', h:['ID','Nombre','Dir','Ciudad','CP','Habs','Precio','Año','Hipo','Capital','VCons'], rows:D.props.map(p=>[p.id,p.nom,p.dir,p.ciu,p.cp,p.habs,p.precio,p.anyo,p.hipo,p.capital,p.vc])},
+      {sheet:'Propietarios', h:['ID','Nombre','Alias','DNI','Relacion','IRPF','Email','Tel','Notas'], rows:(D.propietarios||[]).map(o=>[o.id,o.nom,o.alias,o.dni,o.rel,o.irpf,o.email,o.tel,o.notas])},
+      {sheet:'Propiedades', h:['ID','Nombre','Propietario','Dir','Ciudad','CP','Habs','Precio','Año','Hipo','Capital','VCons'], rows:D.props.map(p=>[p.id,p.nom,ownerNom(p.ownerId),p.dir,p.ciu,p.cp,p.habs,p.precio,p.anyo,p.hipo,p.capital,p.vc])},
       {sheet:'Inquilinos', h:['ID','Nombre','Apellidos','DNI','Nac','Email','Tel','WA','Estado','PisoID','Hab','Alq','Fia','Dia','Ini','Fin','Val','Mot','Notas'], rows:D.inqs.map(i=>[i.id,i.nom,i.ap,i.dni,i.nac,i.email,i.tel,i.wa,i.estado,i.propId,i.hab,i.alq,i.fia,i.dia,i.ini,i.fin,i.val,i.mot,i.notas])},
       {sheet:'Pagos', h:['ID','InqID','Concepto','Mes','Importe','Estado','Fecha','Notas','PDF'], rows:D.pagos.map(p=>[p.id,p.inqId,p.con,p.mes,p.imp,p.estado,p.fecha,p.notas,p.pdfName||''])},
       {sheet:'Gastos', h:['ID','Desc','Cat','Importe','PisoID','Fecha','Ded','Prov','Notas','PDF'], rows:D.gastos.map(g=>[g.id,g.desc,g.cat,g.imp,g.propId,g.fecha,g.ded,g.prov,g.notas,g.pdfName||''])},
@@ -3138,7 +3375,7 @@ async function syncToSheets() {
       {sheet:'Potenciales', h:['ID','Nom','URL','Precio','Alq','Habs','EBITDA','ROCE','Yield','Inv','Fecha'], rows:D.pots.map(p=>[p.id,p.nom,p.url,p.p,p.alq,p.h,p.ebitda,p.roce,p.yld,p.inv,p.fecha])},
       {sheet:'Facturas', h:['ID','Desc','PisoID','Imp','PorHab','Habs','Cobros','Fecha'], rows:D.facturas.map(f=>[f.id,f.desc,f.propId,f.imp,f.porHab,f.habs,f.cobros,f.fecha])},
       {sheet:'Agenda', h:['ID','Titulo','Fecha','Tipo','PisoID','Notas','Hecho'], rows:D.agenda.map(a=>[a.id,a.titulo,a.fecha,a.tipo,a.propId,a.notas,a.done?'SI':'NO'])},
-      {sheet:'FacturasCompra', h:['ID','Fecha','NumFactura','Concepto','Empresa','Categoria','PisoID','Hab','Importe','FormaPago','TratamientoFiscal','GarantiaHasta','Notas','PDF'], rows:(D.compras||[]).map(x=>[x.id,x.fecha,x.num,x.con,x.emp,x.cat,x.propId,x.hab,x.imp,x.pago,FISCAL[fiscalKey(x.ded)].et,x.gar,x.notas,x.pdfName||''])},
+      {sheet:'FacturasCompra', h:['ID','Fecha','NumFactura','Concepto','Empresa','Categoria','Propietario','PisoID','Hab','Importe','FormaPago','TratamientoFiscal','GarantiaHasta','Notas','PDF'], rows:(D.compras||[]).map(x=>[x.id,x.fecha,x.num,x.con,x.emp,x.cat,ownerNom(ownerDe(x)),x.propId,x.hab,x.imp,x.pago,FISCAL[fiscalKey(x.ded)].et,x.gar,x.notas,x.pdfName||''])},
       {sheet:'Anuncios', h:['ID','Titulo','PisoID','Hab','Precio','m2','Estado','GastosIncl','URL','Caracteristicas','NumFotos','Descripcion'], rows:(D.anuncios||[]).map(a=>[a.id,a.tit,a.propId,a.hab,a.precio,a.m2,a.est,a.gastos,a.url,a.carac,(a.fotos||[]).length,a.desc])},
     ];
     // Asegurar que existen todas las pestañas
