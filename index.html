@@ -10,9 +10,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gentaury">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-180.png?v=5">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=5">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=5">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ── RESET & ROOT ─────────────────────────────────────────── */
@@ -639,7 +639,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
   <div class="login-box">
-    <img src="icon-192.png" alt="Gentaury" style="width:72px;height:72px;border-radius:16px;margin:0 auto 14px;display:block;">
+    <img src="icon-192.png?v=5" alt="Gentaury" style="width:72px;height:72px;border-radius:16px;margin:0 auto 14px;display:block;">
     <div class="login-logo">Gentaury</div>
     <div class="login-sub">Gestión inmobiliaria y financiera</div>
     <div class="login-title">Acceso privado</div>
@@ -661,7 +661,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <div id="ws-screen">
   <div class="ws-box">
     <div class="ws-hi" id="ws-hola">Bienvenido</div>
-    <img src="icon-180.png" alt="Gentaury" style="width:56px;height:56px;border-radius:14px;margin:0 auto 14px;display:block;"><div class="ws-title">¿Con qué quieres trabajar?</div>
+    <img src="icon-180.png?v=5" alt="Gentaury" style="width:56px;height:56px;border-radius:14px;margin:0 auto 14px;display:block;"><div class="ws-title">¿Con qué quieres trabajar?</div>
     <div class="ws-sub">Cada espacio guarda sus datos por separado en tu Google Drive</div>
     <div class="ws-grid">
       <div class="ws-card" onclick="elegirWS('gentaury')">
@@ -1147,6 +1147,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
         <label class="btn btn-ghost" style="cursor:pointer;">⬆ Importar backup JSON local<input type="file" accept=".json" onchange="importData(event)" style="display:none;"></label>
         <button class="btn btn-ghost" onclick="pullFromDrive()" style="border-color:var(--gn);color:var(--gn);">☁ Forzar descarga desde Google Drive</button>
         <button class="btn btn-secondary" onclick="syncNow()">↻ Sincronizar ahora</button>
+        <button class="btn btn-ghost" onclick="liberarEspacio()" style="border-color:var(--bl);color:var(--bl);">🧹 Mover archivos a Drive y liberar espacio</button>
         <div style="font-size:11px;color:var(--ink3);line-height:1.6;background:var(--bg);border-radius:var(--r2);padding:10px 12px;">
           <strong style="color:var(--ink2);">Guardado automático activo.</strong><br>
           Cada cambio se sube a Drive en 1 segundo. Además se comprueba cada 45 s, al volver a la app y al recuperar conexión.
@@ -1324,6 +1325,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="card"><div class="card-title">Datos</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button class="btn btn-secondary" onclick="syncNow()">↻ Sincronizar ahora</button>
+        <button class="btn btn-ghost" onclick="liberarEspacio()" style="border-color:var(--bl);color:var(--bl);">🧹 Mover archivos a Drive y liberar espacio</button>
         <button class="btn btn-success" onclick="exportAll()">⬇ Exportar backup JSON</button>
         <button class="btn btn-ghost" onclick="pullFromDrive()" style="border-color:var(--gn);color:var(--gn);">☁ Forzar descarga desde Drive</button>
         <button class="btn btn-danger" onclick="clearAll()">🗑 Borrar datos de este espacio</button>
@@ -1935,44 +1937,101 @@ const $i=id=>document.getElementById(id);
 const gi=id=>($i(id)?.value||'').trim();
 const gn=id=>parseFloat($i(id)?.value)||0;
 // ── PDF HANDLING ──────────────────────────────────────────
-function handlePdfUpload(inputId, zoneId, dataId) {
+async function handlePdfUpload(inputId, zoneId, dataId){
   const file = document.getElementById(inputId).files[0];
-  if (!file) return;
-  if (file.size > 15 * 1024 * 1024) { toast('El archivo es demasiado grande (máx. 15 MB)', false); return; }
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const zone = document.getElementById(zoneId);
-    const nameInput = document.getElementById(dataId.replace('-data', '-name'));
-    document.getElementById(dataId).value = e.target.result;
-    if (nameInput) nameInput.value = file.name;
-    zone.classList.add('has-file');
-    zone.querySelector('.pdf-upload-label').textContent = '✓ ' + file.name;
-    // Also upload to Drive if connected
-    if (gToken && gFolderId) {
-      zone.querySelector('.pdf-upload-label').textContent = '⬆ Subiendo a Drive...';
-      try {
-        const result = await uploadPdfToDrive(e.target.result, file.name);
-        if (result) {
-          // Store Drive link alongside base64
-          const linkInput = document.getElementById(dataId.replace('-data', '-drivelink'));
-          if (linkInput) linkInput.value = result.webViewLink || '';
-          zone.querySelector('.pdf-upload-label').textContent = '✓ ' + file.name + ' (en Drive)';
-        }
-      } catch(err) {
-        zone.querySelector('.pdf-upload-label').textContent = '✓ ' + file.name + ' (local)';
-      }
+  if(!file) return;
+  if(file.size > 15*1024*1024){ toast('El archivo es demasiado grande (máx. 15 MB)', false); return; }
+  const zone = document.getElementById(zoneId);
+  const lbl = zone.querySelector('.pdf-upload-label');
+  const dataEl = document.getElementById(dataId);
+  const nameEl = document.getElementById(dataId.replace('-data','-name'));
+
+  // Si es imagen, la comprimimos para ahorrar espacio antes de subir
+  let toUpload = file, isImg = file.type.startsWith('image/');
+
+  if(!gToken || !gFolderId){
+    // Sin Drive: guardamos en local SOLO si es pequeño, avisando
+    if(file.size > 500*1024){
+      toast('Conéctate a Google Drive para adjuntar archivos grandes', false);
+      return;
     }
-  };
-  reader.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onload = e=>{
+      dataEl.value = e.target.result;
+      if(nameEl) nameEl.value = file.name;
+      zone.classList.add('has-file');
+      lbl.textContent = '✓ '+file.name+' (local)';
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+
+  // Con Drive: subir el fichero y guardar SOLO su id (ocupa ~30 caracteres)
+  lbl.textContent = '⬆ Subiendo a Drive…';
+  try{
+    let blob = file, nombre = file.name;
+    if(isImg){
+      const dataUri = await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(file);});
+      const comp = await comprimirImagen2(dataUri, 1600, 0.72);
+      blob = comp.blob; // Blob comprimido
+    }
+    const meta = JSON.stringify({name:nombre, parents:[gFolderId]});
+    const boundary='bd'+Date.now();
+    const head='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: '+(blob.type||'application/octet-stream')+'\r\n\r\n';
+    const foot='\r\n--'+boundary+'--';
+    const body=new Blob([head, blob, foot]);
+    const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      {method:'POST',headers:{'Authorization':'Bearer '+gToken},body});
+    if(!r.ok) throw new Error('Error al subir ('+r.status+')');
+    const data=await r.json();
+    // Guardar referencia ligera: driveId en lugar de base64
+    dataEl.value = 'drive:'+data.id;
+    if(nameEl) nameEl.value = nombre;
+    zone.classList.add('has-file');
+    lbl.textContent = '✓ '+nombre+' (en Drive)';
+  }catch(err){
+    console.error(err);
+    toast('No se pudo subir el archivo: '+err.message, false);
+    lbl.textContent = '📎 Reintentar subida';
+  }
 }
 
-function openPdf(dataUri, name) {
-  if (!dataUri) { toast('Sin documento adjunto', false); return; }
-  const link = document.createElement('a');
-  link.href = dataUri;
-  link.download = name || 'documento.pdf';
-  link.target = '_blank';
-  link.click();
+// Compresión de imagen que devuelve un Blob (no base64)
+function comprimirImagen2(dataUri, maxLado, calidad){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      let {width:w,height:h}=img;
+      if(w>maxLado||h>maxLado){const r=Math.min(maxLado/w,maxLado/h);w=Math.round(w*r);h=Math.round(h*r);}
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      cv.toBlob(b=>resolve({blob:b}), 'image/jpeg', calidad);
+    };
+    img.onerror=reject; img.src=dataUri;
+  });
+}
+
+async function openPdf(ref, name){
+  if(!ref){ toast('Sin documento adjunto', false); return; }
+  // Nuevo formato: drive:ID  → descargar de Drive
+  if(typeof ref==='string' && ref.startsWith('drive:')){
+    const id=ref.slice(6);
+    if(!gToken){ toast('Conéctate a Google Drive para ver el archivo', false); return; }
+    toast('Abriendo…');
+    try{
+      const r=await fetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media',
+        {headers:{'Authorization':'Bearer '+gToken}});
+      if(!r.ok) throw new Error(r.status);
+      const blob=await r.blob();
+      const url=URL.createObjectURL(blob);
+      window.open(url,'_blank');
+      setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    }catch(e){ toast('No se pudo abrir el archivo', false); }
+    return;
+  }
+  // Formato antiguo: base64 embebido
+  const a=document.createElement('a');
+  a.href=ref; a.download=name||'documento'; a.target='_blank'; a.click();
 }
 
 const PDF_PLACEHOLDERS = {
@@ -5514,17 +5573,81 @@ let _debounceSync = null;
 
 // ── Guardado local blindado ───────────────────────────────────
 function guardarLocal(){
-  try {
+  try{
     localStorage.setItem(KEY, JSON.stringify(D));
     return true;
-  } catch(e) {
-    console.error('Error guardando en localStorage:', e);
-    alert('⚠️ NO SE HAN PODIDO GUARDAR LOS DATOS EN ESTE DISPOSITIVO.\n\n' +
-          'El almacenamiento del navegador está lleno, probablemente por PDFs o fotos muy pesadas.\n\n' +
-          'Pulsa Sync ahora mismo para subir lo que haya a Google Drive y luego elimina algún archivo adjunto grande.');
-    estadoSync('error','Almacenamiento lleno');
+  }catch(e){
+    console.error('localStorage lleno, intentando liberar espacio…', e);
+    // Intento de rescate: mover a Drive los adjuntos base64 pesados y reintentar
+    if(gToken && gFolderId){
+      migrarAdjuntosADrive().then(()=>{ try{localStorage.setItem(KEY,JSON.stringify(D));}catch(_){} });
+      estadoSync('sync','liberando espacio');
+      return true; // el guardado se completará tras migrar
+    }
+    alert('⚠️ No se han podido guardar los datos en este dispositivo.\n\nConéctate a Google Drive: los archivos se subirán a la nube y dejarán de ocupar espacio local.');
+    estadoSync('error','Sin espacio · conecta Drive');
     return false;
   }
+}
+
+// Convierte adjuntos base64 antiguos en referencias drive:ID para liberar espacio
+async function migrarAdjuntosADrive(){
+  if(!gToken || !gFolderId) return;
+  let migrados=0;
+  const campos=[
+    ['gastos','pdfData','pdfName'],['pagos','pdfData','pdfName'],['conts','pdfData','pdfName'],
+    ['compras','pdfData','pdfName'],['movs','pdfData','pdfName'],['docs','pdfData','pdfName'],
+    ['libros','pdfData','pdfName']
+  ];
+  for(const [col,df,nf] of campos){
+    for(const r of (D[col]||[])){
+      const v=r[df];
+      if(v && typeof v==='string' && v.startsWith('data:')){
+        try{
+          const id=await subirDataUri(v, r[nf]||'documento');
+          if(id){ r[df]='drive:'+id; migrados++; }
+        }catch(e){ console.warn('No se pudo migrar un adjunto', e); }
+      }
+    }
+    // docs de propiedades (objeto doc1..doc6)
+    if(col==='gastos'){
+      for(const p of (D.props||[])){
+        if(!p.docs) continue;
+        for(const k of Object.keys(p.docs)){
+          const d=p.docs[k];
+          if(d && d.data && typeof d.data==='string' && d.data.startsWith('data:')){
+            try{ const id=await subirDataUri(d.data, d.name||k); if(id){ d.data='drive:'+id; migrados++; } }catch(e){}
+          }
+        }
+      }
+    }
+  }
+  if(migrados){ console.log(migrados+' adjuntos movidos a Drive'); toast(migrados+' archivos movidos a Drive'); }
+}
+
+
+async function liberarEspacio(){
+  if(!gToken || !gFolderId){ toast('Conéctate primero a Google Drive', false); return; }
+  toast('Moviendo archivos a Drive…');
+  await migrarAdjuntosADrive();
+  guardarLocal();
+  await syncFull(true);
+  toast('✓ Espacio liberado');
+}
+
+async function subirDataUri(dataUri, nombre){
+  const arr=dataUri.split(','), mime=(arr[0].match(/:(.*?);/)||[])[1]||'application/octet-stream';
+  const bstr=atob(arr[1]); const u8=new Uint8Array(bstr.length);
+  for(let i=0;i<bstr.length;i++) u8[i]=bstr.charCodeAt(i);
+  const blob=new Blob([u8],{type:mime});
+  const meta=JSON.stringify({name:nombre, parents:[gFolderId]});
+  const boundary='bd'+Date.now()+Math.random();
+  const head='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: '+mime+'\r\n\r\n';
+  const foot='\r\n--'+boundary+'--';
+  const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    {method:'POST',headers:{'Authorization':'Bearer '+gToken},body:new Blob([head,blob,foot])});
+  if(!r.ok) return null;
+  return (await r.json()).id;
 }
 
 // ── Huellas: detectar altas, ediciones y borrados ─────────────
