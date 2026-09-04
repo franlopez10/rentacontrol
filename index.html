@@ -397,6 +397,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 #gdrive-bar.connected{background:#0a1f12;border-color:rgba(16,185,129,.4);}
 #gdrive-dot{width:7px;height:7px;border-radius:50%;background:var(--ye);flex-shrink:0;}
 #gdrive-bar.connected #gdrive-dot{background:var(--gn);}
+#gdrive-dot{transition:background .25s, box-shadow .25s;}
 #gdrive-status{display:flex;align-items:center;gap:6px;}
 #gdrive-user{font-size:9px;color:rgba(255,255,255,.4);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #gdrive-lastsync{font-size:8px;color:rgba(255,255,255,.25);}
@@ -612,6 +613,25 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   .periodo-lbl{width:100%;margin-bottom:2px;}
   .pill{padding:5px 10px;font-size:11px;}
 }
+
+/* ── SELECTOR DE ESPACIO ────────────────────────────────── */
+#ws-screen{position:fixed;inset:0;z-index:999;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px;}
+#ws-screen.show{display:flex;}
+.ws-box{max-width:760px;width:100%;text-align:center;}
+.ws-hi{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:2.5px;color:var(--ink3);margin-bottom:8px;}
+.ws-title{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--ink);letter-spacing:-.8px;margin-bottom:6px;}
+.ws-sub{font-size:13px;color:var(--ink3);margin-bottom:34px;}
+.ws-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.ws-card{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:30px 26px;cursor:pointer;transition:.18s;text-align:left;position:relative;overflow:hidden;}
+.ws-card:hover{border-color:var(--acc);transform:translateY(-3px);box-shadow:0 10px 32px rgba(26,23,20,.13);}
+.ws-card .ic{font-size:34px;margin-bottom:14px;display:block;}
+.ws-card h3{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:-.4px;}
+.ws-card p{font-size:12px;color:var(--ink3);line-height:1.65;margin-bottom:14px;}
+.ws-card .tags{display:flex;gap:5px;flex-wrap:wrap;}
+.ws-card .bar{position:absolute;left:0;top:0;bottom:0;width:4px;}
+.ws-foot{margin-top:26px;font-size:11px;color:var(--ink3);}
+.ws-foot a{color:var(--acc);cursor:pointer;text-decoration:underline;}
+@media(max-width:700px){.ws-grid{grid-template-columns:1fr;}.ws-title{font-size:24px;}}
 </style>
 
 </head>
@@ -636,6 +656,37 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="login-loading" id="login-loading">Verificando acceso...</div>
   </div>
 </div>
+<!-- SELECTOR DE ESPACIO -->
+<div id="ws-screen">
+  <div class="ws-box">
+    <div class="ws-hi" id="ws-hola">Bienvenido</div>
+    <div class="ws-title">¿Con qué quieres trabajar?</div>
+    <div class="ws-sub">Cada espacio guarda sus datos por separado en tu Google Drive</div>
+    <div class="ws-grid">
+      <div class="ws-card" onclick="elegirWS('gentaury')">
+        <div class="bar" style="background:var(--acc);"></div>
+        <span class="ic">🏢</span>
+        <h3>Gentaury</h3>
+        <p>Gestión completa del holding inmobiliario: propiedades, inquilinos, contratos, cobros, facturas y fiscalidad por propietario.</p>
+        <div class="tags">
+          <span class="badge badge-b">Propiedades</span><span class="badge badge-b">Inquilinos</span>
+          <span class="badge badge-b">Facturas</span><span class="badge badge-b">IRPF</span>
+        </div>
+      </div>
+      <div class="ws-card" onclick="elegirWS('personal')">
+        <div class="bar" style="background:var(--gn);"></div>
+        <span class="ic">💰</span>
+        <h3>Personal</h3>
+        <p>Tus finanzas personales: cuentas, ingresos y gastos, presupuestos, suscripciones, inversiones, deudas y patrimonio neto.</p>
+        <div class="tags">
+          <span class="badge badge-g">Presupuestos</span><span class="badge badge-g">Inversiones</span>
+          <span class="badge badge-g">Patrimonio</span><span class="badge badge-g">Renta</span>
+        </div>
+      </div>
+    </div>
+    <div class="ws-foot">Podrás cambiar de espacio en cualquier momento desde el menú lateral · <a onclick="cerrarSesion()">Cerrar sesión</a></div>
+  </div>
+</div>
 <div id="sb-overlay" onclick="closeSb()"></div>
 <button id="menu-toggle" onclick="toggleSb()">☰</button>
 <div id="gdrive-bar">
@@ -658,96 +709,128 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- SIDEBAR -->
 <aside id="sb">
   <div class="logo">
-    <div class="logo-name">RentaControl</div>
-    <div class="logo-tag">Gestión de alquiler</div>
+    <div class="logo-name" id="ws-logo-nom">RentaControl</div>
+    <div class="logo-tag" id="ws-logo-tag">Gentaury · Alquiler</div>
+    <button id="ws-switch" onclick="cambiarWS()" style="margin-top:12px;width:100%;padding:7px;border-radius:7px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-family:'DM Mono',monospace;font-size:9.5px;cursor:pointer;transition:.15s;" onmouseover="this.style.background='rgba(255,255,255,.15)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">💰 Ir a Personal</button>
   </div>
 
-  <div class="nav-group">
+  <div class="nav-group" data-ws="gentaury">
     <div class="nav-label">Principal</div>
-    <div class="nav-item on" data-s="dash" onclick="go(this)">
+    <div class="nav-item on" data-ws="gentaury" data-s="dash" onclick="go(this)">
       <span class="nav-icon">◈</span> Dashboard
     </div>
-    <div class="nav-item" data-s="agenda" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="agenda" onclick="go(this)">
       <span class="nav-icon">📅</span> Agenda
     </div>
   </div>
 
-  <div class="nav-group">
+  <div class="nav-group" data-ws="gentaury">
     <div class="nav-label">Archivo</div>
-    <div class="nav-item" data-s="compras" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="compras" onclick="go(this)">
       <span class="nav-icon">🧾</span> Facturas
     </div>
-    <div class="nav-item" data-s="anuncios" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="anuncios" onclick="go(this)">
       <span class="nav-icon">📸</span> Anuncios Idealista
     </div>
   </div>
 
-  <div class="nav-group">
+  <div class="nav-group" data-ws="gentaury">
     <div class="nav-label">Inmuebles</div>
-    <div class="nav-item" data-s="props" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="props" onclick="go(this)">
       <span class="nav-icon">🏢</span> Propiedades
     </div>
-    <div class="nav-item" data-s="habs" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="habs" onclick="go(this)">
       <span class="nav-icon">🚪</span> Habitaciones
     </div>
-    <div class="nav-item" data-s="pots" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="pots" onclick="go(this)">
       <span class="nav-icon">🔍</span> Pisos Potenciales
     </div>
   </div>
 
-  <div class="nav-group">
+  <div class="nav-group" data-ws="gentaury">
     <div class="nav-label">Personas</div>
-    <div class="nav-item" data-s="propietarios" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="propietarios" onclick="go(this)">
       <span class="nav-icon">👑</span> Propietarios
     </div>
-    <div class="nav-item" data-s="activos" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="activos" onclick="go(this)">
       <span class="nav-icon">🟢</span> Inquilinos Activos
     </div>
-    <div class="nav-item" data-s="pasados" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="pasados" onclick="go(this)">
       <span class="nav-icon">🗂</span> Pasados / BBDD
     </div>
   </div>
 
-  <div class="nav-group">
+  <div class="nav-group" data-ws="gentaury">
     <div class="nav-label">Finanzas</div>
-    <div class="nav-item" data-s="contratos" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="contratos" onclick="go(this)">
       <span class="nav-icon">📄</span> Contratos
     </div>
-    <div class="nav-item" data-s="pagos" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="pagos" onclick="go(this)">
       <span class="nav-icon">💳</span> Pagos
     </div>
-    <div class="nav-item" data-s="gastos" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="gastos" onclick="go(this)">
       <span class="nav-icon">📉</span> Gastos
     </div>
-    <div class="nav-item" data-s="facturas" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="facturas" onclick="go(this)">
       <span class="nav-icon">🧾</span> Facturas → Habs
     </div>
-    <div class="nav-item" data-s="hist" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="hist" onclick="go(this)">
       <span class="nav-icon">📆</span> Histórico
     </div>
-    <div class="nav-item" data-s="fiscal" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="fiscal" onclick="go(this)">
       <span class="nav-icon">💶</span> Fiscal / IRPF
     </div>
   </div>
 
-  <div class="nav-group">
+  <div class="nav-group" data-ws="gentaury">
     <div class="nav-label">Gestión</div>
-    <div class="nav-item" data-s="informes" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="informes" onclick="go(this)">
       <span class="nav-icon">📊</span> Informes
     </div>
-    <div class="nav-item" data-s="incs" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="incs" onclick="go(this)">
       <span class="nav-icon">🔧</span> Incidencias
     </div>
-    <div class="nav-item" data-s="provs" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="provs" onclick="go(this)">
       <span class="nav-icon">👷</span> Proveedores
     </div>
   </div>
 
-  <div class="nav-group" style="margin-bottom:16px;">
+  <div class="nav-group" data-ws="gentaury" style="margin-bottom:16px;">
     <div class="nav-label">Sistema</div>
-    <div class="nav-item" data-s="cfg" onclick="go(this)">
+    <div class="nav-item" data-ws="gentaury" data-s="cfg" onclick="go(this)">
       <span class="nav-icon">⚙</span> Configuración
     </div>
+  </div>
+  <!-- ══════ MENÚ PERSONAL ══════ -->
+  <div class="nav-group" data-ws="personal">
+    <div class="nav-label">Resumen</div>
+    <div class="nav-item" data-ws="personal" data-s="pDash" onclick="go(this)"><span class="nav-icon">◈</span> Panel</div>
+    <div class="nav-item" data-ws="personal" data-s="pPatrimonio" onclick="go(this)"><span class="nav-icon">📈</span> Patrimonio neto</div>
+  </div>
+  <div class="nav-group" data-ws="personal">
+    <div class="nav-label">Día a día</div>
+    <div class="nav-item" data-ws="personal" data-s="pMovs" onclick="go(this)"><span class="nav-icon">💸</span> Ingresos y gastos</div>
+    <div class="nav-item" data-ws="personal" data-s="pCuentas" onclick="go(this)"><span class="nav-icon">🏦</span> Cuentas</div>
+    <div class="nav-item" data-ws="personal" data-s="pSubs" onclick="go(this)"><span class="nav-icon">🔁</span> Suscripciones</div>
+  </div>
+  <div class="nav-group" data-ws="personal">
+    <div class="nav-label">Planificación</div>
+    <div class="nav-item" data-ws="personal" data-s="pPresup" onclick="go(this)"><span class="nav-icon">🎯</span> Presupuestos</div>
+    <div class="nav-item" data-ws="personal" data-s="pMetas" onclick="go(this)"><span class="nav-icon">🏁</span> Objetivos de ahorro</div>
+  </div>
+  <div class="nav-group" data-ws="personal">
+    <div class="nav-label">Capital</div>
+    <div class="nav-item" data-ws="personal" data-s="pInver" onclick="go(this)"><span class="nav-icon">📊</span> Inversiones</div>
+    <div class="nav-item" data-ws="personal" data-s="pDeudas" onclick="go(this)"><span class="nav-icon">🧮</span> Deudas y préstamos</div>
+  </div>
+  <div class="nav-group" data-ws="personal">
+    <div class="nav-label">Archivo</div>
+    <div class="nav-item" data-ws="personal" data-s="pDocs" onclick="go(this)"><span class="nav-icon">📁</span> Documentos</div>
+    <div class="nav-item" data-ws="personal" data-s="pRenta" onclick="go(this)"><span class="nav-icon">🧾</span> Renta / IRPF</div>
+  </div>
+  <div class="nav-group" data-ws="personal" style="margin-bottom:16px;">
+    <div class="nav-label">Sistema</div>
+    <div class="nav-item" data-ws="personal" data-s="pCfg" onclick="go(this)"><span class="nav-icon">⚙</span> Configuración</div>
   </div>
 </aside>
 
@@ -761,7 +844,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   </div>
   <div id="content">
 <!-- ═══════════════ DASHBOARD ═══════════════ -->
-<section class="sec on" id="sec-dash">
+<section class="sec on" data-ws="gentaury" id="sec-dash">
   <div id="d-alerts" style="margin-bottom:14px;"></div>
   <div class="kpi-strip" id="d-kpis"></div>
   <div class="g2 mb">
@@ -776,7 +859,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ AGENDA ═══════════════ -->
-<section class="sec" id="sec-agenda">
+<section class="sec" data-ws="gentaury" id="sec-agenda">
   <div class="ph"><div class="ph-title">📅 Agenda</div>
     <button class="btn btn-primary" onclick="openM('m-ag')">+ Nueva tarea</button>
   </div>
@@ -786,7 +869,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ PROPIEDADES ═══════════════ -->
-<section class="sec" id="sec-props">
+<section class="sec" data-ws="gentaury" id="sec-props">
   <div class="ph"><div class="ph-title">🏢 Propiedades</div>
     <button class="btn btn-primary" onclick="newProp()">+ Nueva propiedad</button>
   </div>
@@ -794,7 +877,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ HABITACIONES ═══════════════ -->
-<section class="sec" id="sec-habs">
+<section class="sec" data-ws="gentaury" id="sec-habs">
   <div class="ph"><div class="ph-title">🚪 Habitaciones</div>
     <select id="hf" onchange="rHabs()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink);min-width:180px;outline:none;">
       <option value="">Todos los pisos</option>
@@ -804,7 +887,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ POTENCIALES ═══════════════ -->
-<section class="sec" id="sec-pots">
+<section class="sec" data-ws="gentaury" id="sec-pots">
   <div class="ph"><div class="ph-title">🔍 Pisos Potenciales</div>
     <button class="btn btn-primary" onclick="openM('m-pot')">+ Analizar piso</button>
   </div>
@@ -812,7 +895,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ ACTIVOS ═══════════════ -->
-<section class="sec" id="sec-activos">
+<section class="sec" data-ws="gentaury" id="sec-activos">
   <div class="ph"><div class="ph-title">🟢 Inquilinos Activos</div>
     <button class="btn btn-primary" onclick="openM('m-inq')">+ Nuevo inquilino</button>
   </div>
@@ -824,7 +907,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ PASADOS ═══════════════ -->
-<section class="sec" id="sec-pasados">
+<section class="sec" data-ws="gentaury" id="sec-pasados">
   <div class="ph"><div class="ph-title">🗂 Pasados / BBDD</div></div>
   <div class="export-bar">
     <span class="export-bar-label">Exportar:</span>
@@ -843,7 +926,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ CONTRATOS ═══════════════ -->
-<section class="sec" id="sec-contratos">
+<section class="sec" data-ws="gentaury" id="sec-contratos">
   <div class="ph"><div class="ph-title">📄 Contratos</div>
     <button class="btn btn-primary" onclick="newCont()">+ Nuevo contrato</button>
   </div>
@@ -856,7 +939,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ PAGOS ═══════════════ -->
-<section class="sec" id="sec-pagos">
+<section class="sec" data-ws="gentaury" id="sec-pagos">
   <div class="ph"><div class="ph-title">💳 Pagos</div>
     <div class="ph-acts">
       <button class="btn btn-success btn-sm" onclick="genPagos()">⚡ Generar mes</button>
@@ -873,7 +956,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ GASTOS ═══════════════ -->
-<section class="sec" id="sec-gastos">
+<section class="sec" data-ws="gentaury" id="sec-gastos">
   <div class="ph"><div class="ph-title">📉 Gastos</div>
     <button class="btn btn-primary" onclick="openM('m-ga')">+ Nuevo gasto</button>
   </div>
@@ -887,7 +970,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ FACTURAS → HABITACIONES ═══════════════ -->
-<section class="sec" id="sec-facturas">
+<section class="sec" data-ws="gentaury" id="sec-facturas">
   <div class="ph">
     <div>
       <div class="ph-title">🧾 Facturas → Habitaciones</div>
@@ -924,7 +1007,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 
 <!-- ═══════════════ FACTURAS DE COMPRA ═══════════════ -->
-<section class="sec" id="sec-compras">
+<section class="sec" data-ws="gentaury" id="sec-compras">
   <div class="ph">
     <div>
       <div class="ph-title">🧾 Facturas</div>
@@ -955,7 +1038,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ ANUNCIOS IDEALISTA ═══════════════ -->
-<section class="sec" id="sec-anuncios">
+<section class="sec" data-ws="gentaury" id="sec-anuncios">
   <div class="ph">
     <div>
       <div class="ph-title">📸 Anuncios Idealista</div>
@@ -975,7 +1058,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 
 <!-- ═══════════════ PROPIETARIOS ═══════════════ -->
-<section class="sec" id="sec-propietarios">
+<section class="sec" data-ws="gentaury" id="sec-propietarios">
   <div class="ph">
     <div>
       <div class="ph-title">👑 Propietarios</div>
@@ -987,7 +1070,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ HISTÓRICO ═══════════════ -->
-<section class="sec" id="sec-hist">
+<section class="sec" data-ws="gentaury" id="sec-hist">
   <div class="ph"><div class="ph-title">📆 Histórico Mensual</div></div>
   <div class="fb">
     <div class="fgrp" style="flex:none;"><label style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Mes</label><input type="month" id="hm" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink);outline:none;width:180px;" oninput="rHist()"></div>
@@ -997,7 +1080,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ FISCAL ═══════════════ -->
-<section class="sec" id="sec-fiscal">
+<section class="sec" data-ws="gentaury" id="sec-fiscal">
   <div class="ph"><div class="ph-title">💶 Fiscal / IRPF</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <select id="fi-owner" onchange="rFiscal()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:170px;"></select>
@@ -1015,14 +1098,14 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ INFORMES ═══════════════ -->
-<section class="sec" id="sec-informes">
+<section class="sec" data-ws="gentaury" id="sec-informes">
   <div class="ph"><div class="ph-title">📊 Informes y Análisis</div></div>
   <div class="g2 mb" id="inf-kpis"></div>
   <div class="g2"><div class="card" id="inf-pisos"></div><div class="card" id="inf-cats"></div></div>
 </section>
 
 <!-- ═══════════════ INCIDENCIAS ═══════════════ -->
-<section class="sec" id="sec-incs">
+<section class="sec" data-ws="gentaury" id="sec-incs">
   <div class="ph"><div class="ph-title">🔧 Incidencias</div>
     <button class="btn btn-primary" onclick="openM('m-inc')">+ Nueva incidencia</button>
   </div>
@@ -1034,7 +1117,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ PROVEEDORES ═══════════════ -->
-<section class="sec" id="sec-provs">
+<section class="sec" data-ws="gentaury" id="sec-provs">
   <div class="ph"><div class="ph-title">👷 Proveedores</div>
     <button class="btn btn-primary" onclick="openM('m-pv')">+ Añadir proveedor</button>
   </div>
@@ -1042,7 +1125,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 <!-- ═══════════════ CONFIGURACIÓN ═══════════════ -->
-<section class="sec" id="sec-cfg">
+<section class="sec" data-ws="gentaury" id="sec-cfg">
   <div class="ph"><div class="ph-title">⚙ Configuración</div></div>
   <div class="g2 mb">
     <div class="card"><div class="card-title">Parámetros fiscales</div>
@@ -1057,9 +1140,172 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button class="btn btn-success" onclick="exportAll()">⬇ Exportar backup JSON local</button>
         <label class="btn btn-ghost" style="cursor:pointer;">⬆ Importar backup JSON local<input type="file" accept=".json" onchange="importData(event)" style="display:none;"></label>
-        <button class="btn btn-ghost" onclick="pullFromDrive()" style="border-color:var(--gn);color:var(--gn);">☁ Restaurar desde Google Drive</button>
+        <button class="btn btn-ghost" onclick="pullFromDrive()" style="border-color:var(--gn);color:var(--gn);">☁ Forzar descarga desde Google Drive</button>
+        <button class="btn btn-secondary" onclick="syncNow()">↻ Sincronizar ahora</button>
+        <div style="font-size:11px;color:var(--ink3);line-height:1.6;background:var(--bg);border-radius:var(--r2);padding:10px 12px;">
+          <strong style="color:var(--ink2);">Guardado automático activo.</strong><br>
+          Cada cambio se sube a Drive en 1 segundo. Además se comprueba cada 45 s, al volver a la app y al recuperar conexión.
+          Los datos se <strong>fusionan</strong>: nunca se pierde nada aunque uses el móvil y el ordenador a la vez.
+        </div>
         <button class="btn btn-ghost" onclick="forzarActualizacion()" style="border-color:var(--bl);color:var(--bl);">🔄 Forzar actualización de la app</button>
         <button class="btn btn-danger" onclick="clearAll()">🗑 Borrar todos los datos</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════ PERSONAL: PANEL ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pDash">
+  <div id="pd-alerts" style="margin-bottom:14px;"></div>
+  <div class="kpi-strip" id="pd-kpis"></div>
+  <div class="g2 mb">
+    <div class="card"><div class="card-title">💸 Últimos movimientos</div><div id="pd-movs"></div></div>
+    <div class="card"><div class="card-title">🏦 Saldo por cuenta</div><div id="pd-cuentas"></div></div>
+  </div>
+  <div class="g3">
+    <div class="card"><div class="card-title">🎯 Presupuesto del mes</div><div id="pd-presup"></div></div>
+    <div class="card"><div class="card-title">🔁 Próximos cargos</div><div id="pd-subs"></div></div>
+    <div class="card"><div class="card-title">🏁 Objetivos</div><div id="pd-metas"></div></div>
+  </div>
+</section>
+
+<!-- ════════════ PERSONAL: MOVIMIENTOS ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pMovs">
+  <div class="ph">
+    <div><div class="ph-title">💸 Ingresos y gastos</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Todo tu flujo de caja personal en un solo sitio</div></div>
+    <div class="ph-acts">
+      <button class="btn btn-success" onclick="newMov('ingreso')">+ Ingreso</button>
+      <button class="btn btn-primary" onclick="newMov('gasto')">+ Gasto</button>
+    </div>
+  </div>
+  <div class="periodo-nav">
+    <div class="periodo-fila"><span class="periodo-lbl">Año</span><div id="pm-anyos" style="display:flex;gap:6px;flex-wrap:wrap;"></div></div>
+    <div class="periodo-fila"><span class="periodo-lbl">Mes</span><div id="pm-meses" style="display:flex;gap:6px;flex-wrap:wrap;"></div></div>
+  </div>
+  <div id="pm-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="fb">
+    <div class="fi"><span class="fi-icon">🔍</span><input id="pm-q" placeholder="Buscar concepto, categoría, notas..." oninput="rMovs()"></div>
+    <select id="pm-tipo-f" onchange="rMovs()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todo</option><option value="ingreso">↑ Ingresos</option><option value="gasto">↓ Gastos</option></select>
+    <select id="pm-cat-f" onchange="rMovs()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:150px;"><option value="">Todas categorías</option></select>
+    <select id="pm-cta-f" onchange="rMovs()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:140px;"></select>
+  </div>
+  <div class="g2 mb"><div class="card" id="pm-porcat"></div><div class="card" id="pm-evol"></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Cuenta</th><th class="n">Importe</th><th>IRPF</th><th>Doc</th><th></th></tr></thead><tbody id="pm-tb"></tbody></table></div></div>
+</section>
+
+<!-- ════════════ PERSONAL: CUENTAS ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pCuentas">
+  <div class="ph"><div><div class="ph-title">🏦 Cuentas</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Bancos, efectivo y tarjetas. El saldo se recalcula con cada movimiento</div></div>
+    <button class="btn btn-primary" onclick="newCuenta()">+ Nueva cuenta</button></div>
+  <div id="pc-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="g2" id="pc-grid"></div>
+</section>
+
+<!-- ════════════ PERSONAL: SUSCRIPCIONES ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pSubs">
+  <div class="ph"><div><div class="ph-title">🔁 Suscripciones y recibos fijos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Todo lo que se te cobra de forma recurrente</div></div>
+    <button class="btn btn-primary" onclick="newSub()">+ Nueva suscripción</button></div>
+  <div id="ps-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Servicio</th><th>Categoría</th><th>Periodicidad</th><th class="n">Importe</th><th class="n">Coste anual</th><th>Próximo cargo</th><th>Cuenta</th><th>Estado</th><th></th></tr></thead><tbody id="ps-tb"></tbody></table></div></div>
+</section>
+
+<!-- ════════════ PERSONAL: PRESUPUESTOS ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pPresup">
+  <div class="ph"><div><div class="ph-title">🎯 Presupuestos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Fija un límite mensual por categoría y controla cómo vas</div></div>
+    <button class="btn btn-primary" onclick="newPresup()">+ Nuevo presupuesto</button></div>
+  <div class="fb">
+    <div class="fgrp" style="flex:none;"><label style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Mes</label>
+      <input type="month" id="pp-mes" oninput="rPresup()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;width:180px;"></div>
+  </div>
+  <div id="pp-resumen" class="mb"></div>
+  <div id="pp-lista"></div>
+</section>
+
+<!-- ════════════ PERSONAL: OBJETIVOS ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pMetas">
+  <div class="ph"><div><div class="ph-title">🏁 Objetivos de ahorro</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Metas con fecha, progreso y cuánto necesitas apartar cada mes</div></div>
+    <button class="btn btn-primary" onclick="newMeta()">+ Nuevo objetivo</button></div>
+  <div class="g2" id="pmt-grid"></div>
+</section>
+
+<!-- ════════════ PERSONAL: INVERSIONES ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pInver">
+  <div class="ph"><div><div class="ph-title">📊 Inversiones</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Cartera con rentabilidad y peso de cada posición</div></div>
+    <button class="btn btn-primary" onclick="newInver()">+ Nueva posición</button></div>
+  <div id="pi-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="g2 mb"><div class="card" id="pi-repar"></div><div class="card" id="pi-top"></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Activo</th><th>Tipo</th><th>Bróker</th><th>Alta</th><th class="n">Invertido</th><th class="n">Valor actual</th><th class="n">P/G</th><th class="n">%</th><th class="n">Peso</th><th></th></tr></thead><tbody id="pi-tb"></tbody></table></div></div>
+</section>
+
+<!-- ════════════ PERSONAL: DEUDAS ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pDeudas">
+  <div class="ph"><div><div class="ph-title">🧮 Deudas y préstamos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Hipotecas, préstamos y tarjetas con lo que queda por pagar</div></div>
+    <button class="btn btn-primary" onclick="newDeuda()">+ Nueva deuda</button></div>
+  <div id="pdd-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="g2" id="pdd-grid"></div>
+</section>
+
+<!-- ════════════ PERSONAL: PATRIMONIO ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pPatrimonio">
+  <div class="ph"><div><div class="ph-title">📈 Patrimonio neto</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Todo lo que tienes menos todo lo que debes</div></div></div>
+  <div id="ppat-hero" class="mb"></div>
+  <div class="g2"><div class="card" id="ppat-act"></div><div class="card" id="ppat-pas"></div></div>
+</section>
+
+<!-- ════════════ PERSONAL: DOCUMENTOS ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pDocs">
+  <div class="ph"><div><div class="ph-title">📁 Documentos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Nóminas, certificados, seguros, declaraciones…</div></div>
+    <button class="btn btn-primary" onclick="newDoc()">+ Subir documento</button></div>
+  <div class="fb">
+    <div class="fi"><span class="fi-icon">🔍</span><input id="pdc-q" placeholder="Buscar documento..." oninput="rDocs()"></div>
+    <select id="pdc-tipo-f" onchange="rDocs()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos los tipos</option></select>
+    <select id="pdc-anyo-f" onchange="rDocs()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos los años</option></select>
+  </div>
+  <div class="g3" id="pdc-grid"></div>
+</section>
+
+<!-- ════════════ PERSONAL: RENTA ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pRenta">
+  <div class="ph"><div><div class="ph-title">🧾 Renta / IRPF personal</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Resumen fiscal del ejercicio listo para la declaración</div></div>
+    <div class="ph-acts">
+      <select id="pr-anyo" onchange="rRenta()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"></select>
+      <button class="btn btn-primary" onclick="rentaPDF()">📄 Informe PDF</button>
+      <button class="btn btn-secondary" onclick="rentaIA()">🤖 Copiar para IA</button>
+    </div></div>
+  <div id="prt-kpis" class="kpi-strip mb"></div>
+  <div class="g2 mb"><div class="card" id="prt-rend"></div><div class="card" id="prt-ded"></div></div>
+  <div class="card"><div class="card-title">Detalle de movimientos con efecto fiscal</div><div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Clasificación IRPF</th><th class="n">Importe</th></tr></thead><tbody id="prt-tb"></tbody></table></div></div>
+</section>
+
+<!-- ════════════ PERSONAL: CONFIGURACIÓN ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pCfg">
+  <div class="ph"><div class="ph-title">⚙ Configuración</div></div>
+  <div class="g2 mb">
+    <div class="card"><div class="card-title">Parámetros</div>
+      <div class="fg">
+        <div class="fgrp"><label>Tu nombre</label><input id="pcf-nom" onchange="savePCfg()"></div>
+        <div class="fgrp"><label>DNI</label><input id="pcf-dni" onchange="savePCfg()"></div>
+        <div class="fgrp"><label>% IRPF marginal</label><input id="pcf-irpf" type="number" onchange="savePCfg()"></div>
+        <div class="fgrp"><label>Objetivo tasa de ahorro (%)</label><input id="pcf-ahorro" type="number" onchange="savePCfg()"></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Datos</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn btn-secondary" onclick="syncNow()">↻ Sincronizar ahora</button>
+        <button class="btn btn-success" onclick="exportAll()">⬇ Exportar backup JSON</button>
+        <button class="btn btn-ghost" onclick="pullFromDrive()" style="border-color:var(--gn);color:var(--gn);">☁ Forzar descarga desde Drive</button>
+        <button class="btn btn-danger" onclick="clearAll()">🗑 Borrar datos de este espacio</button>
       </div>
     </div>
   </div>
@@ -1453,35 +1699,183 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-propietario')">Cancelar</button><button class="btn btn-primary" onclick="savePropietario()">Guardar</button></div>
 </div></div>
 
+
+<!-- MODAL MOVIMIENTO -->
+<div class="modal-overlay" id="m-mov"><div class="modal modal-lg">
+  <h2 id="m-mov-title">💸 Nuevo movimiento</h2>
+  <input type="hidden" id="mv-edit-id"><input type="hidden" id="mv-tipo">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Concepto *</label><input id="mv-con" placeholder="Nómina agosto / Compra Mercadona / Gasolina"></div>
+    <div class="fgrp"><label>Importe (€) *</label><input id="mv-imp" type="number" step="0.01" placeholder="1250.00"></div>
+    <div class="fgrp"><label>Fecha</label><input id="mv-fecha" type="date"></div>
+    <div class="fgrp"><label>Categoría</label><select id="mv-cat" onchange="toggleMovCatOtros()"></select>
+      <input id="mv-cat-otros" placeholder="Escribe la categoría…" style="display:none;margin-top:6px;border-color:var(--acc);"></div>
+    <div class="fgrp"><label>Cuenta</label><select id="mv-cta"></select></div>
+    <div class="fgrp"><label>Método de pago</label><select id="mv-met"><option>Tarjeta</option><option>Transferencia</option><option>Domiciliado</option><option>Efectivo</option><option>Bizum</option><option>Otro</option></select></div>
+    <div class="fgrp"><label>Clasificación IRPF</label>
+      <select id="mv-fis" onchange="pintarAyudaIRPF()">
+        <option value="ninguno">Sin efecto fiscal</option>
+        <option value="trabajo">Rendimiento del trabajo (nómina)</option>
+        <option value="actividad">Actividad económica (autónomo)</option>
+        <option value="cap_mob">Capital mobiliario (dividendos, intereses)</option>
+        <option value="cap_inm">Capital inmobiliario (alquileres)</option>
+        <option value="ganancia">Ganancia patrimonial (venta)</option>
+        <option value="perdida">Pérdida patrimonial</option>
+        <option value="ded_gasto">Gasto deducible de actividad</option>
+        <option value="ded_pension">Aportación a plan de pensiones</option>
+        <option value="ded_donativo">Donativo deducible</option>
+        <option value="ded_otra">Otra deducción</option>
+      </select>
+      <div id="mv-fis-ayuda" style="font-size:10.5px;color:var(--ink3);line-height:1.5;margin-top:2px;"></div>
+    </div>
+    <div class="fgrp fgf"><label>Notas</label><textarea id="mv-notas" rows="2"></textarea></div>
+    <div class="fgrp fgf"><label>Adjuntar justificante (PDF o foto)</label>
+      <div class="pdf-upload-zone" id="mv-pdf-zone" onclick="document.getElementById('mv-pdf').click()">
+        <input type="file" id="mv-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('mv-pdf','mv-pdf-zone','mv-pdf-data')">
+        <input type="hidden" id="mv-pdf-data"><input type="hidden" id="mv-pdf-name">
+        <span class="pdf-upload-label">📎 Adjuntar justificante</span>
+      </div>
+    </div>
+  </div>
+  <div id="mv-doc-actual"></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-mov')">Cancelar</button><button class="btn btn-primary" onclick="saveMov()">Guardar</button></div>
+</div></div>
+
+<!-- MODAL CUENTA -->
+<div class="modal-overlay" id="m-cuenta"><div class="modal">
+  <h2 id="m-cta-title">🏦 Nueva cuenta</h2>
+  <input type="hidden" id="ct-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Nombre *</label><input id="ct-nom" placeholder="Cuenta nómina BBVA"></div>
+    <div class="fgrp"><label>Tipo</label><select id="ct-tipo"><option>Cuenta corriente</option><option>Cuenta ahorro</option><option>Efectivo</option><option>Tarjeta de crédito</option><option>Bróker</option><option>Monedero digital</option><option>Otro</option></select></div>
+    <div class="fgrp"><label>Entidad</label><input id="ct-banco" placeholder="BBVA, Santander, Revolut..."></div>
+    <div class="fgrp"><label>Saldo inicial (€)</label><input id="ct-saldo" type="number" step="0.01" placeholder="0"></div>
+    <div class="fgrp"><label>IBAN (últimos 4)</label><input id="ct-iban" placeholder="1234"></div>
+    <div class="fgrp fgf"><label>Notas</label><input id="ct-notas"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-cuenta')">Cancelar</button><button class="btn btn-primary" onclick="saveCuenta()">Guardar</button></div>
+</div></div>
+
+<!-- MODAL SUSCRIPCIÓN -->
+<div class="modal-overlay" id="m-sub"><div class="modal">
+  <h2 id="m-sub-title">🔁 Nueva suscripción</h2>
+  <input type="hidden" id="sb-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Servicio *</label><input id="sb-nom" placeholder="Netflix, gimnasio, seguro coche..."></div>
+    <div class="fgrp"><label>Importe (€) *</label><input id="sb-imp" type="number" step="0.01" placeholder="12.99"></div>
+    <div class="fgrp"><label>Periodicidad</label><select id="sb-per"><option value="mensual">Mensual</option><option value="trimestral">Trimestral</option><option value="semestral">Semestral</option><option value="anual">Anual</option></select></div>
+    <div class="fgrp"><label>Próximo cargo</label><input id="sb-prox" type="date"></div>
+    <div class="fgrp"><label>Categoría</label><select id="sb-cat"></select></div>
+    <div class="fgrp"><label>Cuenta de cargo</label><select id="sb-cta"></select></div>
+    <div class="fgrp"><label>Estado</label><select id="sb-act"><option value="si">🟢 Activa</option><option value="no">⏸ Cancelada</option></select></div>
+    <div class="fgrp fgf"><label>Notas</label><input id="sb-notas" placeholder="Plan, cuándo renovar, si se puede cancelar..."></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-sub')">Cancelar</button><button class="btn btn-primary" onclick="saveSub()">Guardar</button></div>
+</div></div>
+
+<!-- MODAL PRESUPUESTO -->
+<div class="modal-overlay" id="m-presup"><div class="modal">
+  <h2 id="m-pp-title">🎯 Nuevo presupuesto</h2>
+  <input type="hidden" id="pb-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Categoría *</label><select id="pb-cat"></select></div>
+    <div class="fgrp fgf"><label>Límite mensual (€) *</label><input id="pb-imp" type="number" step="0.01" placeholder="400"></div>
+    <div class="fgrp fgf"><label>Notas</label><input id="pb-notas"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-presup')">Cancelar</button><button class="btn btn-primary" onclick="savePresup()">Guardar</button></div>
+</div></div>
+
+<!-- MODAL META -->
+<div class="modal-overlay" id="m-meta"><div class="modal">
+  <h2 id="m-mt-title">🏁 Nuevo objetivo</h2>
+  <input type="hidden" id="mt-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Objetivo *</label><input id="mt-nom" placeholder="Entrada piso, viaje Japón, fondo de emergencia"></div>
+    <div class="fgrp"><label>Cantidad objetivo (€) *</label><input id="mt-obj" type="number" step="0.01" placeholder="20000"></div>
+    <div class="fgrp"><label>Ahorrado hasta ahora (€)</label><input id="mt-act" type="number" step="0.01" placeholder="5000"></div>
+    <div class="fgrp"><label>Fecha límite</label><input id="mt-fecha" type="date"></div>
+    <div class="fgrp"><label>Prioridad</label><select id="mt-pri"><option value="alta">🔴 Alta</option><option value="media" selected>🟡 Media</option><option value="baja">🟢 Baja</option></select></div>
+    <div class="fgrp fgf"><label>Notas</label><input id="mt-notas"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Guardar</button></div>
+</div></div>
+
+<!-- MODAL INVERSIÓN -->
+<div class="modal-overlay" id="m-inver"><div class="modal">
+  <h2 id="m-iv-title">📊 Nueva posición</h2>
+  <input type="hidden" id="iv-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Activo *</label><input id="iv-nom" placeholder="MSCI World, Apple, Bitcoin, Letras del Tesoro"></div>
+    <div class="fgrp"><label>Tipo</label><select id="iv-tipo"><option>Fondo indexado</option><option>ETF</option><option>Acciones</option><option>Renta fija</option><option>Criptomoneda</option><option>Plan de pensiones</option><option>Depósito</option><option>Inmobiliario</option><option>Otro</option></select></div>
+    <div class="fgrp"><label>Bróker / entidad</label><input id="iv-broker" placeholder="MyInvestor, Interactive Brokers..."></div>
+    <div class="fgrp"><label>Invertido (€) *</label><input id="iv-inv" type="number" step="0.01" placeholder="10000"></div>
+    <div class="fgrp"><label>Valor actual (€) *</label><input id="iv-val" type="number" step="0.01" placeholder="11500"></div>
+    <div class="fgrp"><label>Fecha primera compra</label><input id="iv-fecha" type="date"></div>
+    <div class="fgrp"><label>Aportación mensual (€)</label><input id="iv-apo" type="number" step="0.01" placeholder="300"></div>
+    <div class="fgrp fgf"><label>Notas</label><input id="iv-notas"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-inver')">Cancelar</button><button class="btn btn-primary" onclick="saveInver()">Guardar</button></div>
+</div></div>
+
+<!-- MODAL DEUDA -->
+<div class="modal-overlay" id="m-deuda"><div class="modal">
+  <h2 id="m-dd-title">🧮 Nueva deuda</h2>
+  <input type="hidden" id="dd-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Concepto *</label><input id="dd-nom" placeholder="Hipoteca vivienda, préstamo coche, tarjeta"></div>
+    <div class="fgrp"><label>Tipo</label><select id="dd-tipo"><option>Hipoteca</option><option>Préstamo personal</option><option>Préstamo coche</option><option>Tarjeta de crédito</option><option>Préstamo familiar</option><option>Otro</option></select></div>
+    <div class="fgrp"><label>Entidad</label><input id="dd-ent" placeholder="BBVA, Cetelem..."></div>
+    <div class="fgrp"><label>Importe inicial (€)</label><input id="dd-ini" type="number" step="0.01" placeholder="150000"></div>
+    <div class="fgrp"><label>Pendiente ahora (€) *</label><input id="dd-pend" type="number" step="0.01" placeholder="120000"></div>
+    <div class="fgrp"><label>Cuota mensual (€)</label><input id="dd-cuota" type="number" step="0.01" placeholder="650"></div>
+    <div class="fgrp"><label>Tipo de interés (%)</label><input id="dd-tin" type="number" step="0.01" placeholder="2.5"></div>
+    <div class="fgrp"><label>Fecha fin prevista</label><input id="dd-fin" type="date"></div>
+    <div class="fgrp fgf"><label>Notas</label><input id="dd-notas"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-deuda')">Cancelar</button><button class="btn btn-primary" onclick="saveDeuda()">Guardar</button></div>
+</div></div>
+
+<!-- MODAL DOCUMENTO -->
+<div class="modal-overlay" id="m-doc"><div class="modal">
+  <h2 id="m-dc-title">📁 Subir documento</h2>
+  <input type="hidden" id="dc-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Nombre *</label><input id="dc-nom" placeholder="Nómina agosto 2026 / Declaración renta 2025"></div>
+    <div class="fgrp"><label>Tipo</label><select id="dc-tipo"><option>Nómina</option><option>Declaración de la renta</option><option>Certificado bancario</option><option>Seguro</option><option>Contrato</option><option>Factura</option><option>Justificante</option><option>Vida laboral</option><option>Escritura</option><option>Otro</option></select></div>
+    <div class="fgrp"><label>Año</label><input id="dc-anyo" type="number" placeholder="2026"></div>
+    <div class="fgrp fgf"><label>Notas</label><input id="dc-notas"></div>
+    <div class="fgrp fgf"><label>Archivo (PDF o imagen) *</label>
+      <div class="pdf-upload-zone" id="dc-pdf-zone" onclick="document.getElementById('dc-pdf').click()">
+        <input type="file" id="dc-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('dc-pdf','dc-pdf-zone','dc-pdf-data')">
+        <input type="hidden" id="dc-pdf-data"><input type="hidden" id="dc-pdf-name">
+        <span class="pdf-upload-label">📎 Seleccionar archivo</span>
+      </div>
+    </div>
+  </div>
+  <div id="dc-doc-actual"></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-doc')">Cancelar</button><button class="btn btn-primary" onclick="saveDoc()">Guardar</button></div>
+</div></div>
+
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
 // DATA LAYER
 // ══════════════════════════════════════════════════════════════
-const KEY='rc5';
+let WS = localStorage.getItem('rc_ws') || '';
+const WS_CFG = {
+  gentaury:{key:'rc5',      sheet:'RentaControl_Data',  backup:'rentacontrol_backup.json', nom:'Gentaury', ic:'🏢'},
+  personal:{key:'rc5_pers', sheet:'Personal_Finanzas',   backup:'personal_backup.json',     nom:'Personal', ic:'💰'}
+};
+let KEY = WS_CFG[WS] ? WS_CFG[WS].key : 'rc5';
 let D=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||def();}catch{return def();}})();
-function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
+function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
 if(!D.compras)D.compras=[];
 if(!D.propietarios)D.propietarios=[];
+['cuentas','movs','presup','subs','metas','invers','deudas','docs'].forEach(k=>{if(!D[k])D[k]=[];});
 if(!D.anuncios)D.anuncios=[];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(D));
 // ── Save + auto-sync to Drive ────────────────────────────────
-function saveAndSync() {
-  localStorage.setItem(KEY, JSON.stringify(D));
-  if (typeof gToken !== 'undefined' && gToken && typeof gSheetId !== 'undefined' && gSheetId) {
-    clearTimeout(window._syncDebounce);
-    window._syncDebounce = setTimeout(async () => {
-      try {
-        updateDriveUI('syncing');
-        await syncToSheets();
-        updateDriveUI(true);
-      } catch(e) {
-        console.warn('Auto-sync error:', e);
-        updateDriveUI(true);
-      }
-    }, 2000);
-  }
-}
+
 
 
 const eur=(n,d=0)=>(parseFloat(n)||0).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d})+'€';
@@ -1542,7 +1936,9 @@ const PDF_PLACEHOLDERS = {
   'ga-pdf-zone':'📎 Haz clic para adjuntar PDF o imagen',
   'pa-pdf-zone':'📎 Haz clic para adjuntar recibo o factura',
   'co-pdf-zone':'📎 Adjuntar contrato firmado (PDF o imagen)',
-  'cp-pdf-zone':'📎 Adjuntar factura en PDF o foto'
+  'cp-pdf-zone':'📎 Adjuntar factura en PDF o foto',
+  'mv-pdf-zone':'📎 Adjuntar justificante',
+  'dc-pdf-zone':'📎 Seleccionar archivo'
 };
 function clearPdfZone(zoneId, dataId) {
   const zone = document.getElementById(zoneId);
@@ -1563,7 +1959,10 @@ function clearPdfZone(zoneId, dataId) {
 const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,propietarios:rPropietarios,
   activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rPagos,
   gastos:rGastos,facturas:rFacturas,hist:rHist,fiscal:rFiscal,
-  informes:rInfs,incs:rIncs,provs:rProvs,cfg:rCfg};
+  informes:rInfs,incs:rIncs,provs:rProvs,cfg:rCfg,
+  pDash:rPDash, pMovs:rMovs, pCuentas:rCuentas, pSubs:rSubs, pPresup:rPresup,
+  pMetas:rMetas, pInver:rInver, pDeudas:rDeudas, pPatrimonio:rPatrimonio,
+  pDocs:rDocs, pRenta:rRenta, pCfg:rPCfg};
 
 function go(el){
   const s=el.dataset.s;
@@ -1583,6 +1982,11 @@ function populateSels(){
   // Selectores de propietario
   const oO='<option value="">— Sin asignar —</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['pr-owner','cp-owner'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oO;e.value=v;}});
+  // Cuentas del espacio personal
+  const ctO='<option value="">— Sin cuenta —</option>'+(D.cuentas||[]).map(x=>`<option value="${x.id}">${x.nom}</option>`).join('');
+  ['mv-cta','sb-cta'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=ctO;e.value=v;}});
+  const ctF='<option value="">Todas las cuentas</option>'+(D.cuentas||[]).map(x=>`<option value="${x.id}">${x.nom}</option>`).join('');
+  ['pm-cta-f'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=ctF;e.value=v;}});
   const oF='<option value="">Todos los propietarios</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['cp-owner-f','fi-owner'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oF;e.value=v;}});
   ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=iO;});
@@ -2727,6 +3131,1075 @@ function rAnuncios(){
   }).join('');
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// FINANZAS PERSONALES
+// ══════════════════════════════════════════════════════════════
+const CAT_GASTO = ['Vivienda','Alimentación','Restaurantes','Transporte','Combustible','Salud','Farmacia','Ocio','Viajes','Ropa','Educación','Suscripciones','Seguros','Impuestos','Telefonía e internet','Suministros','Regalos','Mascotas','Cuidado personal','Hogar y muebles','Comisiones bancarias','Donativos','Otros'];
+const CAT_INGRESO = ['Nómina','Paga extra','Facturación autónomo','Dividendos','Intereses','Alquileres','Venta de activos','Devolución de Hacienda','Reembolsos','Regalos recibidos','Otros'];
+const IC_CAT = {'Vivienda':'🏠','Alimentación':'🛒','Restaurantes':'🍽️','Transporte':'🚇','Combustible':'⛽','Salud':'🏥','Farmacia':'💊','Ocio':'🎬','Viajes':'✈️','Ropa':'👕','Educación':'📚','Suscripciones':'🔁','Seguros':'🛡️','Impuestos':'🏛️','Telefonía e internet':'📱','Suministros':'💡','Regalos':'🎁','Mascotas':'🐾','Cuidado personal':'💇','Hogar y muebles':'🪑','Comisiones bancarias':'🏦','Donativos':'❤️','Nómina':'💼','Paga extra':'🎉','Facturación autónomo':'🧾','Dividendos':'📈','Intereses':'🏦','Alquileres':'🔑','Venta de activos':'💱','Devolución de Hacienda':'🏛️','Reembolsos':'↩️','Regalos recibidos':'🎁','Otros':'📦'};
+
+const IRPF_TIPOS = {
+  ninguno:{et:'—',col:'',ayuda:''},
+  trabajo:{et:'Trabajo',col:'b',ayuda:'Nóminas y retribuciones por cuenta ajena. Van a rendimientos del trabajo.'},
+  actividad:{et:'Actividad',col:'b',ayuda:'Ingresos de actividad económica como autónomo.'},
+  cap_mob:{et:'Cap. mobiliario',col:'p',ayuda:'Dividendos, intereses y rendimientos de productos financieros. Tributan en la base del ahorro.'},
+  cap_inm:{et:'Cap. inmobiliario',col:'p',ayuda:'Rendimientos por arrendamiento de inmuebles.'},
+  ganancia:{et:'Ganancia',col:'g',ayuda:'Beneficio por venta de acciones, fondos, inmuebles o cripto. Base del ahorro.'},
+  perdida:{et:'Pérdida',col:'r',ayuda:'Pérdida patrimonial: puede compensar ganancias del ejercicio y de los 4 siguientes.'},
+  ded_gasto:{et:'Gasto deducible',col:'g',ayuda:'Gasto deducible de tu actividad económica.'},
+  ded_pension:{et:'Plan pensiones',col:'g',ayuda:'Aportaciones a planes de pensiones: reducen la base imponible (límite legal anual).'},
+  ded_donativo:{et:'Donativo',col:'g',ayuda:'Donativos a ONG y entidades acogidas a la Ley 49/2002: deducción en cuota.'},
+  ded_otra:{et:'Otra deducción',col:'g',ayuda:'Otras deducciones estatales o autonómicas.'}
+};
+
+const MES_N = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let pmAnyo='', pmMes='';
+
+function catsDe(tipo){ return tipo==='ingreso' ? CAT_INGRESO : CAT_GASTO; }
+function icCat(c){ return IC_CAT[c] || '📦'; }
+function pctBar(v,max){ return max>0 ? Math.min(100,Math.round(v/max*100)) : 0; }
+
+// Saldo real de una cuenta = inicial + ingresos − gastos
+function saldoCuenta(id){
+  const c=(D.cuentas||[]).find(x=>x.id==id); if(!c) return 0;
+  const mov=(D.movs||[]).filter(m=>m.ctaId==id)
+    .reduce((s,m)=>s+(m.tipo==='ingreso'?1:-1)*parseFloat(m.imp||0),0);
+  return parseFloat(c.saldo||0)+mov;
+}
+function totalLiquido(){ return (D.cuentas||[]).filter(c=>c.tipo!=='Tarjeta de crédito').reduce((s,c)=>s+saldoCuenta(c.id),0); }
+function totalInvertido(){ return (D.invers||[]).reduce((s,i)=>s+parseFloat(i.val||0),0); }
+function totalDeuda(){ return (D.deudas||[]).reduce((s,d)=>s+parseFloat(d.pend||0),0); }
+function patrimonioNeto(){ return totalLiquido()+totalInvertido()-totalDeuda(); }
+
+function movsDe(anyo,mes){
+  return (D.movs||[]).filter(m=>{
+    const f=m.fecha||''; if(!f.startsWith(anyo)) return false;
+    if(mes && f.slice(5,7)!==mes) return false;
+    return true;
+  });
+}
+const sumTipo=(arr,t)=>arr.filter(m=>m.tipo===t).reduce((s,m)=>s+parseFloat(m.imp||0),0);
+
+// ── MOVIMIENTOS ───────────────────────────────────────────────
+function pintarAyudaIRPF(){
+  const el=$i('mv-fis-ayuda'); if(!el)return;
+  el.textContent=(IRPF_TIPOS[$i('mv-fis').value]||{}).ayuda||'';
+}
+function toggleMovCatOtros(){
+  const sel=$i('mv-cat'), inp=$i('mv-cat-otros'); if(!sel||!inp)return;
+  const es=sel.value==='Otros';
+  inp.style.display=es?'block':'none'; if(es)inp.focus(); else inp.value='';
+}
+function rellenarCats(tipo){
+  const sel=$i('mv-cat'); if(!sel)return;
+  sel.innerHTML=catsDe(tipo).map(x=>`<option>${x}</option>`).join('');
+}
+function newMov(tipo){
+  $i('mv-edit-id').value=''; $i('mv-tipo').value=tipo;
+  $i('m-mov-title').textContent = tipo==='ingreso' ? '💚 Nuevo ingreso' : '💸 Nuevo gasto';
+  ['mv-con','mv-imp','mv-notas','mv-cat-otros'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  let fd=new Date().toISOString().split('T')[0];
+  if(pmAnyo&&pmAnyo!=='TODO'&&pmMes) fd=`${pmAnyo}-${pmMes}-01`;
+  $i('mv-fecha').value=fd;
+  rellenarCats(tipo);
+  $i('mv-cat').value = tipo==='ingreso'?'Nómina':'Alimentación';
+  $i('mv-fis').value = tipo==='ingreso'?'trabajo':'ninguno';
+  $i('mv-met').value='Tarjeta';
+  toggleMovCatOtros(); pintarAyudaIRPF();
+  clearPdfZone('mv-pdf-zone','mv-pdf-data');
+  $i('mv-doc-actual').innerHTML='';
+  openM('m-mov');
+}
+function editMov(id){
+  const m=(D.movs||[]).find(x=>x.id==id); if(!m)return;
+  $i('mv-edit-id').value=m.id; $i('mv-tipo').value=m.tipo;
+  $i('m-mov-title').textContent='✏️ Editar '+(m.tipo==='ingreso'?'ingreso':'gasto');
+  $i('mv-con').value=m.con||''; $i('mv-imp').value=m.imp||''; $i('mv-fecha').value=m.fecha||'';
+  rellenarCats(m.tipo);
+  if(m.cat && !catsDe(m.tipo).includes(m.cat)){ $i('mv-cat').value='Otros'; $i('mv-cat-otros').value=m.cat; }
+  else { $i('mv-cat').value=m.cat||'Otros'; $i('mv-cat-otros').value=''; }
+  toggleMovCatOtros();
+  $i('mv-cta').value=m.ctaId||''; $i('mv-met').value=m.met||'Tarjeta';
+  $i('mv-fis').value=m.fis||'ninguno'; pintarAyudaIRPF();
+  $i('mv-notas').value=m.notas||'';
+  clearPdfZone('mv-pdf-zone','mv-pdf-data');
+  $i('mv-doc-actual').innerHTML = m.pdfData ? `<div class="form-section" style="margin-top:16px;">Justificante guardado</div>
+    <div style="display:flex;gap:6px;"><button class="pdf-badge green" onclick="openPdf('${m.pdfData}','${m.pdfName||'doc.pdf'}')">📄 ${m.pdfName||'Ver'}</button></div>` : '';
+  openM('m-mov');
+}
+function saveMov(){
+  const con=gi('mv-con'), imp=gn('mv-imp');
+  if(!con||!imp){toast('Completa concepto e importe',false);return;}
+  let cat=$i('mv-cat').value;
+  if(cat==='Otros'){ const l=gi('mv-cat-otros'); if(l) cat=l; }
+  const editId=gi('mv-edit-id');
+  const campos={tipo:$i('mv-tipo').value,con,imp,fecha:gi('mv-fecha'),cat,ctaId:gi('mv-cta'),
+    met:$i('mv-met').value,fis:$i('mv-fis').value,notas:gi('mv-notas')};
+  const pdfData=$i('mv-pdf-data')?.value||'', pdfName=$i('mv-pdf-name')?.value||'';
+  if(editId){ const m=D.movs.find(x=>x.id==editId); if(m){Object.assign(m,campos); if(pdfData){m.pdfData=pdfData;m.pdfName=pdfName;}} toast('Movimiento actualizado'); }
+  else { D.movs.push(Object.assign({id:uid(),pdfData,pdfName},campos)); toast(campos.tipo==='ingreso'?'Ingreso registrado':'Gasto registrado'); }
+  saveAndSync(); closeM('m-mov'); rMovs();
+}
+function delMov(id){ if(!confirm('¿Eliminar este movimiento?'))return; D.movs=D.movs.filter(x=>x.id!==id); saveAndSync(); rMovs(); toast('Eliminado'); }
+function setPmAnyo(a){ pmAnyo=a; pmMes=''; rMovs(); }
+function setPmMes(m){ pmMes=m; rMovs(); }
+
+function rMovs(){
+  const movs=D.movs||[];
+  const anyos=[...new Set(movs.map(m=>(m.fecha||'').slice(0,4)).filter(Boolean))].sort().reverse();
+  if(pmAnyo && !anyos.includes(pmAnyo) && pmAnyo!=='TODO') pmAnyo='';
+  if(!pmAnyo) pmAnyo = anyos.length?anyos[0]:String(new Date().getFullYear());
+
+  const totA=a=>{const l=movs.filter(m=>(m.fecha||'').startsWith(a));return sumTipo(l,'ingreso')-sumTipo(l,'gasto');};
+  let hA=anyos.map(a=>`<button class="pill ${pmAnyo===a?'on':''}" onclick="setPmAnyo('${a}')">${a}<span class="pill-sub">${eur(totA(a))}</span></button>`).join('');
+  hA+=`<button class="pill ${pmAnyo==='TODO'?'on':''}" onclick="setPmAnyo('TODO')">Todo</button>`;
+  if(!anyos.length) hA='<span style="font-size:11px;color:var(--ink3);">Sin movimientos aún</span>'+hA;
+  $i('pm-anyos').innerHTML=hA;
+
+  const bm=$i('pm-meses');
+  if(pmAnyo==='TODO'){ bm.innerHTML='<span style="font-size:11px;color:var(--ink3);">Todos los años</span>'; pmMes=''; }
+  else {
+    const dA=movs.filter(m=>(m.fecha||'').startsWith(pmAnyo));
+    let h=`<button class="pill ${pmMes===''?'on':''}" onclick="setPmMes('')">Todo el año<span class="pill-sub">${dA.length} mov.</span></button>`;
+    h+=MES_N.map((mn,ix)=>{
+      const mm=String(ix+1).padStart(2,'0');
+      const dM=dA.filter(m=>m.fecha.slice(5,7)===mm);
+      const bal=sumTipo(dM,'ingreso')-sumTipo(dM,'gasto');
+      return `<button class="pill ${pmMes===mm?'on':''} ${dM.length?'':'vacio'}" onclick="setPmMes('${mm}')">${mn}<span class="pill-sub">${dM.length?eur(bal):'–'}</span></button>`;
+    }).join('');
+    bm.innerHTML=h;
+  }
+
+  const selC=$i('pm-cat-f');
+  if(selC){ const us=[...new Set(movs.map(m=>m.cat).filter(Boolean))].sort(); const v=selC.value;
+    selC.innerHTML='<option value="">Todas categorías</option>'+us.map(x=>`<option>${x}</option>`).join(''); selC.value=v; }
+
+  const q=gi('pm-q').toLowerCase(), tF=gi('pm-tipo-f'), cF=gi('pm-cat-f'), ctF=gi('pm-cta-f');
+  const list=movs.filter(m=>{
+    const f=m.fecha||'';
+    if(pmAnyo!=='TODO'){ if(!f.startsWith(pmAnyo))return false; if(pmMes&&f.slice(5,7)!==pmMes)return false; }
+    if(tF&&m.tipo!==tF)return false;
+    if(cF&&m.cat!==cF)return false;
+    if(ctF&&m.ctaId!=ctF)return false;
+    if(q&&!`${m.con} ${m.cat} ${m.notas}`.toLowerCase().includes(q))return false;
+    return true;
+  }).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  const ing=sumTipo(list,'ingreso'), gas=sumTipo(list,'gasto'), bal=ing-gas;
+  const tasa=ing>0?Math.round(bal/ing*100):0;
+  const per=pmAnyo==='TODO'?'Histórico':(pmMes?MES_L[+pmMes-1]+' '+pmAnyo:'Año '+pmAnyo);
+  $i('pm-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">${per} · Ingresos</div><div class="kpi-value">${eur(ing)}</div></div>
+    <div class="kpi" style="--kc:var(--rd);flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">Gastos</div><div class="kpi-value">${eur(gas)}</div></div>
+    <div class="kpi" style="--kc:${bal>=0?'var(--gn)':'var(--rd)'};flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">Balance</div><div class="kpi-value">${eur(bal)}</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:130px;"><div class="kpi-accent"></div><div class="kpi-label">Tasa de ahorro</div><div class="kpi-value">${tasa}%</div><div class="kpi-sub">${list.length} movimientos</div></div>`;
+
+  const gl=list.filter(m=>m.tipo==='gasto');
+  const porCat={}; gl.forEach(m=>{porCat[m.cat]=(porCat[m.cat]||0)+parseFloat(m.imp||0);});
+  const ord=Object.entries(porCat).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  $i('pm-porcat').innerHTML=`<div class="card-title">📉 Gastos por categoría</div>${ord.length?ord.map(([k,v])=>`
+    <div style="margin-bottom:11px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>${icCat(k)} ${k}</span><span class="mono" style="color:var(--rd);">${eur(v)} <span style="color:var(--ink3);font-size:10px;">${gas>0?Math.round(v/gas*100):0}%</span></span></div>
+    <div class="pbar"><div class="pbar-fill" style="width:${pctBar(v,ord[0][1])}%;background:var(--rd);"></div></div></div>`).join(''):'<div class="empty" style="padding:20px;"><p>Sin gastos en el periodo</p></div>'}`;
+
+  const anyoEv=pmAnyo==='TODO'?String(new Date().getFullYear()):pmAnyo;
+  let hEv=`<div class="card-title">📈 Evolución ${anyoEv}</div>`;
+  const maxM=Math.max(...MES_N.map((_,ix)=>{const mm=String(ix+1).padStart(2,'0');const l=movs.filter(m=>(m.fecha||'').startsWith(anyoEv+'-'+mm));return Math.max(sumTipo(l,'ingreso'),sumTipo(l,'gasto'));}),1);
+  hEv+=MES_N.map((mn,ix)=>{
+    const mm=String(ix+1).padStart(2,'0');
+    const l=movs.filter(m=>(m.fecha||'').startsWith(anyoEv+'-'+mm));
+    const i2=sumTipo(l,'ingreso'), g2=sumTipo(l,'gasto');
+    if(!i2&&!g2) return '';
+    return `<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span>${mn}</span><span class="mono" style="color:${i2-g2>=0?'var(--gn)':'var(--rd)'};">${eur(i2-g2)}</span></div>
+      <div style="display:flex;gap:3px;height:7px;"><div style="flex:1;background:var(--line);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pctBar(i2,maxM)}%;background:var(--gn);"></div></div>
+      <div style="flex:1;background:var(--line);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pctBar(g2,maxM)}%;background:var(--rd);"></div></div></div></div>`;
+  }).join('');
+  $i('pm-evol').innerHTML=hEv+'<div style="font-size:10px;color:var(--ink3);margin-top:8px;">🟢 ingresos · 🔴 gastos</div>';
+
+  const tb=$i('pm-tb');
+  if(!list.length){ tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">💸</div><p>Sin movimientos en '+per.toLowerCase()+'</p></div></td></tr>'; return; }
+  let mAct=''; const filas=[];
+  list.forEach(m=>{
+    const mm=(m.fecha||'').slice(0,7);
+    if(!pmMes&&mm&&mm!==mAct){
+      mAct=mm; const [yy,m2]=mm.split('-');
+      const lm=list.filter(o=>(o.fecha||'').slice(0,7)===mm);
+      const b=sumTipo(lm,'ingreso')-sumTipo(lm,'gasto');
+      filas.push(`<tr style="background:var(--bg2);"><td colspan="8" style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink2);font-weight:600;">${MES_L[+m2-1]} ${yy} · balance ${eur(b)}</td></tr>`);
+    }
+    const ct=(D.cuentas||[]).find(c=>c.id==m.ctaId);
+    const fi=IRPF_TIPOS[m.fis]||IRPF_TIPOS.ninguno;
+    filas.push(`<tr>
+      <td class="mono" style="font-size:11px;white-space:nowrap;">${m.fecha?fD(m.fecha):'–'}</td>
+      <td><div style="font-size:12px;font-weight:600;">${m.con}</div>${m.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${m.notas}</div>`:''}</td>
+      <td style="font-size:11px;white-space:nowrap;">${icCat(m.cat)} ${m.cat}</td>
+      <td style="font-size:11px;color:var(--ink3);">${ct?ct.nom:'—'}</td>
+      <td class="mono" style="text-align:right;font-weight:700;white-space:nowrap;color:${m.tipo==='ingreso'?'var(--gn)':'var(--rd)'};">${m.tipo==='ingreso'?'+':'−'}${eur(m.imp,2)}</td>
+      <td>${m.fis&&m.fis!=='ninguno'?`<span class="badge badge-${fi.col}">${fi.et}</span>`:'<span style="font-size:10px;color:var(--ink3);">—</span>'}</td>
+      <td>${m.pdfData?`<button class="pdf-badge green" onclick="openPdf('${m.pdfData}','${m.pdfName||'doc.pdf'}')">📄</button>`:'<span style="font-size:10px;color:var(--ink3);">–</span>'}</td>
+      <td style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editMov('${m.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delMov('${m.id}')">🗑</button></td>
+    </tr>`);
+  });
+  tb.innerHTML=filas.join('');
+}
+
+// ── CUENTAS ───────────────────────────────────────────────────
+function newCuenta(){
+  $i('ct-edit-id').value=''; $i('m-cta-title').textContent='🏦 Nueva cuenta';
+  ['ct-nom','ct-banco','ct-saldo','ct-iban','ct-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('ct-tipo').value='Cuenta corriente'; openM('m-cuenta');
+}
+function editCuenta(id){
+  const c=(D.cuentas||[]).find(x=>x.id==id); if(!c)return;
+  $i('ct-edit-id').value=c.id; $i('m-cta-title').textContent='✏️ Editar cuenta';
+  $i('ct-nom').value=c.nom||''; $i('ct-tipo').value=c.tipo||'Cuenta corriente';
+  $i('ct-banco').value=c.banco||''; $i('ct-saldo').value=c.saldo||'';
+  $i('ct-iban').value=c.iban||''; $i('ct-notas').value=c.notas||'';
+  openM('m-cuenta');
+}
+function saveCuenta(){
+  const nom=gi('ct-nom'); if(!nom){toast('Introduce el nombre',false);return;}
+  const campos={nom,tipo:$i('ct-tipo').value,banco:gi('ct-banco'),saldo:gn('ct-saldo'),iban:gi('ct-iban'),notas:gi('ct-notas')};
+  const id=gi('ct-edit-id');
+  if(id){ const c=D.cuentas.find(x=>x.id==id); if(c)Object.assign(c,campos); toast('Cuenta actualizada'); }
+  else { D.cuentas.push(Object.assign({id:uid()},campos)); toast('Cuenta añadida'); }
+  saveAndSync(); closeM('m-cuenta'); populateSels(); rCuentas();
+}
+function delCuenta(id){
+  const n=(D.movs||[]).filter(m=>m.ctaId==id).length;
+  if(n && !confirm(`Esta cuenta tiene ${n} movimiento(s) asociados. Quedarán sin cuenta. ¿Continuar?`))return;
+  if(!n && !confirm('¿Eliminar cuenta?'))return;
+  (D.movs||[]).forEach(m=>{if(m.ctaId==id)m.ctaId='';});
+  D.cuentas=D.cuentas.filter(x=>x.id!==id);
+  saveAndSync(); populateSels(); rCuentas(); toast('Eliminada');
+}
+const IC_CTA={'Cuenta corriente':'🏦','Cuenta ahorro':'🐷','Efectivo':'💵','Tarjeta de crédito':'💳','Bróker':'📊','Monedero digital':'📱','Otro':'📦'};
+function rCuentas(){
+  const cs=D.cuentas||[];
+  const liq=totalLiquido();
+  const tarj=cs.filter(c=>c.tipo==='Tarjeta de crédito').reduce((s,c)=>s+saldoCuenta(c.id),0);
+  $i('pc-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Total líquido</div><div class="kpi-value">${eur(liq)}</div><div class="kpi-sub">${cs.length} cuentas</div></div>
+    <div class="kpi" style="--kc:var(--rd);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Saldo tarjetas</div><div class="kpi-value">${eur(tarj)}</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Patrimonio neto</div><div class="kpi-value">${eur(patrimonioNeto())}</div></div>`;
+  const g=$i('pc-grid');
+  if(!cs.length){ g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏦</div><p>Añade tus cuentas para empezar a controlar los saldos</p></div>'; return; }
+  g.innerHTML=cs.map(c=>{
+    const s=saldoCuenta(c.id);
+    const nm=(D.movs||[]).filter(m=>m.ctaId==c.id).length;
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${IC_CTA[c.tipo]||'🏦'} ${c.nom}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px;">${c.tipo}${c.banco?' · '+c.banco:''}${c.iban?' · ····'+c.iban:''}</div></div>
+        <div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editCuenta('${c.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCuenta('${c.id}')">🗑</button></div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:${s>=0?'var(--gn)':'var(--rd)'};">${eur(s,2)}</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:4px;">Saldo inicial ${eur(c.saldo,2)} · ${nm} movimientos</div>
+      ${c.notas?`<div style="font-size:10px;color:var(--ink3);margin-top:6px;font-style:italic;">${c.notas}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+
+// ── SUSCRIPCIONES ─────────────────────────────────────────────
+const FREQ={mensual:12,trimestral:4,semestral:2,anual:1};
+function costeAnual(s){ return parseFloat(s.imp||0)*(FREQ[s.per]||12); }
+function newSub(){
+  $i('sb-edit-id').value=''; $i('m-sub-title').textContent='🔁 Nueva suscripción';
+  ['sb-nom','sb-imp','sb-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('sb-per').value='mensual'; $i('sb-act').value='si';
+  $i('sb-prox').value=new Date().toISOString().split('T')[0];
+  $i('sb-cat').innerHTML=CAT_GASTO.map(x=>`<option>${x}</option>`).join('');
+  $i('sb-cat').value='Suscripciones';
+  openM('m-sub');
+}
+function editSub(id){
+  const s=(D.subs||[]).find(x=>x.id==id); if(!s)return;
+  $i('sb-edit-id').value=s.id; $i('m-sub-title').textContent='✏️ Editar suscripción';
+  $i('sb-nom').value=s.nom||''; $i('sb-imp').value=s.imp||''; $i('sb-per').value=s.per||'mensual';
+  $i('sb-prox').value=s.prox||''; $i('sb-act').value=s.act||'si'; $i('sb-notas').value=s.notas||'';
+  $i('sb-cat').innerHTML=CAT_GASTO.map(x=>`<option>${x}</option>`).join('');
+  $i('sb-cat').value=s.cat||'Suscripciones'; $i('sb-cta').value=s.ctaId||'';
+  openM('m-sub');
+}
+function saveSub(){
+  const nom=gi('sb-nom'), imp=gn('sb-imp');
+  if(!nom||!imp){toast('Completa servicio e importe',false);return;}
+  const campos={nom,imp,per:$i('sb-per').value,prox:gi('sb-prox'),cat:$i('sb-cat').value,
+    ctaId:gi('sb-cta'),act:$i('sb-act').value,notas:gi('sb-notas')};
+  const id=gi('sb-edit-id');
+  if(id){ const s=D.subs.find(x=>x.id==id); if(s)Object.assign(s,campos); toast('Actualizada'); }
+  else { D.subs.push(Object.assign({id:uid()},campos)); toast('Suscripción añadida'); }
+  saveAndSync(); closeM('m-sub'); rSubs();
+}
+function delSub(id){ if(!confirm('¿Eliminar suscripción?'))return; D.subs=D.subs.filter(x=>x.id!==id); saveAndSync(); rSubs(); toast('Eliminada'); }
+function cobrarSub(id){
+  const s=(D.subs||[]).find(x=>x.id==id); if(!s)return;
+  D.movs.push({id:uid(),tipo:'gasto',con:s.nom+' (suscripción)',imp:parseFloat(s.imp||0),
+    fecha:s.prox||new Date().toISOString().split('T')[0],cat:s.cat||'Suscripciones',
+    ctaId:s.ctaId||'',met:'Domiciliado',fis:'ninguno',notas:'Generado desde suscripciones'});
+  // Avanzar la fecha del próximo cargo
+  if(s.prox){
+    const d=new Date(s.prox+'T00:00:00');
+    const add={mensual:1,trimestral:3,semestral:6,anual:12}[s.per]||1;
+    d.setMonth(d.getMonth()+add);
+    s.prox=d.toISOString().split('T')[0];
+  }
+  saveAndSync(); rSubs(); toast('Cargo registrado y fecha actualizada');
+}
+function rSubs(){
+  const ss=D.subs||[], act=ss.filter(s=>s.act!=='no');
+  const mes=act.reduce((s,x)=>s+costeAnual(x)/12,0);
+  const anual=act.reduce((s,x)=>s+costeAnual(x),0);
+  const hoy=new Date().toISOString().split('T')[0];
+  const prox7=act.filter(s=>s.prox&&s.prox>=hoy&&s.prox<=new Date(Date.now()+7*864e5).toISOString().split('T')[0]).length;
+  $i('ps-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--rd);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Coste mensual medio</div><div class="kpi-value">${eur(mes)}</div><div class="kpi-sub">${act.length} activas</div></div>
+    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Coste anual</div><div class="kpi-value">${eur(anual)}</div></div>
+    <div class="kpi" style="--kc:var(--ye);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Cargos en 7 días</div><div class="kpi-value">${prox7}</div></div>`;
+  const tb=$i('ps-tb');
+  if(!ss.length){ tb.innerHTML='<tr><td colspan="9"><div class="empty"><div class="empty-icon">🔁</div><p>Añade tus suscripciones para saber cuánto te cuestan al año</p></div></td></tr>'; return; }
+  const orden=[...ss].sort((a,b)=>costeAnual(b)-costeAnual(a));
+  tb.innerHTML=orden.map(s=>{
+    const ct=(D.cuentas||[]).find(c=>c.id==s.ctaId);
+    const venc=s.prox&&s.prox<hoy;
+    const pronto=s.prox&&s.prox>=hoy&&s.prox<=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
+    return `<tr style="${s.act==='no'?'opacity:.5;':''}">
+      <td><div style="font-size:12px;font-weight:600;">${s.nom}</div>${s.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${s.notas}</div>`:''}</td>
+      <td style="font-size:11px;">${icCat(s.cat)} ${s.cat||'—'}</td>
+      <td style="font-size:11px;">${s.per||'mensual'}</td>
+      <td class="mono" style="text-align:right;">${eur(s.imp,2)}</td>
+      <td class="mono" style="text-align:right;font-weight:700;color:var(--rd);">${eur(costeAnual(s))}</td>
+      <td style="font-size:11px;">${s.prox?(venc?`<span class="badge badge-r">${fD(s.prox)}</span>`:pronto?`<span class="badge badge-y">${fD(s.prox)}</span>`:fD(s.prox)):'—'}</td>
+      <td style="font-size:11px;color:var(--ink3);">${ct?ct.nom:'—'}</td>
+      <td>${s.act==='no'?'<span class="badge badge-r">Cancelada</span>':'<span class="badge badge-g">Activa</span>'}</td>
+      <td style="display:flex;gap:4px;">${s.act!=='no'?`<button class="btn btn-success btn-xs" onclick="cobrarSub('${s.id}')" title="Registrar cargo">✓</button>`:''}<button class="btn btn-secondary btn-xs" onclick="editSub('${s.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delSub('${s.id}')">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── PRESUPUESTOS ──────────────────────────────────────────────
+function newPresup(){
+  $i('pb-edit-id').value=''; $i('m-pp-title').textContent='🎯 Nuevo presupuesto';
+  $i('pb-imp').value=''; $i('pb-notas').value='';
+  $i('pb-cat').innerHTML=CAT_GASTO.map(x=>`<option>${x}</option>`).join('');
+  openM('m-presup');
+}
+function editPresup(id){
+  const p=(D.presup||[]).find(x=>x.id==id); if(!p)return;
+  $i('pb-edit-id').value=p.id; $i('m-pp-title').textContent='✏️ Editar presupuesto';
+  $i('pb-cat').innerHTML=CAT_GASTO.map(x=>`<option>${x}</option>`).join('');
+  $i('pb-cat').value=p.cat||''; $i('pb-imp').value=p.imp||''; $i('pb-notas').value=p.notas||'';
+  openM('m-presup');
+}
+function savePresup(){
+  const cat=$i('pb-cat').value, imp=gn('pb-imp');
+  if(!cat||!imp){toast('Completa categoría e importe',false);return;}
+  const id=gi('pb-edit-id');
+  if(id){ const p=D.presup.find(x=>x.id==id); if(p)Object.assign(p,{cat,imp,notas:gi('pb-notas')}); toast('Actualizado'); }
+  else {
+    if((D.presup||[]).some(p=>p.cat===cat)){toast('Ya existe un presupuesto para esa categoría',false);return;}
+    D.presup.push({id:uid(),cat,imp,notas:gi('pb-notas')}); toast('Presupuesto creado');
+  }
+  saveAndSync(); closeM('m-presup'); rPresup();
+}
+function delPresup(id){ if(!confirm('¿Eliminar presupuesto?'))return; D.presup=D.presup.filter(x=>x.id!==id); saveAndSync(); rPresup(); toast('Eliminado'); }
+function rPresup(){
+  if(!$i('pp-mes').value) $i('pp-mes').value=new Date().toISOString().slice(0,7);
+  const mes=$i('pp-mes').value;
+  const gm=(D.movs||[]).filter(m=>m.tipo==='gasto'&&(m.fecha||'').startsWith(mes));
+  const ps=D.presup||[];
+  const totalPres=ps.reduce((s,p)=>s+parseFloat(p.imp||0),0);
+  const totalGas=gm.reduce((s,m)=>s+parseFloat(m.imp||0),0);
+  const conPres=gm.filter(m=>ps.some(p=>p.cat===m.cat)).reduce((s,m)=>s+parseFloat(m.imp||0),0);
+  const pc=totalPres>0?Math.round(conPres/totalPres*100):0;
+  $i('pp-resumen').innerHTML=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
+      <div><div style="font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Presupuestado en ${MES_L[+mes.slice(5,7)-1]} ${mes.slice(0,4)}</div>
+      <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:${pc>100?'var(--rd)':'var(--gn)'};">${eur(conPres)} <span style="font-size:15px;color:var(--ink3);font-weight:400;">de ${eur(totalPres)}</span></div></div>
+      <div style="text-align:right;"><div style="font-size:11px;color:var(--ink3);">Gasto total del mes</div><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;">${eur(totalGas)}</div></div>
+    </div>
+    <div class="pbar" style="height:9px;"><div class="pbar-fill" style="width:${Math.min(100,pc)}%;background:${pc>100?'var(--rd)':pc>85?'var(--ye)':'var(--gn)'};"></div></div>
+    <div style="font-size:11px;color:var(--ink3);margin-top:6px;">${pc}% consumido${totalPres-conPres>0?' · quedan '+eur(totalPres-conPres):' · presupuesto superado en '+eur(conPres-totalPres)}</div>
+  </div>`;
+  const div=$i('pp-lista');
+  if(!ps.length){ div.innerHTML='<div class="empty"><div class="empty-icon">🎯</div><p>Crea presupuestos por categoría para controlar en qué se te va el dinero</p></div>'; return; }
+  const orden=[...ps].sort((a,b)=>{
+    const ga=gm.filter(m=>m.cat===a.cat).reduce((s,m)=>s+parseFloat(m.imp||0),0)/(a.imp||1);
+    const gb=gm.filter(m=>m.cat===b.cat).reduce((s,m)=>s+parseFloat(m.imp||0),0)/(b.imp||1);
+    return gb-ga;
+  });
+  div.innerHTML='<div class="g2">'+orden.map(p=>{
+    const g=gm.filter(m=>m.cat===p.cat).reduce((s,m)=>s+parseFloat(m.imp||0),0);
+    const pc2=p.imp>0?Math.round(g/p.imp*100):0;
+    const col=pc2>100?'var(--rd)':pc2>85?'var(--ye)':'var(--gn)';
+    const n=gm.filter(m=>m.cat===p.cat).length;
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div><div style="font-size:14px;font-weight:700;">${icCat(p.cat)} ${p.cat}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px;">${n} movimiento${n!==1?'s':''} este mes</div></div>
+        <div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editPresup('${p.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delPresup('${p.id}')">🗑</button></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+        <span class="mono" style="font-size:17px;font-weight:700;color:${col};">${eur(g)}</span>
+        <span style="font-size:12px;color:var(--ink3);">de ${eur(p.imp)}</span>
+      </div>
+      <div class="pbar" style="height:7px;"><div class="pbar-fill" style="width:${Math.min(100,pc2)}%;background:${col};"></div></div>
+      <div style="font-size:11px;margin-top:5px;color:${col};font-weight:600;">${pc2}%${pc2>100?' · superado en '+eur(g-p.imp):' · quedan '+eur(p.imp-g)}</div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+// ── OBJETIVOS ─────────────────────────────────────────────────
+function newMeta(){
+  $i('mt-edit-id').value=''; $i('m-mt-title').textContent='🏁 Nuevo objetivo';
+  ['mt-nom','mt-obj','mt-act','mt-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('mt-pri').value='media'; $i('mt-fecha').value=''; openM('m-meta');
+}
+function editMeta(id){
+  const m=(D.metas||[]).find(x=>x.id==id); if(!m)return;
+  $i('mt-edit-id').value=m.id; $i('m-mt-title').textContent='✏️ Editar objetivo';
+  $i('mt-nom').value=m.nom||''; $i('mt-obj').value=m.obj||''; $i('mt-act').value=m.act||'';
+  $i('mt-fecha').value=m.fecha||''; $i('mt-pri').value=m.pri||'media'; $i('mt-notas').value=m.notas||'';
+  openM('m-meta');
+}
+function saveMeta(){
+  const nom=gi('mt-nom'), obj=gn('mt-obj');
+  if(!nom||!obj){toast('Completa objetivo y cantidad',false);return;}
+  const campos={nom,obj,act:gn('mt-act'),fecha:gi('mt-fecha'),pri:$i('mt-pri').value,notas:gi('mt-notas')};
+  const id=gi('mt-edit-id');
+  if(id){ const m=D.metas.find(x=>x.id==id); if(m)Object.assign(m,campos); toast('Actualizado'); }
+  else { D.metas.push(Object.assign({id:uid()},campos)); toast('Objetivo creado'); }
+  saveAndSync(); closeM('m-meta'); rMetas();
+}
+function delMeta(id){ if(!confirm('¿Eliminar objetivo?'))return; D.metas=D.metas.filter(x=>x.id!==id); saveAndSync(); rMetas(); toast('Eliminado'); }
+function aportarMeta(id){
+  const m=(D.metas||[]).find(x=>x.id==id); if(!m)return;
+  const v=prompt('¿Cuánto añades a "'+m.nom+'"?','100');
+  if(v===null)return;
+  const n=parseFloat(String(v).replace(',','.'));
+  if(isNaN(n)){toast('Cantidad no válida',false);return;}
+  m.act=(parseFloat(m.act||0))+n;
+  saveAndSync(); rMetas(); toast('Aportación registrada');
+}
+function rMetas(){
+  const ms=D.metas||[]; const g=$i('pmt-grid');
+  if(!ms.length){ g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏁</div><p>Define objetivos de ahorro con fecha y ve tu progreso</p></div>'; return; }
+  const pr={alta:'🔴',media:'🟡',baja:'🟢'};
+  g.innerHTML=ms.map(m=>{
+    const obj=parseFloat(m.obj||0), act=parseFloat(m.act||0);
+    const pc=obj>0?Math.round(act/obj*100):0;
+    const falta=Math.max(0,obj-act);
+    let mesesR=null, cuota=null;
+    if(m.fecha){
+      const d=Math.ceil((new Date(m.fecha)-new Date())/864e5);
+      mesesR=Math.max(0,Math.round(d/30.4));
+      cuota=mesesR>0?falta/mesesR:falta;
+    }
+    const col=pc>=100?'var(--gn)':pc>=50?'var(--bl)':'var(--acc)';
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${pr[m.pri]||'🟡'} ${m.nom}</div>
+        ${m.fecha?`<div style="font-size:11px;color:var(--ink3);margin-top:2px;">Meta: ${fD(m.fecha)}${mesesR!==null?' · faltan '+mesesR+' meses':''}</div>`:''}</div>
+        <div style="display:flex;gap:4px;"><button class="btn btn-success btn-xs" onclick="aportarMeta('${m.id}')">+ €</button><button class="btn btn-secondary btn-xs" onclick="editMeta('${m.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delMeta('${m.id}')">🗑</button></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;">
+        <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:${col};">${eur(act)}</span>
+        <span style="font-size:13px;color:var(--ink3);">de ${eur(obj)}</span>
+      </div>
+      <div class="pbar" style="height:9px;"><div class="pbar-fill" style="width:${Math.min(100,pc)}%;background:${col};"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:6px;">
+        <span style="font-weight:700;color:${col};">${pc}%</span>
+        <span style="color:var(--ink3);">${pc>=100?'¡Objetivo conseguido! 🎉':'faltan '+eur(falta)}</span>
+      </div>
+      ${cuota&&pc<100?`<div style="margin-top:10px;padding:8px 10px;background:var(--bg);border-radius:var(--r2);font-size:11.5px;color:var(--ink2);">Necesitas apartar <strong>${eur(cuota)}/mes</strong> para llegar a tiempo</div>`:''}
+      ${m.notas?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;font-style:italic;">${m.notas}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+
+// ── INVERSIONES ───────────────────────────────────────────────
+function newInver(){
+  $i('iv-edit-id').value=''; $i('m-iv-title').textContent='📊 Nueva posición';
+  ['iv-nom','iv-broker','iv-inv','iv-val','iv-apo','iv-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('iv-tipo').value='Fondo indexado'; $i('iv-fecha').value=new Date().toISOString().split('T')[0];
+  openM('m-inver');
+}
+function editInver(id){
+  const v=(D.invers||[]).find(x=>x.id==id); if(!v)return;
+  $i('iv-edit-id').value=v.id; $i('m-iv-title').textContent='✏️ Editar posición';
+  $i('iv-nom').value=v.nom||''; $i('iv-tipo').value=v.tipo||'Fondo indexado';
+  $i('iv-broker').value=v.broker||''; $i('iv-inv').value=v.inv||''; $i('iv-val').value=v.val||'';
+  $i('iv-fecha').value=v.fecha||''; $i('iv-apo').value=v.apo||''; $i('iv-notas').value=v.notas||'';
+  openM('m-inver');
+}
+function saveInver(){
+  const nom=gi('iv-nom'), inv=gn('iv-inv'), val=gn('iv-val');
+  if(!nom||!inv){toast('Completa activo e invertido',false);return;}
+  const campos={nom,tipo:$i('iv-tipo').value,broker:gi('iv-broker'),inv,val:val||inv,
+    fecha:gi('iv-fecha'),apo:gn('iv-apo'),notas:gi('iv-notas')};
+  const id=gi('iv-edit-id');
+  if(id){ const v=D.invers.find(x=>x.id==id); if(v)Object.assign(v,campos); toast('Actualizada'); }
+  else { D.invers.push(Object.assign({id:uid()},campos)); toast('Posición añadida'); }
+  saveAndSync(); closeM('m-inver'); rInver();
+}
+function delInver(id){ if(!confirm('¿Eliminar posición?'))return; D.invers=D.invers.filter(x=>x.id!==id); saveAndSync(); rInver(); toast('Eliminada'); }
+function rInver(){
+  const vs=D.invers||[];
+  const inv=vs.reduce((s,v)=>s+parseFloat(v.inv||0),0);
+  const val=vs.reduce((s,v)=>s+parseFloat(v.val||0),0);
+  const pg=val-inv, pct2=inv>0?(pg/inv*100):0;
+  const apo=vs.reduce((s,v)=>s+parseFloat(v.apo||0),0);
+  $i('pi-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Valor de cartera</div><div class="kpi-value">${eur(val)}</div><div class="kpi-sub">${vs.length} posiciones</div></div>
+    <div class="kpi" style="--kc:var(--ink2);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Total invertido</div><div class="kpi-value">${eur(inv)}</div></div>
+    <div class="kpi" style="--kc:${pg>=0?'var(--gn)':'var(--rd)'};flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Plusvalía latente</div><div class="kpi-value">${pg>=0?'+':''}${eur(pg)}</div><div class="kpi-sub">${pct2>=0?'+':''}${pct2.toFixed(1)}%</div></div>
+    <div class="kpi" style="--kc:var(--pu);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Aportación mensual</div><div class="kpi-value">${eur(apo)}</div></div>`;
+  const porTipo={}; vs.forEach(v=>{porTipo[v.tipo]=(porTipo[v.tipo]||0)+parseFloat(v.val||0);});
+  const ord=Object.entries(porTipo).sort((a,b)=>b[1]-a[1]);
+  $i('pi-repar').innerHTML=`<div class="card-title">🥧 Reparto por tipo de activo</div>${ord.length?ord.map(([k,v])=>`
+    <div style="margin-bottom:11px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>${k}</span><span class="mono">${eur(v)} <span style="color:var(--ink3);font-size:10px;">${val>0?Math.round(v/val*100):0}%</span></span></div>
+    <div class="pbar"><div class="pbar-fill" style="width:${pctBar(v,ord[0][1])}%;background:var(--bl);"></div></div></div>`).join(''):'<div class="empty" style="padding:20px;"><p>Sin posiciones</p></div>'}`;
+  const top=[...vs].map(v=>({...v,r:parseFloat(v.inv||0)>0?((parseFloat(v.val||0)-parseFloat(v.inv||0))/parseFloat(v.inv))*100:0})).sort((a,b)=>b.r-a.r);
+  $i('pi-top').innerHTML=`<div class="card-title">🏆 Rentabilidad por posición</div>${top.length?top.slice(0,8).map(v=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
+      <div><div style="font-size:12px;font-weight:600;">${v.nom}</div><div style="font-size:10px;color:var(--ink3);">${v.tipo}</div></div>
+      <div style="text-align:right;"><div class="mono" style="font-weight:700;color:${v.r>=0?'var(--gn)':'var(--rd)'};">${v.r>=0?'+':''}${v.r.toFixed(1)}%</div>
+      <div style="font-size:10px;color:var(--ink3);">${v.r>=0?'+':''}${eur(parseFloat(v.val||0)-parseFloat(v.inv||0))}</div></div>
+    </div>`).join(''):'<div class="empty" style="padding:20px;"><p>Sin posiciones</p></div>'}`;
+  const tb=$i('pi-tb');
+  if(!vs.length){ tb.innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-icon">📊</div><p>Registra tus inversiones para seguir la rentabilidad</p></div></td></tr>'; return; }
+  tb.innerHTML=[...vs].sort((a,b)=>parseFloat(b.val||0)-parseFloat(a.val||0)).map(v=>{
+    const i2=parseFloat(v.inv||0), v2=parseFloat(v.val||0), p2=v2-i2, r=i2>0?p2/i2*100:0;
+    return `<tr>
+      <td><div style="font-size:12px;font-weight:600;">${v.nom}</div>${v.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${v.notas}</div>`:''}</td>
+      <td style="font-size:11px;">${v.tipo}</td>
+      <td style="font-size:11px;color:var(--ink3);">${v.broker||'—'}</td>
+      <td class="mono" style="font-size:11px;">${v.fecha?fD(v.fecha):'—'}</td>
+      <td class="mono" style="text-align:right;">${eur(i2)}</td>
+      <td class="mono" style="text-align:right;font-weight:600;">${eur(v2)}</td>
+      <td class="mono" style="text-align:right;font-weight:700;color:${p2>=0?'var(--gn)':'var(--rd)'};">${p2>=0?'+':''}${eur(p2)}</td>
+      <td class="mono" style="text-align:right;color:${r>=0?'var(--gn)':'var(--rd)'};">${r>=0?'+':''}${r.toFixed(1)}%</td>
+      <td class="mono" style="text-align:right;color:var(--ink3);">${val>0?Math.round(v2/val*100):0}%</td>
+      <td style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editInver('${v.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delInver('${v.id}')">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── DEUDAS ────────────────────────────────────────────────────
+function newDeuda(){
+  $i('dd-edit-id').value=''; $i('m-dd-title').textContent='🧮 Nueva deuda';
+  ['dd-nom','dd-ent','dd-ini','dd-pend','dd-cuota','dd-tin','dd-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('dd-tipo').value='Hipoteca'; $i('dd-fin').value=''; openM('m-deuda');
+}
+function editDeuda(id){
+  const d=(D.deudas||[]).find(x=>x.id==id); if(!d)return;
+  $i('dd-edit-id').value=d.id; $i('m-dd-title').textContent='✏️ Editar deuda';
+  $i('dd-nom').value=d.nom||''; $i('dd-tipo').value=d.tipo||'Hipoteca'; $i('dd-ent').value=d.ent||'';
+  $i('dd-ini').value=d.ini||''; $i('dd-pend').value=d.pend||''; $i('dd-cuota').value=d.cuota||'';
+  $i('dd-tin').value=d.tin||''; $i('dd-fin').value=d.fin||''; $i('dd-notas').value=d.notas||'';
+  openM('m-deuda');
+}
+function saveDeuda(){
+  const nom=gi('dd-nom'), pend=gn('dd-pend');
+  if(!nom||!pend){toast('Completa concepto y pendiente',false);return;}
+  const campos={nom,tipo:$i('dd-tipo').value,ent:gi('dd-ent'),ini:gn('dd-ini'),pend,
+    cuota:gn('dd-cuota'),tin:gn('dd-tin'),fin:gi('dd-fin'),notas:gi('dd-notas')};
+  const id=gi('dd-edit-id');
+  if(id){ const d=D.deudas.find(x=>x.id==id); if(d)Object.assign(d,campos); toast('Actualizada'); }
+  else { D.deudas.push(Object.assign({id:uid()},campos)); toast('Deuda añadida'); }
+  saveAndSync(); closeM('m-deuda'); rDeudas();
+}
+function delDeuda(id){ if(!confirm('¿Eliminar deuda?'))return; D.deudas=D.deudas.filter(x=>x.id!==id); saveAndSync(); rDeudas(); toast('Eliminada'); }
+function rDeudas(){
+  const ds=D.deudas||[];
+  const pend=ds.reduce((s,d)=>s+parseFloat(d.pend||0),0);
+  const cuota=ds.reduce((s,d)=>s+parseFloat(d.cuota||0),0);
+  const ini=ds.reduce((s,d)=>s+parseFloat(d.ini||0),0);
+  const pagado=Math.max(0,ini-pend);
+  $i('pdd-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--rd);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Deuda pendiente</div><div class="kpi-value">${eur(pend)}</div><div class="kpi-sub">${ds.length} préstamos</div></div>
+    <div class="kpi" style="--kc:var(--ye);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Cuota mensual</div><div class="kpi-value">${eur(cuota)}</div></div>
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Ya amortizado</div><div class="kpi-value">${eur(pagado)}</div><div class="kpi-sub">${ini>0?Math.round(pagado/ini*100):0}% del total</div></div>`;
+  const g=$i('pdd-grid');
+  if(!ds.length){ g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🧮</div><p>Sin deudas registradas 🎉</p></div>'; return; }
+  g.innerHTML=[...ds].sort((a,b)=>parseFloat(b.pend||0)-parseFloat(a.pend||0)).map(d=>{
+    const i2=parseFloat(d.ini||0), p2=parseFloat(d.pend||0);
+    const pc=i2>0?Math.round((i2-p2)/i2*100):0;
+    let meses=null;
+    if(d.fin){ meses=Math.max(0,Math.round((new Date(d.fin)-new Date())/864e5/30.4)); }
+    else if(d.cuota>0){ meses=Math.ceil(p2/parseFloat(d.cuota)); }
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${d.nom}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px;">${d.tipo}${d.ent?' · '+d.ent:''}${d.tin?' · '+d.tin+'% TIN':''}</div></div>
+        <div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editDeuda('${d.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delDeuda('${d.id}')">🗑</button></div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--rd);">${eur(p2)}</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:8px;">pendiente${i2?' de '+eur(i2):''}</div>
+      ${i2?`<div class="pbar" style="height:7px;"><div class="pbar-fill" style="width:${pc}%;background:var(--gn);"></div></div>
+      <div style="font-size:11px;color:var(--gn);margin-top:5px;font-weight:600;">${pc}% amortizado</div>`:''}
+      <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--ink3);flex-wrap:wrap;">
+        ${d.cuota?`<span>Cuota: <strong style="color:var(--ink2);">${eur(d.cuota)}/mes</strong></span>`:''}
+        ${meses!==null?`<span>Quedan: <strong style="color:var(--ink2);">${meses} meses</strong></span>`:''}
+        ${d.fin?`<span>Fin: <strong style="color:var(--ink2);">${fD(d.fin)}</strong></span>`:''}
+      </div>
+      ${d.notas?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;font-style:italic;">${d.notas}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── PATRIMONIO ────────────────────────────────────────────────
+function rPatrimonio(){
+  const liq=totalLiquido(), inv=totalInvertido(), deu=totalDeuda();
+  const metas=(D.metas||[]).reduce((s,m)=>s+parseFloat(m.act||0),0);
+  const act=liq+inv, neto=act-deu;
+  $i('ppat-hero').innerHTML=`<div class="card" style="text-align:center;padding:34px 20px;">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--ink3);">Patrimonio neto</div>
+    <div style="font-family:'Syne',sans-serif;font-size:48px;font-weight:800;color:${neto>=0?'var(--gn)':'var(--rd)'};letter-spacing:-1.5px;margin:8px 0;">${eur(neto)}</div>
+    <div style="font-size:12.5px;color:var(--ink3);">${eur(act)} en activos − ${eur(deu)} en deudas</div>
+    <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-top:20px;max-width:520px;margin-left:auto;margin-right:auto;background:var(--line);">
+      <div style="width:${act>0?(liq/Math.max(act,1))*100:0}%;background:var(--gn);"></div>
+      <div style="width:${act>0?(inv/Math.max(act,1))*100:0}%;background:var(--bl);"></div>
+    </div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:11px;color:var(--ink3);flex-wrap:wrap;">
+      <span>🟢 Líquido ${eur(liq)}</span><span>🔵 Invertido ${eur(inv)}</span><span>🔴 Deuda ${eur(deu)}</span>
+    </div>
+  </div>`;
+  const cs=(D.cuentas||[]).map(c=>({n:c.nom,v:saldoCuenta(c.id),t:'Cuenta'}))
+    .concat((D.invers||[]).map(v=>({n:v.nom,v:parseFloat(v.val||0),t:'Inversión'})));
+  $i('ppat-act').innerHTML=`<div class="card-title">💚 Activos · ${eur(act)}</div>${cs.length?cs.sort((a,b)=>b.v-a.v).map(x=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);">
+      <div><div style="font-size:12.5px;font-weight:500;">${x.n}</div><div style="font-size:10px;color:var(--ink3);">${x.t}</div></div>
+      <span class="mono" style="font-weight:600;color:var(--gn);">${eur(x.v)}</span></div>`).join('')
+    :'<div class="empty" style="padding:20px;"><p>Sin activos registrados</p></div>'}
+    ${metas>0?`<div style="margin-top:12px;padding:9px 11px;background:var(--bg);border-radius:var(--r2);font-size:11px;color:var(--ink3);">De ese líquido, <strong style="color:var(--ink2);">${eur(metas)}</strong> están asignados a objetivos de ahorro.</div>`:''}`;
+  const ds=D.deudas||[];
+  $i('ppat-pas').innerHTML=`<div class="card-title">🔴 Pasivos · ${eur(deu)}</div>${ds.length?[...ds].sort((a,b)=>parseFloat(b.pend||0)-parseFloat(a.pend||0)).map(d=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);">
+      <div><div style="font-size:12.5px;font-weight:500;">${d.nom}</div><div style="font-size:10px;color:var(--ink3);">${d.tipo}${d.cuota?' · '+eur(d.cuota)+'/mes':''}</div></div>
+      <span class="mono" style="font-weight:600;color:var(--rd);">${eur(d.pend)}</span></div>`).join('')
+    :'<div class="empty" style="padding:20px;"><p>Sin deudas 🎉</p></div>'}`;
+}
+
+// ── DOCUMENTOS ────────────────────────────────────────────────
+function newDoc(){
+  $i('dc-edit-id').value=''; $i('m-dc-title').textContent='📁 Subir documento';
+  ['dc-nom','dc-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('dc-tipo').value='Nómina'; $i('dc-anyo').value=new Date().getFullYear();
+  clearPdfZone('dc-pdf-zone','dc-pdf-data'); $i('dc-doc-actual').innerHTML='';
+  openM('m-doc');
+}
+function editDoc(id){
+  const d=(D.docs||[]).find(x=>x.id==id); if(!d)return;
+  $i('dc-edit-id').value=d.id; $i('m-dc-title').textContent='✏️ Editar documento';
+  $i('dc-nom').value=d.nom||''; $i('dc-tipo').value=d.tipo||'Otro';
+  $i('dc-anyo').value=d.anyo||''; $i('dc-notas').value=d.notas||'';
+  clearPdfZone('dc-pdf-zone','dc-pdf-data');
+  $i('dc-doc-actual').innerHTML=d.pdfData?`<div class="form-section" style="margin-top:16px;">Archivo guardado</div>
+    <button class="pdf-badge green" onclick="openPdf('${d.pdfData}','${d.pdfName||'doc.pdf'}')">📄 ${d.pdfName||'Ver'}</button>`:'';
+  openM('m-doc');
+}
+function saveDoc(){
+  const nom=gi('dc-nom'); if(!nom){toast('Introduce el nombre',false);return;}
+  const pdfData=$i('dc-pdf-data')?.value||'', pdfName=$i('dc-pdf-name')?.value||'';
+  const id=gi('dc-edit-id');
+  if(!id && !pdfData){toast('Adjunta el archivo',false);return;}
+  const campos={nom,tipo:$i('dc-tipo').value,anyo:gi('dc-anyo'),notas:gi('dc-notas')};
+  if(id){ const d=D.docs.find(x=>x.id==id); if(d){Object.assign(d,campos); if(pdfData){d.pdfData=pdfData;d.pdfName=pdfName;}} toast('Actualizado'); }
+  else { D.docs.push(Object.assign({id:uid(),pdfData,pdfName,fecha:new Date().toISOString().split('T')[0]},campos)); toast('Documento guardado'); }
+  saveAndSync(); closeM('m-doc'); rDocs();
+}
+function delDoc(id){ if(!confirm('¿Eliminar documento?'))return; D.docs=D.docs.filter(x=>x.id!==id); saveAndSync(); rDocs(); toast('Eliminado'); }
+const IC_DOC={'Nómina':'💼','Declaración de la renta':'🧾','Certificado bancario':'🏦','Seguro':'🛡️','Contrato':'📄','Factura':'🧾','Justificante':'📋','Vida laboral':'📊','Escritura':'📜','Otro':'📁'};
+function rDocs(){
+  const ds=D.docs||[];
+  const st=$i('pdc-tipo-f');
+  if(st){ const us=[...new Set(ds.map(d=>d.tipo).filter(Boolean))].sort(); const v=st.value;
+    st.innerHTML='<option value="">Todos los tipos</option>'+us.map(x=>`<option>${x}</option>`).join(''); st.value=v; }
+  const sa=$i('pdc-anyo-f');
+  if(sa){ const us=[...new Set(ds.map(d=>String(d.anyo||'')).filter(Boolean))].sort().reverse(); const v=sa.value;
+    sa.innerHTML='<option value="">Todos los años</option>'+us.map(x=>`<option>${x}</option>`).join(''); sa.value=v; }
+  const q=gi('pdc-q').toLowerCase(), tF=gi('pdc-tipo-f'), aF=gi('pdc-anyo-f');
+  const list=ds.filter(d=>{
+    if(tF&&d.tipo!==tF)return false;
+    if(aF&&String(d.anyo||'')!==aF)return false;
+    if(q&&!`${d.nom} ${d.tipo} ${d.notas}`.toLowerCase().includes(q))return false;
+    return true;
+  }).sort((a,b)=>String(b.anyo||'').localeCompare(String(a.anyo||'')));
+  const g=$i('pdc-grid');
+  if(!list.length){ g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📁</div><p>Guarda aquí nóminas, seguros, declaraciones y cualquier documento importante</p></div>'; return; }
+  g.innerHTML=list.map(d=>`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+      <div style="font-size:26px;">${IC_DOC[d.tipo]||'📁'}</div>
+      <div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editDoc('${d.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delDoc('${d.id}')">🗑</button></div>
+    </div>
+    <div style="font-size:13px;font-weight:700;line-height:1.35;">${d.nom}</div>
+    <div style="font-size:11px;color:var(--ink3);margin-top:3px;">${d.tipo}${d.anyo?' · '+d.anyo:''}</div>
+    ${d.notas?`<div style="font-size:10px;color:var(--ink3);margin-top:6px;font-style:italic;">${d.notas}</div>`:''}
+    ${d.pdfData?`<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px;" onclick="openPdf('${d.pdfData}','${d.pdfName||d.nom}')">📄 Abrir</button>`:''}
+  </div>`).join('');
+}
+
+
+
+// ══════════════════════════════════════════════════════════════
+// PUENTE GENTAURY → PERSONAL (solo lectura)
+// ══════════════════════════════════════════════════════════════
+let G = null;
+
+function cargarGentaury(){
+  try{
+    let raw = localStorage.getItem('rc5');
+    if(!raw || raw.length < 40) raw = localStorage.getItem('rc5_espejo');
+    G = raw ? JSON.parse(raw) : null;
+  }catch(e){ G = null; }
+  return G;
+}
+
+// Descarga una copia de lectura del backup de Gentaury desde Drive
+async function espejoGentaury(){
+  if(!gToken || !gFolderId) return;
+  try{
+    const q = encodeURIComponent("name='rentacontrol_backup.json' and '"+gFolderId+"' in parents and trashed=false");
+    const res = await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)');
+    if(!res.files || !res.files.length) return;
+    const r = await fetch('https://www.googleapis.com/drive/v3/files/'+res.files[0].id+'?alt=media',
+      { headers:{'Authorization':'Bearer '+gToken}, cache:'no-store' });
+    if(!r.ok) return;
+    const txt = await r.text();
+    if(txt && txt.trim().length > 40){
+      localStorage.setItem('rc5_espejo', txt);
+      cargarGentaury();
+      console.log('Espejo de Gentaury actualizado');
+    }
+  }catch(e){ console.warn('No se pudo traer el espejo de Gentaury:', e.message); }
+}
+
+function ownerDeG(x){
+  if(!G) return '';
+  if(x.ownerId) return x.ownerId;
+  if(x.propId){ const p=(G.props||[]).find(y=>y.id==x.propId); if(p&&p.ownerId) return p.ownerId; }
+  return '';
+}
+
+// Propiedades que computan como tuyas en el espacio personal
+function propsDeYo(){
+  if(!G) return [];
+  const oy = D.cfg.ownerYo;
+  if(!oy) return [];
+  if(oy==='TODAS') return G.props||[];
+  return (G.props||[]).filter(p=>p.ownerId==oy);
+}
+
+function patrimonioInmo(){
+  const ps = propsDeYo();
+  const valor    = ps.reduce((s,p)=>s+parseFloat(p.precio||0),0);
+  const hipoteca = ps.reduce((s,p)=>s+parseFloat(p.capital||0),0);
+  return { valor, hipoteca, neto: valor-hipoteca, n: ps.length, props: ps };
+}
+
+// Rentabilidad neta del alquiler para el IRPF personal
+function rendimientoInmo(anyo){
+  const vacio = {ingresos:0,gastos:0,hipoteca:0,amort:0,neto:0,props:0,rentaMes:0};
+  if(!G) return vacio;
+  const ps = propsDeYo();
+  if(!ps.length) return vacio;
+
+  const ids   = ps.map(p=>p.id);
+  const inqs  = (G.inqs||[]).filter(i=>ids.includes(i.propId));
+  const idsI  = inqs.map(i=>i.id);
+  const pagos = (G.pagos||[]).filter(p=>idsI.includes(p.inqId) && (p.mes||'').startsWith(anyo));
+  const gast  = (G.gastos||[]).filter(g=>g.propId && ids.includes(g.propId) && (g.fecha||'').startsWith(anyo));
+  const comp  = (G.compras||[]).filter(x=>{
+    const o = ownerDeG(x);
+    if(D.cfg.ownerYo==='TODAS') return true;
+    return o == D.cfg.ownerYo;
+  });
+
+  const ingresos = pagos.filter(p=>p.estado==='pagado').reduce((s,p)=>s+parseFloat(p.imp||0),0);
+  const gDed = gast.filter(g=>g.ded==='si'&&g.cat!=='Hipoteca').reduce((s,g)=>s+parseFloat(g.imp||0),0)
+             + comp.filter(x=>(x.fecha||'').startsWith(anyo)&&fiscalKey(x.ded)==='corriente').reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  const hip  = gast.filter(g=>g.cat==='Hipoteca').reduce((s,g)=>s+parseFloat(g.imp||0),0);
+
+  const amPct = parseFloat((G.cfg||{}).amorti)||3;
+  let amort = 0;
+  for(let m=1;m<=12;m++) amort += amortDelMes(parseInt(anyo), m, ps, comp, amPct).total;
+
+  const rentaMes = inqs.filter(i=>i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0);
+  return { ingresos, gastos:gDed, hipoteca:hip, amort, neto: ingresos-gDed-hip-amort, props: ps.length, rentaMes };
+}
+
+function nomOwnerG(id){
+  if(!G) return '';
+  const o=(G.propietarios||[]).find(x=>x.id==id);
+  return o ? (o.alias||o.nom) : '';
+}
+
+// ── PANEL PERSONAL ────────────────────────────────────────────
+function rPDash(){
+  const hoy=new Date(), mesAct=hoy.toISOString().slice(0,7), hoyS=hoy.toISOString().split('T')[0];
+  const mm=movsDe(mesAct.slice(0,4),mesAct.slice(5,7));
+  const ing=sumTipo(mm,'ingreso'), gas=sumTipo(mm,'gasto'), bal=ing-gas;
+  const tasa=ing>0?Math.round(bal/ing*100):0;
+  const objTasa=parseFloat(D.cfg.ahorroObj)||20;
+
+  const al=[];
+  (D.subs||[]).filter(s=>s.act!=='no'&&s.prox&&s.prox<hoyS).forEach(s=>al.push({t:'r',m:`🔁 ${s.nom}: cargo del ${fD(s.prox)} sin registrar (${eur(s.imp,2)})`}));
+  (D.presup||[]).forEach(p=>{
+    const g=mm.filter(m=>m.tipo==='gasto'&&m.cat===p.cat).reduce((s,m)=>s+parseFloat(m.imp||0),0);
+    if(p.imp>0&&g>p.imp) al.push({t:'r',m:`🎯 ${p.cat}: presupuesto superado en ${eur(g-p.imp)}`});
+    else if(p.imp>0&&g>p.imp*0.85) al.push({t:'y',m:`🎯 ${p.cat}: llevas el ${Math.round(g/p.imp*100)}% del presupuesto`});
+  });
+  if(ing>0&&tasa<objTasa) al.push({t:'y',m:`📉 Tasa de ahorro del ${tasa}%, por debajo de tu objetivo del ${objTasa}%`});
+  (D.cuentas||[]).forEach(c=>{ if(saldoCuenta(c.id)<0) al.push({t:'r',m:`🏦 ${c.nom} en negativo: ${eur(saldoCuenta(c.id))}`}); });
+  $i('pd-alerts').innerHTML=al.slice(0,5).map(a=>`<div class="alert alert-${a.t}">${a.m}</div>`).join('');
+
+  const subsMes=(D.subs||[]).filter(s=>s.act!=='no').reduce((s,x)=>s+costeAnual(x)/12,0);
+  $i('pd-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--gn);"><div class="kpi-accent"></div><div class="kpi-label">Ingresos del mes</div><div class="kpi-value">${eur(ing)}</div></div>
+    <div class="kpi" style="--kc:var(--rd);"><div class="kpi-accent"></div><div class="kpi-label">Gastos del mes</div><div class="kpi-value">${eur(gas)}</div></div>
+    <div class="kpi" style="--kc:${bal>=0?'var(--gn)':'var(--rd)'};"><div class="kpi-accent"></div><div class="kpi-label">Ahorro del mes</div><div class="kpi-value">${eur(bal)}</div><div class="kpi-sub">tasa ${tasa}%</div></div>
+    <div class="kpi" style="--kc:var(--bl);"><div class="kpi-accent"></div><div class="kpi-label">Patrimonio neto</div><div class="kpi-value">${eur(patrimonioNeto())}</div></div>
+    <div class="kpi" style="--kc:var(--pu);"><div class="kpi-accent"></div><div class="kpi-label">Gastos fijos</div><div class="kpi-value">${eur(subsMes)}</div><div class="kpi-sub">al mes</div></div>`;
+
+  const ult=[...(D.movs||[])].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,7);
+  $i('pd-movs').innerHTML=ult.length?ult.map(m=>{
+    const ct=(D.cuentas||[]).find(c=>c.id==m.ctaId);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
+      <div><div style="font-size:12px;font-weight:500;">${icCat(m.cat)} ${m.con}</div>
+      <div style="font-size:10px;color:var(--ink3);">${fD(m.fecha)}${ct?' · '+ct.nom:''}</div></div>
+      <span class="mono" style="font-weight:700;color:${m.tipo==='ingreso'?'var(--gn)':'var(--rd)'};">${m.tipo==='ingreso'?'+':'−'}${eur(m.imp,2)}</span></div>`;
+  }).join(''):'<div class="empty" style="padding:16px;"><p>Sin movimientos todavía</p></div>';
+
+  const cs=D.cuentas||[];
+  $i('pd-cuentas').innerHTML=cs.length?cs.map(c=>{
+    const s=saldoCuenta(c.id), mx=Math.max(...cs.map(x=>Math.abs(saldoCuenta(x.id))),1);
+    return `<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+      <span>${IC_CTA[c.tipo]||'🏦'} ${c.nom}</span><span class="mono" style="font-weight:600;color:${s>=0?'var(--gn)':'var(--rd)'};">${eur(s)}</span></div>
+      <div class="pbar"><div class="pbar-fill" style="width:${pctBar(Math.abs(s),mx)}%;background:${s>=0?'var(--gn)':'var(--rd)'};"></div></div></div>`;
+  }).join(''):'<div class="empty" style="padding:16px;"><p>Añade tus cuentas</p></div>';
+
+  const ps=D.presup||[];
+  $i('pd-presup').innerHTML=ps.length?ps.slice(0,5).map(p=>{
+    const g=mm.filter(m=>m.tipo==='gasto'&&m.cat===p.cat).reduce((s,m)=>s+parseFloat(m.imp||0),0);
+    const pc=p.imp>0?Math.round(g/p.imp*100):0;
+    const col=pc>100?'var(--rd)':pc>85?'var(--ye)':'var(--gn)';
+    return `<div style="margin-bottom:11px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px;">
+      <span>${icCat(p.cat)} ${p.cat}</span><span class="mono" style="color:${col};">${pc}%</span></div>
+      <div class="pbar"><div class="pbar-fill" style="width:${Math.min(100,pc)}%;background:${col};"></div></div></div>`;
+  }).join(''):'<div class="empty" style="padding:16px;"><p>Sin presupuestos</p></div>';
+
+  const px=(D.subs||[]).filter(s=>s.act!=='no'&&s.prox).sort((a,b)=>a.prox.localeCompare(b.prox)).slice(0,5);
+  $i('pd-subs').innerHTML=px.length?px.map(s=>{
+    const venc=s.prox<hoyS;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
+      <div><div style="font-size:12px;font-weight:500;">${s.nom}</div><div style="font-size:10px;color:${venc?'var(--rd)':'var(--ink3)'};">${fD(s.prox)}</div></div>
+      <span class="mono" style="font-size:12px;">${eur(s.imp,2)}</span></div>`;
+  }).join(''):'<div class="empty" style="padding:16px;"><p>Sin cargos previstos</p></div>';
+
+  const ms=D.metas||[];
+  $i('pd-metas').innerHTML=ms.length?ms.slice(0,4).map(m=>{
+    const pc=m.obj>0?Math.round(parseFloat(m.act||0)/parseFloat(m.obj)*100):0;
+    return `<div style="margin-bottom:11px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px;">
+      <span>${m.nom}</span><span class="mono" style="color:var(--bl);">${pc}%</span></div>
+      <div class="pbar"><div class="pbar-fill" style="width:${Math.min(100,pc)}%;background:var(--bl);"></div></div></div>`;
+  }).join(''):'<div class="empty" style="padding:16px;"><p>Sin objetivos</p></div>';
+}
+
+// ── RENTA / IRPF PERSONAL ─────────────────────────────────────
+function datosRenta(anyo){
+  const movs=(D.movs||[]).filter(m=>(m.fecha||'').startsWith(anyo));
+  const por=k=>movs.filter(m=>m.fis===k);
+  const sum=k=>por(k).reduce((s,m)=>s+parseFloat(m.imp||0),0);
+  const trabajo=sum('trabajo'), actividad=sum('actividad'), capMob=sum('cap_mob'),
+        capInm=sum('cap_inm'), ganancia=sum('ganancia'), perdida=sum('perdida'),
+        dedGasto=sum('ded_gasto'), pension=sum('ded_pension'), donativo=sum('ded_donativo'), otraDed=sum('ded_otra');
+  const irpf=parseFloat(D.cfg.irpf)||24;
+  const baseGeneral=trabajo+actividad-dedGasto-pension;
+  const baseAhorro=capMob+capInm+ganancia-perdida;
+  // Tramos base del ahorro 2024-2026
+  let cuotaAhorro=0, r=Math.max(0,baseAhorro);
+  const tr=[[6000,.19],[44000,.21],[150000,.23],[150000,.27],[Infinity,.30]];
+  for(const [lim,t] of tr){ if(r<=0)break; const p=Math.min(r,lim); cuotaAhorro+=p*t; r-=p; }
+  const cuotaGeneral=Math.max(0,baseGeneral)*irpf/100;
+  const dedCuota=donativo*0.80+otraDed;
+  return {anyo,movs,trabajo,actividad,capMob,capInm,ganancia,perdida,dedGasto,pension,donativo,otraDed,
+    irpf,baseGeneral,baseAhorro,cuotaGeneral,cuotaAhorro,dedCuota,
+    total:Math.max(0,cuotaGeneral+cuotaAhorro-dedCuota),por};
+}
+function rRenta(){
+  const sel=$i('pr-anyo');
+  const anyos=[...new Set((D.movs||[]).map(m=>(m.fecha||'').slice(0,4)).filter(Boolean))].sort().reverse();
+  if(!anyos.includes(String(new Date().getFullYear()))) anyos.unshift(String(new Date().getFullYear()));
+  if(sel && (!sel.options.length || sel.dataset.n!==String(anyos.length))){
+    const v=sel.value; sel.dataset.n=String(anyos.length);
+    sel.innerHTML=anyos.map(a=>`<option>${a}</option>`).join(''); if(v)sel.value=v;
+  }
+  const anyo=sel?.value||String(new Date().getFullYear());
+  const d=datosRenta(anyo);
+  $i('prt-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--bl);"><div class="kpi-accent"></div><div class="kpi-label">Base general</div><div class="kpi-value">${eur(d.baseGeneral)}</div><div class="kpi-sub">trabajo + actividad</div></div>
+    <div class="kpi" style="--kc:var(--pu);"><div class="kpi-accent"></div><div class="kpi-label">Base del ahorro</div><div class="kpi-value">${eur(d.baseAhorro)}</div><div class="kpi-sub">capital + ganancias</div></div>
+    <div class="kpi" style="--kc:var(--gn);"><div class="kpi-accent"></div><div class="kpi-label">Reducciones</div><div class="kpi-value">${eur(d.pension+d.dedGasto)}</div></div>
+    <div class="kpi" style="--kc:var(--acc);"><div class="kpi-accent"></div><div class="kpi-label">Deducciones en cuota</div><div class="kpi-value">${eur(d.dedCuota)}</div></div>
+    <div class="kpi" style="--kc:var(--ye);"><div class="kpi-accent"></div><div class="kpi-label">Cuota estimada</div><div class="kpi-value">${eur(d.total)}</div></div>`;
+  const fila=(l,v,c)=>`<div class="fiscal-row"><span class="fiscal-label">${l}</span><span class="fiscal-val" style="color:${c||'var(--ink2)'};">${eur(v)}</span></div>`;
+  $i('prt-rend').innerHTML=`<div class="card-title">📊 Rendimientos ${anyo}</div>
+    ${fila('Rendimientos del trabajo',d.trabajo,'var(--gn)')}
+    ${fila('Actividad económica',d.actividad,'var(--gn)')}
+    ${fila('Capital mobiliario',d.capMob,'var(--gn)')}
+    ${fila('Capital inmobiliario',d.capInm,'var(--gn)')}
+    ${fila('Ganancias patrimoniales',d.ganancia,'var(--gn)')}
+    ${fila('Pérdidas patrimoniales',-d.perdida,'var(--rd)')}
+    <div class="fiscal-row" style="border-top:1.5px solid var(--line2);padding-top:12px;margin-top:4px;">
+      <span class="fiscal-label" style="font-weight:700;color:var(--ink);">Cuota base general (${d.irpf}%)</span><span class="fiscal-val">${eur(d.cuotaGeneral)}</span></div>
+    ${fila('Cuota base del ahorro (tramos 19–30%)',d.cuotaAhorro)}
+    <div class="fiscal-row" style="border-top:1.5px solid var(--line2);padding-top:12px;">
+      <span class="fiscal-label" style="font-weight:700;color:var(--ink);">Cuota estimada total</span>
+      <span class="fiscal-val" style="font-size:17px;color:var(--ye);">${eur(d.total)}</span></div>`;
+  $i('prt-ded').innerHTML=`<div class="card-title">✅ Reducciones y deducciones</div>
+    ${fila('Aportaciones a planes de pensiones',d.pension,'var(--gn)')}
+    ${fila('Gastos deducibles de actividad',d.dedGasto,'var(--gn)')}
+    ${fila('Donativos (deducción 80% primeros 250 €)',d.donativo,'var(--gn)')}
+    ${fila('Otras deducciones',d.otraDed,'var(--gn)')}
+    <div style="margin-top:12px;padding:10px;background:var(--ye-l);border:1px solid rgba(181,118,42,.2);border-radius:var(--r2);font-size:11px;color:var(--ye);line-height:1.6;">
+      ⚠️ Estimación orientativa. No incluye mínimo personal y familiar, reducciones por rendimientos del trabajo,
+      deducciones autonómicas ni retenciones ya practicadas. Consulta con tu asesor.</div>`;
+  const conFis=d.movs.filter(m=>m.fis&&m.fis!=='ninguno').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  $i('prt-tb').innerHTML=conFis.length?conFis.map(m=>{
+    const f=IRPF_TIPOS[m.fis]||IRPF_TIPOS.ninguno;
+    return `<tr><td class="mono" style="font-size:11px;">${fD(m.fecha)}</td><td style="font-size:12px;">${m.con}</td>
+      <td style="font-size:11px;">${icCat(m.cat)} ${m.cat}</td><td><span class="badge badge-${f.col}">${f.et}</span></td>
+      <td class="mono" style="text-align:right;font-weight:700;color:${m.tipo==='ingreso'?'var(--gn)':'var(--rd)'};">${eur(m.imp,2)}</td></tr>`;
+  }).join(''):'<tr><td colspan="5"><div class="empty" style="padding:24px;"><p>Ningún movimiento marcado con clasificación IRPF en '+anyo+'</p></div></td></tr>';
+}
+function rentaTexto(d){
+  const L=[];
+  L.push('INFORME IRPF PERSONAL — Ejercicio '+d.anyo);
+  L.push('Contribuyente: '+(D.cfg.nom||'no indicado')+(D.cfg.dni?' · DNI '+D.cfg.dni:''));
+  L.push('Generado: '+new Date().toLocaleString('es-ES')+' desde RentaControl · Espacio Personal');
+  L.push('');
+  L.push('═══ RENDIMIENTOS ═══');
+  L.push('Rendimientos del trabajo ........ '+eur(d.trabajo));
+  L.push('Actividad económica ............. '+eur(d.actividad));
+  L.push('Capital mobiliario .............. '+eur(d.capMob));
+  L.push('Capital inmobiliario ............ '+eur(d.capInm));
+  L.push('Ganancias patrimoniales ......... '+eur(d.ganancia));
+  L.push('Pérdidas patrimoniales .......... '+eur(d.perdida));
+  L.push('');
+  L.push('═══ REDUCCIONES Y DEDUCCIONES ═══');
+  L.push('Planes de pensiones ............. '+eur(d.pension));
+  L.push('Gastos deducibles actividad ..... '+eur(d.dedGasto));
+  L.push('Donativos ....................... '+eur(d.donativo));
+  L.push('Otras deducciones ............... '+eur(d.otraDed));
+  L.push('');
+  L.push('═══ LIQUIDACIÓN ESTIMADA ═══');
+  L.push('Base imponible general .......... '+eur(d.baseGeneral));
+  L.push('Base imponible del ahorro ....... '+eur(d.baseAhorro));
+  L.push('Cuota base general ('+d.irpf+'%) ...... '+eur(d.cuotaGeneral));
+  L.push('Cuota base ahorro (tramos) ...... '+eur(d.cuotaAhorro));
+  L.push('(−) Deducciones en cuota ........ '+eur(d.dedCuota));
+  L.push('CUOTA ESTIMADA .................. '+eur(d.total));
+  L.push('');
+  L.push('═══ DETALLE DE MOVIMIENTOS CON EFECTO FISCAL ═══');
+  const cf=d.movs.filter(m=>m.fis&&m.fis!=='ninguno').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  if(!cf.length) L.push('(ninguno)');
+  cf.forEach(m=>L.push('· '+fx(m.fecha)+' | '+m.con+' | '+m.cat+' | '+(IRPF_TIPOS[m.fis]||{}).et+' | '+eur(m.imp)));
+  L.push('');
+  L.push('═══ PATRIMONIO A CIERRE ═══');
+  L.push('Líquido en cuentas .............. '+eur(totalLiquido()));
+  L.push('Cartera de inversión ............ '+eur(totalInvertido()));
+  L.push('Deuda pendiente ................. '+eur(totalDeuda()));
+  L.push('PATRIMONIO NETO ................. '+eur(patrimonioNeto()));
+  (D.invers||[]).forEach(v=>L.push('  · '+v.nom+' ('+v.tipo+') | invertido '+eur(v.inv)+' | valor '+eur(v.val)+' | bróker '+(v.broker||'—')));
+  L.push('');
+  L.push('═══ ADVERTENCIAS ═══');
+  L.push('• Estimación orientativa: NO incluye mínimo personal y familiar, reducción por rendimientos');
+  L.push('  del trabajo (art. 20 LIRPF), deducciones autonómicas ni retenciones ya practicadas.');
+  L.push('• La cuota de la base del ahorro se calcula con los tramos 19/21/23/27/30%.');
+  L.push('• Las pérdidas patrimoniales pueden compensarse con ganancias del ejercicio y de los 4 siguientes.');
+  L.push('• Revisar con asesor fiscal antes de presentar.');
+  L.push('');
+  L.push('═══ INSTRUCCIONES PARA EL ASISTENTE DE IA ═══');
+  L.push('Con estos datos puedes: 1) revisar la clasificación fiscal de cada movimiento,');
+  L.push('2) indicar las casillas del modelo 100 correspondientes, 3) detectar deducciones no aprovechadas,');
+  L.push('4) calcular el resultado real aplicando mínimos y retenciones, 5) sugerir optimizaciones legales.');
+  return L.join('\n');
+}
+function rentaIA(){ copyT(rentaTexto(datosRenta($i('pr-anyo')?.value||String(new Date().getFullYear()))),'Informe copiado — pégalo en la conversación con la IA'); }
+function rentaPDF(){
+  const d=datosRenta($i('pr-anyo')?.value||String(new Date().getFullYear()));
+  const w=window.open('','_blank');
+  if(!w){toast('Permite las ventanas emergentes',false);return;}
+  const cf=d.movs.filter(m=>m.fis&&m.fis!=='ninguno').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>IRPF ${d.anyo}</title>
+  <style>@page{size:A4;margin:14mm 12mm;}body{font-family:-apple-system,'Segoe UI',Arial,sans-serif;color:#1a1714;font-size:10px;line-height:1.45;}
+  h1{font-size:19px;margin:0 0 3px;color:#c84b2f;}h2{font-size:13px;margin:20px 0 8px;padding-bottom:4px;border-bottom:2px solid #c84b2f;}
+  table{width:100%;border-collapse:collapse;margin-bottom:10px;}th{background:#f0ede8;text-align:left;padding:5px 6px;font-size:8.5px;text-transform:uppercase;color:#7a7268;border-bottom:1px solid #c2bdb5;}
+  td{padding:4px 6px;border-bottom:1px solid #e8e4de;font-size:9.5px;}td.n,th.n{text-align:right;}
+  .head{border-bottom:3px solid #c84b2f;padding-bottom:10px;margin-bottom:14px;}
+  .rrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e8e4de;font-size:11px;}
+  .rrow.f{border-top:2px solid #c84b2f;margin-top:6px;padding-top:9px;font-size:14px;font-weight:700;}
+  .box{background:#faf8f5;border:2px solid #c84b2f;border-radius:8px;padding:14px 16px;margin:14px 0;}
+  .nota{background:#fef3cd;border:1px solid #e8d090;border-radius:6px;padding:9px 12px;font-size:9px;color:#7a5c1a;margin-top:14px;}
+  @media print{.noprint{display:none;}}</style></head><body>
+  <div class="head"><h1>Informe IRPF ${d.anyo}</h1>
+  <div style="font-size:12px;font-weight:600;">${D.cfg.nom||'Declaración personal'}${D.cfg.dni?' · DNI '+D.cfg.dni:''}</div>
+  <div style="font-size:9px;color:#7a7268;">Generado ${new Date().toLocaleDateString('es-ES')} · RentaControl · Espacio Personal</div></div>
+  <h2>Rendimientos</h2>
+  <div class="rrow"><span>Rendimientos del trabajo</span><strong>${eur(d.trabajo)}</strong></div>
+  <div class="rrow"><span>Actividad económica</span><strong>${eur(d.actividad)}</strong></div>
+  <div class="rrow"><span>Capital mobiliario</span><strong>${eur(d.capMob)}</strong></div>
+  <div class="rrow"><span>Capital inmobiliario</span><strong>${eur(d.capInm)}</strong></div>
+  <div class="rrow"><span>Ganancias patrimoniales</span><strong>${eur(d.ganancia)}</strong></div>
+  <div class="rrow"><span>Pérdidas patrimoniales</span><strong>−${eur(d.perdida)}</strong></div>
+  <h2>Reducciones y deducciones</h2>
+  <div class="rrow"><span>Planes de pensiones</span><strong>${eur(d.pension)}</strong></div>
+  <div class="rrow"><span>Gastos deducibles de actividad</span><strong>${eur(d.dedGasto)}</strong></div>
+  <div class="rrow"><span>Donativos</span><strong>${eur(d.donativo)}</strong></div>
+  <div class="rrow"><span>Otras deducciones</span><strong>${eur(d.otraDed)}</strong></div>
+  <h2>Liquidación estimada</h2>
+  <div class="box">
+    <div class="rrow"><span>Base imponible general</span><strong>${eur(d.baseGeneral)}</strong></div>
+    <div class="rrow"><span>Base imponible del ahorro</span><strong>${eur(d.baseAhorro)}</strong></div>
+    <div class="rrow"><span>Cuota base general (${d.irpf}%)</span><span>${eur(d.cuotaGeneral)}</span></div>
+    <div class="rrow"><span>Cuota base del ahorro (19–30%)</span><span>${eur(d.cuotaAhorro)}</span></div>
+    <div class="rrow"><span>(−) Deducciones en cuota</span><span>${eur(d.dedCuota)}</span></div>
+    <div class="rrow f"><span>Cuota estimada</span><span>${eur(d.total)}</span></div>
+  </div>
+  <h2>Movimientos con efecto fiscal</h2>
+  <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Clasificación</th><th class="n">Importe</th></tr></thead><tbody>
+  ${cf.length?cf.map(m=>`<tr><td>${fx(m.fecha)}</td><td>${m.con}</td><td>${m.cat}</td><td>${(IRPF_TIPOS[m.fis]||{}).et}</td><td class="n">${eur(m.imp)}</td></tr>`).join(''):'<tr><td colspan="5">Sin movimientos clasificados</td></tr>'}
+  </tbody></table>
+  <h2>Patrimonio a cierre</h2>
+  <div class="rrow"><span>Líquido en cuentas</span><strong>${eur(totalLiquido())}</strong></div>
+  <div class="rrow"><span>Cartera de inversión</span><strong>${eur(totalInvertido())}</strong></div>
+  <div class="rrow"><span>Deuda pendiente</span><strong>−${eur(totalDeuda())}</strong></div>
+  <div class="rrow f"><span>Patrimonio neto</span><span>${eur(patrimonioNeto())}</span></div>
+  <div class="nota"><strong>Advertencias:</strong> Estimación orientativa. No incluye mínimo personal y familiar,
+  reducción por rendimientos del trabajo, deducciones autonómicas ni retenciones ya practicadas.
+  La base del ahorro se calcula con los tramos 19/21/23/27/30%. Revisar con asesor fiscal antes de presentar.</div>
+  <div class="noprint" style="text-align:center;margin-top:24px;">
+  <button onclick="window.print()" style="padding:12px 26px;background:#c84b2f;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">🖨️ Guardar como PDF</button></div>
+  </body></html>`);
+  w.document.close();
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},700);
+  toast('Informe generado — elige "Guardar como PDF"');
+}
+
+// ── CONFIG PERSONAL ───────────────────────────────────────────
+function savePCfg(){
+  D.cfg=Object.assign({},D.cfg,{nom:gi('pcf-nom'),dni:gi('pcf-dni'),irpf:gn('pcf-irpf')||24,ahorroObj:gn('pcf-ahorro')||20});
+  saveAndSync(); toast('Guardado');
+}
+function rPCfg(){
+  $i('pcf-nom').value=D.cfg.nom||''; $i('pcf-dni').value=D.cfg.dni||'';
+  $i('pcf-irpf').value=D.cfg.irpf||24; $i('pcf-ahorro').value=D.cfg.ahorroObj||20;
+}
+
 // ══════════════════════════════════════════════════════════════
 // HISTÓRICO
 // ══════════════════════════════════════════════════════════════
@@ -3404,7 +4877,7 @@ function saveCfg(){D.cfg={nom:gi('cn'),irpf:gn('ci')||24,amorti:gn('ca')||3,vaca
 function rCfg(){$i('cn').value=D.cfg.nom||'';$i('ci').value=D.cfg.irpf||24;$i('ca').value=D.cfg.amorti||3;$i('cv').value=D.cfg.vacancia||5;}
 function exportAll(){const blob=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`rentacontrol_backup_${new Date().toISOString().split('T')[0]}.json`;a.click();toast('Backup descargado');}
 function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{D=JSON.parse(ev.target.result);saveAndSync();rDash();toast('Datos importados ✓');}catch{toast('Error al importar',false);}};r.readAsText(f);}
-function clearAll(){if(!confirm('¿Borrar TODOS los datos?'))return;if(!confirm('¿Seguro? Sin vuelta atrás.'))return;D=def();saveAndSync();rDash();toast('Datos borrados');}
+function clearAll(){if(!confirm('¿Borrar TODOS los datos?'))return;if(!confirm('¿Seguro? Se borrarán solo los datos del espacio '+((WS_CFG[WS]||{}).nom||'actual')+'. Sin vuelta atrás.'))return;D=def();saveAndSync();rDash();toast('Datos borrados');}
 
 // ══════════════════════════════════════════════════════════════
 // INIT
@@ -3495,6 +4968,45 @@ function loginWithGoogle() {
 function showApp() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('login-loading').classList.remove('show');
+  if(!WS){ mostrarSelectorWS(); } else { aplicarWS(); }
+}
+
+function mostrarSelectorWS(){
+  const em = currentUser ? currentUser.email : '';
+  $i('ws-hola').textContent = em ? ('Hola, '+em.split('@')[0]) : 'Bienvenido';
+  $i('ws-screen').classList.add('show');
+}
+
+function elegirWS(ws){
+  localStorage.setItem('rc_ws', ws);
+  location.reload();
+}
+
+function cambiarWS(){
+  localStorage.removeItem('rc_ws');
+  location.reload();
+}
+
+function cerrarSesion(){
+  sessionStorage.clear();
+  localStorage.removeItem('rc_ws');
+  location.reload();
+}
+
+// Aplica el espacio elegido: menú, secciones y título
+function aplicarWS(){
+  $i('ws-screen').classList.remove('show');
+  const esP = WS==='personal';
+  document.body.classList.toggle('ws-personal', esP);
+  document.querySelectorAll('[data-ws]').forEach(el=>{
+    el.style.display = (el.dataset.ws===WS) ? '' : 'none';
+  });
+  const lg=$i('ws-logo-nom'); if(lg) lg.textContent = esP ? 'Finanzas' : 'RentaControl';
+  const lt=$i('ws-logo-tag'); if(lt) lt.textContent = esP ? 'Espacio personal' : 'Gentaury · Alquiler';
+  const btn=$i('ws-switch'); if(btn) btn.innerHTML = esP ? '🏢 Ir a Gentaury' : '💰 Ir a Personal';
+  // Activar la primera sección del espacio
+  const primera = document.querySelector('.nav-item[data-ws="'+WS+'"]');
+  if(primera) go(primera);
 }
 
 function checkExistingSession() {
@@ -3517,7 +5029,7 @@ function checkExistingSession() {
 // ══════════════════════════════════════════════════════════════
 const CLIENT_ID = '184703008619-fh1ds4msldo3i83p5udut8mhat1hjh0h.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file email profile';
-const SHEET_NAME = 'RentaControl_Data';
+function SHEET_NAME(){ return (WS_CFG[WS]||WS_CFG.gentaury).sheet; }
 const FOLDER_NAME = 'RentaControl';
 
 let gToken = null;
@@ -3571,7 +5083,7 @@ function gdriveDisconnect() {
     google.accounts.oauth2.revoke(gToken, () => {});
   }
   gToken = null; gSheetId = null; gFolderId = null; _tokenClient = null;
-  localStorage.removeItem('rc_gsheet_id');
+  localStorage.removeItem('rc_gsheet_id_'+WS);
   localStorage.removeItem('rc_gfolder_id');
   clearInterval(gAutoSyncTimer);
   updateDriveUI(false);
@@ -3581,7 +5093,7 @@ function gdriveDisconnect() {
 // ── Init ─────────────────────────────────────────────────────
 async function gdriveInit() {
   try {
-    gSheetId = localStorage.getItem('rc_gsheet_id');
+    gSheetId = localStorage.getItem('rc_gsheet_id_'+WS);
     gFolderId = localStorage.getItem('rc_gfolder_id');
     console.log('Init: token length =', gToken ? gToken.length : 0);
     // Go straight to Drive API - no token verification needed
@@ -3593,19 +5105,13 @@ async function gdriveInit() {
 
     if (!gSheetId) gSheetId = await gFindOrCreateSheet();
     else gSheetId = await gVerifySheet(gSheetId);
-    localStorage.setItem('rc_gsheet_id', gSheetId);
+    localStorage.setItem('rc_gsheet_id_'+WS, gSheetId);
 
-    // Try to load latest data from Drive backup first
-    const loaded = await loadFromDriveIfNewer();
-    if (!loaded) {
-      // No Drive data yet or local is newer — push local to Drive
-      await syncToSheets();
-    }
+    // Fusión completa: baja lo de Drive, mezcla y sube el resultado
+    inicializarSnapshot();
+    await syncFull(false);
     updateDriveUI(true);
-    clearInterval(gAutoSyncTimer);
-    gAutoSyncTimer = setInterval(() => {
-      if (gToken) syncToSheets();
-    }, 120000);
+    arrancarAutoSync();
     toast('✓ Google Drive conectado correctamente');
   } catch(e) {
     console.error('Drive init error:', e);
@@ -3628,7 +5134,6 @@ function updateDriveUI(state) {
     if (lbl) lbl.textContent = '↻ Conectando...';
   } else if (state === true) {
     if (bar) bar.classList.add('connected');
-    if (lbl) lbl.textContent = '';
     if (connectBtn) connectBtn.style.display = 'none';
     if (syncBtn) { syncBtn.style.display = 'inline-block'; syncBtn.textContent = '↻ Sync'; }
     if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
@@ -3678,14 +5183,14 @@ async function gVerifyFolder(id) {
 
 // ── Sheet ────────────────────────────────────────────────────
 async function gFindOrCreateSheet() {
-  const q = encodeURIComponent("name='" + SHEET_NAME + "' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
+  const q = encodeURIComponent("name='" + SHEET_NAME() + "' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
   const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id)');
   if (res.files && res.files.length) return res.files[0].id;
   const c = await gFetch('https://sheets.googleapis.com/v4/spreadsheets', {
     method:'POST',
     body: JSON.stringify({
-      properties:{title:SHEET_NAME},
-      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios'].map(t=>({properties:{title:t}}))
+      properties:{title:SHEET_NAME()},
+      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios','Cuentas','Movimientos','Presupuestos','Suscripciones','Objetivos','Inversiones','Deudas','DocsPersonales'].map(t=>({properties:{title:t}}))
     })
   });
   try {
@@ -3700,117 +5205,12 @@ async function gVerifySheet(id) {
 
 
 // ── Load from Drive on connect ───────────────────────────────
-async function loadFromDriveIfNewer() {
-  try {
-    const q = encodeURIComponent("name='rentacontrol_backup.json' and '" + gFolderId + "' in parents and trashed=false");
-    const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,modifiedTime)');
-    if (!res.files || !res.files.length) return false; // No backup in Drive yet
 
-    const fileId = res.files[0].id;
-    const r = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', {
-      headers: { 'Authorization': 'Bearer ' + gToken }
-    });
-    if (!r.ok) return false;
-    const driveData = await r.json();
-
-    // Check if Drive has more data than local
-    const localInqs = D.inqs ? D.inqs.length : 0;
-    const driveInqs = driveData.inqs ? driveData.inqs.length : 0;
-    const localProps = D.props ? D.props.length : 0;
-    const driveProps = driveData.props ? driveData.props.length : 0;
-
-    // Use Drive data if it has more records, or if local is empty
-    const localEmpty = localProps === 0 && localInqs === 0;
-    const driveHasMore = driveProps > localProps || driveInqs > localInqs;
-
-    if (localEmpty || driveHasMore) {
-      D = driveData;
-      localStorage.setItem(KEY, JSON.stringify(D));
-      rDash(); // Refresh UI
-      console.log('Loaded data from Drive backup');
-      toast('✓ Datos cargados desde Google Drive');
-      return true;
-    }
-    return false;
-  } catch(e) {
-    console.warn('Could not load from Drive:', e);
-    return false;
-  }
-}
 
 // ── Sync ─────────────────────────────────────────────────────
-async function syncNow() {
-  if (!gToken) { toast('Conecta primero con Google Drive', false); return; }
-  const btn = document.getElementById('gdrive-sync-btn');
-  if (btn) btn.textContent = '↻ Sincronizando...';
-  updateDriveUI('syncing');
-  try {
-    // Step 1: Download latest from Drive
-    let driveData = null;
-    try {
-      const q = encodeURIComponent("name='rentacontrol_backup.json' and '" + gFolderId + "' in parents and trashed=false");
-      const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id)');
-      if (res.files && res.files.length) {
-        const r = await fetch('https://www.googleapis.com/drive/v3/files/' + res.files[0].id + '?alt=media', {
-          headers: { 'Authorization': 'Bearer ' + gToken }
-        });
-        if (r.ok) driveData = await r.json();
-      }
-    } catch(e) { console.warn('Could not pull from Drive:', e); }
 
-    // Step 2: Merge Drive data with local (keep whichever has more records per collection)
-    if (driveData) {
-      const collections = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios'];
-      collections.forEach(col => {
-        const local = D[col] || [];
-        const drive = driveData[col] || [];
-        if (drive.length === 0 && local.length === 0) return;
-        // Merge: combine both, deduplicate by id, keep most recent
-        const merged = [...local];
-        drive.forEach(driveItem => {
-          if (!merged.find(l => l.id === driveItem.id)) {
-            merged.push(driveItem);
-          }
-        });
-        D[col] = merged;
-      });
-      // Keep local cfg unless Drive has a name set and local doesn't
-      if (!D.cfg.nom && driveData.cfg && driveData.cfg.nom) D.cfg = driveData.cfg;
-      localStorage.setItem(KEY, JSON.stringify(D));
-      rDash();
-    }
 
-    // Step 3: Push merged data back up to Drive
-    await syncToSheets();
-    updateDriveUI(true);
-    toast('✓ Sincronizado con Google Drive');
-  }
-  catch(e) { 
-    console.error('Sync error:', e);
-    toast('Error al sincronizar: ' + e.message, false); 
-    updateDriveUI(true); 
-  }
-}
 
-async function pullFromDrive() {
-  if (!gToken || !gFolderId) { toast('Conecta primero con Google Drive', false); return; }
-  updateDriveUI('syncing');
-  try {
-    const q = encodeURIComponent("name='rentacontrol_backup.json' and '" + gFolderId + "' in parents and trashed=false");
-    const res = await gFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,modifiedTime)');
-    if (!res.files || !res.files.length) { toast('No hay datos en Drive todavía', false); updateDriveUI(true); return; }
-    const r = await fetch('https://www.googleapis.com/drive/v3/files/' + res.files[0].id + '?alt=media', {
-      headers: { 'Authorization': 'Bearer ' + gToken }
-    });
-    if (!r.ok) throw new Error('Error descargando datos');
-    const driveData = await r.json();
-    D = driveData;
-    localStorage.setItem(KEY, JSON.stringify(D));
-    rDash();
-    updateDriveUI(true);
-    toast('✓ Datos actualizados desde Google Drive');
-  } catch(e) { toast('Error: ' + e.message, false); updateDriveUI(true); }
-}
 
 
 // ── Crear pestañas que falten en el Sheet ────────────────────
@@ -3832,7 +5232,7 @@ async function ensureSheets(nombres){
   }
 }
 
-async function syncToSheets() {
+async function volcarSheets() {
   if (!gToken || !gSheetId || gSyncing) return;
   gSyncing = true;
   try {
@@ -3848,6 +5248,14 @@ async function syncToSheets() {
       {sheet:'Potenciales', h:['ID','Nom','URL','Precio','Alq','Habs','EBITDA','ROCE','Yield','Inv','Fecha'], rows:D.pots.map(p=>[p.id,p.nom,p.url,p.p,p.alq,p.h,p.ebitda,p.roce,p.yld,p.inv,p.fecha])},
       {sheet:'Facturas', h:['ID','Desc','PisoID','Imp','PorHab','Habs','Cobros','Fecha'], rows:D.facturas.map(f=>[f.id,f.desc,f.propId,f.imp,f.porHab,f.habs,f.cobros,f.fecha])},
       {sheet:'Agenda', h:['ID','Titulo','Fecha','Tipo','PisoID','Notas','Hecho'], rows:D.agenda.map(a=>[a.id,a.titulo,a.fecha,a.tipo,a.propId,a.notas,a.done?'SI':'NO'])},
+      {sheet:'Cuentas', h:['ID','Nombre','Tipo','Entidad','SaldoInicial','SaldoActual','IBAN','Notas'], rows:(D.cuentas||[]).map(x=>[x.id,x.nom,x.tipo,x.banco,x.saldo,saldoCuenta(x.id),x.iban,x.notas])},
+      {sheet:'Movimientos', h:['ID','Fecha','Tipo','Concepto','Categoria','Importe','Cuenta','Metodo','IRPF','Notas','Doc'], rows:(D.movs||[]).map(x=>{const ct=(D.cuentas||[]).find(c2=>c2.id==x.ctaId);return [x.id,x.fecha,x.tipo,x.con,x.cat,x.imp,ct?ct.nom:'',x.met,(IRPF_TIPOS[x.fis]||{}).et||'',x.notas,x.pdfName||''];})},
+      {sheet:'Presupuestos', h:['ID','Categoria','LimiteMensual','Notas'], rows:(D.presup||[]).map(x=>[x.id,x.cat,x.imp,x.notas])},
+      {sheet:'Suscripciones', h:['ID','Servicio','Importe','Periodicidad','CosteAnual','ProximoCargo','Categoria','Activa','Notas'], rows:(D.subs||[]).map(x=>[x.id,x.nom,x.imp,x.per,costeAnual(x),x.prox,x.cat,x.act,x.notas])},
+      {sheet:'Objetivos', h:['ID','Objetivo','Meta','Ahorrado','FechaLimite','Prioridad','Notas'], rows:(D.metas||[]).map(x=>[x.id,x.nom,x.obj,x.act,x.fecha,x.pri,x.notas])},
+      {sheet:'Inversiones', h:['ID','Activo','Tipo','Broker','Invertido','ValorActual','PlusvaliaLatente','FechaAlta','AportacionMensual','Notas'], rows:(D.invers||[]).map(x=>[x.id,x.nom,x.tipo,x.broker,x.inv,x.val,(parseFloat(x.val||0)-parseFloat(x.inv||0)),x.fecha,x.apo,x.notas])},
+      {sheet:'Deudas', h:['ID','Concepto','Tipo','Entidad','ImporteInicial','Pendiente','CuotaMensual','TIN','FechaFin','Notas'], rows:(D.deudas||[]).map(x=>[x.id,x.nom,x.tipo,x.ent,x.ini,x.pend,x.cuota,x.tin,x.fin,x.notas])},
+      {sheet:'DocsPersonales', h:['ID','Nombre','Tipo','Anyo','Archivo','Notas'], rows:(D.docs||[]).map(x=>[x.id,x.nom,x.tipo,x.anyo,x.pdfName||'',x.notas])},
       {sheet:'FacturasCompra', h:['ID','Fecha','NumFactura','Concepto','Empresa','Categoria','Propietario','PisoID','Hab','Importe','FormaPago','TratamientoFiscal','GarantiaHasta','Notas','PDF'], rows:(D.compras||[]).map(x=>[x.id,x.fecha,x.num,x.con,x.emp,x.cat,ownerNom(ownerDe(x)),x.propId,x.hab,x.imp,x.pago,FISCAL[fiscalKey(x.ded)].et,x.gar,x.notas,x.pdfName||''])},
       {sheet:'Anuncios', h:['ID','Titulo','PisoID','Hab','Precio','m2','Estado','GastosIncl','URL','Caracteristicas','NumFotos','Descripcion'], rows:(D.anuncios||[]).map(a=>[a.id,a.tit,a.propId,a.hab,a.precio,a.m2,a.est,a.gastos,a.url,a.carac,(a.fotos||[]).length,a.desc])},
     ];
@@ -3861,54 +5269,312 @@ async function syncToSheets() {
     }));
     await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchClear',{method:'POST',body:JSON.stringify({ranges:activos.map(s=>s.sheet+'!A:Z')})});
     await gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate',{method:'POST',body:JSON.stringify({valueInputOption:'RAW',data:data})});
-    await saveDriveBackup();
   } finally { gSyncing = false; }
 }
 
-// ── Backup JSON to Drive ──────────────────────────────────────
-async function saveDriveBackup() {
-  try {
-    const json = JSON.stringify(D);
-    const fileName = 'rentacontrol_backup.json';
-    const q = encodeURIComponent("name='"+fileName+"' and '"+gFolderId+"' in parents and trashed=false");
-    const ex = await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)');
+// ══════════════════════════════════════════════════════════════
+// SINCRONIZACIÓN AUTOMÁTICA CON FUSIÓN (anti pérdida de datos)
+// ══════════════════════════════════════════════════════════════
+const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','cuentas','movs','presup','subs','metas','invers','deudas','docs'];
 
-    if (ex.files && ex.files.length) {
-      // Update existing file - use media upload only
-      const res = await fetch(
-        'https://www.googleapis.com/upload/drive/v3/files/'+ex.files[0].id+'?uploadType=media',
-        {
-          method: 'PATCH',
-          headers: {
-            'Authorization': 'Bearer '+gToken,
-            'Content-Type': 'application/json'
-          },
-          body: json
-        }
-      );
-      if (!res.ok) throw new Error('PATCH failed: ' + res.status);
-      console.log('Backup updated in Drive');
-    } else {
-      // Create new file with multipart
-      const metadata = JSON.stringify({name: fileName, parents: [gFolderId]});
-      const body = '--boundary\r\nContent-Type: application/json\r\n\r\n' + metadata +
-        '\r\n--boundary\r\nContent-Type: application/json\r\n\r\n' + json + '\r\n--boundary--';
-      const res = await fetch(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer '+gToken,
-            'Content-Type': 'multipart/related; boundary=boundary'
-          },
-          body: body
-        }
-      );
-      if (!res.ok) throw new Error('POST failed: ' + res.status);
-      console.log('Backup created in Drive');
-    }
-  } catch(e) { console.warn('Backup error:', e.message); }
+let _snap = {};              // huella de cada registro para detectar cambios
+let _syncEnCurso = false;
+let _syncPendiente = false;
+let _hayCambiosSinSubir = false;
+let _ultimaSync = 0;
+let _debounceSync = null;
+
+// ── Guardado local blindado ───────────────────────────────────
+function guardarLocal(){
+  try {
+    localStorage.setItem(KEY, JSON.stringify(D));
+    return true;
+  } catch(e) {
+    console.error('Error guardando en localStorage:', e);
+    alert('⚠️ NO SE HAN PODIDO GUARDAR LOS DATOS EN ESTE DISPOSITIVO.\n\n' +
+          'El almacenamiento del navegador está lleno, probablemente por PDFs o fotos muy pesadas.\n\n' +
+          'Pulsa Sync ahora mismo para subir lo que haya a Google Drive y luego elimina algún archivo adjunto grande.');
+    estadoSync('error','Almacenamiento lleno');
+    return false;
+  }
 }
+
+// ── Huellas: detectar altas, ediciones y borrados ─────────────
+function huella(r){
+  const {_upd, ...resto} = r;
+  return JSON.stringify(resto);
+}
+
+function inicializarSnapshot(){
+  _snap = {};
+  COLS.forEach(k => (D[k]||[]).forEach(r => { if(r && r.id) _snap[k+':'+r.id] = huella(r); }));
+}
+
+// Marca con fecha lo que ha cambiado y deja lápida de lo borrado
+function marcarCambios(){
+  const ahora = Date.now();
+  let hubo = false;
+  if(!D._del) D._del = {};
+  const presentes = new Set();
+
+  COLS.forEach(k => {
+    (D[k]||[]).forEach(r => {
+      if(!r || !r.id) return;
+      const clave = k+':'+r.id;
+      presentes.add(clave);
+      const h = huella(r);
+      if(_snap[clave] !== h){
+        r._upd = ahora;
+        _snap[clave] = h;
+        hubo = true;
+      }
+    });
+  });
+
+  // Lo que estaba en la huella y ya no está = borrado
+  Object.keys(_snap).forEach(clave => {
+    if(!presentes.has(clave)){
+      D._del[clave] = ahora;
+      delete _snap[clave];
+      hubo = true;
+    }
+  });
+
+  // Config
+  const hCfg = JSON.stringify(D.cfg||{});
+  if(_snap['__cfg'] !== hCfg){ _snap['__cfg'] = hCfg; D._cfgUpd = ahora; hubo = true; }
+
+  // Limpiar lápidas de más de 120 días
+  const limite = ahora - 120*24*3600*1000;
+  Object.keys(D._del).forEach(k => { if(D._del[k] < limite) delete D._del[k]; });
+
+  return hubo;
+}
+
+// ── Fusión de dos versiones: gana siempre el dato más reciente ─
+function fusionar(local, remoto){
+  const out = { cfg: local.cfg, _del: Object.assign({}, remoto._del||{}, local._del||{}) };
+  // En _del nos quedamos con la lápida más reciente de cada clave
+  Object.keys(remoto._del||{}).forEach(k=>{
+    const a=(remoto._del||{})[k]||0, b=(local._del||{})[k]||0;
+    out._del[k] = Math.max(a,b);
+  });
+
+  COLS.forEach(k => {
+    const mapa = new Map();
+    (remoto[k]||[]).forEach(r => { if(r && r.id) mapa.set(String(r.id), r); });
+    (local[k]||[]).forEach(r => {
+      if(!r || !r.id) return;
+      const id = String(r.id);
+      const otro = mapa.get(id);
+      // Sin fecha se asume antiguo (0). Empate → gana el local.
+      if(!otro || (r._upd||0) >= (otro._upd||0)) mapa.set(id, r);
+    });
+    const res = [];
+    mapa.forEach((r, id) => {
+      const lapida = out._del[k+':'+id];
+      if(lapida && lapida >= (r._upd||0)) return;   // se borró después de la última edición
+      res.push(r);
+    });
+    out[k] = res;
+  });
+
+  out.cfg = ((remoto._cfgUpd||0) > (local._cfgUpd||0)) ? (remoto.cfg||local.cfg) : local.cfg;
+  out._cfgUpd = Math.max(remoto._cfgUpd||0, local._cfgUpd||0);
+  return out;
+}
+
+// ── Guardar + sincronizar (se llama en CADA cambio) ───────────
+function saveAndSync(){
+  const hubo = marcarCambios();
+  if(!guardarLocal()) return;
+  if(hubo) _hayCambiosSinSubir = true;
+
+  if(!gToken || !gFolderId){
+    estadoSync(_hayCambiosSinSubir ? 'local' : 'ok');
+    return;
+  }
+  estadoSync('pendiente');
+  clearTimeout(_debounceSync);
+  _debounceSync = setTimeout(()=>{ syncFull(false); }, 1200);
+}
+
+// ── Descargar backup de Drive ─────────────────────────────────
+async function bajarBackup(){
+  const q = encodeURIComponent("name='"+(WS_CFG[WS]||WS_CFG.gentaury).backup+"' and '"+gFolderId+"' in parents and trashed=false");
+  const res = await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,modifiedTime)');
+  if(!res.files || !res.files.length) return null;
+  const r = await fetch('https://www.googleapis.com/drive/v3/files/'+res.files[0].id+'?alt=media',
+    { headers:{ 'Authorization':'Bearer '+gToken }, cache:'no-store' });
+  if(!r.ok) throw new Error('No se pudo descargar el backup ('+r.status+')');
+  const txt = await r.text();
+  if(!txt || !txt.trim()) return null;
+  return JSON.parse(txt);
+}
+
+// ── Sincronización completa: bajar → fusionar → subir ─────────
+async function syncFull(manual){
+  if(!gToken || !gFolderId){ if(manual) toast('Conecta primero con Google Drive', false); return; }
+  if(_syncEnCurso){ _syncPendiente = true; return; }
+
+  _syncEnCurso = true;
+  estadoSync('sync');
+  try{
+    marcarCambios();
+
+    // 1. Bajar lo que hay en Drive
+    let remoto = null;
+    try { remoto = await bajarBackup(); }
+    catch(e){ console.warn('Sin backup remoto legible:', e.message); }
+
+    // 2. Fusionar sin perder nada de ninguno de los dos lados
+    if(remoto && typeof remoto === 'object'){
+      const antes = COLS.reduce((s,k)=>s+((D[k]||[]).length),0);
+      const fus = fusionar(D, remoto);
+      COLS.forEach(k => D[k] = fus[k]);
+      D._del = fus._del; D.cfg = fus.cfg; D._cfgUpd = fus._cfgUpd;
+      const despues = COLS.reduce((s,k)=>s+((D[k]||[]).length),0);
+      guardarLocal();
+      inicializarSnapshot();
+      if(despues !== antes){
+        refrescarVista();
+        if(despues > antes) toast('↓ '+(despues-antes)+' registro(s) recibidos de otro dispositivo');
+      }
+    }
+
+    // 3. Subir el resultado fusionado (backup primero: es el que manda)
+    await subirBackup();
+    await volcarSheets();
+
+    _hayCambiosSinSubir = false;
+    _ultimaSync = Date.now();
+    estadoSync('ok');
+    if(manual) toast('✓ Todo sincronizado con Google Drive');
+  } catch(e){
+    console.error('Error de sincronización:', e);
+    estadoSync('error', e.message);
+    if(manual) toast('Error al sincronizar: '+e.message, false);
+    // Reintento automático a los 20 s
+    setTimeout(()=>{ if(_hayCambiosSinSubir) syncFull(false); }, 20000);
+  } finally {
+    _syncEnCurso = false;
+    if(_syncPendiente){ _syncPendiente = false; setTimeout(()=>syncFull(false), 400); }
+  }
+}
+
+// ── Subir backup JSON (fuente de verdad) ──────────────────────
+async function subirBackup(){
+  const json = JSON.stringify(D);
+  const nombre = (WS_CFG[WS]||WS_CFG.gentaury).backup;
+  const q = encodeURIComponent("name='"+nombre+"' and '"+gFolderId+"' in parents and trashed=false");
+  const ex = await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)');
+
+  let res;
+  if(ex.files && ex.files.length){
+    res = await fetch('https://www.googleapis.com/upload/drive/v3/files/'+ex.files[0].id+'?uploadType=media',
+      { method:'PATCH', headers:{'Authorization':'Bearer '+gToken,'Content-Type':'application/json'}, body: json });
+  } else {
+    const meta = JSON.stringify({name:nombre, parents:[gFolderId]});
+    const body = '--bd\r\nContent-Type: application/json\r\n\r\n'+meta+
+                 '\r\n--bd\r\nContent-Type: application/json\r\n\r\n'+json+'\r\n--bd--';
+    res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      { method:'POST', headers:{'Authorization':'Bearer '+gToken,'Content-Type':'multipart/related; boundary=bd'}, body });
+  }
+  if(!res.ok) throw new Error('No se pudo guardar el backup en Drive ('+res.status+')');
+
+  // Verificación: releer y comprobar que el contenido está completo
+  const check = await bajarBackup();
+  const nLocal = COLS.reduce((s,k)=>s+((D[k]||[]).length),0);
+  const nRem = check ? COLS.reduce((s,k)=>s+((check[k]||[]).length),0) : -1;
+  if(nRem < nLocal) throw new Error('El backup subido está incompleto, se reintentará');
+  return true;
+}
+
+
+// ── Vigilancia continua: periódica, al volver a la app y al cerrar ──
+function arrancarAutoSync(){
+  clearInterval(gAutoSyncTimer);
+  // Cada 45 s comprueba si hay novedades en Drive o cambios por subir
+  gAutoSyncTimer = setInterval(()=>{
+    if(gToken && !document.hidden) syncFull(false);
+  }, 45000);
+}
+
+// Al volver a la pestaña o desbloquear el móvil: sincroniza al momento
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden && gToken){
+    setTimeout(()=>syncFull(false), 300);
+  }
+});
+window.addEventListener('focus', ()=>{
+  if(gToken && Date.now()-_ultimaSync > 15000) syncFull(false);
+});
+window.addEventListener('online', ()=>{ if(gToken) syncFull(false); });
+
+// Aviso si se intenta cerrar con cambios sin subir
+window.addEventListener('beforeunload', (e)=>{
+  if(_hayCambiosSinSubir && gToken){
+    clearTimeout(_debounceSync);
+    syncFull(false);
+    e.preventDefault();
+    e.returnValue = 'Hay cambios sin terminar de guardar en Google Drive.';
+    return e.returnValue;
+  }
+});
+
+// ── Estado visual de la sincronización ────────────────────────
+function estadoSync(estado, detalle){
+  const bar = document.getElementById('gdrive-bar');
+  const lbl = document.getElementById('gdrive-label');
+  const ls  = document.getElementById('gdrive-lastsync');
+  const dot = document.getElementById('gdrive-dot');
+  if(!bar) return;
+  const hora = _ultimaSync ? new Date(_ultimaSync).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '';
+  const mapa = {
+    ok:        {txt:'Guardado',            col:'#10b981', sub: hora?('✓ '+hora):'✓'},
+    sync:      {txt:'Sincronizando…',      col:'#f59e0b', sub:'…'},
+    pendiente: {txt:'Cambios pendientes',  col:'#f59e0b', sub:'…'},
+    local:     {txt:'Solo en este equipo', col:'#f59e0b', sub:'sin Drive'},
+    error:     {txt:'Error al guardar',    col:'#ef4444', sub: detalle? detalle.slice(0,28) : 'reintentando'}
+  };
+  const e = mapa[estado] || mapa.ok;
+  if(dot){ dot.style.background = e.col; dot.style.boxShadow = '0 0 6px '+e.col; }
+  if(lbl) lbl.textContent = e.txt;
+  if(ls)  ls.textContent  = e.sub;
+}
+
+// ── Refrescar la vista que esté abierta ───────────────────────
+function refrescarVista(){
+  try{
+    const activa = document.querySelector('.nav-item.on');
+    const s = activa ? activa.dataset.s : 'dash';
+    populateSels();
+    if(RENDERS[s]) RENDERS[s]();
+  }catch(e){ console.warn('No se pudo refrescar la vista', e); }
+}
+
+// ── Sincronización manual desde el botón ──────────────────────
+async function syncNow(){ await syncFull(true); }
+
+// ── Forzar descarga completa desde Drive (descartando lo local) ─
+async function pullFromDrive(){
+  if(!gToken || !gFolderId){ toast('Conecta primero con Google Drive', false); return; }
+  if(!confirm('Se descargará la versión de Google Drive y se fusionará con lo que tengas aquí.\n\n¿Continuar?')) return;
+  estadoSync('sync');
+  try{
+    const remoto = await bajarBackup();
+    if(!remoto){ toast('No hay backup en Drive todavía', false); estadoSync('ok'); return; }
+    const fus = fusionar(D, remoto);
+    COLS.forEach(k => D[k] = fus[k]);
+    D._del = fus._del; D.cfg = fus.cfg; D._cfgUpd = fus._cfgUpd;
+    guardarLocal(); inicializarSnapshot(); refrescarVista();
+    _ultimaSync = Date.now(); estadoSync('ok');
+    toast('✓ Datos actualizados desde Google Drive');
+  }catch(e){ estadoSync('error', e.message); toast('Error: '+e.message, false); }
+}
+
+// ── Backup JSON to Drive ──────────────────────────────────────
+
 
 // ── PDF to Drive ──────────────────────────────────────────────
 async function uploadPdfToDrive(dataUri, fileName) {
@@ -3926,19 +5592,7 @@ async function uploadPdfToDrive(dataUri, fileName) {
 }
 
 // ── Import from Drive ─────────────────────────────────────────
-async function importFromDrive() {
-  if (!gToken || !gFolderId) { toast('Conecta primero con Google Drive', false); return; }
-  try {
-    const q=encodeURIComponent("name='rentacontrol_backup.json' and '"+gFolderId+"' in parents and trashed=false");
-    const res=await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)');
-    if(!res.files||!res.files.length){toast('No hay backup en Drive todavía',false);return;}
-    const r=await fetch('https://www.googleapis.com/drive/v3/files/'+res.files[0].id+'?alt=media',{headers:{'Authorization':'Bearer '+gToken}});
-    D=await r.json();
-    localStorage.setItem(KEY,JSON.stringify(D));
-    rDash();
-    toast('✓ Datos importados desde Google Drive');
-  } catch(e){toast('Error: '+e.message,false);}
-}
+
 
 // ── Open sheet / folder ───────────────────────────────────────
 function openSheet() {
