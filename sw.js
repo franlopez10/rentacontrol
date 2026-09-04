@@ -1,4 +1,4 @@
-const CACHE = 'rentacontrol-v3';
+const CACHE = 'gentaury-v4';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
