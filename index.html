@@ -712,7 +712,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="logo">
     <div class="logo-name" id="ws-logo-nom">RentaControl</div>
     <div class="logo-tag" id="ws-logo-tag">Gentaury · Alquiler</div>
-    <button id="ws-switch" onclick="cambiarWS()" style="margin-top:12px;width:100%;padding:7px;border-radius:7px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-family:'DM Mono',monospace;font-size:9.5px;cursor:pointer;transition:.15s;" onmouseover="this.style.background='rgba(255,255,255,.15)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">💰 Ir a Personal</button>
+    <button id="ws-switch" onclick="abrirSelector()" style="margin-top:12px;width:100%;padding:7px;border-radius:7px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-family:'DM Mono',monospace;font-size:9.5px;cursor:pointer;transition:.15s;" onmouseover="this.style.background='rgba(255,255,255,.15)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">💰 Ir a Personal</button>
   </div>
 
   <div class="nav-group" data-ws="gentaury">
@@ -5168,6 +5168,7 @@ function clearAll(){if(!confirm('¿Borrar TODOS los datos?'))return;if(!confirm(
 // ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
 
+  const haySesion = checkExistingSession();
   const d=new Date();
   $i('topbar-date').textContent=d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
   $i('hm').value=d.toISOString().slice(0,7);
@@ -5177,7 +5178,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   $i('in-f').value=d.toISOString().split('T')[0];
   $i('ag-f').value=d.toISOString().split('T')[0];
   $i('fac-f').value=d.toISOString().split('T')[0];
-  populateSels();rDash();
+  populateSels();
+  inicializarSnapshot();
+  if(haySesion){
+    if(WS) aplicarWS(); else mostrarSelectorWS();
+  }
   // Auto-agenda contratos próximos
   D.inqs.filter(i=>i.estado==='ACTIVO'&&i.fin).forEach(i=>{
     const dias=Math.round((new Date(i.fin)-d)/86400000);
@@ -5233,8 +5238,9 @@ function loginWithGoogle() {
           // Authorized!
           currentUser = { email, token: resp.access_token };
           gToken = resp.access_token;
-          sessionStorage.setItem('rc_auth_email', email);
-          sessionStorage.setItem('rc_auth_token', resp.access_token);
+          localStorage.setItem('rc_auth_email', email);
+          localStorage.setItem('rc_auth_token', resp.access_token);
+          localStorage.setItem('rc_auth_exp', String(Date.now()+(resp.expires_in||3600)*1000));
           showApp();
           // Init Drive with same token
           await gdriveInit();
@@ -5261,19 +5267,47 @@ function mostrarSelectorWS(){
   $i('ws-screen').classList.add('show');
 }
 
+
+function abrirSelector(){
+  const em = currentUser ? currentUser.email : '';
+  const h=$i('ws-hola'); if(h) h.textContent = em ? ('Hola, '+em.split('@')[0]) : 'Bienvenido';
+  $i('ws-screen').classList.add('show');
+}
+
 function elegirWS(ws){
-  localStorage.setItem('rc_ws', ws);
-  location.reload();
+  irAEspacio(ws);
 }
 
 function cambiarWS(){
-  localStorage.removeItem('rc_ws');
-  location.reload();
+  // Guardar el espacio actual y cambiar al otro sin recargar
+  const nuevo = (WS==='personal') ? 'gentaury' : 'personal';
+  irAEspacio(nuevo);
+}
+
+async function irAEspacio(ws){
+  // Asegurar que lo del espacio actual queda subido antes de cambiar
+  if(gToken && _hayCambiosSinSubir){ try{ await syncFull(false); }catch(e){} }
+  WS = ws;
+  KEY = WS_CFG[ws].key;
+  localStorage.setItem('rc_ws', ws);
+  // Recargar los datos del nuevo espacio desde su almacenamiento
+  try{ D = JSON.parse(localStorage.getItem(KEY)) || def(); }catch(e){ D = def(); }
+  ['cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'].forEach(k=>{if(!D[k])D[k]=[];});
+  if(!D.propietarios)D.propietarios=[];
+  ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios'].forEach(k=>{if(!D[k])D[k]=[];});
+  gSheetId = null; gFolderId = null; GEN = null;
+  inicializarSnapshot();
+  aplicarWS();
+  // Reconectar Drive para este espacio (mismo token, no pide login)
+  if(gToken){ estadoSync('sync'); gdriveInit().catch(()=>{}); }
 }
 
 function cerrarSesion(){
-  sessionStorage.clear();
+  localStorage.removeItem('rc_auth_email');
+  localStorage.removeItem('rc_auth_token');
+  localStorage.removeItem('rc_auth_exp');
   localStorage.removeItem('rc_ws');
+  sessionStorage.clear();
   location.reload();
 }
 
@@ -5288,6 +5322,7 @@ function aplicarWS(){
   const lg=$i('ws-logo-nom'); if(lg) lg.textContent = esP ? 'Finanzas' : 'RentaControl';
   const lt=$i('ws-logo-tag'); if(lt) lt.textContent = esP ? 'Gentaury · Personal' : 'Gentaury · Alquiler';
   const btn=$i('ws-switch'); if(btn) btn.innerHTML = esP ? '🏢 Ir a RentaControl' : '💰 Ir a Personal';
+  const bs=$i('ws-switch2'); if(bs) bs.style.display='block';
   // Si es Personal, precargar el patrimonio inmobiliario de Gentaury
   if(esP && gToken){ cargarGentaury(); }
   // Activar la primera sección del espacio
@@ -5296,17 +5331,44 @@ function aplicarWS(){
 }
 
 function checkExistingSession() {
-  const email = sessionStorage.getItem('rc_auth_email');
-  const token = sessionStorage.getItem('rc_auth_token');
-  if (email && token && ALLOWED_EMAILS.includes(email.toLowerCase())) {
+  const email = localStorage.getItem('rc_auth_email');
+  const token = localStorage.getItem('rc_auth_token');
+  const exp   = parseInt(localStorage.getItem('rc_auth_exp')||'0');
+  if (email && ALLOWED_EMAILS.includes(email.toLowerCase())) {
     currentUser = { email, token };
-    gToken = token;
-    showApp();
-    // Try to reconnect Drive silently
-    gdriveInit().catch(() => {});
+    // Si el token sigue vigente lo usamos; si caducó, entramos igual y lo renovamos en silencio
+    if (token && exp > Date.now()+60000) {
+      gToken = token;
+      showApp();
+      gdriveInit().catch(()=>renovarTokenSilencioso());
+    } else {
+      // Token caducado: mostramos la app y renovamos por detrás sin pedir elegir cuenta
+      showApp();
+      renovarTokenSilencioso();
+    }
     return true;
   }
   return false;
+}
+
+// Renueva el token de Google sin volver a mostrar el selector de cuenta
+function renovarTokenSilencioso(){
+  loadGIS().then(()=>{
+    if(!window.google||!window.google.accounts) return;
+    const cli = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: 'email profile '+SCOPES,
+      callback: (resp)=>{
+        if(resp.error||!resp.access_token) return;
+        gToken = resp.access_token;
+        localStorage.setItem('rc_auth_token', resp.access_token);
+        localStorage.setItem('rc_auth_exp', String(Date.now()+(resp.expires_in||3600)*1000));
+        gdriveInit().catch(()=>{});
+      }
+    });
+    // prompt vacío = sin ventana de selección si ya hay sesión de Google en el navegador
+    cli.requestAccessToken({prompt:''});
+  });
 }
 
 // ══════════════════════════════════════════════════════════════
