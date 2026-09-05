@@ -1965,6 +1965,12 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Coste seguro vida (€/año)</label><input id="hp-cs-vida" type="number" placeholder="0"></div>
     <div class="fgrp"><label>Coste otras vinculaciones (€/año)</label><input id="hp-cs-otros" type="number" placeholder="0"></div>
   </div>
+  <div class="form-section">Desglose de la cuota (opcional, del cuadro del banco)</div>
+  <div class="fg">
+    <div class="fgrp"><label>Interés en esta cuota (€) — deducible</label><input id="hp-int-manual" type="number" step="0.01" placeholder="auto"></div>
+    <div class="fgrp"><label>Amortización de capital (€) — no deducible</label><input id="hp-cap-manual" type="number" step="0.01" placeholder="auto"></div>
+  </div>
+  <div style="font-size:10.5px;color:var(--ink3);margin-top:2px;">Si lo dejas vacío, se calcula automáticamente con el tipo y el capital pendiente.</div>
   <div id="hp-calc" style="background:var(--ink);border-radius:var(--r);padding:14px;margin-top:14px;color:#fff;font-family:'DM Mono',monospace;"></div>
   <div class="fgrp fgf" style="margin-top:12px;"><label>Notas</label><textarea id="hp-notas" rows="2"></textarea></div>
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-hipoteca')">Cancelar</button><button class="btn btn-primary" onclick="saveHipoteca()">Guardar</button></div>
@@ -2258,7 +2264,7 @@ function saveProp(){
   });
   const fc=gi('pr-fc');
   const campos={nom,ownerId:gi('pr-owner'),dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,
-    precio:gn('pr-p'),fcompra:fc,anyo:fc?fc.slice(0,4):gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
+    precio:gn('pr-p'),compra:gn('pr-com'),gcompra:gn('pr-gc'),fcompra:fc,anyo:fc?fc.slice(0,4):gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
   if(editId){
     const p=D.props.find(x=>x.id==editId);
     if(p){ Object.assign(p,campos); p.docs=Object.assign({},p.docs||{},nuevosDocs); }
@@ -3369,7 +3375,7 @@ function autoOwnerHip(){
 
 function newHipoteca(){
   $i('hp-edit-id').value=''; $i('m-hp-title').textContent='🏦 Nueva hipoteca';
-  ['hp-banco','hp-ini','hp-pend','hp-cuota','hp-dia','hp-plazo','hp-firma','hp-fin','hp-dif','hp-euribor','hp-bonif','hp-cs-hogar','hp-cs-vida','hp-cs-otros','hp-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['hp-banco','hp-ini','hp-pend','hp-cuota','hp-dia','hp-plazo','hp-firma','hp-fin','hp-dif','hp-euribor','hp-bonif','hp-cs-hogar','hp-cs-vida','hp-cs-otros','hp-int-manual','hp-cap-manual','hp-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   $i('hp-tipo').value='Variable';
   ['hp-v-nomina','hp-v-hogar','hp-v-vida','hp-v-tarjeta','hp-v-planes','hp-v-alarma'].forEach(id=>{const e=$i(id);if(e)e.checked=false;});
   populateSels(); calcHip(); openM('m-hipoteca');
@@ -3384,6 +3390,7 @@ function editHipoteca(id){
   $i('hp-dia').value=h.dia||''; $i('hp-plazo').value=h.plazo||''; $i('hp-firma').value=h.firma||''; $i('hp-fin').value=h.fin||'';
   $i('hp-dif').value=h.dif||''; $i('hp-euribor').value=h.euribor||''; $i('hp-bonif').value=h.bonif||'';
   $i('hp-cs-hogar').value=h.csHogar||''; $i('hp-cs-vida').value=h.csVida||''; $i('hp-cs-otros').value=h.csOtros||'';
+  $i('hp-int-manual').value=h.intManual||''; $i('hp-cap-manual').value=h.capManual||'';
   $i('hp-v-nomina').checked=!!h.vNomina; $i('hp-v-hogar').checked=!!h.vHogar; $i('hp-v-vida').checked=!!h.vVida;
   $i('hp-v-tarjeta').checked=!!h.vTarjeta; $i('hp-v-planes').checked=!!h.vPlanes; $i('hp-v-alarma').checked=!!h.vAlarma;
   $i('hp-notas').value=h.notas||'';
@@ -3395,7 +3402,7 @@ function saveHipoteca(){
   const campos={propId:pid,ownerId:gi('hp-owner'),banco:gi('hp-banco'),tipo:$i('hp-tipo').value,
     ini:gn('hp-ini'),pend,cuota:gn('hp-cuota'),dia:gi('hp-dia'),plazo:gi('hp-plazo'),
     firma:gi('hp-firma'),fin:gi('hp-fin'),dif:gn('hp-dif'),euribor:gn('hp-euribor'),bonif:gn('hp-bonif'),
-    csHogar:gn('hp-cs-hogar'),csVida:gn('hp-cs-vida'),csOtros:gn('hp-cs-otros'),
+    csHogar:gn('hp-cs-hogar'),csVida:gn('hp-cs-vida'),csOtros:gn('hp-cs-otros'),intManual:gn('hp-int-manual'),capManual:gn('hp-cap-manual'),
     vNomina:$i('hp-v-nomina').checked,vHogar:$i('hp-v-hogar').checked,vVida:$i('hp-v-vida').checked,
     vTarjeta:$i('hp-v-tarjeta').checked,vPlanes:$i('hp-v-planes').checked,vAlarma:$i('hp-v-alarma').checked,
     notas:gi('hp-notas')};
@@ -3411,15 +3418,23 @@ function delHipoteca(id){ if(!confirm('¿Eliminar hipoteca?'))return; D.hipoteca
 function amortizarHip(id){
   const h=(D.hipotecas||[]).find(x=>x.id==id); if(!h)return;
   const t=tipoResultante(h);
-  const interesMes=parseFloat(h.pend||0)*t/100/12;
-  const capitalMes=Math.max(0,parseFloat(h.cuota||0)-interesMes);
-  if(!confirm(`Registrar el pago de la cuota de este mes:\\n\\n• Interés: ${eur(interesMes,2)}\\n• Capital amortizado: ${eur(capitalMes,2)}\\n\\nEl capital pendiente bajará a ${eur(h.pend-capitalMes,2)}. ¿Continuar?`))return;
+  let interesMes = h.intManual>0 ? parseFloat(h.intManual) : parseFloat(h.pend||0)*t/100/12;
+  let capitalMes = h.capManual>0 ? parseFloat(h.capManual) : Math.max(0,parseFloat(h.cuota||0)-interesMes);
+  const p=D.props.find(x=>x.id==h.propId);
+  if(!confirm(`Registrar la cuota de este mes:\n\n• Interés (DEDUCIBLE): ${eur(interesMes,2)}\n• Amortización de capital (no deducible): ${eur(capitalMes,2)}\n• Cuota total: ${eur(h.cuota,2)}\n\nEl capital pendiente bajará a ${eur(h.pend-capitalMes,2)}. ¿Continuar?`))return;
   h.pend=Math.max(0,parseFloat(h.pend||0)-capitalMes);
-  const p=D.props.find(x=>x.id==h.propId); if(p)p.capital=h.pend;
-  // Registrar el gasto de intereses (deducible) y la cuota
-  D.gastos.push({id:uid(),desc:'Cuota hipoteca '+(p?p.nom:''),cat:'Hipoteca',imp:parseFloat(h.cuota||0),
-    propId:h.propId,fecha:new Date().toISOString().split('T')[0],ded:'si',prov:h.banco||'',
-    notas:`Interés ${eur(interesMes,2)} + capital ${eur(capitalMes,2)}`});
+  if(p)p.capital=h.pend;
+  const hoy=new Date().toISOString().split('T')[0];
+  // Solo el INTERÉS es gasto deducible en IRPF
+  if(interesMes>0){
+    D.gastos.push({id:uid(),desc:'Intereses hipoteca '+(p?p.nom:''),cat:'Hipoteca',imp:interesMes,
+      propId:h.propId,fecha:hoy,ded:'si',prov:h.banco||'',notas:'Parte de intereses de la cuota (deducible)'});
+  }
+  // La amortización de capital se registra como NO deducible (informativo)
+  if(capitalMes>0){
+    D.gastos.push({id:uid(),desc:'Amortización capital hipoteca '+(p?p.nom:''),cat:'Hipoteca',imp:capitalMes,
+      propId:h.propId,fecha:hoy,ded:'no',prov:h.banco||'',notas:'Devolución de préstamo (no deducible)'});
+  }
   saveAndSync(); rHipotecas(); toast('Cuota registrada · pendiente '+eur(h.pend));
 }
 
@@ -6027,13 +6042,17 @@ function marcarCambios(){
       const clave = k+':'+r.id;
       presentes.add(clave);
       const h = huella(r);
-      if(_snap[clave] !== h){
-        r._upd = ahoraMonotono();   // sello nuevo en cada cambio
-        _snap[clave] = huella(r);   // recalcular huella YA con el _upd puesto
-        hubo = true;
-      } else if(!r._upd){
-        // Registro antiguo sin sello: dárselo sin marcar como cambio de datos
+      if(_snap[clave] === undefined){
+        // Registro que aparece por primera vez en esta sesión.
+        // Si ya trae _upd (viene de Drive o de otra sesión), lo respetamos tal cual.
+        // Si NO trae _upd, es un dato antiguo local: _upd=0 para que no gane a ediciones reales.
+        if(!r._upd) r._upd = 0;
+        _snap[clave] = h;
+      } else if(_snap[clave] !== h){
+        // Cambio REAL de contenido → sello nuevo (gana en la fusión)
         r._upd = ahoraMonotono();
+        _snap[clave] = huella(r);
+        hubo = true;
       }
     });
   });
@@ -6048,7 +6067,8 @@ function marcarCambios(){
   });
 
   const hCfg = JSON.stringify(D.cfg||{});
-  if(_snap['__cfg'] !== hCfg){ _snap['__cfg'] = hCfg; D._cfgUpd = ahoraMonotono(); hubo = true; }
+  if(_snap['__cfg'] === undefined){ _snap['__cfg'] = hCfg; }
+  else if(_snap['__cfg'] !== hCfg){ _snap['__cfg'] = hCfg; D._cfgUpd = ahoraMonotono(); hubo = true; }
 
   const limite = Date.now() - 180*24*3600*1000;
   Object.keys(D._del).forEach(k => { if(D._del[k] < limite) delete D._del[k]; });
@@ -6075,7 +6095,13 @@ function fusionar(local, remoto){
       const otro = mapa.get(id);
       if(!otro){ mapa.set(id, r); return; }
       const lu = r._upd||0, ru = otro._upd||0;
-      if(lu >= ru) mapa.set(id, r);
+      if(lu > ru){ mapa.set(id, r); }
+      else if(lu === ru){
+        // Empate de sello: gana el que tenga más información (más campos rellenos)
+        const nL=Object.values(r).filter(v=>v!==''&&v!=null&&v!==0).length;
+        const nR=Object.values(otro).filter(v=>v!==''&&v!=null&&v!==0).length;
+        if(nL >= nR) mapa.set(id, r);
+      }
     });
     const res = [];
     mapa.forEach((r, id) => {
