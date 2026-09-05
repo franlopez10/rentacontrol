@@ -2044,8 +2044,8 @@ async function handlePdfUpload(inputId, zoneId, dataId){
     const head='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: '+(blob.type||'application/octet-stream')+'\r\n\r\n';
     const foot='\r\n--'+boundary+'--';
     const body=new Blob([head, blob, foot]);
-    const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-      {method:'POST',headers:{'Authorization':'Bearer '+gToken},body});
+    const r=await gUpload('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      {method:'POST',body});
     if(!r.ok) throw new Error('Error al subir ('+r.status+')');
     const data=await r.json();
     // Guardar referencia ligera: driveId en lugar de base64
@@ -5742,16 +5742,58 @@ function updateDriveUI(state) {
 }
 
 // ── API fetch helper ─────────────────────────────────────────
-async function gFetch(url, opts = {}) {
+async function gFetch(url, opts = {}, _reintento) {
   const res = await fetch(url, {
     ...opts,
     headers: { 'Authorization': 'Bearer ' + gToken, 'Content-Type': 'application/json', ...(opts.headers||{}) }
   });
+  if (res.status === 401 && !_reintento) {
+    // Token caducado: renovar en silencio y reintentar una vez
+    const ok = await renovarTokenAhora();
+    if (ok) return gFetch(url, opts, true);
+  }
   if (!res.ok) {
     const err = await res.text();
     throw new Error('API ' + res.status + ': ' + err.slice(0,200));
   }
   return res.json();
+}
+
+
+// Fetch a Drive con Authorization y reintento automático ante 401
+async function gUpload(url, opts, _reintento){
+  const res = await fetch(url, {...opts, headers:{'Authorization':'Bearer '+gToken, ...(opts.headers||{})}});
+  if(res.status===401 && !_reintento){
+    const ok=await renovarTokenAhora();
+    if(ok) return gUpload(url, opts, true);
+  }
+  return res;
+}
+
+// Renueva el token y devuelve una promesa que resuelve a true/false
+let _renovando = null;
+function renovarTokenAhora(){
+  if(_renovando) return _renovando;
+  _renovando = new Promise((resolve)=>{
+    loadGIS().then(()=>{
+      if(!window.google||!window.google.accounts){ resolve(false); return; }
+      const cli = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: 'email profile '+SCOPES,
+        callback:(resp)=>{
+          _renovando=null;
+          if(resp.error||!resp.access_token){ resolve(false); return; }
+          gToken = resp.access_token;
+          localStorage.setItem('rc_auth_token', resp.access_token);
+          localStorage.setItem('rc_auth_exp', String(Date.now()+(resp.expires_in||3600)*1000));
+          resolve(true);
+        },
+        error_callback:()=>{ _renovando=null; resolve(false); }
+      });
+      cli.requestAccessToken({prompt:''});   // sin ventana si ya hay sesión de Google
+    }).catch(()=>{ _renovando=null; resolve(false); });
+  });
+  return _renovando;
 }
 
 // ── Folder ───────────────────────────────────────────────────
@@ -5947,8 +5989,8 @@ async function subirDataUri(dataUri, nombre){
   const boundary='bd'+Date.now()+Math.random();
   const head='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: '+mime+'\r\n\r\n';
   const foot='\r\n--'+boundary+'--';
-  const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-    {method:'POST',headers:{'Authorization':'Bearer '+gToken},body:new Blob([head,blob,foot])});
+  const r=await gUpload('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    {method:'POST',body:new Blob([head,blob,foot])});
   if(!r.ok) return null;
   return (await r.json()).id;
 }
@@ -6058,8 +6100,9 @@ async function bajarBackup(){
   const q = encodeURIComponent("name='"+(WS_CFG[WS]||WS_CFG.gentaury).backup+"' and '"+gFolderId+"' in parents and trashed=false");
   const res = await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,modifiedTime)');
   if(!res.files || !res.files.length) return null;
-  const r = await fetch('https://www.googleapis.com/drive/v3/files/'+res.files[0].id+'?alt=media',
+  let r = await fetch('https://www.googleapis.com/drive/v3/files/'+res.files[0].id+'?alt=media',
     { headers:{ 'Authorization':'Bearer '+gToken }, cache:'no-store' });
+  if(r.status===401){ if(await renovarTokenAhora()) r=await fetch('https://www.googleapis.com/drive/v3/files/'+res.files[0].id+'?alt=media',{headers:{'Authorization':'Bearer '+gToken},cache:'no-store'}); }
   if(!r.ok) throw new Error('No se pudo descargar el backup ('+r.status+')');
   const txt = await r.text();
   if(!txt || !txt.trim()) return null;
@@ -6106,11 +6149,16 @@ async function syncFull(manual){
     estadoSync('ok');
     if(manual) toast('✓ Todo sincronizado con Google Drive');
   } catch(e){
-    console.error('Error de sincronización:', e);
-    estadoSync('error', e.message);
-    if(manual) toast('Error al sincronizar: '+e.message, false);
-    // Reintento automático a los 20 s
-    setTimeout(()=>{ if(_hayCambiosSinSubir) syncFull(false); }, 20000);
+    console.warn('Sync pospuesto:', e.message);
+    // Si es problema de credenciales, renovar y reintentar enseguida sin alarmar
+    if(/401|credential|auth/i.test(e.message)){
+      const ok=await renovarTokenAhora();
+      estadoSync(ok?'pendiente':'local');
+      if(ok) setTimeout(()=>syncFull(false), 1500);
+    } else {
+      estadoSync('pendiente');
+      setTimeout(()=>{ if(_hayCambiosSinSubir) syncFull(false); }, 20000);
+    }
   } finally {
     _syncEnCurso = false;
     if(_syncPendiente){ _syncPendiente = false; setTimeout(()=>syncFull(false), 400); }
@@ -6126,14 +6174,14 @@ async function subirBackup(){
 
   let res;
   if(ex.files && ex.files.length){
-    res = await fetch('https://www.googleapis.com/upload/drive/v3/files/'+ex.files[0].id+'?uploadType=media',
-      { method:'PATCH', headers:{'Authorization':'Bearer '+gToken,'Content-Type':'application/json'}, body: json });
+    res = await gUpload('https://www.googleapis.com/upload/drive/v3/files/'+ex.files[0].id+'?uploadType=media',
+      { method:'PATCH', headers:{'Content-Type':'application/json'}, body: json });
   } else {
     const meta = JSON.stringify({name:nombre, parents:[gFolderId]});
     const body = '--bd\r\nContent-Type: application/json\r\n\r\n'+meta+
                  '\r\n--bd\r\nContent-Type: application/json\r\n\r\n'+json+'\r\n--bd--';
-    res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-      { method:'POST', headers:{'Authorization':'Bearer '+gToken,'Content-Type':'multipart/related; boundary=bd'}, body });
+    res = await gUpload('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      { method:'POST', headers:{'Content-Type':'multipart/related; boundary=bd'}, body });
   }
   if(!res.ok) throw new Error('No se pudo guardar el backup en Drive ('+res.status+')');
 
