@@ -772,6 +772,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="nav-item" data-ws="gentaury" data-s="gastos" onclick="go(this)">
       <span class="nav-icon">📉</span> Gastos
     </div>
+    <div class="nav-item" data-ws="gentaury" data-s="hipotecas" onclick="go(this)">
+      <span class="nav-icon">🏦</span> Hipotecas
+    </div>
     <div class="nav-item" data-ws="gentaury" data-s="facturas" onclick="go(this)">
       <span class="nav-icon">🧾</span> Facturas → Habs
     </div>
@@ -1161,6 +1164,20 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 
+
+<!-- ════════════ HIPOTECAS ════════════ -->
+<section class="sec" data-ws="gentaury" id="sec-hipotecas">
+  <div class="ph"><div><div class="ph-title">🏦 Hipotecas</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Control de cada préstamo: cuota, vinculaciones, tipo resultante y capital pendiente</div></div>
+    <button class="btn btn-primary" onclick="newHipoteca()">+ Nueva hipoteca</button></div>
+  <div id="hp-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="fb">
+    <select id="hp-prop-f" onchange="rHipotecas()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:170px;outline:none;"></select>
+    <select id="hp-owner-f" onchange="rHipotecas()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:170px;outline:none;"></select>
+  </div>
+  <div class="g2" id="hp-grid"></div>
+</section>
+
 <!-- ════════════ PERSONAL: PANEL ════════════ -->
 <section class="sec" data-ws="personal" id="sec-pDash">
   <div id="pd-alerts" style="margin-bottom:14px;"></div>
@@ -1353,8 +1370,11 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Ciudad</label><input id="pr-c" placeholder="Alicante"></div>
     <div class="fgrp"><label>Código postal</label><input id="pr-cp" placeholder="03001"></div>
     <div class="fgrp"><label>Nº habitaciones *</label><input id="pr-h" type="number" placeholder="5" min="1" max="20"></div>
-    <div class="fgrp"><label>Precio de compra (€)</label><input id="pr-p" type="number" placeholder="130000"></div>
+    <div class="fgrp"><label>Precio de compra (€)</label><input id="pr-p" type="number" placeholder="130000" oninput="calcCosteTotal()"></div>
+    <div class="fgrp"><label>Comisión inmobiliaria (€)</label><input id="pr-com" type="number" placeholder="6000" oninput="calcCosteTotal()"></div>
+    <div class="fgrp"><label>Otros gastos compra (ITP, notaría…) (€)</label><input id="pr-gc" type="number" placeholder="9000" oninput="calcCosteTotal()"></div>
     <div class="fgrp"><label>Fecha de compra (escritura)</label><input id="pr-fc" type="date"></div>
+    <div class="fgrp fgf" id="pr-coste-total" style="font-size:12px;color:var(--ink3);"></div>
     <div class="fgrp"><label>Hipoteca mensual (€)</label><input id="pr-hip" type="number" placeholder="407"></div>
     <div class="fgrp"><label>Capital hipoteca (€)</label><input id="pr-cap" type="number" placeholder="123500"></div>
     <div class="fgrp"><label>Valor construcción (€)</label><input id="pr-vc" type="number" placeholder="78000"></div>
@@ -1907,6 +1927,49 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-libro')">Cancelar</button><button class="btn btn-primary" onclick="saveLibro()">Guardar</button></div>
 </div></div>
 
+
+<!-- MODAL HIPOTECA -->
+<div class="modal-overlay" id="m-hipoteca"><div class="modal modal-lg">
+  <h2 id="m-hp-title">🏦 Nueva hipoteca</h2>
+  <input type="hidden" id="hp-edit-id">
+  <div class="fg">
+    <div class="fgrp"><label>Propiedad *</label><select id="hp-prop" onchange="autoOwnerHip()"></select></div>
+    <div class="fgrp"><label>Propietario</label><select id="hp-owner"></select></div>
+    <div class="fgrp"><label>Banco / entidad</label><input id="hp-banco" placeholder="BBVA, Santander..."></div>
+    <div class="fgrp"><label>Tipo</label><select id="hp-tipo"><option>Variable</option><option>Fija</option><option>Mixta</option></select></div>
+    <div class="fgrp"><label>Capital inicial (€)</label><input id="hp-ini" type="number" placeholder="123500" oninput="calcHip()"></div>
+    <div class="fgrp"><label>Capital pendiente (€) *</label><input id="hp-pend" type="number" placeholder="118000" oninput="calcHip()"></div>
+    <div class="fgrp"><label>Cuota mensual (€)</label><input id="hp-cuota" type="number" step="0.01" placeholder="620" oninput="calcHip()"></div>
+    <div class="fgrp"><label>Día de cobro de la cuota</label><input id="hp-dia" type="number" min="1" max="31" placeholder="1"></div>
+    <div class="fgrp"><label>Plazo total (años)</label><input id="hp-plazo" type="number" placeholder="30"></div>
+    <div class="fgrp"><label>Fecha de firma</label><input id="hp-firma" type="date"></div>
+    <div class="fgrp"><label>Fecha fin prevista</label><input id="hp-fin" type="date"></div>
+  </div>
+  <div class="form-section">Tipo de interés</div>
+  <div class="fg fg3">
+    <div class="fgrp"><label>Diferencial (%)</label><input id="hp-dif" type="number" step="0.01" placeholder="0.99" oninput="calcHip()"></div>
+    <div class="fgrp"><label>Euríbor actual (%)</label><input id="hp-euribor" type="number" step="0.01" placeholder="2.5" oninput="calcHip()"></div>
+    <div class="fgrp"><label>Bonificación por vinculaciones (%)</label><input id="hp-bonif" type="number" step="0.01" placeholder="0" oninput="calcHip()"></div>
+  </div>
+  <div class="form-section">Vinculaciones contratadas</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;">
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--ink2);text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;"><input type="checkbox" id="hp-v-nomina" style="width:auto;" onchange="calcHip()"> Nómina</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--ink2);text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;"><input type="checkbox" id="hp-v-hogar" style="width:auto;" onchange="calcHip()"> Seguro de hogar</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--ink2);text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;"><input type="checkbox" id="hp-v-vida" style="width:auto;" onchange="calcHip()"> Seguro de vida</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--ink2);text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;"><input type="checkbox" id="hp-v-tarjeta" style="width:auto;" onchange="calcHip()"> Tarjeta</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--ink2);text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;"><input type="checkbox" id="hp-v-planes" style="width:auto;" onchange="calcHip()"> Planes/fondos</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--ink2);text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;"><input type="checkbox" id="hp-v-alarma" style="width:auto;" onchange="calcHip()"> Alarma</label>
+  </div>
+  <div class="fg fg3">
+    <div class="fgrp"><label>Coste seguro hogar (€/año)</label><input id="hp-cs-hogar" type="number" placeholder="0"></div>
+    <div class="fgrp"><label>Coste seguro vida (€/año)</label><input id="hp-cs-vida" type="number" placeholder="0"></div>
+    <div class="fgrp"><label>Coste otras vinculaciones (€/año)</label><input id="hp-cs-otros" type="number" placeholder="0"></div>
+  </div>
+  <div id="hp-calc" style="background:var(--ink);border-radius:var(--r);padding:14px;margin-top:14px;color:#fff;font-family:'DM Mono',monospace;"></div>
+  <div class="fgrp fgf" style="margin-top:12px;"><label>Notas</label><textarea id="hp-notas" rows="2"></textarea></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-hipoteca')">Cancelar</button><button class="btn btn-primary" onclick="saveHipoteca()">Guardar</button></div>
+</div></div>
+
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -1919,9 +1982,10 @@ const WS_CFG = {
 };
 let KEY = WS_CFG[WS] ? WS_CFG[WS].key : 'rc5';
 let D=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||def();}catch{return def();}})();
-function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
+function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],hipotecas:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
 if(!D.compras)D.compras=[];
 if(!D.propietarios)D.propietarios=[];
+if(!D.hipotecas)D.hipotecas=[];
 ['cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'].forEach(k=>{if(!D[k])D[k]=[];});
 if(!D.anuncios)D.anuncios=[];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(D));
@@ -2068,7 +2132,7 @@ function clearPdfZone(zoneId, dataId) {
 const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,propietarios:rPropietarios,
   activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rPagos,
   gastos:rGastos,facturas:rFacturas,hist:rHist,fiscal:rFiscal,
-  informes:rInfs,incs:rIncs,provs:rProvs,cfg:rCfg,
+  informes:rInfs,incs:rIncs,provs:rProvs,hipotecas:rHipotecas,cfg:rCfg,
   pDash:rPDash, pMovs:rMovs, pCuentas:rCuentas, pSubs:rSubs, pPresup:rPresup,
   pMetas:rMetas, pInver:rInver, pDeudas:rDeudas, pPatrimonio:rPatrimonio,
   pDocs:rDocs, pRenta:rRenta, pLibros:rLibros, pCfg:rPCfg};
@@ -2087,19 +2151,19 @@ function go(el){
 function populateSels(){
   const pO='<option value="">Sin asignar</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');
   const iO='<option value="">— Seleccionar —</option>'+D.inqs.map(i=>`<option value="${i.id}">${i.nom} ${i.ap} (${i.estado})</option>`).join('');
-  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
+  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop','hp-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
   // Selectores de propietario
   const oO='<option value="">— Sin asignar —</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
-  ['pr-owner','cp-owner'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oO;e.value=v;}});
+  ['pr-owner','cp-owner','hp-owner'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oO;e.value=v;}});
   // Cuentas del espacio personal
   const ctO='<option value="">— Sin cuenta —</option>'+(D.cuentas||[]).map(x=>`<option value="${x.id}">${x.nom}</option>`).join('');
   ['mv-cta','sb-cta'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=ctO;e.value=v;}});
   const ctF='<option value="">Todas las cuentas</option>'+(D.cuentas||[]).map(x=>`<option value="${x.id}">${x.nom}</option>`).join('');
   ['pm-cta-f'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=ctF;e.value=v;}});
   const oF='<option value="">Todos los propietarios</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
-  ['cp-owner-f','fi-owner'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oF;e.value=v;}});
+  ['cp-owner-f','fi-owner','hp-owner-f'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oF;e.value=v;}});
   ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=iO;});
-  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
+  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
   const pmf=$i('pamf');if(pmf){const ms=[...new Set(D.pagos.map(p=>p.mes).filter(Boolean))].sort().reverse();pmf.innerHTML='<option value="">Todos los meses</option>'+ms.map(m=>`<option value="${m}">${m}</option>`).join('');}
   const fy=$i('fy');if(fy){const ys=[...new Set([...D.pagos.map(p=>p.mes?.slice(0,4)),...D.gastos.map(g=>g.fecha?.slice(0,4)),...(D.compras||[]).map(x=>x.fecha?.slice(0,4))].filter(Boolean))].sort().reverse();if(!ys.includes(String(new Date().getFullYear())))ys.unshift(String(new Date().getFullYear()));fy.innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');}
 }
@@ -2130,13 +2194,26 @@ const DOC_INFO = {
   doc5:{ico:'📄',nom:'Otros'}
 };
 
+
+function calcCosteTotal(){
+  const p=gn('pr-p'), com=gn('pr-com'), gc=gn('pr-gc');
+  const el=$i('pr-coste-total'); if(!el)return;
+  if(!p&&!com&&!gc){ el.innerHTML=''; return; }
+  const total=p+com+gc;
+  el.innerHTML=`<div style="background:var(--bg);border-radius:var(--r2);padding:10px 12px;">
+    <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Coste total de adquisición</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--acc);margin-top:2px;">${eur(total)}</div>
+    <div style="font-size:10.5px;color:var(--ink3);margin-top:2px;">Precio ${eur(p)}${com?' + comisión '+eur(com):''}${gc?' + gastos '+eur(gc):''}</div>
+  </div>`;
+}
+
 function newProp(){
   $i('pr-edit-id').value='';
   $i('m-prop-title').textContent='🏢 Nueva Propiedad';
-  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   $i('pr-docs-actuales').innerHTML='';
-  $i('pr-owner').value='';
+  $i('pr-owner').value=''; $i('pr-coste-total').innerHTML='';
   openM('m-prop');
 }
 
@@ -2148,6 +2225,7 @@ function editProp(id){
   $i('pr-cp').value=p.cp||''; $i('pr-h').value=p.habs||''; $i('pr-p').value=p.precio||'';
   $i('pr-fc').value=p.fcompra||(p.anyo?p.anyo+'-01-01':''); $i('pr-hip').value=p.hipo||''; $i('pr-cap').value=p.capital||'';
   $i('pr-vc').value=p.vc||''; $i('pr-owner').value=p.ownerId||'';
+  $i('pr-com').value=p.compra||''; $i('pr-gc').value=p.gcompra||''; calcCosteTotal();
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   // Mostrar documentos ya guardados
   const docs=p.docs||{};
@@ -2191,9 +2269,9 @@ function saveProp(){
   }
   saveAndSync(); closeM('m-prop'); rProps(); rHabs();
   $i('pr-edit-id').value='';
-  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
-  $i('pr-docs-actuales').innerHTML='';
+  $i('pr-docs-actuales').innerHTML=''; $i('pr-coste-total').innerHTML='';
 }
 
 
@@ -2227,7 +2305,7 @@ function rProps(){
       </div>
       <div style="font-size:11px;color:var(--ink3);margin-bottom:5px;">${iqs.length} de ${p.habs} habitaciones ocupadas</div>
       <div class="pbar"><div class="pbar-fill" style="width:${pc}%;background:${col};"></div></div>
-      ${(p.fcompra||p.anyo)?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;">Comprado ${p.fcompra?fD(p.fcompra):p.anyo} · Hipoteca ${p.hipo||0}€/mes</div>`:''}
+      ${(p.fcompra||p.anyo)?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;">Comprado ${p.fcompra?fD(p.fcompra):p.anyo}${(p.compra||p.gcompra)?' · Coste total '+eur(parseFloat(p.precio||0)+parseFloat(p.compra||0)+parseFloat(p.gcompra||0)):''} · Hipoteca ${p.hipo||0}€/mes</div>`:''}
     ${p.docs&&Object.keys(p.docs).length?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);">
       <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px;">Documentos</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;">
@@ -2804,6 +2882,8 @@ function rPropietarios(){
     const facts=(D.compras||[]).filter(x=>ownerDe(x)==o.id);
     const totalFact=facts.reduce((s,x)=>s+parseFloat(x.imp||0),0);
     const valor=props.reduce((s,p)=>s+parseFloat(p.precio||0),0);
+    const deudaH=(D.hipotecas||[]).filter(h=>{const p2=D.props.find(x=>x.id==h.propId);return (h.ownerId||(p2?p2.ownerId:''))==o.id;}).reduce((s,h)=>s+parseFloat(h.pend||0),0);
+    const patNeto=valor-deudaH;
     const ini=(o.alias||o.nom||'?').trim()[0].toUpperCase();
     return `<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;">
@@ -2829,7 +2909,11 @@ function rPropietarios(){
         <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px;">Sus propiedades</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;">${props.map(p=>`<span class="badge badge-b">${p.nom}</span>`).join('')}</div>
       </div>`:''}
-      <div style="margin-top:10px;font-size:11px;color:var(--ink3);">Cartera: <strong style="color:var(--ink2);">${eur(valor)}</strong> · Facturado: <strong style="color:var(--ink2);">${eur(totalFact)}</strong> · IRPF ${o.irpf||24}%</div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8.5px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Patrimonio bruto</div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">${eur(valor)}</div></div>
+        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8.5px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Patrimonio neto</div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gn);">${eur(patNeto)}</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--ink3);">Deuda hipotecaria: <strong style="color:var(--rd);">${eur(deudaH)}</strong> · Facturado: <strong style="color:var(--ink2);">${eur(totalFact)}</strong> · IRPF ${o.irpf||24}%</div>
       ${o.notas?`<div style="font-size:10px;color:var(--ink3);margin-top:6px;font-style:italic;">${o.notas}</div>`:''}
     </div>`;
   }).join('');
@@ -3242,6 +3326,160 @@ function rAnuncios(){
 
 
 
+
+// ══════════════════════════════════════════════════════════════
+// HIPOTECAS
+// ══════════════════════════════════════════════════════════════
+function tipoResultante(h){
+  // Variable/Mixta: euríbor + diferencial − bonificación. Fija: diferencial actúa como tipo fijo.
+  if(h.tipo==='Fija') return Math.max(0,(parseFloat(h.dif||0))-(parseFloat(h.bonif||0)));
+  return Math.max(0,(parseFloat(h.euribor||0))+(parseFloat(h.dif||0))-(parseFloat(h.bonif||0)));
+}
+function vinculaciones(h){
+  const v=[];
+  if(h.vNomina)v.push('Nómina'); if(h.vHogar)v.push('S. hogar'); if(h.vVida)v.push('S. vida');
+  if(h.vTarjeta)v.push('Tarjeta'); if(h.vPlanes)v.push('Planes'); if(h.vAlarma)v.push('Alarma');
+  return v;
+}
+function costeVincAnual(h){ return parseFloat(h.csHogar||0)+parseFloat(h.csVida||0)+parseFloat(h.csOtros||0); }
+
+function calcHip(){
+  const h={tipo:$i('hp-tipo').value,dif:gn('hp-dif'),euribor:gn('hp-euribor'),bonif:gn('hp-bonif'),
+    pend:gn('hp-pend'),cuota:gn('hp-cuota'),csHogar:gn('hp-cs-hogar'),csVida:gn('hp-cs-vida'),csOtros:gn('hp-cs-otros')};
+  const t=tipoResultante(h);
+  const interesMes=h.pend*t/100/12;
+  const capitalMes=Math.max(0,h.cuota-interesMes);
+  const cv=costeVincAnual(h);
+  const costeRealMes=h.cuota+cv/12;
+  $i('hp-calc').innerHTML=`
+    <div style="font-family:'DM Mono',monospace;font-size:8.5px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Cálculo automático</div>
+    <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;"><span style="color:rgba(255,255,255,.7);">Tipo resultante</span><span style="color:#93c5fd;font-weight:600;">${t.toFixed(2)}%</span></div>
+    <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;"><span style="color:rgba(255,255,255,.7);">Interés de este mes</span><span style="color:#fca5a5;">${eur(interesMes,2)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;"><span style="color:rgba(255,255,255,.7);">Amortización de capital</span><span style="color:#6ee7b7;">${eur(capitalMes,2)}</span></div>
+    ${cv>0?`<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;"><span style="color:rgba(255,255,255,.7);">Coste vinculaciones</span><span>${eur(cv)}/año</span></div>`:''}
+    <div style="display:flex;justify-content:space-between;padding:8px 0 0;margin-top:6px;border-top:1px solid rgba(255,255,255,.15);font-size:14px;font-weight:600;"><span>Coste real mensual</span><span>${eur(costeRealMes,2)}</span></div>`;
+}
+
+function autoOwnerHip(){
+  const pid=gi('hp-prop'); if(!pid)return;
+  const p=D.props.find(x=>x.id==pid);
+  if(p&&p.ownerId) $i('hp-owner').value=p.ownerId;
+  if(p&&p.capital&&!gn('hp-pend')) $i('hp-pend').value=p.capital;
+}
+
+function newHipoteca(){
+  $i('hp-edit-id').value=''; $i('m-hp-title').textContent='🏦 Nueva hipoteca';
+  ['hp-banco','hp-ini','hp-pend','hp-cuota','hp-dia','hp-plazo','hp-firma','hp-fin','hp-dif','hp-euribor','hp-bonif','hp-cs-hogar','hp-cs-vida','hp-cs-otros','hp-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('hp-tipo').value='Variable';
+  ['hp-v-nomina','hp-v-hogar','hp-v-vida','hp-v-tarjeta','hp-v-planes','hp-v-alarma'].forEach(id=>{const e=$i(id);if(e)e.checked=false;});
+  populateSels(); calcHip(); openM('m-hipoteca');
+}
+function editHipoteca(id){
+  const h=(D.hipotecas||[]).find(x=>x.id==id); if(!h)return;
+  $i('hp-edit-id').value=h.id; $i('m-hp-title').textContent='✏️ Editar hipoteca';
+  populateSels();
+  $i('hp-prop').value=h.propId||''; $i('hp-owner').value=h.ownerId||'';
+  $i('hp-banco').value=h.banco||''; $i('hp-tipo').value=h.tipo||'Variable';
+  $i('hp-ini').value=h.ini||''; $i('hp-pend').value=h.pend||''; $i('hp-cuota').value=h.cuota||'';
+  $i('hp-dia').value=h.dia||''; $i('hp-plazo').value=h.plazo||''; $i('hp-firma').value=h.firma||''; $i('hp-fin').value=h.fin||'';
+  $i('hp-dif').value=h.dif||''; $i('hp-euribor').value=h.euribor||''; $i('hp-bonif').value=h.bonif||'';
+  $i('hp-cs-hogar').value=h.csHogar||''; $i('hp-cs-vida').value=h.csVida||''; $i('hp-cs-otros').value=h.csOtros||'';
+  $i('hp-v-nomina').checked=!!h.vNomina; $i('hp-v-hogar').checked=!!h.vHogar; $i('hp-v-vida').checked=!!h.vVida;
+  $i('hp-v-tarjeta').checked=!!h.vTarjeta; $i('hp-v-planes').checked=!!h.vPlanes; $i('hp-v-alarma').checked=!!h.vAlarma;
+  $i('hp-notas').value=h.notas||'';
+  calcHip(); openM('m-hipoteca');
+}
+function saveHipoteca(){
+  const pid=gi('hp-prop'); if(!pid){toast('Selecciona la propiedad',false);return;}
+  const pend=gn('hp-pend'); if(!pend){toast('Introduce el capital pendiente',false);return;}
+  const campos={propId:pid,ownerId:gi('hp-owner'),banco:gi('hp-banco'),tipo:$i('hp-tipo').value,
+    ini:gn('hp-ini'),pend,cuota:gn('hp-cuota'),dia:gi('hp-dia'),plazo:gi('hp-plazo'),
+    firma:gi('hp-firma'),fin:gi('hp-fin'),dif:gn('hp-dif'),euribor:gn('hp-euribor'),bonif:gn('hp-bonif'),
+    csHogar:gn('hp-cs-hogar'),csVida:gn('hp-cs-vida'),csOtros:gn('hp-cs-otros'),
+    vNomina:$i('hp-v-nomina').checked,vHogar:$i('hp-v-hogar').checked,vVida:$i('hp-v-vida').checked,
+    vTarjeta:$i('hp-v-tarjeta').checked,vPlanes:$i('hp-v-planes').checked,vAlarma:$i('hp-v-alarma').checked,
+    notas:gi('hp-notas')};
+  const id=gi('hp-edit-id');
+  if(id){ const h=D.hipotecas.find(x=>x.id==id); if(h)Object.assign(h,campos); toast('Hipoteca actualizada'); }
+  else { D.hipotecas.push(Object.assign({id:uid()},campos)); toast('Hipoteca añadida'); }
+  // Sincronizar el capital pendiente con la propiedad
+  const p=D.props.find(x=>x.id==pid); if(p){ p.capital=pend; if(campos.cuota) p.hipo=campos.cuota; }
+  saveAndSync(); closeM('m-hipoteca'); rHipotecas();
+}
+function delHipoteca(id){ if(!confirm('¿Eliminar hipoteca?'))return; D.hipotecas=D.hipotecas.filter(x=>x.id!==id); saveAndSync(); rHipotecas(); toast('Eliminada'); }
+
+function amortizarHip(id){
+  const h=(D.hipotecas||[]).find(x=>x.id==id); if(!h)return;
+  const t=tipoResultante(h);
+  const interesMes=parseFloat(h.pend||0)*t/100/12;
+  const capitalMes=Math.max(0,parseFloat(h.cuota||0)-interesMes);
+  if(!confirm(`Registrar el pago de la cuota de este mes:\\n\\n• Interés: ${eur(interesMes,2)}\\n• Capital amortizado: ${eur(capitalMes,2)}\\n\\nEl capital pendiente bajará a ${eur(h.pend-capitalMes,2)}. ¿Continuar?`))return;
+  h.pend=Math.max(0,parseFloat(h.pend||0)-capitalMes);
+  const p=D.props.find(x=>x.id==h.propId); if(p)p.capital=h.pend;
+  // Registrar el gasto de intereses (deducible) y la cuota
+  D.gastos.push({id:uid(),desc:'Cuota hipoteca '+(p?p.nom:''),cat:'Hipoteca',imp:parseFloat(h.cuota||0),
+    propId:h.propId,fecha:new Date().toISOString().split('T')[0],ded:'si',prov:h.banco||'',
+    notas:`Interés ${eur(interesMes,2)} + capital ${eur(capitalMes,2)}`});
+  saveAndSync(); rHipotecas(); toast('Cuota registrada · pendiente '+eur(h.pend));
+}
+
+function rHipotecas(){
+  populateSels();
+  const hs=D.hipotecas||[];
+  const propF=gi('hp-prop-f'), ownF=gi('hp-owner-f');
+  const list=hs.filter(h=>{
+    if(propF&&h.propId!=propF)return false;
+    if(ownF){ const p=D.props.find(x=>x.id==h.propId); const o=h.ownerId||(p?p.ownerId:''); if(o!=ownF)return false; }
+    return true;
+  });
+  const pend=list.reduce((s,h)=>s+parseFloat(h.pend||0),0);
+  const cuotas=list.reduce((s,h)=>s+parseFloat(h.cuota||0),0);
+  const ini=list.reduce((s,h)=>s+parseFloat(h.ini||0),0);
+  const vinc=list.reduce((s,h)=>s+costeVincAnual(h),0);
+  $i('hp-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--rd);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Deuda hipotecaria</div><div class="kpi-value">${eur(pend)}</div><div class="kpi-sub">${list.length} hipotecas</div></div>
+    <div class="kpi" style="--kc:var(--ye);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Cuotas al mes</div><div class="kpi-value">${eur(cuotas)}</div></div>
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Ya amortizado</div><div class="kpi-value">${eur(Math.max(0,ini-pend))}</div><div class="kpi-sub">${ini>0?Math.round((ini-pend)/ini*100):0}% del total</div></div>
+    <div class="kpi" style="--kc:var(--pu);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Coste vinculaciones</div><div class="kpi-value">${eur(vinc)}</div><div class="kpi-sub">al año</div></div>`;
+  const g=$i('hp-grid');
+  if(!list.length){ g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏦</div><p>Añade las hipotecas de tus pisos para controlar cuotas, tipos y capital pendiente</p></div>'; return; }
+  g.innerHTML=list.map(h=>{
+    const p=D.props.find(x=>x.id==h.propId);
+    const o=h.ownerId||(p?p.ownerId:'');
+    const t=tipoResultante(h);
+    const interesMes=parseFloat(h.pend||0)*t/100/12;
+    const capitalMes=Math.max(0,parseFloat(h.cuota||0)-interesMes);
+    const pc=h.ini>0?Math.round((h.ini-h.pend)/h.ini*100):0;
+    const vs=vinculaciones(h);
+    let meses=null;
+    if(h.fin) meses=Math.max(0,Math.round((new Date(h.fin)-new Date())/864e5/30.4));
+    else if(h.cuota>0) meses=Math.ceil(h.pend/parseFloat(h.cuota));
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">🏦 ${p?p.nom:'Piso'}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px;">${h.banco||'—'} · ${h.tipo}${o?' · 👑 '+ownerNom(o):''}</div></div>
+        <div style="display:flex;gap:4px;"><button class="btn btn-success btn-xs" onclick="amortizarHip('${h.id}')" title="Registrar cuota del mes">✓ Cuota</button><button class="btn btn-secondary btn-xs" onclick="editHipoteca('${h.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delHipoteca('${h.id}')">🗑</button></div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--rd);">${eur(h.pend)}</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:8px;">pendiente${h.ini?' de '+eur(h.ini):''}</div>
+      ${h.ini?`<div class="pbar" style="height:7px;"><div class="pbar-fill" style="width:${pc}%;background:var(--gn);"></div></div><div style="font-size:11px;color:var(--gn);margin-top:5px;font-weight:600;">${pc}% amortizado</div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Cuota/mes</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${eur(h.cuota,2)}</div>${h.dia?`<div style="font-size:9px;color:var(--ink3);">día ${h.dia}</div>`:''}</div>
+        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Tipo result.</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--bl);">${t.toFixed(2)}%</div>${h.tipo==='Variable'?`<div style="font-size:9px;color:var(--ink3);">Eur ${(+h.euribor||0)}% + ${(+h.dif||0)}%${h.bonif?' − '+h.bonif+'%':''}</div>`:''}</div>
+        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Interés/mes</div><div class="mono" style="font-size:13px;color:var(--rd);">${eur(interesMes,2)}</div></div>
+        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Amortiz./mes</div><div class="mono" style="font-size:13px;color:var(--gn);">${eur(capitalMes,2)}</div></div>
+      </div>
+      ${vs.length?`<div style="margin-top:10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;margin-bottom:4px;">Vinculaciones</div><div style="display:flex;gap:4px;flex-wrap:wrap;">${vs.map(v=>`<span class="badge badge-b">${v}</span>`).join('')}</div></div>`:''}
+      <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--ink3);flex-wrap:wrap;">
+        ${meses!==null?`<span>Quedan: <strong style="color:var(--ink2);">${meses} meses (${Math.floor(meses/12)}a ${meses%12}m)</strong></span>`:''}
+        ${h.fin?`<span>Fin: <strong style="color:var(--ink2);">${fD(h.fin)}</strong></span>`:''}
+        ${costeVincAnual(h)>0?`<span>Vinc.: <strong style="color:var(--ink2);">${eur(costeVincAnual(h))}/año</strong></span>`:''}
+      </div>
+      ${h.notas?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;font-style:italic;">${h.notas}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
 // ══════════════════════════════════════════════════════════════
 // PUENTE GENTAURY → PERSONAL (patrimonio inmobiliario)
 // ══════════════════════════════════════════════════════════════
@@ -3269,7 +3507,9 @@ function resumenInmobiliario(){
   const yo = (GEN.propietarios||[]).find(o=>/^(yo|yo mismo|mi|fran)/i.test((o.alias||'')+' '+(o.nom||'')+' '+(o.rel||'')));
   const props = yo ? GEN.props.filter(p=>p.ownerId==yo.id) : GEN.props;
   const valor = props.reduce((s,p)=>s+parseFloat(p.precio||0),0);
-  const deuda = props.reduce((s,p)=>s+parseFloat(p.capital||0),0);
+  const ids0 = props.map(p=>p.id);
+  const deuda = (GEN.hipotecas||[]).filter(h=>ids0.includes(h.propId)).reduce((s,h)=>s+parseFloat(h.pend||0),0)
+    || props.reduce((s,p)=>s+parseFloat(p.capital||0),0);
   const ids = props.map(p=>p.id);
   const renta = (GEN.inqs||[]).filter(i=>i.estado==='ACTIVO'&&ids.includes(i.propId))
     .reduce((s,i)=>s+parseFloat(i.alq||0),0);
@@ -5538,7 +5778,7 @@ async function gFindOrCreateSheet() {
     method:'POST',
     body: JSON.stringify({
       properties:{title:SHEET_NAME()},
-      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios','Cuentas','Movimientos','Presupuestos','Suscripciones','Objetivos','Inversiones','Deudas','DocsPersonales','Libros'].map(t=>({properties:{title:t}}))
+      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios','Hipotecas','Cuentas','Movimientos','Presupuestos','Suscripciones','Objetivos','Inversiones','Deudas','DocsPersonales','Libros'].map(t=>({properties:{title:t}}))
     })
   });
   try {
@@ -5586,6 +5826,7 @@ async function volcarSheets() {
   try {
     const sheets = [
       {sheet:'Propietarios', h:['ID','Nombre','Alias','DNI','Relacion','IRPF','Email','Tel','Notas'], rows:(D.propietarios||[]).map(o=>[o.id,o.nom,o.alias,o.dni,o.rel,o.irpf,o.email,o.tel,o.notas])},
+      {sheet:'Hipotecas', h:['ID','Piso','Propietario','Banco','Tipo','CapitalInicial','Pendiente','Cuota','DiaCobro','TipoResultante','Vinculaciones','CosteVincAnual','FechaFin'], rows:(D.hipotecas||[]).map(h=>{const p=D.props.find(x=>x.id==h.propId);return [h.id,p?p.nom:'',ownerNom(h.ownerId||(p?p.ownerId:'')),h.banco,h.tipo,h.ini,h.pend,h.cuota,h.dia,tipoResultante(h).toFixed(2)+'%',vinculaciones(h).join(', '),costeVincAnual(h),h.fin];})},
       {sheet:'Propiedades', h:['ID','Nombre','Propietario','Dir','Ciudad','CP','Habs','Precio','FechaCompra','Hipo','Capital','VCons'], rows:D.props.map(p=>[p.id,p.nom,ownerNom(p.ownerId),p.dir,p.ciu,p.cp,p.habs,p.precio,p.fcompra||p.anyo,p.hipo,p.capital,p.vc])},
       {sheet:'Inquilinos', h:['ID','Nombre','Apellidos','DNI','Nac','Email','Tel','WA','Estado','PisoID','Hab','Alq','Fia','Dia','Ini','Fin','Val','Mot','Notas'], rows:D.inqs.map(i=>[i.id,i.nom,i.ap,i.dni,i.nac,i.email,i.tel,i.wa,i.estado,i.propId,i.hab,i.alq,i.fia,i.dia,i.ini,i.fin,i.val,i.mot,i.notas])},
       {sheet:'Pagos', h:['ID','InqID','Concepto','Mes','Importe','Estado','Fecha','Notas','PDF'], rows:D.pagos.map(p=>[p.id,p.inqId,p.con,p.mes,p.imp,p.estado,p.fecha,p.notas,p.pdfName||''])},
@@ -5624,7 +5865,7 @@ async function volcarSheets() {
 // ══════════════════════════════════════════════════════════════
 // SINCRONIZACIÓN AUTOMÁTICA CON FUSIÓN (anti pérdida de datos)
 // ══════════════════════════════════════════════════════════════
-const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
+const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','hipotecas','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
 
 let _snap = {};              // huella de cada registro para detectar cambios
 let _syncEnCurso = false;
