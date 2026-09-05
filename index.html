@@ -5931,14 +5931,11 @@ window.addEventListener('focus', ()=>{
 });
 window.addEventListener('online', ()=>{ if(gToken) syncFull(false); });
 
-// Aviso si se intenta cerrar con cambios sin subir
-window.addEventListener('beforeunload', (e)=>{
+// Al salir intentamos guardar en silencio, SIN mostrar ningún diálogo.
+// Se usa sendBeacon-style: disparamos el guardado y dejamos ir.
+window.addEventListener('pagehide', ()=>{
   if(_hayCambiosSinSubir && gToken){
-    clearTimeout(_debounceSync);
-    syncFull(false);
-    e.preventDefault();
-    e.returnValue = 'Hay cambios sin terminar de guardar en Google Drive.';
-    return e.returnValue;
+    try{ clearTimeout(_debounceSync); guardarLocal(); syncFull(false); }catch(e){}
   }
 });
 
