@@ -6007,8 +6007,16 @@ function inicializarSnapshot(){
 }
 
 // Marca con fecha lo que ha cambiado y deja lápida de lo borrado
+let _relojLogico = parseInt(localStorage.getItem('rc_reloj')||'0');
+function ahoraMonotono(){
+  // Reloj monótono: nunca retrocede aunque el del sistema esté mal
+  const t = Math.max(Date.now(), _relojLogico + 1);
+  _relojLogico = t;
+  localStorage.setItem('rc_reloj', String(t));
+  return t;
+}
+
 function marcarCambios(){
-  const ahora = Date.now();
   let hubo = false;
   if(!D._del) D._del = {};
   const presentes = new Set();
@@ -6020,62 +6028,66 @@ function marcarCambios(){
       presentes.add(clave);
       const h = huella(r);
       if(_snap[clave] !== h){
-        r._upd = ahora;
-        _snap[clave] = h;
+        r._upd = ahoraMonotono();   // sello nuevo en cada cambio
+        _snap[clave] = huella(r);   // recalcular huella YA con el _upd puesto
         hubo = true;
+      } else if(!r._upd){
+        // Registro antiguo sin sello: dárselo sin marcar como cambio de datos
+        r._upd = ahoraMonotono();
       }
     });
   });
 
-  // Lo que estaba en la huella y ya no está = borrado
   Object.keys(_snap).forEach(clave => {
+    if(clave==='__cfg') return;
     if(!presentes.has(clave)){
-      D._del[clave] = ahora;
+      D._del[clave] = ahoraMonotono();
       delete _snap[clave];
       hubo = true;
     }
   });
 
-  // Config
   const hCfg = JSON.stringify(D.cfg||{});
-  if(_snap['__cfg'] !== hCfg){ _snap['__cfg'] = hCfg; D._cfgUpd = ahora; hubo = true; }
+  if(_snap['__cfg'] !== hCfg){ _snap['__cfg'] = hCfg; D._cfgUpd = ahoraMonotono(); hubo = true; }
 
-  // Limpiar lápidas de más de 120 días
-  const limite = ahora - 120*24*3600*1000;
+  const limite = Date.now() - 180*24*3600*1000;
   Object.keys(D._del).forEach(k => { if(D._del[k] < limite) delete D._del[k]; });
 
   return hubo;
 }
 
+
 // ── Fusión de dos versiones: gana siempre el dato más reciente ─
 function fusionar(local, remoto){
-  const out = { cfg: local.cfg, _del: Object.assign({}, remoto._del||{}, local._del||{}) };
-  // En _del nos quedamos con la lápida más reciente de cada clave
-  Object.keys(remoto._del||{}).forEach(k=>{
-    const a=(remoto._del||{})[k]||0, b=(local._del||{})[k]||0;
-    out._del[k] = Math.max(a,b);
-  });
+  const out = { _del: {} };
+  // Combinar lápidas quedándonos con la más reciente
+  const delKeys = new Set([...Object.keys(local._del||{}), ...Object.keys(remoto._del||{})]);
+  delKeys.forEach(k=>{ out._del[k] = Math.max((local._del||{})[k]||0, (remoto._del||{})[k]||0); });
 
   COLS.forEach(k => {
     const mapa = new Map();
+    // Primero el remoto
     (remoto[k]||[]).forEach(r => { if(r && r.id) mapa.set(String(r.id), r); });
+    // Luego el local: gana si su _upd es mayor O IGUAL (el local es lo que acabas de tocar)
     (local[k]||[]).forEach(r => {
       if(!r || !r.id) return;
       const id = String(r.id);
       const otro = mapa.get(id);
-      // Sin fecha se asume antiguo (0). Empate → gana el local.
-      if(!otro || (r._upd||0) >= (otro._upd||0)) mapa.set(id, r);
+      if(!otro){ mapa.set(id, r); return; }
+      const lu = r._upd||0, ru = otro._upd||0;
+      if(lu >= ru) mapa.set(id, r);
     });
     const res = [];
     mapa.forEach((r, id) => {
-      const lapida = out._del[k+':'+id];
-      if(lapida && lapida >= (r._upd||0)) return;   // se borró después de la última edición
+      const lapida = out._del[k+':'+id] || 0;
+      // Solo se oculta si se borró DESPUÉS de la última edición conocida
+      if(lapida > (r._upd||0)) return;
       res.push(r);
     });
     out[k] = res;
   });
 
-  out.cfg = ((remoto._cfgUpd||0) > (local._cfgUpd||0)) ? (remoto.cfg||local.cfg) : local.cfg;
+  out.cfg = ((remoto._cfgUpd||0) > (local._cfgUpd||0)) ? (remoto.cfg||local.cfg) : (local.cfg||remoto.cfg);
   out._cfgUpd = Math.max(remoto._cfgUpd||0, local._cfgUpd||0);
   return out;
 }
@@ -6117,31 +6129,28 @@ async function syncFull(manual){
   _syncEnCurso = true;
   estadoSync('sync');
   try{
+    // 1. Sellar TODOS los cambios locales ANTES de nada (imprescindible)
     marcarCambios();
+    guardarLocal();
 
-    // 1. Bajar lo que hay en Drive
+    // 2. Bajar lo que hay en Drive
     let remoto = null;
     try { remoto = await bajarBackup(); }
     catch(e){ console.warn('Sin backup remoto legible:', e.message); }
 
-    // 2. Fusionar sin perder nada de ninguno de los dos lados
+    // 3. Fusionar: como acabamos de sellar, nuestros cambios tienen el _upd más alto y siempre ganan
     if(remoto && typeof remoto === 'object'){
-      const antes = COLS.reduce((s,k)=>s+((D[k]||[]).length),0);
       const fus = fusionar(D, remoto);
       COLS.forEach(k => D[k] = fus[k]);
       D._del = fus._del; D.cfg = fus.cfg; D._cfgUpd = fus._cfgUpd;
-      const despues = COLS.reduce((s,k)=>s+((D[k]||[]).length),0);
       guardarLocal();
+      // Rehacer snapshot con el estado ya fusionado (sin marcar nada como cambio nuevo)
       inicializarSnapshot();
-      if(despues !== antes){
-        refrescarVista();
-        if(despues > antes) toast('↓ '+(despues-antes)+' registro(s) recibidos de otro dispositivo');
-      }
+      refrescarVista();
     }
 
-    // 3. Subir el backup JSON (fuente de verdad, imprescindible)
+    // 4. Subir el resultado fusionado (contiene sí o sí lo que acabas de meter)
     await subirBackup();
-    // Las hojas de cálculo son secundarias: si fallan, no rompen el guardado
     try { await volcarSheets(); } catch(e){ console.warn('Volcado a Sheets pospuesto:', e.message); }
 
     _hayCambiosSinSubir = false;
@@ -6150,14 +6159,13 @@ async function syncFull(manual){
     if(manual) toast('✓ Todo sincronizado con Google Drive');
   } catch(e){
     console.warn('Sync pospuesto:', e.message);
-    // Si es problema de credenciales, renovar y reintentar enseguida sin alarmar
     if(/401|credential|auth/i.test(e.message)){
       const ok=await renovarTokenAhora();
       estadoSync(ok?'pendiente':'local');
       if(ok) setTimeout(()=>syncFull(false), 1500);
     } else {
       estadoSync('pendiente');
-      setTimeout(()=>{ if(_hayCambiosSinSubir) syncFull(false); }, 20000);
+      setTimeout(()=>{ if(_hayCambiosSinSubir) syncFull(false); }, 15000);
     }
   } finally {
     _syncEnCurso = false;
@@ -6184,18 +6192,6 @@ async function subirBackup(){
       { method:'POST', headers:{'Content-Type':'multipart/related; boundary=bd'}, body });
   }
   if(!res.ok) throw new Error('No se pudo guardar el backup en Drive ('+res.status+')');
-
-  // Verificación suave: solo avisa en consola, nunca marca error.
-  // Google puede tardar unos segundos en propagar el archivo, así que
-  // un desajuste puntual NO significa que la subida haya fallado.
-  try {
-    const check = await bajarBackup();
-    if(check){
-      const nLocal = COLS.reduce((s,k)=>s+((D[k]||[]).length),0);
-      const nRem = COLS.reduce((s,k)=>s+((check[k]||[]).length),0);
-      if(nRem < nLocal) console.warn('Backup aún propagándose en Drive ('+nRem+'/'+nLocal+')');
-    }
-  } catch(e){ console.warn('Verificación omitida:', e.message); }
   return true;
 }
 
