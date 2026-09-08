@@ -1293,9 +1293,12 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div id="pl-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
   <div class="fb">
     <div class="fi"><span class="fi-icon">🔍</span><input id="pl-q" placeholder="Buscar por título, autor, aprendizaje..." oninput="rLibros()"></div>
-    <select id="pl-autor-f" onchange="rLibros()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:170px;"></select>
+    <select id="pl-cat-f" onchange="rLibros()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:150px;"><option value="">Todas las temáticas</option></select>
+    <select id="pl-autor-f" onchange="rLibros()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:150px;"></select>
     <select id="pl-est-f" onchange="rLibros()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
       <option value="">Todos</option><option value="leido">✅ Leídos</option><option value="leyendo">📖 Leyendo</option><option value="pendiente">🔖 Pendientes</option></select>
+    <select id="pl-agrupar" onchange="rLibros()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
+      <option value="autor">Agrupar por autor</option><option value="cat">Agrupar por temática</option></select>
   </div>
   <div id="pl-lista"></div>
 </section>
@@ -1373,6 +1376,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Precio de compra (€)</label><input id="pr-p" type="number" placeholder="130000" oninput="calcCosteTotal()"></div>
     <div class="fgrp"><label>Comisión inmobiliaria (€)</label><input id="pr-com" type="number" placeholder="6000" oninput="calcCosteTotal()"></div>
     <div class="fgrp"><label>Otros gastos compra (ITP, notaría…) (€)</label><input id="pr-gc" type="number" placeholder="9000" oninput="calcCosteTotal()"></div>
+    <div class="fgrp"><label>Valor de tasación (€)</label><input id="pr-tasacion" type="number" placeholder="145000"></div>
+    <div class="fgrp"><label>Valor de mercado estimado (€)</label><input id="pr-mercado" type="number" placeholder="160000"></div>
     <div class="fgrp"><label>Fecha de compra (escritura)</label><input id="pr-fc" type="date"></div>
     <div class="fgrp fgf" id="pr-coste-total" style="font-size:12px;color:var(--ink3);"></div>
     <div class="fgrp"><label>Hipoteca mensual (€)</label><input id="pr-hip" type="number" placeholder="407"></div>
@@ -1907,7 +1912,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="fg">
     <div class="fgrp"><label>Título *</label><input id="lb-tit" placeholder="Padre Rico, Padre Pobre"></div>
     <div class="fgrp"><label>Autor *</label><input id="lb-autor" placeholder="Robert Kiyosaki" list="lb-autores-list"><datalist id="lb-autores-list"></datalist></div>
-    <div class="fgrp"><label>Categoría / género</label><select id="lb-cat"><option>Finanzas e inversión</option><option>Negocios y emprendimiento</option><option>Desarrollo personal</option><option>Productividad</option><option>Psicología</option><option>Biografía</option><option>Historia</option><option>Ciencia</option><option>Ensayo</option><option>Ficción</option><option>Otro</option></select></div>
+    <div class="fgrp"><label>Temática</label><select id="lb-cat"><option>Inmobiliario</option><option>Finanzas e inversión</option><option>Negocios y emprendimiento</option><option>Marketing y ventas</option><option>Liderazgo</option><option>Desarrollo personal</option><option>Productividad</option><option>Psicología</option><option>Hábitos y disciplina</option><option>Biografía</option><option>Historia</option><option>Filosofía</option><option>Ciencia</option><option>Tecnología</option><option>Ensayo</option><option>Ficción</option><option>Otro</option></select></div>
     <div class="fgrp"><label>Estado</label><select id="lb-est"><option value="leido">✅ Leído</option><option value="leyendo">📖 Leyendo</option><option value="pendiente">🔖 Pendiente</option></select></div>
     <div class="fgrp"><label>Valoración</label><select id="lb-val"><option value="">Sin valorar</option><option value="5">⭐⭐⭐⭐⭐</option><option value="4">⭐⭐⭐⭐</option><option value="3">⭐⭐⭐</option><option value="2">⭐⭐</option><option value="1">⭐</option></select></div>
     <div class="fgrp"><label>Fecha de lectura</label><input id="lb-fecha" type="date"></div>
@@ -1974,6 +1979,24 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div id="hp-calc" style="background:var(--ink);border-radius:var(--r);padding:14px;margin-top:14px;color:#fff;font-family:'DM Mono',monospace;"></div>
   <div class="fgrp fgf" style="margin-top:12px;"><label>Notas</label><textarea id="hp-notas" rows="2"></textarea></div>
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-hipoteca')">Cancelar</button><button class="btn btn-primary" onclick="saveHipoteca()">Guardar</button></div>
+</div></div>
+
+
+<!-- MODAL REGISTRAR CUOTA -->
+<div class="modal-overlay" id="m-cuota"><div class="modal">
+  <h2 id="m-cu-title">🧾 Registrar cuota</h2>
+  <input type="hidden" id="cu-hip-id"><input type="hidden" id="cu-edit-id">
+  <div class="fg">
+    <div class="fgrp"><label>Mes de la cuota *</label><input id="cu-mes" type="month"></div>
+    <div class="fgrp"><label>Fecha de cobro</label><input id="cu-fecha" type="date"></div>
+    <div class="fgrp"><label>Importe cuota (€) *</label><input id="cu-imp" type="number" step="0.01" oninput="cuCalc()"></div>
+    <div class="fgrp"><label>Tipo aplicado (%)</label><input id="cu-tipo" type="number" step="0.001" placeholder="ej 3.49" oninput="cuAuto()"></div>
+    <div class="fgrp"><label>Intereses (€) — deducible *</label><input id="cu-int" type="number" step="0.01" oninput="cuCalc()"></div>
+    <div class="fgrp"><label>Amortización capital (€)</label><input id="cu-cap" type="number" step="0.01" oninput="cuCalc()"></div>
+    <div class="fgrp fgf"><label>Notas (ej: quitada bonificación nómina)</label><input id="cu-notas" placeholder="Cambios de tipo, bonificaciones..."></div>
+  </div>
+  <div id="cu-resumen" style="background:var(--bg);border-radius:var(--r2);padding:12px;margin-top:12px;font-size:12px;"></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-cuota')">Cancelar</button><button class="btn btn-primary" onclick="saveCuota()">Guardar cuota</button></div>
 </div></div>
 
 <div id="toast"></div>
@@ -2216,7 +2239,7 @@ function calcCosteTotal(){
 function newProp(){
   $i('pr-edit-id').value='';
   $i('m-prop-title').textContent='🏢 Nueva Propiedad';
-  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-mercado','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   $i('pr-docs-actuales').innerHTML='';
   $i('pr-owner').value=''; $i('pr-coste-total').innerHTML='';
@@ -2231,7 +2254,7 @@ function editProp(id){
   $i('pr-cp').value=p.cp||''; $i('pr-h').value=p.habs||''; $i('pr-p').value=p.precio||'';
   $i('pr-fc').value=p.fcompra||(p.anyo?p.anyo+'-01-01':''); $i('pr-hip').value=p.hipo||''; $i('pr-cap').value=p.capital||'';
   $i('pr-vc').value=p.vc||''; $i('pr-owner').value=p.ownerId||'';
-  $i('pr-com').value=p.compra||''; $i('pr-gc').value=p.gcompra||''; calcCosteTotal();
+  $i('pr-com').value=p.compra||''; $i('pr-gc').value=p.gcompra||''; $i('pr-tasacion').value=p.tasacion||''; $i('pr-mercado').value=p.mercado||''; calcCosteTotal();
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   // Mostrar documentos ya guardados
   const docs=p.docs||{};
@@ -2264,7 +2287,7 @@ function saveProp(){
   });
   const fc=gi('pr-fc');
   const campos={nom,ownerId:gi('pr-owner'),dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,
-    precio:gn('pr-p'),compra:gn('pr-com'),gcompra:gn('pr-gc'),fcompra:fc,anyo:fc?fc.slice(0,4):gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
+    precio:gn('pr-p'),compra:gn('pr-com'),gcompra:gn('pr-gc'),tasacion:gn('pr-tasacion'),mercado:gn('pr-mercado'),fcompra:fc,anyo:fc?fc.slice(0,4):gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
   if(editId){
     const p=D.props.find(x=>x.id==editId);
     if(p){ Object.assign(p,campos); p.docs=Object.assign({},p.docs||{},nuevosDocs); }
@@ -2275,7 +2298,7 @@ function saveProp(){
   }
   saveAndSync(); closeM('m-prop'); rProps(); rHabs();
   $i('pr-edit-id').value='';
-  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-mercado','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   $i('pr-docs-actuales').innerHTML=''; $i('pr-coste-total').innerHTML='';
 }
@@ -2887,7 +2910,8 @@ function rPropietarios(){
     const renta=inqs.reduce((s,i)=>s+parseFloat(i.alq||0),0);
     const facts=(D.compras||[]).filter(x=>ownerDe(x)==o.id);
     const totalFact=facts.reduce((s,x)=>s+parseFloat(x.imp||0),0);
-    const valor=props.reduce((s,p)=>s+parseFloat(p.precio||0),0);
+    const valorProp=p=>parseFloat(p.tasacion||p.mercado||p.precio||0);
+    const valor=props.reduce((s,p)=>s+valorProp(p),0);
     const deudaH=(D.hipotecas||[]).filter(h=>{const p2=D.props.find(x=>x.id==h.propId);return (h.ownerId||(p2?p2.ownerId:''))==o.id;}).reduce((s,h)=>s+parseFloat(h.pend||0),0);
     const patNeto=valor-deudaH;
     const ini=(o.alias||o.nom||'?').trim()[0].toUpperCase();
@@ -2916,7 +2940,7 @@ function rPropietarios(){
         <div style="display:flex;gap:5px;flex-wrap:wrap;">${props.map(p=>`<span class="badge badge-b">${p.nom}</span>`).join('')}</div>
       </div>`:''}
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8.5px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Patrimonio bruto</div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">${eur(valor)}</div></div>
+        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8.5px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Patrimonio bruto</div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">${eur(valor)}</div><div style="font-size:8px;color:var(--ink3);">según tasación/mercado</div></div>
         <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8.5px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Patrimonio neto</div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gn);">${eur(patNeto)}</div></div>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--ink3);">Deuda hipotecaria: <strong style="color:var(--rd);">${eur(deudaH)}</strong> · Facturado: <strong style="color:var(--ink2);">${eur(totalFact)}</strong> · IRPF ${o.irpf||24}%</div>
@@ -3438,6 +3462,145 @@ function amortizarHip(id){
   saveAndSync(); rHipotecas(); toast('Cuota registrada · pendiente '+eur(h.pend));
 }
 
+
+// ── CUOTAS DE HIPOTECA (registro mes a mes) ──────────────────
+function cuCalc(){
+  const imp=gn('cu-imp'), int=gn('cu-int'), cap=gn('cu-cap');
+  const el=$i('cu-resumen'); if(!el)return;
+  const suma=int+cap;
+  const desc=imp-suma;
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="color:var(--ink3);">Intereses (deducible)</span><span class="mono" style="color:var(--rd);">${eur(int,2)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="color:var(--ink3);">Amortización capital</span><span class="mono" style="color:var(--gn);">${eur(cap,2)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:6px 0 0;margin-top:4px;border-top:1px solid var(--line);font-weight:600;"><span>Suma</span><span class="mono">${eur(suma,2)}</span></div>
+    ${imp>0&&Math.abs(desc)>0.5?`<div style="color:var(--ye);font-size:11px;margin-top:4px;">⚠️ La cuota (${eur(imp,2)}) no cuadra con intereses+amortización. Diferencia: ${eur(desc,2)}</div>`:imp>0?`<div style="color:var(--gn);font-size:11px;margin-top:4px;">✓ Cuadra con la cuota</div>`:''}`;
+}
+function cuAuto(){
+  // Si pones el tipo y hay capital pendiente, sugiere el interés
+  const h=(D.hipotecas||[]).find(x=>x.id==gi('cu-hip-id')); if(!h)return;
+  const tipo=gn('cu-tipo'), imp=gn('cu-imp');
+  if(tipo>0 && parseFloat(h.pend||0)>0){
+    const int=parseFloat(h.pend)*tipo/100/12;
+    $i('cu-int').value=int.toFixed(2);
+    if(imp>0) $i('cu-cap').value=Math.max(0,imp-int).toFixed(2);
+    cuCalc();
+  }
+}
+function newCuota(hipId){
+  const h=(D.hipotecas||[]).find(x=>x.id==hipId); if(!h)return;
+  $i('cu-hip-id').value=hipId; $i('cu-edit-id').value='';
+  const p=D.props.find(x=>x.id==h.propId);
+  $i('m-cu-title').textContent='🧾 Cuota — '+(p?p.nom:'')+' ('+(h.banco||'')+')';
+  ['cu-int','cu-cap','cu-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  const hoy=new Date();
+  $i('cu-mes').value=hoy.toISOString().slice(0,7);
+  $i('cu-fecha').value=hoy.toISOString().split('T')[0];
+  $i('cu-imp').value=h.cuota||'';
+  $i('cu-tipo').value=tipoResultante(h).toFixed(3);
+  // Sugerir desglose automático
+  const t=tipoResultante(h);
+  const int=parseFloat(h.pend||0)*t/100/12;
+  $i('cu-int').value=int.toFixed(2);
+  $i('cu-cap').value=Math.max(0,parseFloat(h.cuota||0)-int).toFixed(2);
+  cuCalc();
+  openM('m-cuota');
+}
+function editCuota(hipId, cuId){
+  const h=(D.hipotecas||[]).find(x=>x.id==hipId); if(!h)return;
+  const cu=(h.cuotas||[]).find(x=>x.id==cuId); if(!cu)return;
+  $i('cu-hip-id').value=hipId; $i('cu-edit-id').value=cuId;
+  $i('m-cu-title').textContent='✏️ Editar cuota';
+  $i('cu-mes').value=cu.mes||''; $i('cu-fecha').value=cu.fecha||'';
+  $i('cu-imp').value=cu.imp||''; $i('cu-tipo').value=cu.tipo||'';
+  $i('cu-int').value=cu.int||''; $i('cu-cap').value=cu.cap||''; $i('cu-notas').value=cu.notas||'';
+  cuCalc(); openM('m-cuota');
+}
+function saveCuota(){
+  const hipId=gi('cu-hip-id'), h=(D.hipotecas||[]).find(x=>x.id==hipId); if(!h)return;
+  const mes=gi('cu-mes'), imp=gn('cu-imp');
+  if(!mes||!imp){toast('Completa mes e importe',false);return;}
+  if(!h.cuotas) h.cuotas=[];
+  const p=D.props.find(x=>x.id==h.propId);
+  const campos={mes,fecha:gi('cu-fecha'),imp,tipo:gn('cu-tipo'),int:gn('cu-int'),cap:gn('cu-cap'),notas:gi('cu-notas')};
+  const editId=gi('cu-edit-id');
+  if(editId){
+    const cu=h.cuotas.find(x=>x.id==editId);
+    if(cu){
+      // revertir el efecto anterior sobre el capital y los gastos
+      revertirGastosCuota(h, cu);
+      Object.assign(cu, campos);
+    }
+    toast('Cuota actualizada');
+  } else {
+    const cu=Object.assign({id:uid()},campos);
+    h.cuotas.push(cu);
+    // bajar capital pendiente por la amortización
+    h.pend=Math.max(0, parseFloat(h.pend||0)-campos.cap);
+    if(p)p.capital=h.pend;
+    toast('Cuota registrada');
+  }
+  // registrar/actualizar los gastos asociados (interés deducible, capital no deducible)
+  registrarGastosCuota(h, h.cuotas.find(x=>x.mes===mes) || campos, mes);
+  saveAndSync(); closeM('m-cuota'); rHipotecas();
+}
+function registrarGastosCuota(h, cu, mes){
+  const p=D.props.find(x=>x.id==h.propId);
+  const tag='[cuota:'+h.id+':'+mes+']';
+  // eliminar posibles gastos previos de esta misma cuota
+  D.gastos=D.gastos.filter(g=>!(g.notas||'').includes(tag));
+  const fecha=cu.fecha||mes+'-01';
+  if(cu.int>0) D.gastos.push({id:uid(),desc:'Intereses hipoteca '+(p?p.nom:''),cat:'Hipoteca',imp:cu.int,propId:h.propId,fecha,ded:'si',prov:h.banco||'',notas:'Intereses (deducible) '+tag});
+  if(cu.cap>0) D.gastos.push({id:uid(),desc:'Amortización capital '+(p?p.nom:''),cat:'Hipoteca',imp:cu.cap,propId:h.propId,fecha,ded:'no',prov:h.banco||'',notas:'Devolución préstamo (no deducible) '+tag});
+}
+function revertirGastosCuota(h, cu){
+  const tag='[cuota:'+h.id+':'+cu.mes+']';
+  D.gastos=D.gastos.filter(g=>!(g.notas||'').includes(tag));
+  // devolver el capital al pendiente
+  h.pend=parseFloat(h.pend||0)+parseFloat(cu.cap||0);
+  const p=D.props.find(x=>x.id==h.propId); if(p)p.capital=h.pend;
+}
+function delCuota(hipId, cuId){
+  const h=(D.hipotecas||[]).find(x=>x.id==hipId); if(!h)return;
+  const cu=(h.cuotas||[]).find(x=>x.id==cuId); if(!cu)return;
+  if(!confirm('¿Eliminar esta cuota? El capital pendiente volverá a subir.'))return;
+  revertirGastosCuota(h, cu);
+  h.cuotas=h.cuotas.filter(x=>x.id!==cuId);
+  saveAndSync(); rHipotecas(); toast('Cuota eliminada');
+}
+function verCuotas(hipId){
+  const h=(D.hipotecas||[]).find(x=>x.id==hipId); if(!h)return;
+  const p=D.props.find(x=>x.id==h.propId);
+  const cuotas=[...(h.cuotas||[])].sort((a,b)=>(b.mes||'').localeCompare(a.mes||''));
+  const totalInt=cuotas.reduce((s,c)=>s+parseFloat(c.int||0),0);
+  const totalCap=cuotas.reduce((s,c)=>s+parseFloat(c.cap||0),0);
+  $i('drw-c').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+      <div><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">🧾 Cuotas pagadas</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:3px;">${p?p.nom:''} · ${h.banco||''}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px;">
+      <div class="dsc"><div class="dsv">${cuotas.length}</div><div class="dsl">Cuotas</div></div>
+      <div class="dsc"><div class="dsv" style="color:var(--rd);">${eur(totalInt)}</div><div class="dsl">Intereses (ded.)</div></div>
+      <div class="dsc"><div class="dsv" style="color:var(--gn);">${eur(totalCap)}</div><div class="dsl">Amortizado</div></div>
+    </div>
+    <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-bottom:14px;" onclick="closeDrw();newCuota('${hipId}')">+ Registrar nueva cuota</button>
+    ${cuotas.length?cuotas.map(cu=>`
+      <div style="background:var(--bg);border:1px solid var(--line);border-radius:var(--r2);padding:12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div><div style="font-size:13px;font-weight:700;">${cu.mes||'—'}${cu.fecha?' · '+fD(cu.fecha):''}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px;">Cuota ${eur(cu.imp,2)}${cu.tipo?' · tipo '+cu.tipo+'%':''}</div></div>
+          <div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editCuota('${hipId}','${cu.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCuota('${hipId}','${cu.id}')">🗑</button></div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;">
+          <span style="color:var(--rd);">Interés: <strong>${eur(cu.int,2)}</strong></span>
+          <span style="color:var(--gn);">Capital: <strong>${eur(cu.cap,2)}</strong></span>
+        </div>
+        ${cu.notas?`<div style="font-size:10px;color:var(--ink3);margin-top:6px;font-style:italic;">${cu.notas}</div>`:''}
+      </div>`).join(''):'<div class="empty" style="padding:20px;"><p>Aún no has registrado ninguna cuota</p></div>'}`;
+  $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
+}
+
 function rHipotecas(){
   populateSels();
   const hs=D.hipotecas||[];
@@ -3473,7 +3636,7 @@ function rHipotecas(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
         <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">🏦 ${p?p.nom:'Piso'}</div>
         <div style="font-size:11px;color:var(--ink3);margin-top:2px;">${h.banco||'—'} · ${h.tipo}${o?' · 👑 '+ownerNom(o):''}</div></div>
-        <div style="display:flex;gap:4px;"><button class="btn btn-success btn-xs" onclick="amortizarHip('${h.id}')" title="Registrar cuota del mes">✓ Cuota</button><button class="btn btn-secondary btn-xs" onclick="editHipoteca('${h.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delHipoteca('${h.id}')">🗑</button></div>
+        <div style="display:flex;gap:4px;"><button class="btn btn-success btn-xs" onclick="newCuota('${h.id}')" title="Registrar cuota">+ Cuota</button><button class="btn btn-secondary btn-xs" onclick="verCuotas('${h.id}')" title="Ver cuotas">🧾</button><button class="btn btn-secondary btn-xs" onclick="editHipoteca('${h.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delHipoteca('${h.id}')">🗑</button></div>
       </div>
       <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--rd);">${eur(h.pend)}</div>
       <div style="font-size:11px;color:var(--ink3);margin-bottom:8px;">pendiente${h.ini?' de '+eur(h.ini):''}</div>
@@ -3486,6 +3649,7 @@ function rHipotecas(){
       </div>
       ${vs.length?`<div style="margin-top:10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;margin-bottom:4px;">Vinculaciones</div><div style="display:flex;gap:4px;flex-wrap:wrap;">${vs.map(v=>`<span class="badge badge-b">${v}</span>`).join('')}</div></div>`:''}
       <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--ink3);flex-wrap:wrap;">
+        ${(h.cuotas&&h.cuotas.length)?`<span>Cuotas pagadas: <strong style="color:var(--ink2);">${h.cuotas.length}</strong></span>`:''}
         ${meses!==null?`<span>Quedan: <strong style="color:var(--ink2);">${meses} meses (${Math.floor(meses/12)}a ${meses%12}m)</strong></span>`:''}
         ${h.fin?`<span>Fin: <strong style="color:var(--ink2);">${fD(h.fin)}</strong></span>`:''}
         ${costeVincAnual(h)>0?`<span>Vinc.: <strong style="color:var(--ink2);">${eur(costeVincAnual(h))}/año</strong></span>`:''}
@@ -3521,7 +3685,7 @@ function resumenInmobiliario(){
   // Detectar tu propietario: alias/relación "Yo"
   const yo = (GEN.propietarios||[]).find(o=>/^(yo|yo mismo|mi|fran)/i.test((o.alias||'')+' '+(o.nom||'')+' '+(o.rel||'')));
   const props = yo ? GEN.props.filter(p=>p.ownerId==yo.id) : GEN.props;
-  const valor = props.reduce((s,p)=>s+parseFloat(p.precio||0),0);
+  const valor = props.reduce((s,p)=>s+parseFloat(p.tasacion||p.mercado||p.precio||0),0);
   const ids0 = props.map(p=>p.id);
   const deuda = (GEN.hipotecas||[]).filter(h=>ids0.includes(h.propId)).reduce((s,h)=>s+parseFloat(h.pend||0),0)
     || props.reduce((s,p)=>s+parseFloat(p.capital||0),0);
@@ -4617,7 +4781,7 @@ function rPCfg(){
 
 
 // ── LIBROS ────────────────────────────────────────────────────
-const IC_LIBRO={'Finanzas e inversión':'💰','Negocios y emprendimiento':'💼','Desarrollo personal':'🌱','Productividad':'⚡','Psicología':'🧠','Biografía':'👤','Historia':'📜','Ciencia':'🔬','Ensayo':'✍️','Ficción':'📖','Otro':'📚'};
+const IC_LIBRO={'Inmobiliario':'🏘️','Finanzas e inversión':'💰','Negocios y emprendimiento':'💼','Marketing y ventas':'📣','Liderazgo':'👑','Desarrollo personal':'🌱','Productividad':'⚡','Psicología':'🧠','Hábitos y disciplina':'🎯','Biografía':'👤','Historia':'📜','Filosofía':'🤔','Ciencia':'🔬','Tecnología':'💻','Ensayo':'✍️','Ficción':'📖','Otro':'📚'};
 const EST_LIBRO={leido:'<span class="badge badge-g">✅ Leído</span>',leyendo:'<span class="badge badge-y">📖 Leyendo</span>',pendiente:'<span class="badge badge-b">🔖 Pendiente</span>'};
 
 function newLibro(){
@@ -4687,54 +4851,65 @@ function verLibro(id){
 
 function rLibros(){
   const ls=D.libros||[];
-  const sel=$i('pl-autor-f');
-  if(sel){ const as=[...new Set(ls.map(l=>l.autor).filter(Boolean))].sort(); const v=sel.value;
-    sel.innerHTML='<option value="">Todos los autores</option>'+as.map(a=>`<option>${a}</option>`).join(''); sel.value=v; }
+  const selA=$i('pl-autor-f');
+  if(selA){ const as=[...new Set(ls.map(l=>l.autor).filter(Boolean))].sort(); const v=selA.value;
+    selA.innerHTML='<option value="">Todos los autores</option>'+as.map(a=>`<option>${a}</option>`).join(''); selA.value=v; }
+  const selC=$i('pl-cat-f');
+  if(selC){ const cs=[...new Set(ls.map(l=>l.cat).filter(Boolean))].sort(); const v=selC.value;
+    selC.innerHTML='<option value="">Todas las temáticas</option>'+cs.map(x=>`<option>${x}</option>`).join(''); selC.value=v; }
+
   const leidos=ls.filter(l=>l.est==='leido').length;
   const autores=new Set(ls.map(l=>l.autor).filter(Boolean)).size;
+  const tematicas=new Set(ls.map(l=>l.cat).filter(Boolean)).size;
   const aprendTot=ls.reduce((s,l)=>s+((l.aprend||'').split('\n').filter(x=>x.trim()).length),0);
   $i('pl-kpis').innerHTML=`
-    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Libros</div><div class="kpi-value">${ls.length}</div><div class="kpi-sub">${leidos} leídos</div></div>
-    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Autores</div><div class="kpi-value">${autores}</div></div>
-    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Aprendizajes</div><div class="kpi-value">${aprendTot}</div><div class="kpi-sub">apuntados</div></div>`;
+    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:110px;"><div class="kpi-accent"></div><div class="kpi-label">Libros</div><div class="kpi-value">${ls.length}</div><div class="kpi-sub">${leidos} leídos</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:110px;"><div class="kpi-accent"></div><div class="kpi-label">Autores</div><div class="kpi-value">${autores}</div></div>
+    <div class="kpi" style="--kc:var(--pu);flex:1;min-width:110px;"><div class="kpi-accent"></div><div class="kpi-label">Temáticas</div><div class="kpi-value">${tematicas}</div></div>
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:110px;"><div class="kpi-accent"></div><div class="kpi-label">Aprendizajes</div><div class="kpi-value">${aprendTot}</div></div>`;
 
-  const q=gi('pl-q').toLowerCase(), aF=gi('pl-autor-f'), eF=gi('pl-est-f');
+  const q=gi('pl-q').toLowerCase(), aF=gi('pl-autor-f'), cF=gi('pl-cat-f'), eF=gi('pl-est-f');
+  const agrupar=gi('pl-agrupar')||'autor';
   const list=ls.filter(l=>{
     if(aF&&l.autor!==aF)return false;
+    if(cF&&l.cat!==cF)return false;
     if(eF&&l.est!==eF)return false;
-    if(q&&!`${l.tit} ${l.autor} ${l.resumen} ${l.aprend} ${l.frases}`.toLowerCase().includes(q))return false;
+    if(q&&!`${l.tit} ${l.autor} ${l.cat} ${l.resumen} ${l.aprend} ${l.frases}`.toLowerCase().includes(q))return false;
     return true;
   });
   const div=$i('pl-lista');
-  if(!list.length){ div.innerHTML='<div class="empty"><div class="empty-icon">📚</div><p>Añade los libros que lees para guardar sus aprendizajes agrupados por autor</p></div>'; return; }
+  if(!list.length){ div.innerHTML='<div class="empty"><div class="empty-icon">📚</div><p>Añade los libros que lees para guardar sus aprendizajes</p></div>'; return; }
 
-  // Agrupar por autor
-  const porAutor={};
-  list.forEach(l=>{ (porAutor[l.autor]=porAutor[l.autor]||[]).push(l); });
-  const autoresOrd=Object.keys(porAutor).sort();
-  div.innerHTML=autoresOrd.map(autor=>{
-    const libs=porAutor[autor].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const tarjeta=l=>{
+    const est=EST_LIBRO[l.est]||'';
+    const stars=l.val?'⭐'.repeat(parseInt(l.val)):'';
+    const nApr=(l.aprend||'').split('\n').filter(x=>x.trim()).length;
+    return `<div onclick="verLibro('${l.id}')" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--r2);padding:14px;cursor:pointer;transition:.15s;" onmouseover="this.style.borderColor='var(--acc)'" onmouseout="this.style.borderColor='var(--line)'">
+      <div style="font-size:14px;font-weight:700;line-height:1.3;">${IC_LIBRO[l.cat]||'📚'} ${l.tit}</div>
+      <div style="font-size:11px;color:var(--acc);margin-top:3px;">${l.autor}</div>
+      <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${est}${stars?`<span style="font-size:12px;">${stars}</span>`:''}</div>
+      ${l.resumen?`<div style="font-size:11.5px;color:var(--ink3);margin-top:8px;line-height:1.55;max-height:54px;overflow:hidden;">${l.resumen}</div>`:''}
+      ${nApr?`<div style="font-size:10px;color:var(--acc);margin-top:8px;font-weight:600;">💡 ${nApr} aprendizaje${nApr!==1?'s':''}</div>`:''}
+    </div>`;
+  };
+
+  // Agrupación
+  const grupos={};
+  list.forEach(l=>{ const k=agrupar==='cat'?(l.cat||'Sin temática'):(l.autor||'Sin autor'); (grupos[k]=grupos[k]||[]).push(l); });
+  const claves=Object.keys(grupos).sort();
+  div.innerHTML=claves.map(clave=>{
+    const libs=grupos[clave].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+    const icono = agrupar==='cat' ? (IC_LIBRO[clave]||'📚') : clave.trim()[0].toUpperCase();
+    const avBg = agrupar==='cat' ? 'var(--bg2)' : 'linear-gradient(135deg,var(--acc),#7c3aed)';
     return `<div class="card mb">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--line);">
         <div style="display:flex;align-items:center;gap:12px;">
-          <div class="profile-avatar" style="width:40px;height:40px;font-size:15px;background:linear-gradient(135deg,var(--acc),#7c3aed);">${autor.trim()[0].toUpperCase()}</div>
-          <div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;">${autor}</div>
+          <div class="profile-avatar" style="width:40px;height:40px;font-size:${agrupar==='cat'?'18px':'15px'};background:${avBg};">${icono}</div>
+          <div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;">${clave}</div>
           <div style="font-size:11px;color:var(--ink3);">${libs.length} libro${libs.length!==1?'s':''}</div></div>
         </div>
       </div>
-      <div class="g2">${libs.map(l=>{
-        const est=EST_LIBRO[l.est]||'';
-        const stars=l.val?'⭐'.repeat(parseInt(l.val)):'';
-        const nApr=(l.aprend||'').split('\n').filter(x=>x.trim()).length;
-        return `<div onclick="verLibro('${l.id}')" style="background:var(--bg);border:1px solid var(--line);border-radius:var(--r2);padding:14px;cursor:pointer;transition:.15s;" onmouseover="this.style.borderColor='var(--acc)'" onmouseout="this.style.borderColor='var(--line)'">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-            <div style="font-size:14px;font-weight:700;line-height:1.3;">${IC_LIBRO[l.cat]||'📚'} ${l.tit}</div>
-          </div>
-          <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${est}${stars?`<span style="font-size:12px;">${stars}</span>`:''}</div>
-          ${l.resumen?`<div style="font-size:11.5px;color:var(--ink3);margin-top:8px;line-height:1.55;max-height:54px;overflow:hidden;">${l.resumen}</div>`:''}
-          ${nApr?`<div style="font-size:10px;color:var(--acc);margin-top:8px;font-weight:600;">💡 ${nApr} aprendizaje${nApr!==1?'s':''}</div>`:''}
-        </div>`;
-      }).join('')}</div>
+      <div class="g2">${libs.map(tarjeta).join('')}</div>
     </div>`;
   }).join('');
 }
@@ -5884,7 +6059,7 @@ async function volcarSheets() {
     const sheets = [
       {sheet:'Propietarios', h:['ID','Nombre','Alias','DNI','Relacion','IRPF','Email','Tel','Notas'], rows:(D.propietarios||[]).map(o=>[o.id,o.nom,o.alias,o.dni,o.rel,o.irpf,o.email,o.tel,o.notas])},
       {sheet:'Hipotecas', h:['ID','Piso','Propietario','Banco','Tipo','CapitalInicial','Pendiente','Cuota','DiaCobro','TipoResultante','Vinculaciones','CosteVincAnual','FechaFin'], rows:(D.hipotecas||[]).map(h=>{const p=D.props.find(x=>x.id==h.propId);return [h.id,p?p.nom:'',ownerNom(h.ownerId||(p?p.ownerId:'')),h.banco,h.tipo,h.ini,h.pend,h.cuota,h.dia,tipoResultante(h).toFixed(2)+'%',vinculaciones(h).join(', '),costeVincAnual(h),h.fin];})},
-      {sheet:'Propiedades', h:['ID','Nombre','Propietario','Dir','Ciudad','CP','Habs','Precio','FechaCompra','Hipo','Capital','VCons'], rows:D.props.map(p=>[p.id,p.nom,ownerNom(p.ownerId),p.dir,p.ciu,p.cp,p.habs,p.precio,p.fcompra||p.anyo,p.hipo,p.capital,p.vc])},
+      {sheet:'Propiedades', h:['ID','Nombre','Propietario','Dir','Ciudad','CP','Habs','Precio','Comision','GastosCompra','Tasacion','Mercado','FechaCompra','Hipo','Capital','VCons'], rows:D.props.map(p=>[p.id,p.nom,ownerNom(p.ownerId),p.dir,p.ciu,p.cp,p.habs,p.precio,p.compra,p.gcompra,p.tasacion,p.mercado,p.fcompra||p.anyo,p.hipo,p.capital,p.vc])},
       {sheet:'Inquilinos', h:['ID','Nombre','Apellidos','DNI','Nac','Email','Tel','WA','Estado','PisoID','Hab','Alq','Fia','Dia','Ini','Fin','Val','Mot','Notas'], rows:D.inqs.map(i=>[i.id,i.nom,i.ap,i.dni,i.nac,i.email,i.tel,i.wa,i.estado,i.propId,i.hab,i.alq,i.fia,i.dia,i.ini,i.fin,i.val,i.mot,i.notas])},
       {sheet:'Pagos', h:['ID','InqID','Concepto','Mes','Importe','Estado','Fecha','Notas','PDF'], rows:D.pagos.map(p=>[p.id,p.inqId,p.con,p.mes,p.imp,p.estado,p.fecha,p.notas,p.pdfName||''])},
       {sheet:'Gastos', h:['ID','Desc','Cat','Importe','PisoID','Fecha','Ded','Prov','Notas','PDF'], rows:D.gastos.map(g=>[g.id,g.desc,g.cat,g.imp,g.propId,g.fecha,g.ded,g.prov,g.notas,g.pdfName||''])},
