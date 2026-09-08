@@ -2022,6 +2022,14 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Intereses (€) — deducible *</label><input id="cu-int" type="number" step="0.01" oninput="cuCalc()"></div>
     <div class="fgrp"><label>Amortización capital (€)</label><input id="cu-cap" type="number" step="0.01" oninput="cuCalc()"></div>
     <div class="fgrp fgf"><label>Notas (ej: quitada bonificación nómina)</label><input id="cu-notas" placeholder="Cambios de tipo, bonificaciones..."></div>
+    <div class="fgrp fgf"><label>Adjuntar justificante del movimiento (PDF o foto)</label>
+      <div class="pdf-upload-zone" id="cu-pdf-zone" onclick="document.getElementById('cu-pdf').click()">
+        <input type="file" id="cu-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('cu-pdf','cu-pdf-zone','cu-pdf-data')">
+        <input type="hidden" id="cu-pdf-data"><input type="hidden" id="cu-pdf-name">
+        <span class="pdf-upload-label">📎 Adjuntar justificante bancario</span>
+      </div>
+    </div>
+    <div id="cu-doc-actual"></div>
   </div>
   <div id="cu-resumen" style="background:var(--bg);border-radius:var(--r2);padding:12px;margin-top:12px;font-size:12px;"></div>
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-cuota')">Cancelar</button><button class="btn btn-primary" onclick="saveCuota()">Guardar cuota</button></div>
@@ -2171,7 +2179,8 @@ const PDF_PLACEHOLDERS = {
   'lb-pdf-zone':'📎 Adjuntar archivo (opcional)',
   'hp-fein-zone':'📎 Adjuntar FEIN en PDF',
   'hp-esc-zone':'📎 Adjuntar escritura',
-  'hp-cuadro-zone':'📎 Adjuntar cuadro de amortización'
+  'hp-cuadro-zone':'📎 Adjuntar cuadro de amortización',
+  'cu-pdf-zone':'📎 Adjuntar justificante bancario'
 };
 function clearPdfZone(zoneId, dataId) {
   const zone = document.getElementById(zoneId);
@@ -3546,6 +3555,8 @@ function newCuota(hipId){
   const int=parseFloat(h.pend||0)*t/100/12;
   $i('cu-int').value=int.toFixed(2);
   $i('cu-cap').value=Math.max(0,parseFloat(h.cuota||0)-int).toFixed(2);
+  clearPdfZone('cu-pdf-zone','cu-pdf-data');
+  $i('cu-doc-actual').innerHTML='';
   cuCalc();
   openM('m-cuota');
 }
@@ -3557,6 +3568,8 @@ function editCuota(hipId, cuId){
   $i('cu-mes').value=cu.mes||''; $i('cu-fecha').value=cu.fecha||'';
   $i('cu-imp').value=cu.imp||''; $i('cu-tipo').value=cu.tipo||'';
   $i('cu-int').value=cu.int||''; $i('cu-cap').value=cu.cap||''; $i('cu-notas').value=cu.notas||'';
+  clearPdfZone('cu-pdf-zone','cu-pdf-data');
+  $i('cu-doc-actual').innerHTML = cu.pdfData ? `<div class="form-section" style="margin-top:14px;">Justificante guardado</div><button class="pdf-badge green" onclick="openPdf('${cu.pdfData}','${cu.pdfName||'movimiento.pdf'}')">📄 ${cu.pdfName||'Ver'}</button>` : '';
   cuCalc(); openM('m-cuota');
 }
 function saveCuota(){
@@ -3565,7 +3578,9 @@ function saveCuota(){
   if(!mes||!imp){toast('Completa mes e importe',false);return;}
   if(!h.cuotas) h.cuotas=[];
   const p=D.props.find(x=>x.id==h.propId);
+  const pdfData=$i('cu-pdf-data')?.value||'', pdfName=$i('cu-pdf-name')?.value||'';
   const campos={mes,fecha:gi('cu-fecha'),imp,tipo:gn('cu-tipo'),int:gn('cu-int'),cap:gn('cu-cap'),notas:gi('cu-notas')};
+  if(pdfData){ campos.pdfData=pdfData; campos.pdfName=pdfName; }
   const editId=gi('cu-edit-id');
   if(editId){
     const cu=h.cuotas.find(x=>x.id==editId);
@@ -3636,9 +3651,10 @@ function verCuotas(hipId){
           <div style="font-size:11px;color:var(--ink3);margin-top:2px;">Cuota ${eur(cu.imp,2)}${cu.tipo?' · tipo '+cu.tipo+'%':''}</div></div>
           <div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editCuota('${hipId}','${cu.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCuota('${hipId}','${cu.id}')">🗑</button></div>
         </div>
-        <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;">
+        <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;align-items:center;">
           <span style="color:var(--rd);">Interés: <strong>${eur(cu.int,2)}</strong></span>
           <span style="color:var(--gn);">Capital: <strong>${eur(cu.cap,2)}</strong></span>
+          ${cu.pdfData?`<button class="pdf-badge green" onclick="event.stopPropagation();openPdf('${cu.pdfData}','${cu.pdfName||'movimiento.pdf'}')">📄 Justificante</button>`:''}
         </div>
         ${cu.notas?`<div style="font-size:10px;color:var(--ink3);margin-top:6px;font-style:italic;">${cu.notas}</div>`:''}
       </div>`).join(''):'<div class="empty" style="padding:20px;"><p>Aún no has registrado ninguna cuota</p></div>'}`;
