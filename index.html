@@ -1668,7 +1668,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <h2 id="m-compra-title">🧾 Nueva Factura</h2>
   <input type="hidden" id="cp-edit-id">
   <div class="fg">
-    <div class="fgrp fgf"><label>Concepto / Descripción *</label><input id="cp-con" placeholder="Ej: 3 escritorios + 3 sillas oficina"></div>
+    <div class="fgrp fgf"><label>Concepto / Descripción *</label><input id="cp-con" placeholder="Ej: 3 escritorios + 3 sillas oficina" oninput="sugerirClasifCompra()"></div>
     <div class="fgrp"><label>Empresa / Tienda *</label><input id="cp-emp" placeholder="IKEA, Leroy Merlin, Amazon..."></div>
     <div class="fgrp"><label>Fecha de compra</label><input id="cp-fecha" type="date" onchange="autoNumFactura()"></div>
     <div class="fgrp"><label>Importe total (€) *</label><input id="cp-imp" type="number" step="0.01" placeholder="459.90"></div>
@@ -1684,6 +1684,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <select id="cp-pago"><option>Tarjeta</option><option>Transferencia</option><option>Efectivo</option><option>Bizum</option><option>Financiado</option><option>Otro</option></select>
     </div>
     <div class="fgrp fgf"><label>Tratamiento fiscal (IRPF)</label>
+      <div id="cp-sugerencia" style="display:none;background:var(--acc-l);border:1px solid rgba(200,75,47,.2);border-radius:var(--r2);padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--acc);"></div>
       <select id="cp-ded" onchange="pintarAyudaFiscal()">
         <option value="corriente">✅ Deducible (gasto corriente)</option>
         <option value="no">❌ No deducible</option>
@@ -1694,7 +1695,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <div id="cp-ded-ayuda" style="font-size:10.5px;color:var(--ink3);line-height:1.5;margin-top:2px;"></div>
     </div>
     <div class="fgrp"><label>Garantía hasta</label><input id="cp-gar" type="date"></div>
-    <div class="fgrp fgf"><label>Notas</label><textarea id="cp-notas" rows="2" placeholder="Modelo, color, dónde está instalado, referencia..."></textarea></div>
+    <div class="fgrp fgf"><label>Notas</label><textarea id="cp-notas" rows="2" placeholder="Modelo, color, dónde está instalado, referencia..." oninput="sugerirClasifCompra()"></textarea></div>
     <div class="fgrp fgf"><label>Adjuntar factura (PDF o foto)</label>
       <div class="pdf-upload-zone" id="cp-pdf-zone" onclick="document.getElementById('cp-pdf').click()">
         <input type="file" id="cp-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('cp-pdf','cp-pdf-zone','cp-pdf-data')">
@@ -2095,9 +2096,13 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <button class="btn btn-primary" id="ca-btn-add" onclick="addCosteAdq()">+ Añadir partida</button>
   </div>
 
-  <div class="form-section" style="margin-top:20px;">Partidas registradas</div>
+  <div class="form-section" style="margin-top:20px;">Partidas registradas aquí</div>
   <div id="ca-lista"></div>
   <div id="ca-total" style="margin-top:14px;"></div>
+
+  <div class="form-section" style="margin-top:20px;">🧾 Facturas de este piso ya amortizables (metidas en Facturas)</div>
+  <div style="font-size:10.5px;color:var(--ink3);margin-bottom:10px;">Estas ya cuentan automáticamente para la amortización de este piso — no hace falta añadirlas aquí también.</div>
+  <div id="ca-facturas-vinc"></div>
 
   <div class="modal-footer"><button class="btn btn-primary" onclick="closeM('m-costeadq');rProps();">✓ Hecho</button></div>
 </div></div>
@@ -2388,6 +2393,15 @@ function migrarCostesAdqLegacy(p){
   }
 }
 
+
+function totalFacturasVinculadas(p){
+  return (D.compras||[]).filter(x=>x.propId==p.id && ['amort3','mejora'].includes(fiscalKey(x.ded)))
+    .reduce((s,x)=>s+parseFloat(x.imp||0),0);
+}
+function totalAdquisicionCompleto(p){
+  return totalCostesAdq(p) + totalFacturasVinculadas(p);
+}
+
 function totalCostesAdq(p){ return (p.costesAdq||[]).reduce((s,x)=>s+parseFloat(x.imp||0),0); }
 
 function abrirCostesAdq(){
@@ -2468,9 +2482,34 @@ function delCosteAdq(propId, itemId){
   saveAndSync(); rCostesAdqLista(); actualizarResumenCostesAdq(p);
   toast('Eliminada');
 }
+
+function rFacturasVinculadas(propId){
+  const div=$i('ca-facturas-vinc'); if(!div) return;
+  const facts=(D.compras||[]).filter(x=>x.propId==propId && ['amort3','mejora'].includes(fiscalKey(x.ded)));
+  if(!facts.length){ div.innerHTML='<div style="font-size:11px;color:var(--ink3);padding:8px 0;">Ninguna factura de este piso está marcada como amortizable o mejora todavía.</div>'; return; }
+  const total=facts.reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  div.innerHTML = facts.map(x=>{
+    const f=FISCAL[fiscalKey(x.ded)];
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:12.5px;font-weight:600;">${CP_ICONS[x.cat]||'🧾'} ${x.con}</div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:2px;">${x.fecha?fD(x.fecha):'sin fecha'} · <span class="badge badge-${f.col}" style="font-size:8px;">${f.et}</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <span class="mono" style="font-weight:700;color:var(--acc);">${eur(x.imp,2)}</span>
+        ${x.pdfData?`<button class="pdf-badge green" onclick="openPdf('${x.pdfData}','${x.pdfName||'factura.pdf'}')">📄</button>`:''}
+        <button class="btn btn-secondary btn-xs" onclick="closeM('m-costeadq');go(document.querySelector('.nav-item[data-s=\'compras\']'));editCompra('${x.id}')" title="Editar en Facturas">✏️</button>
+      </div>
+    </div>`;
+  }).join('') + `<div style="background:var(--bg);border-radius:var(--r2);padding:10px 12px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
+    <span style="font-size:11px;color:var(--ink3);">Total facturas vinculadas</span>
+    <span class="mono" style="font-weight:700;color:var(--acc);">${eur(total)}</span></div>`;
+}
+
 function rCostesAdqLista(){
   const propId=gi('ca-prop-id'); const p=D.props.find(x=>x.id==propId); if(!p) return;
   const items=p.costesAdq||[];
+  rFacturasVinculadas(propId);
   const div=$i('ca-lista');
   if(!items.length){ div.innerHTML='<div class="empty" style="padding:20px;"><p>Sin partidas todavía. Añade la primera arriba.</p></div>'; $i('ca-total').innerHTML=''; return; }
   div.innerHTML=items.map(it=>`
@@ -2497,8 +2536,9 @@ function rCostesAdqLista(){
 function actualizarResumenCostesAdq(p){
   const el=$i('pr-costesadq-resumen'); if(!el) return;
   const total=totalCostesAdq(p);
-  el.textContent = total>0 ? eur(total) : '+ añadir';
-  el.style.color = total>0 ? 'var(--acc)' : 'var(--ink3)';
+  const factV=totalFacturasVinculadas(p);
+  el.textContent = total>0 ? (eur(total) + (factV>0?' + '+eur(factV)+' en facturas':'')) : (factV>0?eur(factV)+' en facturas':'+ añadir');
+  el.style.color = (total>0||factV>0) ? 'var(--acc)' : 'var(--ink3)';
   calcCosteTotal();
 }
 
@@ -2610,6 +2650,7 @@ function rProps(){
       <div style="font-size:11px;color:var(--ink3);margin-bottom:5px;">${iqs.length} de ${p.habs} habitaciones ocupadas</div>
       <div class="pbar"><div class="pbar-fill" style="width:${pc}%;background:${col};"></div></div>
       ${(p.fcompra||p.anyo)?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;">Comprado ${p.fcompra?fD(p.fcompra):p.anyo}${totalCostesAdq(p)>0?' · Coste total '+eur(parseFloat(p.precio||0)+totalCostesAdq(p)):''} · Hipoteca ${p.hipo||0}€/mes</div>`:''}${totalCostesAdq(p)>0?`<div style="font-size:10px;color:var(--acc);margin-top:3px;">📐 ${(p.costesAdq||[]).length} gasto${((p.costesAdq||[]).length!==1)?'s':''} de adquisición · ${eur(totalCostesAdq(p))}</div>`:''}
+    ${totalFacturasVinculadas(p)>0?`<div style="font-size:10px;color:var(--acc);margin-top:2px;">🧾 + ${eur(totalFacturasVinculadas(p))} en facturas vinculadas (amortizables)</div>`:''}
     ${dineroPropio(p)>0?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Dinero propio</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${eur(dineroPropio(p))}</div></div>
       ${roceDe(p)!==null?`<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">ROCE anual</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:${roceDe(p)>=0?'var(--gn)':'var(--rd)'};">${roceDe(p).toFixed(1)}%</div></div>`:''}
@@ -3271,6 +3312,32 @@ function rPropietarios(){
 // ══════════════════════════════════════════════════════════════
 // FACTURAS DE COMPRA
 // ══════════════════════════════════════════════════════════════
+
+// ── Detección automática: ¿esta factura parece un gasto de adquisición/reforma? ──
+const PALABRAS_REFORMA = ['reforma','obra','rehabilitac','renovaci','albañil','fontaner','electricist','derribo','tabique','alicatad','pintura integral','reforma integral','instalación eléctrica','instalación fontanería'];
+const PALABRAS_ADQUISICION = ['notaría','notaria','registro de la propiedad','gestoría compra','itp','ajd','comisión inmobiliaria','tasación','tasacion'];
+
+function sugerirClasifCompra(){
+  const con=(gi('cp-con')||'').toLowerCase();
+  const notas=(gi('cp-notas')||'').toLowerCase();
+  const texto=con+' '+notas;
+  const box=$i('cp-sugerencia'); if(!box) return;
+  const esReforma = PALABRAS_REFORMA.some(p=>texto.includes(p));
+  const esAdquisicion = PALABRAS_ADQUISICION.some(p=>texto.includes(p));
+  const propId=gi('cp-prop');
+
+  if(esReforma){
+    box.style.display='block';
+    box.innerHTML='🔨 Esto parece una <strong>reforma</strong>. Si es una mejora (no sustitución/reparación), márcala como <strong>🏗️ Mejora</strong> abajo — no se deduce como gasto pero sube el valor del piso. Si es reparación o sustitución, es <strong>✅ Deducible</strong> directo.';
+    if($i('cp-ded').value==='corriente') { /* dejamos elegir, solo avisamos */ }
+  } else if(esAdquisicion){
+    box.style.display='block';
+    box.innerHTML='📐 Esto parece un <strong>gasto de adquisición del piso</strong> (notaría/registro/ITP/comisión/tasación). Considera marcarlo como <strong>🏠 Amortizable 3%</strong> abajo, o mejor aún, mételo directamente en <strong>Propiedades → Gastos de adquisición</strong> de ese piso para tenerlo junto con el resto.';
+  } else {
+    box.style.display='none';
+  }
+}
+
 const CP_ICONS={'Mobiliario':'🪑','Electrodomésticos':'🔌','Colchones y textil':'🛏️','Menaje':'🍽️','Reforma y obra':'🏗️','Decoración':'🖼️','Herramientas':'🔧','Suministros':'💡','Otros':'📦'};
 
 
@@ -3319,6 +3386,7 @@ function newCompra(){
   $i('cp-cat-otros').value=''; toggleCatOtros(); pintarAyudaFiscal(); $i('cp-owner').value='';
   clearPdfZone('cp-pdf-zone','cp-pdf-data');
   $i('cp-doc-actual').innerHTML='';
+  const sug=$i('cp-sugerencia'); if(sug) sug.style.display='none';
   openM('m-compra');
 }
 
@@ -5318,8 +5386,8 @@ function hipotecaPendiente(p){
   return h ? parseFloat(h.pend||0) : parseFloat(p.capital||0);
 }
 function dineroPropio(p){
-  // Lo que has puesto de tu bolsillo: coste total − lo que financió el banco
-  const costeTotal = parseFloat(p.precio||0) + totalCostesAdq(p);
+  // Lo que has puesto de tu bolsillo: coste total (compra + gastos + reformas) − lo que financió el banco
+  const costeTotal = parseFloat(p.precio||0) + totalAdquisicionCompleto(p);
   return Math.max(0, costeTotal - hipotecaConcedida(p));
 }
 function ingresoAnualPiso(p){
