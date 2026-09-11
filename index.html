@@ -1368,7 +1368,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <input type="hidden" id="pr-edit-id">
   <div class="fg">
     <div class="fgrp fgf"><label>Nombre *</label><input id="pr-n" placeholder="Ej: Piso Gran Vía 1"></div>
-    <div class="fgrp fgf"><label>Propietario</label><select id="pr-owner"></select></div>
+    <div class="fgrp"><label>Propietario (nudo propietario)</label><select id="pr-owner"></select></div>
+    <div class="fgrp"><label>Usufructuario (opcional)</label><select id="pr-usufructo"></select></div>
+    <div class="fgrp fgf" style="font-size:10.5px;color:var(--ink3);">Si asignas un usufructuario, los ingresos y la fiscalidad de este piso computan a su nombre. Al quitarlo, vuelven al propietario.</div>
     <div class="fgrp fgf"><label>Dirección</label><input id="pr-d" placeholder="Calle, número, piso, puerta"></div>
     <div class="fgrp"><label>Ciudad</label><input id="pr-c" placeholder="Alicante"></div>
     <div class="fgrp"><label>Código postal</label><input id="pr-cp" placeholder="03001"></div>
@@ -1386,7 +1388,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp fgf" id="pr-coste-total" style="font-size:12px;color:var(--ink3);"></div>
     <div class="fgrp"><label>Hipoteca mensual (€)</label><input id="pr-hip" type="number" placeholder="407"></div>
     <div class="fgrp"><label>Capital hipoteca (€)</label><input id="pr-cap" type="number" placeholder="123500"></div>
-    <div class="fgrp"><label>Valor construcción (€)</label><input id="pr-vc" type="number" placeholder="78000"></div>
+    <div class="fgrp"><label>Valor construcción (€) <span style="color:var(--acc);font-size:9px;">para amortizar 3%</span></label><input id="pr-vc" type="number" placeholder="auto: 70% del precio"></div>
+    <div class="fgrp"><label>% construcción (si no pones valor)</label><input id="pr-pctc" type="number" placeholder="70" oninput="calcCosteTotal()"></div>
+    <div class="fgrp fgf" style="font-size:10.5px;color:var(--ink3);">💡 Solo la construcción se amortiza al 3% (el suelo no). Si no sabes el valor exacto, se estima el 70% del coste. Puedes afinar con el valor catastral: (valor construcción catastral ÷ valor catastral total) × precio.</div>
   </div>
   <div class="form-section" style="margin-top:18px;">Documentos de la propiedad (opcional)</div>
   <div style="display:flex;flex-direction:column;gap:10px;">
@@ -1462,6 +1466,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Propiedad</label><select id="iq-p"></select></div>
     <div class="fgrp"><label>Habitación nº</label><input id="iq-h" type="number" placeholder="1" min="1"></div>
     <div class="fgrp"><label>Alquiler mensual (€)</label><input id="iq-alq" type="number" placeholder="350"></div>
+    <div class="fgrp"><label>Luz mensual (€) — opcional</label><input id="iq-luz" type="number" placeholder="30"></div>
+    <div class="fgrp"><label>Agua mensual (€) — opcional</label><input id="iq-agua" type="number" placeholder="15"></div>
     <div class="fgrp"><label>Fianza depositada (€)</label><input id="iq-fia" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Día de pago</label><input id="iq-dia" type="number" placeholder="1" min="1" max="28"></div>
     <div class="fgrp"><label>Inicio contrato</label><input id="iq-ini" type="date"></div>
@@ -2059,7 +2065,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
         <option>Comisión inmobiliaria</option>
         <option>ITP / AJD</option>
         <option>Tasación (para hipoteca)</option>
+        <option>Comisión de apertura hipoteca</option>
         <option>Gastos constitución hipoteca</option>
+        <option>Reforma / mejora inicial</option>
         <option>Otros</option>
       </select>
     </div>
@@ -2274,7 +2282,7 @@ function populateSels(){
   ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop','hp-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
   // Selectores de propietario
   const oO='<option value="">— Sin asignar —</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
-  ['pr-owner','cp-owner','hp-owner'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oO;e.value=v;}});
+  ['pr-owner','cp-owner','hp-owner','pr-usufructo'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oO;e.value=v;}});
   // Cuentas del espacio personal
   const ctO='<option value="">— Sin cuenta —</option>'+(D.cuentas||[]).map(x=>`<option value="${x.id}">${x.nom}</option>`).join('');
   ['mv-cta','sb-cta'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=ctO;e.value=v;}});
@@ -2337,7 +2345,7 @@ function calcCosteTotal(){
 const CA_ICONS={
   'Escritura de compraventa (con arras)':'📜','Notaría compraventa':'⚖️','Registro de la propiedad':'📋',
   'Gestoría compraventa':'🗂️','Comisión inmobiliaria':'🏠','ITP / AJD':'🏛️',
-  'Tasación (para hipoteca)':'📐','Gastos constitución hipoteca':'🏦','Otros':'📄'
+  'Tasación (para hipoteca)':'📐','Comisión de apertura hipoteca':'💳','Gastos constitución hipoteca':'🏦','Reforma / mejora inicial':'🔨','Otros':'📄'
 };
 
 // Migra automáticamente los campos antiguos planos (compra/gcompra) a partidas,
@@ -2487,10 +2495,10 @@ function actualizarResumenCostesAdq(p){
 function newProp(){
   $i('pr-edit-id').value='';
   $i('m-prop-title').textContent='🏢 Nueva Propiedad';
-  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-mercado','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-mercado','pr-pctc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   $i('pr-docs-actuales').innerHTML='';
-  $i('pr-owner').value=''; $i('pr-coste-total').innerHTML='';
+  $i('pr-owner').value=''; $i('pr-usufructo').value=''; $i('pr-coste-total').innerHTML='';
   const res=$i('pr-costesadq-resumen'); if(res){res.textContent='+ añadir';res.style.color='var(--ink3)';}
   openM('m-prop');
 }
@@ -2502,9 +2510,9 @@ function editProp(id){
   $i('pr-n').value=p.nom||''; $i('pr-d').value=p.dir||''; $i('pr-c').value=p.ciu||'';
   $i('pr-cp').value=p.cp||''; $i('pr-h').value=p.habs||''; $i('pr-p').value=p.precio||'';
   $i('pr-fc').value=p.fcompra||(p.anyo?p.anyo+'-01-01':''); $i('pr-hip').value=p.hipo||''; $i('pr-cap').value=p.capital||'';
-  $i('pr-vc').value=p.vc||''; $i('pr-owner').value=p.ownerId||'';
+  $i('pr-vc').value=p.vc||''; $i('pr-owner').value=p.ownerId||''; $i('pr-usufructo').value=p.usufructoId||'';
   migrarCostesAdqLegacy(p);
-  $i('pr-tasacion').value=p.tasacion||''; $i('pr-mercado').value=p.mercado||'';
+  $i('pr-tasacion').value=p.tasacion||''; $i('pr-mercado').value=p.mercado||''; $i('pr-pctc').value=p.pctConstruccion||'';
   actualizarResumenCostesAdq(p); calcCosteTotal();
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   // Mostrar documentos ya guardados
@@ -2537,8 +2545,8 @@ function saveProp(){
     if(data) nuevosDocs[d]={data,name};
   });
   const fc=gi('pr-fc');
-  const campos={nom,ownerId:gi('pr-owner'),dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,
-    precio:gn('pr-p'),compra:gn('pr-com'),gcompra:gn('pr-gc'),tasacion:gn('pr-tasacion'),mercado:gn('pr-mercado'),fcompra:fc,anyo:fc?fc.slice(0,4):gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
+  const campos={nom,ownerId:gi('pr-owner'),usufructoId:gi('pr-usufructo'),dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,
+    precio:gn('pr-p'),compra:gn('pr-com'),gcompra:gn('pr-gc'),tasacion:gn('pr-tasacion'),mercado:gn('pr-mercado'),pctConstruccion:gn('pr-pctc'),fcompra:fc,anyo:fc?fc.slice(0,4):gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
   if(editId){
     const p=D.props.find(x=>x.id==editId);
     if(p){ Object.assign(p,campos); p.docs=Object.assign({},p.docs||{},nuevosDocs); }
@@ -2549,7 +2557,7 @@ function saveProp(){
   }
   saveAndSync(); closeM('m-prop'); rProps(); rHabs();
   $i('pr-edit-id').value='';
-  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-mercado','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-mercado','pr-pctc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   $i('pr-docs-actuales').innerHTML=''; $i('pr-coste-total').innerHTML='';
 }
@@ -2592,6 +2600,10 @@ function rProps(){
       <div style="font-size:11px;color:var(--ink3);margin-bottom:5px;">${iqs.length} de ${p.habs} habitaciones ocupadas</div>
       <div class="pbar"><div class="pbar-fill" style="width:${pc}%;background:${col};"></div></div>
       ${(p.fcompra||p.anyo)?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;">Comprado ${p.fcompra?fD(p.fcompra):p.anyo}${totalCostesAdq(p)>0?' · Coste total '+eur(parseFloat(p.precio||0)+totalCostesAdq(p)):''} · Hipoteca ${p.hipo||0}€/mes</div>`:''}${totalCostesAdq(p)>0?`<div style="font-size:10px;color:var(--acc);margin-top:3px;">📐 ${(p.costesAdq||[]).length} gasto${((p.costesAdq||[]).length!==1)?'s':''} de adquisición · ${eur(totalCostesAdq(p))}</div>`:''}
+    ${dineroPropio(p)>0?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Dinero propio</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${eur(dineroPropio(p))}</div></div>
+      ${roceDe(p)!==null?`<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">ROCE anual</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:${roceDe(p)>=0?'var(--gn)':'var(--rd)'};">${roceDe(p).toFixed(1)}%</div></div>`:''}
+    </div>`:''}
     ${p.docs&&Object.keys(p.docs).length?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);">
       <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px;">Documentos</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;">
@@ -2712,9 +2724,9 @@ function delPot(id){D.pots=D.pots.filter(p=>p.id!==id);saveAndSync();rPots();toa
 // ══════════════════════════════════════════════════════════════
 function addInq(){
   const nom=gi('iq-n');if(!nom){toast('Introduce el nombre',false);return;}
-  D.inqs.push({id:uid(),nom,ap:gi('iq-a'),dni:gi('iq-dni'),nac:gi('iq-nac'),email:gi('iq-e'),tel:gi('iq-t'),wa:gi('iq-wa'),estado:$i('iq-est').value,propId:gi('iq-p'),hab:gi('iq-h'),alq:gn('iq-alq'),fia:gn('iq-fia'),dia:gi('iq-dia'),ini:gi('iq-ini'),fin:gi('iq-fin'),val:gi('iq-v'),mot:gi('iq-mot'),notas:gi('iq-not')});
-  saveAndSync();closeM('m-inq');rActivos();toast('Inquilino añadido');
-  ['iq-n','iq-a','iq-dni','iq-nac','iq-e','iq-t','iq-wa','iq-h','iq-alq','iq-fia','iq-dia','iq-ini','iq-fin','iq-mot','iq-not'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  D.inqs.push({id:uid(),nom,ap:gi('iq-a'),dni:gi('iq-dni'),nac:gi('iq-nac'),email:gi('iq-e'),tel:gi('iq-t'),wa:gi('iq-wa'),estado:$i('iq-est').value,propId:gi('iq-p'),hab:gi('iq-h'),alq:gn('iq-alq'),luz:gn('iq-luz'),agua:gn('iq-agua'),fia:gn('iq-fia'),dia:gi('iq-dia'),ini:gi('iq-ini'),fin:gi('iq-fin'),val:gi('iq-v'),mot:gi('iq-mot'),notas:gi('iq-not')});
+  saveAndSync();autoGenerarPagosPendientes();closeM('m-inq');rActivos();rPagos&&rPagos();toast('Inquilino añadido · cobros pendientes generados');
+  ['iq-n','iq-a','iq-dni','iq-nac','iq-e','iq-t','iq-wa','iq-h','iq-alq','iq-luz','iq-agua','iq-fia','iq-dia','iq-ini','iq-fin','iq-mot','iq-not'].forEach(id=>{const e=$i(id);if(e)e.value='';});
 }
 
 function iqRow(i,showState=false){
@@ -2947,13 +2959,49 @@ function delCont(id){D.conts=D.conts.filter(c=>c.id!==id);saveAndSync();rConts()
 // PAGOS
 // ══════════════════════════════════════════════════════════════
 function genPagos(){
-  const mes=new Date().toISOString().slice(0,7);let gen=0;
+  const mes=new Date().toISOString().slice(0,7);
+  let gen=0;
   D.inqs.filter(i=>i.estado==='ACTIVO').forEach(inq=>{
-    if(!D.pagos.find(p=>p.inqId==inq.id&&p.mes===mes&&p.con==='Alquiler')&&inq.alq>0){
+    // Alquiler
+    if(inq.alq>0 && !D.pagos.find(p=>p.inqId==inq.id&&p.mes===mes&&p.con==='Alquiler')){
       D.pagos.push({id:uid(),inqId:inq.id,con:'Alquiler',mes,imp:inq.alq,estado:'pendiente',fecha:'',notas:'Auto'});gen++;
     }
+    // Luz
+    if(inq.luz>0 && !D.pagos.find(p=>p.inqId==inq.id&&p.mes===mes&&p.con==='Luz')){
+      D.pagos.push({id:uid(),inqId:inq.id,con:'Luz',mes,imp:inq.luz,estado:'pendiente',fecha:'',notas:'Auto'});gen++;
+    }
+    // Agua
+    if(inq.agua>0 && !D.pagos.find(p=>p.inqId==inq.id&&p.mes===mes&&p.con==='Agua')){
+      D.pagos.push({id:uid(),inqId:inq.id,con:'Agua',mes,imp:inq.agua,estado:'pendiente',fecha:'',notas:'Auto'});gen++;
+    }
   });
-  saveAndSync();rPagos();toast(`${gen} pagos generados para ${mes}`);
+  saveAndSync();rPagos();toast(`${gen} cobros pendientes generados para ${mes}`);
+}
+
+// Genera automáticamente los cobros pendientes de TODOS los meses desde que entró cada inquilino
+function autoGenerarPagosPendientes(){
+  const hoy=new Date();
+  const mesActual=hoy.toISOString().slice(0,7);
+  let gen=0;
+  D.inqs.filter(i=>i.estado==='ACTIVO').forEach(inq=>{
+    if(!inq.ini) return;
+    // Desde el mes de inicio hasta el mes actual
+    let d=new Date(inq.ini.slice(0,7)+'-01');
+    const fin=new Date(mesActual+'-01');
+    let guard=0;
+    while(d<=fin && guard<60){
+      const mk=d.toISOString().slice(0,7);
+      const conceptos=[['Alquiler',inq.alq],['Luz',inq.luz],['Agua',inq.agua]];
+      conceptos.forEach(([con,imp])=>{
+        if(imp>0 && !D.pagos.find(p=>p.inqId==inq.id&&p.mes===mk&&p.con===con)){
+          D.pagos.push({id:uid(),inqId:inq.id,con,mes:mk,imp,estado:'pendiente',fecha:'',notas:'Auto'});gen++;
+        }
+      });
+      d.setMonth(d.getMonth()+1); guard++;
+    }
+  });
+  if(gen>0){ saveAndSync(); }
+  return gen;
 }
 function addPago(){
   const iId=gi('pa-i'),imp=gn('pa-imp');if(!iId||!imp){toast('Completa inquilino e importe',false);return;}
@@ -3101,14 +3149,18 @@ function rFacturas(){
 // ══════════════════════════════════════════════════════════════
 // PROPIETARIOS
 // ══════════════════════════════════════════════════════════════
+
+// Quién declara los rendimientos de un piso: el usufructuario si lo hay, si no el propietario
+function fiscalOwnerDe(p){ return (p && p.usufructoId) ? p.usufructoId : (p ? p.ownerId : ''); }
+
 function ownerNom(id){
   const o=(D.propietarios||[]).find(x=>x.id==id);
   return o ? (o.alias||o.nom) : 'Sin asignar';
 }
 function ownerDe(obj){
-  // Propietario efectivo: el suyo propio, o el de su propiedad
+  // Propietario fiscal efectivo: su ownerId propio, o quien tributa por su propiedad (usufructuario o dueño)
   if(obj.ownerId) return obj.ownerId;
-  if(obj.propId){ const p=D.props.find(x=>x.id==obj.propId); if(p&&p.ownerId) return p.ownerId; }
+  if(obj.propId){ const p=D.props.find(x=>x.id==obj.propId); if(p) return fiscalOwnerDe(p); }
   return '';
 }
 function autoOwnerFactura(){
@@ -5240,12 +5292,58 @@ function fraccionMes(fechaAlta,anyo,mes){
 }
 
 // Amortización deducible de un mes concreto
+
+// Base de construcción amortizable: valor explícito, o estimación (% del precio+gastos de adquisición)
+
+// Dinero propio invertido en un piso = precio + gastos adquisición + reforma − hipoteca concedida
+function reformaDe(p){
+  return (p.costesAdq||[]).filter(it=>/reforma|mejora/i.test(it.concepto||'')).reduce((s,it)=>s+parseFloat(it.imp||0),0);
+}
+function hipotecaConcedida(p){
+  const h=(D.hipotecas||[]).find(x=>x.propId==p.id);
+  return h ? parseFloat(h.ini||0) : 0;
+}
+function hipotecaPendiente(p){
+  const h=(D.hipotecas||[]).find(x=>x.propId==p.id);
+  return h ? parseFloat(h.pend||0) : parseFloat(p.capital||0);
+}
+function dineroPropio(p){
+  // Lo que has puesto de tu bolsillo: coste total − lo que financió el banco
+  const costeTotal = parseFloat(p.precio||0) + totalCostesAdq(p);
+  return Math.max(0, costeTotal - hipotecaConcedida(p));
+}
+function ingresoAnualPiso(p){
+  // Renta anual de los inquilinos activos de ese piso
+  const inqs=D.inqs.filter(i=>i.estado==='ACTIVO'&&i.propId==p.id);
+  return inqs.reduce((s,i)=>s+parseFloat(i.alq||0),0)*12;
+}
+function gastoAnualPiso(p){
+  // Hipoteca anual (cuota) + estimación de gastos recurrentes del último año
+  const h=(D.hipotecas||[]).find(x=>x.propId==p.id);
+  const hipoAnual=h?parseFloat(h.cuota||0)*12:parseFloat(p.hipo||0)*12;
+  return hipoAnual;
+}
+function roceDe(p){
+  // ROCE = (ingreso anual − gastos anuales) / dinero propio invertido
+  const dp=dineroPropio(p);
+  if(dp<=0) return null;
+  const flujoAnual=ingresoAnualPiso(p)-gastoAnualPiso(p);
+  return flujoAnual/dp*100;
+}
+
+function baseConstruccion(p){
+  if(parseFloat(p.vc||0) > 0) return parseFloat(p.vc);
+  const pct = parseFloat(p.pctConstruccion||0) || 70;   // 70% por defecto (suelo ~30%)
+  const costeAdq = parseFloat(p.precio||0) + (typeof totalCostesAdq==='function' ? totalCostesAdq(p) : 0);
+  return costeAdq * pct/100;
+}
+
 function amortDelMes(anyo,mes,props,compras,amPct){
   let inm=0,m10=0,ad3=0;
   props.forEach(p=>{
     const alta=p.fcompra||(p.anyo?p.anyo+'-01-01':'');
-    // Valor de construcción del inmueble
-    const base=parseFloat(p.vc||0);
+    // Valor de construcción del inmueble (explícito o estimado como % del coste)
+    const base=baseConstruccion(p);
     if(base>0) inm += (base*amPct/100/12)*fraccionMes(alta,anyo,mes);
     // Gastos de adquisición desglosados (escritura, notaría, registro, gestoría, comisión...)
     // Cada partida amortiza al mismo % desde SU propia fecha (o la de compra si no tiene)
@@ -5279,7 +5377,7 @@ function rFiscal(){
     </div></div>` : '<div style="font-size:11.5px;color:var(--ink3);">Añade propietarios en la sección 👑 Propietarios para ver la fiscalidad separada por persona.</div>';
 
   // ── Conjuntos filtrados por propietario ──
-  const propsOwner = ownF ? D.props.filter(p=>p.ownerId==ownF) : D.props;
+  const propsOwner = ownF ? D.props.filter(p=>fiscalOwnerDe(p)==ownF) : D.props;
   const idsProps = propsOwner.map(p=>p.id);
   const perteneceProp = pid => !ownF || idsProps.includes(pid);
   const inqsOwner = D.inqs.filter(i=>perteneceProp(i.propId));
@@ -5300,7 +5398,7 @@ function rFiscal(){
   const base3prop = propsOwner.reduce((s,p)=>s+totalCostesAdq(p),0);
   const base3 = base3fact + base3prop;
   const baseMej= comprasOwner.filter(x=>fiscalKey(x.ded)==='mejora').reduce((s,x)=>s+parseFloat(x.imp||0),0);
-  const baseInm= propsOwner.reduce((s,p)=>s+parseFloat(p.vc||0),0);
+  const baseInm= propsOwner.reduce((s,p)=>s+baseConstruccion(p),0);
   // Amortización real mes a mes (prorrateada por días desde la compra)
   const amortMeses=Array.from({length:12},(_,mi)=>amortDelMes(parseInt(anyo),mi+1,propsOwner,comprasOwner,amPct));
   const amInmueble=amortMeses.reduce((s,a)=>s+a.inm,0);
@@ -5332,7 +5430,7 @@ function rFiscal(){
       <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
         <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">🏠 Inmueble (${amPct}%)</div>
         <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--pu);margin-top:4px;">${eur(amInmueble)}<span style="font-size:11px;color:var(--ink3);font-weight:400;">/año</span></div>
-        <div style="font-size:10px;color:var(--ink3);margin-top:2px;">Base: ${eur(baseInm)} · prorrateado desde la escritura</div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:2px;">Base construcción: ${eur(baseInm)} · prorrateado desde la compra</div>
       </div>
       <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
         <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">🪑 Mobiliario (10%)</div>
@@ -5386,7 +5484,7 @@ function datosFiscales(ownerId, anyo){
   const amPct = parseFloat(D.cfg.amorti)||3;
   const irpf  = owner && owner.irpf ? parseFloat(owner.irpf) : (parseFloat(D.cfg.irpf)||24);
 
-  const props    = ownerId ? D.props.filter(p=>p.ownerId==ownerId) : D.props;
+  const props    = ownerId ? D.props.filter(p=>fiscalOwnerDe(p)==ownerId) : D.props;
   const idsProps = props.map(p=>p.id);
   const inqs     = D.inqs.filter(i=>!ownerId || idsProps.includes(i.propId));
   const idsInqs  = inqs.map(i=>i.id);
@@ -5409,10 +5507,11 @@ function datosFiscales(ownerId, anyo){
   const detAmort = [];
   props.forEach(p=>{
     const alta=p.fcompra||(p.anyo?p.anyo+'-01-01':'');
-    const base=parseFloat(p.vc||0);
+    const base=baseConstruccion(p);
     if(base>0){
       let t=0; for(let m=1;m<=12;m++) t+=(base*amPct/100/12)*fraccionMes(alta,parseInt(anyo),m);
-      if(t>0) detAmort.push({tipo:'Inmueble '+amPct+'%',desc:p.nom+' (valor construcción)',alta:alta,base:base,pct:amPct,anual:base*amPct/100,esteAnyo:t});
+      const etiq = parseFloat(p.vc||0)>0 ? ' (valor construcción)' : ' (construcción estimada '+(parseFloat(p.pctConstruccion||0)||70)+'%)';
+      if(t>0) detAmort.push({tipo:'Inmueble '+amPct+'%',desc:p.nom+etiq,alta:alta,base:base,pct:amPct,anual:base*amPct/100,esteAnyo:t});
     }
     (p.costesAdq||[]).forEach(it=>{
       const b=parseFloat(it.imp||0); if(!b) return;
@@ -5830,6 +5929,13 @@ function addAgenda(){
   D.agenda.push({id:uid(),titulo:t,fecha:gi('ag-f'),tipo:$i('ag-ti').value,propId:gi('ag-p'),notas:gi('ag-n'),done:false});
   saveAndSync();closeM('m-ag');rAgenda();toast('Tarea añadida');
 }
+function toggleAgenda(id){
+  const a=D.agenda.find(x=>x.id==id); if(!a)return;
+  a.done=!a.done;
+  saveAndSync(); rDash(); if(document.querySelector('.nav-item.on')?.dataset.s==='agenda') rAgenda();
+  toast(a.done?'Tarea completada':'Tarea reactivada');
+}
+
 function rAgenda(){
   const pend=D.agenda.filter(a=>!a.done).sort((a,b)=>a.fecha>b.fecha?1:-1);
   const done=D.agenda.filter(a=>a.done).slice(-5).reverse();
@@ -5846,7 +5952,15 @@ function rDash(){
   const hoy=new Date(),mesAct=hoy.toISOString().slice(0,7),hoyS=hoy.toISOString().split('T')[0];
   const alerts=[];
   D.inqs.filter(i=>i.estado==='ACTIVO'&&i.fin).forEach(i=>{const d=Math.round((new Date(i.fin)-hoy)/86400000);if(d<=30&&d>=0)alerts.push({t:'y',m:`⏰ Contrato de ${i.nom} ${i.ap} vence en ${d} días`});if(d<0)alerts.push({t:'r',m:`🔴 Contrato de ${i.nom} ${i.ap} expirado`});});
-  D.pagos.filter(p=>p.estado==='atrasado').forEach(p=>{const inq=D.inqs.find(i=>i.id==p.inqId);alerts.push({t:'r',m:`💸 Atrasado: ${inq?inq.nom+' '+inq.ap:'?'} — ${eur(p.imp)}`});});
+  D.pagos.filter(p=>p.estado==='atrasado').forEach(p=>{const inq=D.inqs.find(i=>i.id==p.inqId);alerts.push({t:'r',m:`💸 Atrasado: ${inq?inq.nom+' '+inq.ap:'?'} — ${p.con||'Alquiler'} ${eur(p.imp)}`});});
+  // Cobros pendientes del mes en curso (sin marcar como cobrados)
+  const _mesAlert=new Date().toISOString().slice(0,7);
+  const pendMes=D.pagos.filter(p=>p.mes===_mesAlert&&p.estado==='pendiente');
+  const porInq={};
+  pendMes.forEach(p=>{ const inq=D.inqs.find(i=>i.id==p.inqId); const nom=inq?inq.nom+' '+inq.ap:'?'; (porInq[nom]=porInq[nom]||[]).push(p.con||'Alquiler'); });
+  Object.entries(porInq).slice(0,4).forEach(([nom,cons])=>{
+    alerts.push({t:'y',m:`💰 ${nom}: pendiente ${cons.join(' + ')}`});
+  });
   D.incs.filter(i=>i.estado!=='resuelta'&&i.pri==='alta').forEach(inc=>{const p=D.props.find(pr=>pr.id==inc.propId);alerts.push({t:'r',m:`🔴 Incidencia urgente: ${inc.desc} — ${p?p.nom:'?'}`});});
   $i('d-alerts').innerHTML=alerts.slice(0,4).map(a=>`<div class="alert alert-${a.t}">${a.m}</div>`).join('');
 
@@ -5871,8 +5985,21 @@ function rDash(){
   const contV=D.inqs.filter(i=>i.fin&&i.estado==='ACTIVO').map(i=>({i,d:Math.round((new Date(i.fin)-hoy)/86400000)})).filter(x=>x.d<=60&&x.d>=0).sort((a,b)=>a.d-b.d).slice(0,5);
   $i('d-conts').innerHTML=contV.length?contV.map(({i,d})=>{const p=D.props.find(pr=>pr.id==i.propId);return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);"><div><div style="font-size:12px;font-weight:500;">${i.nom} ${i.ap}</div><div style="font-size:10px;color:var(--ink3);">${p?p.nom:'–'}</div></div><span class="mono" style="font-size:12px;color:${d<14?'var(--rd)':'var(--ye)'};">${d}d</span></div>`;}).join(''):'<div class="empty" style="padding:16px;"><p>Sin contratos por vencer</p></div>';
 
-  const agH=D.agenda.filter(a=>!a.done&&a.fecha===hoyS);
-  $i('d-agenda').innerHTML=agH.length?agH.map(a=>`<div class="agenda-item"><div class="agenda-dot" style="background:var(--acc);"></div><div style="font-size:12px;">${a.titulo}</div></div>`).join(''):'<div class="empty" style="padding:16px;"><p>Sin tareas hoy</p></div>';
+  // Muestra tareas de hoy + atrasadas + próximas 7 días, ordenadas
+  const en7=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
+  const agH=D.agenda.filter(a=>!a.done && a.fecha && a.fecha<=en7)
+    .sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const sinFecha=D.agenda.filter(a=>!a.done && !a.fecha);
+  const todas=[...agH,...sinFecha];
+  $i('d-agenda').innerHTML=todas.length?todas.slice(0,8).map(a=>{
+    const venc=a.fecha&&a.fecha<hoyS, esHoy=a.fecha===hoyS;
+    const col=venc?'var(--rd)':esHoy?'var(--acc)':'var(--bl)';
+    const et=venc?'Atrasada':esHoy?'Hoy':(a.fecha?fD(a.fecha):'Sin fecha');
+    return `<div class="agenda-item"><div class="agenda-dot" style="background:${col};"></div>
+      <div style="flex:1;"><div style="font-size:12px;">${a.titulo}</div>
+      <div style="font-size:10px;color:${venc?'var(--rd)':'var(--ink3)'};">${et}${a.tipo?' · '+a.tipo:''}</div></div>
+      <button class="btn btn-success btn-xs" onclick="toggleAgenda('${a.id}')" title="Completar">✓</button></div>`;
+  }).join(''):'<div class="empty" style="padding:16px;"><p>Sin tareas pendientes 🎉</p></div>';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -6055,7 +6182,7 @@ function aplicarWS(){
   const bs=$i('ws-switch2'); if(bs) bs.style.display='block';
   // Si es Personal, precargar el patrimonio inmobiliario de Gentaury
   if(esP && gToken){ cargarGentaury(); }
-  if(WS==='gentaury') repararTodasPropiedades();
+  if(WS==='gentaury'){ repararTodasPropiedades(); autoGenerarPagosPendientes(); }
   // Activar la primera sección del espacio
   const primera = document.querySelector('.nav-item[data-ws="'+WS+'"]');
   if(primera) go(primera);
@@ -6361,7 +6488,7 @@ async function volcarSheets() {
       {sheet:'Propietarios', h:['ID','Nombre','Alias','DNI','Relacion','IRPF','Email','Tel','Notas'], rows:(D.propietarios||[]).map(o=>[o.id,o.nom,o.alias,o.dni,o.rel,o.irpf,o.email,o.tel,o.notas])},
       {sheet:'Hipotecas', h:['ID','Piso','Propietario','Banco','Tipo','CapitalInicial','Pendiente','Cuota','DiaCobro','TipoResultante','Vinculaciones','CosteVincAnual','FechaFin'], rows:(D.hipotecas||[]).map(h=>{const p=D.props.find(x=>x.id==h.propId);return [h.id,p?p.nom:'',ownerNom(h.ownerId||(p?p.ownerId:'')),h.banco,h.tipo,h.ini,h.pend,h.cuota,h.dia,tipoResultante(h).toFixed(2)+'%',vinculaciones(h).join(', '),costeVincAnual(h),h.fin];})},
       {sheet:'CostesAdquisicion', h:['PisoID','Piso','Propietario','Concepto','Importe','Fecha','Notas','Documento'], rows:D.props.flatMap(p=>(p.costesAdq||[]).map(it=>[p.id,p.nom,ownerNom(p.ownerId),it.concepto,it.imp,it.fecha,it.notas,it.pdfName||'']))},
-      {sheet:'Propiedades', h:['ID','Nombre','Propietario','Dir','Ciudad','CP','Habs','Precio','Comision','GastosCompra','Tasacion','Mercado','FechaCompra','Hipo','Capital','VCons'], rows:D.props.map(p=>[p.id,p.nom,ownerNom(p.ownerId),p.dir,p.ciu,p.cp,p.habs,p.precio,p.compra,p.gcompra,p.tasacion,p.mercado,p.fcompra||p.anyo,p.hipo,p.capital,p.vc])},
+      {sheet:'Propiedades', h:['ID','Nombre','Propietario','Usufructuario','Dir','Ciudad','CP','Habs','Precio','Tasacion','Mercado','PctConstruccion','FechaCompra','Hipo','Capital','VCons','DineroPropio','ROCE'], rows:D.props.map(p=>[p.id,p.nom,ownerNom(p.ownerId),p.usufructoId?ownerNom(p.usufructoId):'',p.dir,p.ciu,p.cp,p.habs,p.precio,p.tasacion,p.mercado,p.pctConstruccion,p.fcompra||p.anyo,p.hipo,p.capital,p.vc,dineroPropio(p),roceDe(p)!==null?roceDe(p).toFixed(1)+'%':''])},
       {sheet:'Inquilinos', h:['ID','Nombre','Apellidos','DNI','Nac','Email','Tel','WA','Estado','PisoID','Hab','Alq','Fia','Dia','Ini','Fin','Val','Mot','Notas'], rows:D.inqs.map(i=>[i.id,i.nom,i.ap,i.dni,i.nac,i.email,i.tel,i.wa,i.estado,i.propId,i.hab,i.alq,i.fia,i.dia,i.ini,i.fin,i.val,i.mot,i.notas])},
       {sheet:'Pagos', h:['ID','InqID','Concepto','Mes','Importe','Estado','Fecha','Notas','PDF'], rows:D.pagos.map(p=>[p.id,p.inqId,p.con,p.mes,p.imp,p.estado,p.fecha,p.notas,p.pdfName||''])},
       {sheet:'Gastos', h:['ID','Desc','Cat','Importe','PisoID','Fecha','Ded','Prov','Notas','PDF'], rows:D.gastos.map(g=>[g.id,g.desc,g.cat,g.imp,g.propId,g.fecha,g.ded,g.prov,g.notas,g.pdfName||''])},
