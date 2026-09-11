@@ -1144,6 +1144,14 @@ td .name-link:hover{border-bottom-color:var(--acc);}
         <div class="fgrp"><label>% Vacancia estimado</label><input id="cv" type="number" value="5" onchange="saveCfg()"></div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-title">📈 Revalorización anual por IPC</div>
+      <div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-bottom:12px;">
+        El valor de tasación de cada piso se actualiza cada año aplicando el IPC del año correspondiente. Revisa y ajusta estos porcentajes una vez al año con el dato oficial de tu Comunidad Autónoma en <a href="https://www.ine.es" target="_blank" style="color:var(--acc);">ine.es</a>.
+      </div>
+      <div id="ipc-tabla" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="anyadirAnyoIPC()">+ Añadir año</button>
+    </div>
     <div class="card"><div class="card-title">Backup de datos</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button class="btn btn-success" onclick="exportAll()">⬇ Exportar backup JSON local</button>
@@ -1373,7 +1381,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp fgf" style="font-size:10.5px;color:var(--ink3);">Si asignas un usufructuario, los ingresos y la fiscalidad de este piso computan a su nombre. Al quitarlo, vuelven al propietario.</div>
     <div class="fgrp fgf"><label>Dirección</label><input id="pr-d" placeholder="Calle, número, piso, puerta"></div>
     <div class="fgrp"><label>Ciudad</label><input id="pr-c" placeholder="Alicante"></div>
-    <div class="fgrp"><label>Código postal</label><input id="pr-cp" placeholder="03001"></div>
+    <div class="fgrp"><label>Código postal</label><input id="pr-cp" placeholder="03001" oninput="mostrarCcaaDetectada()"></div>
+    <div class="fgrp fgf" id="pr-ccaa-info" style="font-size:10.5px;color:var(--ink3);"></div>
     <div class="fgrp"><label>Nº habitaciones *</label><input id="pr-h" type="number" placeholder="5" min="1" max="20"></div>
     <div class="fgrp"><label>Precio de compra (€)</label><input id="pr-p" type="number" placeholder="130000" oninput="calcCosteTotal()"></div>
     <div class="fgrp fgf">
@@ -1383,6 +1392,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       </button>
     </div>
     <div class="fgrp"><label>Valor de tasación (€)</label><input id="pr-tasacion" type="number" placeholder="145000"></div>
+    <div class="fgrp"><label>Fecha de esa tasación</label><input id="pr-fecha-tasacion" type="date"></div>
     <div class="fgrp"><label>Valor de mercado estimado (€)</label><input id="pr-mercado" type="number" placeholder="160000"></div>
     <div class="fgrp"><label>Fecha de compra (escritura)</label><input id="pr-fc" type="date"></div>
     <div class="fgrp fgf" id="pr-coste-total" style="font-size:12px;color:var(--ink3);"></div>
@@ -2212,27 +2222,64 @@ function comprimirImagen2(dataUri, maxLado, calidad){
   });
 }
 
+// Garantiza que el nombre de archivo tenga la extensión correcta según el tipo real
+function nombreConExtension(nombre, mime){
+  nombre = nombre || 'documento';
+  const yaTiene = /\.(pdf|jpe?g|png|gif|webp)$/i.test(nombre);
+  if(yaTiene) return nombre;
+  const ext = mime && mime.includes('pdf') ? '.pdf'
+    : mime && mime.includes('png') ? '.png'
+    : mime && mime.includes('jpeg') ? '.jpg'
+    : mime && mime.includes('webp') ? '.webp'
+    : '.pdf'; // por defecto, casi siempre son PDF
+  return nombre + ext;
+}
+
+// Descarga forzada mediante un <a download>: funciona igual en escritorio, Android y
+// dentro de la app instalada en iPhone (donde window.open() solo reabre la propia app).
+function descargarBlob(blob, nombre){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreConExtension(nombre, blob.type);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 30000);
+}
+
 async function openPdf(ref, name){
   if(!ref){ toast('Sin documento adjunto', false); return; }
   // Nuevo formato: drive:ID  → descargar de Drive
   if(typeof ref==='string' && ref.startsWith('drive:')){
     const id=ref.slice(6);
     if(!gToken){ toast('Conéctate a Google Drive para ver el archivo', false); return; }
-    toast('Abriendo…');
+    toast('Descargando…');
     try{
       const r=await fetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media',
         {headers:{'Authorization':'Bearer '+gToken}});
       if(!r.ok) throw new Error(r.status);
-      const blob=await r.blob();
-      const url=URL.createObjectURL(blob);
-      window.open(url,'_blank');
-      setTimeout(()=>URL.revokeObjectURL(url), 60000);
-    }catch(e){ toast('No se pudo abrir el archivo', false); }
+      let blob=await r.blob();
+      // Si Drive no informa bien el tipo, forzamos a PDF (caso más común aquí)
+      if(!blob.type || blob.type==='application/octet-stream'){
+        blob = new Blob([blob], {type:'application/pdf'});
+      }
+      descargarBlob(blob, name);
+    }catch(e){ toast('No se pudo descargar el archivo', false); }
     return;
   }
-  // Formato antiguo: base64 embebido
-  const a=document.createElement('a');
-  a.href=ref; a.download=name||'documento'; a.target='_blank'; a.click();
+  // Formato antiguo: base64 embebido → convertir a Blob real para que descargue bien tipado
+  try{
+    const partes = ref.split(',');
+    const mime = (partes[0].match(/:(.*?);/)||[])[1] || 'application/pdf';
+    const bstr = atob(partes[1]);
+    const u8 = new Uint8Array(bstr.length);
+    for(let i=0;i<bstr.length;i++) u8[i]=bstr.charCodeAt(i);
+    descargarBlob(new Blob([u8],{type:mime}), name);
+  }catch(e){
+    // Si no es base64 válido, último recurso: enlace directo
+    const a=document.createElement('a'); a.href=ref; a.download=nombreConExtension(name); a.click();
+  }
 }
 
 const PDF_PLACEHOLDERS = {
@@ -2337,6 +2384,13 @@ const DOC_INFO = {
   doc5:{ico:'📄',nom:'Otros'}
 };
 
+
+
+function mostrarCcaaDetectada(){
+  const cp=gi('pr-cp'); const el=$i('pr-ccaa-info'); if(!el) return;
+  const det=detectarCCAA(cp);
+  el.innerHTML = det ? `📍 Detectado: <strong style="color:var(--ink2);">${det[0]}</strong> · ${det[1]}` : (cp?'CP no reconocido; se usará la actualización general':'');
+}
 
 function calcCosteTotal(){
   const p=gn('pr-p');
@@ -2545,7 +2599,7 @@ function actualizarResumenCostesAdq(p){
 function newProp(){
   $i('pr-edit-id').value='';
   $i('m-prop-title').textContent='🏢 Nueva Propiedad';
-  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-mercado','pr-pctc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-fecha-tasacion','pr-mercado','pr-pctc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   $i('pr-docs-actuales').innerHTML='';
   $i('pr-owner').value=''; $i('pr-usufructo').value=''; $i('pr-coste-total').innerHTML='';
@@ -2559,10 +2613,10 @@ function editProp(id){
   $i('m-prop-title').textContent='✏️ Editar Propiedad';
   $i('pr-n').value=p.nom||''; $i('pr-d').value=p.dir||''; $i('pr-c').value=p.ciu||'';
   $i('pr-cp').value=p.cp||''; $i('pr-h').value=p.habs||''; $i('pr-p').value=p.precio||'';
-  $i('pr-fc').value=p.fcompra||(p.anyo?p.anyo+'-01-01':''); $i('pr-hip').value=p.hipo||''; $i('pr-cap').value=p.capital||'';
+  $i('pr-fc').value=p.fcompra||(p.anyo?p.anyo+'-01-01':''); $i('pr-hip').value=p.hipo||''; mostrarCcaaDetectada(); $i('pr-cap').value=p.capital||'';
   $i('pr-vc').value=p.vc||''; $i('pr-owner').value=p.ownerId||''; $i('pr-usufructo').value=p.usufructoId||'';
   migrarCostesAdqLegacy(p);
-  $i('pr-tasacion').value=p.tasacion||''; $i('pr-mercado').value=p.mercado||''; $i('pr-pctc').value=p.pctConstruccion||'';
+  $i('pr-tasacion').value=p.tasacion||''; $i('pr-fecha-tasacion').value=p.fechaTasacion||''; $i('pr-mercado').value=p.mercado||''; $i('pr-pctc').value=p.pctConstruccion||'';
   actualizarResumenCostesAdq(p); calcCosteTotal();
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   // Mostrar documentos ya guardados
@@ -2596,7 +2650,7 @@ function saveProp(){
   });
   const fc=gi('pr-fc');
   const campos={nom,ownerId:gi('pr-owner'),usufructoId:gi('pr-usufructo'),dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,
-    precio:gn('pr-p'),compra:gn('pr-com'),gcompra:gn('pr-gc'),tasacion:gn('pr-tasacion'),mercado:gn('pr-mercado'),pctConstruccion:gn('pr-pctc'),fcompra:fc,anyo:fc?fc.slice(0,4):gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
+    precio:gn('pr-p'),compra:gn('pr-com'),gcompra:gn('pr-gc'),tasacion:gn('pr-tasacion'),fechaTasacion:gi('pr-fecha-tasacion'),mercado:gn('pr-mercado'),pctConstruccion:gn('pr-pctc'),fcompra:fc,anyo:fc?fc.slice(0,4):gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
   if(editId){
     const p=D.props.find(x=>x.id==editId);
     if(p){ Object.assign(p,campos); p.docs=Object.assign({},p.docs||{},nuevosDocs); }
@@ -2607,7 +2661,7 @@ function saveProp(){
   }
   saveAndSync(); closeM('m-prop'); rProps(); rHabs();
   $i('pr-edit-id').value='';
-  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-mercado','pr-pctc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-fecha-tasacion','pr-mercado','pr-pctc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   $i('pr-docs-actuales').innerHTML=''; $i('pr-coste-total').innerHTML='';
 }
@@ -2651,6 +2705,7 @@ function rProps(){
       <div class="pbar"><div class="pbar-fill" style="width:${pc}%;background:${col};"></div></div>
       ${(p.fcompra||p.anyo)?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;">Comprado ${p.fcompra?fD(p.fcompra):p.anyo}${totalCostesAdq(p)>0?' · Coste total '+eur(parseFloat(p.precio||0)+totalCostesAdq(p)):''} · Hipoteca ${p.hipo||0}€/mes</div>`:''}${totalCostesAdq(p)>0?`<div style="font-size:10px;color:var(--acc);margin-top:3px;">📐 ${(p.costesAdq||[]).length} gasto${((p.costesAdq||[]).length!==1)?'s':''} de adquisición · ${eur(totalCostesAdq(p))}</div>`:''}
     ${totalFacturasVinculadas(p)>0?`<div style="font-size:10px;color:var(--acc);margin-top:2px;">🧾 + ${eur(totalFacturasVinculadas(p))} en facturas vinculadas (amortizables)</div>`:''}
+    ${(()=>{const va=valorActualizadoPiso(p); const det=detectarCCAA(p.cp); return va.desdeAnyo&&va.pctAcum>0?`<div style="font-size:10px;color:var(--bl);margin-top:2px;">📈 Valor actualizado por IPC${det?' ('+det[1]+')':''}: <strong>${eur(va.valor)}</strong> (+${va.pctAcum.toFixed(1)}% desde ${va.desdeAnyo})</div>`:'';})()}
     ${dineroPropio(p)>0?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Dinero propio</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${eur(dineroPropio(p))}</div></div>
       ${roceDe(p)!==null?`<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">ROCE anual</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:${roceDe(p)>=0?'var(--gn)':'var(--rd)'};">${roceDe(p).toFixed(1)}%</div></div>`:''}
@@ -3270,8 +3325,9 @@ function rPropietarios(){
     const renta=inqs.reduce((s,i)=>s+parseFloat(i.alq||0),0);
     const facts=(D.compras||[]).filter(x=>ownerDe(x)==o.id);
     const totalFact=facts.reduce((s,x)=>s+parseFloat(x.imp||0),0);
-    const valorProp=p=>parseFloat(p.tasacion||p.mercado||p.precio||0);
+    const valorProp=p=>valorActualizadoPiso(p).valor||parseFloat(p.tasacion||p.mercado||p.precio||0);
     const valor=props.reduce((s,p)=>s+valorProp(p),0);
+    const valorOriginal=props.reduce((s,p)=>s+parseFloat(p.tasacion||p.mercado||p.precio||0),0);
     const deudaH=(D.hipotecas||[]).filter(h=>{const p2=D.props.find(x=>x.id==h.propId);return (h.ownerId||(p2?p2.ownerId:''))==o.id;}).reduce((s,h)=>s+parseFloat(h.pend||0),0);
     const patNeto=valor-deudaH;
     const ini=(o.alias||o.nom||'?').trim()[0].toUpperCase();
@@ -3300,7 +3356,7 @@ function rPropietarios(){
         <div style="display:flex;gap:5px;flex-wrap:wrap;">${props.map(p=>`<span class="badge badge-b">${p.nom}</span>`).join('')}</div>
       </div>`:''}
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8.5px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Patrimonio bruto</div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">${eur(valor)}</div><div style="font-size:8px;color:var(--ink3);">según tasación/mercado</div></div>
+        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8.5px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Patrimonio bruto</div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">${eur(valor)}</div><div style="font-size:8px;color:var(--ink3);">${valor!=valorOriginal?`actualizado por IPC (orig. ${eur(valorOriginal)})`:'según tasación/mercado'}</div></div>
         <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8.5px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Patrimonio neto</div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gn);">${eur(patNeto)}</div></div>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--ink3);">Deuda hipotecaria: <strong style="color:var(--rd);">${eur(deudaH)}</strong> · Facturado: <strong style="color:var(--ink2);">${eur(totalFact)}</strong> · IRPF ${o.irpf||24}%</div>
@@ -5409,6 +5465,92 @@ function roceDe(p){
   return flujoAnual/dp*100;
 }
 
+
+// ── Comunidad Autónoma automática a partir del código postal ──
+const CP_A_CCAA = {
+  '01':['Álava','País Vasco'],'02':['Albacete','Castilla-La Mancha'],'03':['Alicante','C. Valenciana'],
+  '04':['Almería','Andalucía'],'05':['Ávila','Castilla y León'],'06':['Badajoz','Extremadura'],
+  '07':['Baleares','Islas Baleares'],'08':['Barcelona','Cataluña'],'09':['Burgos','Castilla y León'],
+  '10':['Cáceres','Extremadura'],'11':['Cádiz','Andalucía'],'12':['Castellón','C. Valenciana'],
+  '13':['Ciudad Real','Castilla-La Mancha'],'14':['Córdoba','Andalucía'],'15':['A Coruña','Galicia'],
+  '16':['Cuenca','Castilla-La Mancha'],'17':['Girona','Cataluña'],'18':['Granada','Andalucía'],
+  '19':['Guadalajara','Castilla-La Mancha'],'20':['Gipuzkoa','País Vasco'],'21':['Huelva','Andalucía'],
+  '22':['Huesca','Aragón'],'23':['Jaén','Andalucía'],'24':['León','Castilla y León'],
+  '25':['Lleida','Cataluña'],'26':['La Rioja','La Rioja'],'27':['Lugo','Galicia'],
+  '28':['Madrid','Madrid'],'29':['Málaga','Andalucía'],'30':['Murcia','Región de Murcia'],
+  '31':['Navarra','Navarra'],'32':['Ourense','Galicia'],'33':['Asturias','Asturias'],
+  '34':['Palencia','Castilla y León'],'35':['Las Palmas','Canarias'],'36':['Pontevedra','Galicia'],
+  '37':['Salamanca','Castilla y León'],'38':['Sta. Cruz Tenerife','Canarias'],'39':['Cantabria','Cantabria'],
+  '40':['Segovia','Castilla y León'],'41':['Sevilla','Andalucía'],'42':['Soria','Castilla y León'],
+  '43':['Tarragona','Cataluña'],'44':['Teruel','Aragón'],'45':['Toledo','Castilla-La Mancha'],
+  '46':['Valencia','C. Valenciana'],'47':['Valladolid','Castilla y León'],'48':['Bizkaia','País Vasco'],
+  '49':['Zamora','Castilla y León'],'50':['Zaragoza','Aragón'],'51':['Ceuta','Ceuta'],'52':['Melilla','Melilla']
+};
+function detectarCCAA(cp){
+  if(!cp) return null;
+  const pref = String(cp).trim().slice(0,2);
+  return CP_A_CCAA[pref] || null;
+}
+function ccaaDe(p){
+  const det = detectarCCAA(p.cp);
+  return det ? det[1] : (p.ccaaManual || null);
+}
+
+
+// ── Revalorización del valor de tasación según IPC anual (editable en Configuración) ──
+// Tabla por defecto: IPC general nacional aproximado (INE). El usuario puede corregirlo
+// por su Comunidad Autónoma exacta en Configuración una vez al año.
+function tablaIPC(){
+  return (D.cfg && D.cfg.ipcAnual) ? D.cfg.ipcAnual : {
+    '2022':5.7,'2023':3.1,'2024':2.8,'2025':2.5,'2026':2.3
+  };
+}
+
+function rTablaIPC(){
+  const el=$i('ipc-tabla'); if(!el) return;
+  if(!D.cfg.ipcAnual) D.cfg.ipcAnual = tablaIPC();
+  const anyos=Object.keys(D.cfg.ipcAnual).sort();
+  el.innerHTML=anyos.map(a=>`
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="mono" style="width:44px;font-size:12px;color:var(--ink3);">${a}</span>
+      <input type="number" step="0.1" value="${D.cfg.ipcAnual[a]}" style="width:80px;padding:6px 8px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;" onchange="editarIPC('${a}',this.value)">
+      <span style="font-size:11px;color:var(--ink3);">%</span>
+      <button class="btn btn-danger btn-xs" onclick="borrarAnyoIPC('${a}')">🗑</button>
+    </div>`).join('');
+}
+function editarIPC(anyo, valor){
+  D.cfg.ipcAnual[anyo]=parseFloat(valor)||0;
+  saveAndSync();
+}
+function anyadirAnyoIPC(){
+  if(!D.cfg.ipcAnual) D.cfg.ipcAnual = tablaIPC();
+  const anyos=Object.keys(D.cfg.ipcAnual).map(Number);
+  const siguiente = anyos.length ? Math.max(...anyos)+1 : new Date().getFullYear();
+  D.cfg.ipcAnual[String(siguiente)] = 2.5;
+  saveAndSync(); rTablaIPC();
+}
+function borrarAnyoIPC(anyo){
+  delete D.cfg.ipcAnual[anyo];
+  saveAndSync(); rTablaIPC();
+}
+
+function valorActualizadoPiso(p){
+  const base = parseFloat(p.tasacion||p.mercado||p.precio||0);
+  if(!base) return {valor:0,pct:0,desdeAnyo:null};
+  const fechaBase = p.tasacion>0 ? (p.fcompra||'') : (p.fcompra||'');
+  // Año desde el que empezamos a revalorizar: el de la tasación si la hay, si no el de compra
+  const anyoBase = parseInt((p.fechaTasacion||p.fcompra||'').slice(0,4)) || parseInt((p.fcompra||'').slice(0,4));
+  if(!anyoBase) return {valor:base,pct:0,desdeAnyo:null};
+  const anyoActual = new Date().getFullYear();
+  const tabla = tablaIPC();
+  let valor = base, pctAcum=0;
+  for(let y=anyoBase+1; y<=anyoActual; y++){
+    const tasa = tabla[String(y)];
+    if(typeof tasa==='number'){ valor *= (1+tasa/100); pctAcum += tasa; }
+  }
+  return {valor, pctAcum, desdeAnyo:anyoBase, base};
+}
+
 function baseConstruccion(p){
   if(parseFloat(p.vc||0) > 0) return parseFloat(p.vc);
   const pct = parseFloat(p.pctConstruccion||0) || 70;   // 70% por defecto (suelo ~30%)
@@ -6093,7 +6235,8 @@ function expCSV(){const h=['Estado','Nombre','Apellidos','Email','Tel','WhatsApp
 // CONFIGURACIÓN
 // ══════════════════════════════════════════════════════════════
 function saveCfg(){D.cfg={nom:gi('cn'),irpf:gn('ci')||24,amorti:gn('ca')||3,vacancia:gn('cv')||5};saveAndSync();toast('Guardado');}
-function rCfg(){$i('cn').value=D.cfg.nom||'';$i('ci').value=D.cfg.irpf||24;$i('ca').value=D.cfg.amorti||3;$i('cv').value=D.cfg.vacancia||5;}
+function rCfg(){
+  rTablaIPC();$i('cn').value=D.cfg.nom||'';$i('ci').value=D.cfg.irpf||24;$i('ca').value=D.cfg.amorti||3;$i('cv').value=D.cfg.vacancia||5;}
 function exportAll(){const blob=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`rentacontrol_backup_${new Date().toISOString().split('T')[0]}.json`;a.click();toast('Backup descargado');}
 function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{D=JSON.parse(ev.target.result);saveAndSync();rDash();toast('Datos importados ✓');}catch{toast('Error al importar',false);}};r.readAsText(f);}
 function clearAll(){if(!confirm('¿Borrar TODOS los datos?'))return;if(!confirm('¿Seguro? Se borrarán solo los datos del espacio '+((WS_CFG[WS]||{}).nom||'actual')+'. Sin vuelta atrás.'))return;D=def();saveAndSync();rDash();toast('Datos borrados');}
@@ -6101,11 +6244,21 @@ function clearAll(){if(!confirm('¿Borrar TODOS los datos?'))return;if(!confirm(
 // ══════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════
+
+function actualizarRelojTopbar(){
+  const el=$i('topbar-date'); if(!el) return;
+  const d=new Date();
+  const fecha=d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
+  const hora=d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.textContent=fecha+' · '+hora;
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
 
   const haySesion = checkExistingSession();
   const d=new Date();
-  $i('topbar-date').textContent=d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
+  actualizarRelojTopbar();
+  setInterval(actualizarRelojTopbar, 1000);
   $i('hm').value=d.toISOString().slice(0,7);
   $i('pa-m').value=d.toISOString().slice(0,7);
   $i('pa-f').value=d.toISOString().split('T')[0];
