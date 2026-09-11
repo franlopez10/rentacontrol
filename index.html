@@ -1435,6 +1435,14 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       </div>
     </div>
     <div class="fgrp">
+      <label>📐 Tasación</label>
+      <div class="pdf-upload-zone" id="pr-doc7-zone" onclick="document.getElementById('pr-doc7').click()">
+        <input type="file" id="pr-doc7" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handlePdfUpload('pr-doc7','pr-doc7-zone','pr-doc7-data')">
+        <input type="hidden" id="pr-doc7-data"><input type="hidden" id="pr-doc7-name">
+        <span class="pdf-upload-label">📎 Adjuntar tasación en PDF</span>
+      </div>
+    </div>
+    <div class="fgrp">
       <label>📄 Otros documentos</label>
       <div class="pdf-upload-zone" id="pr-doc5-zone" onclick="document.getElementById('pr-doc5').click()">
         <input type="file" id="pr-doc5" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handlePdfUpload('pr-doc5','pr-doc5-zone','pr-doc5-data')">
@@ -2228,6 +2236,7 @@ const PDF_PLACEHOLDERS = {
   'pr-doc3-zone':'📎 Adjuntar compraventa',
   'pr-doc4-zone':'📎 Adjuntar escritura hipoteca',
   'pr-doc6-zone':'📎 Adjuntar factura inmobiliaria',
+  'pr-doc7-zone':'📎 Adjuntar tasación en PDF',
   'pr-doc5-zone':'📎 Adjuntar otro documento',
   'ga-pdf-zone':'📎 Haz clic para adjuntar PDF o imagen',
   'pa-pdf-zone':'📎 Haz clic para adjuntar recibo o factura',
@@ -2312,13 +2321,14 @@ document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click
 // ══════════════════════════════════════════════════════════════
 // PROPIEDADES
 // ══════════════════════════════════════════════════════════════
-const DOC_KEYS = ['doc1','doc2','doc3','doc4','doc6','doc5'];
+const DOC_KEYS = ['doc1','doc2','doc3','doc4','doc6','doc7','doc5'];
 const DOC_INFO = {
   doc1:{ico:'📋',nom:'Nota simple'},
   doc2:{ico:'🤝',nom:'Arras'},
   doc3:{ico:'🏠',nom:'Compraventa'},
   doc4:{ico:'🏦',nom:'Hipoteca'},
   doc6:{ico:'🧾',nom:'Factura inmobiliaria'},
+  doc7:{ico:'📐',nom:'Tasación'},
   doc5:{ico:'📄',nom:'Otros'}
 };
 
