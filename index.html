@@ -948,19 +948,46 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 <!-- ═══════════════ PAGOS ═══════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-pagos">
-  <div class="ph"><div class="ph-title">💳 Pagos</div>
+  <div class="ph"><div><div class="ph-title">💳 Pagos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Vista rápida por piso y habitación. Verde = cobrado · Gris = pendiente · Rojo = vencido</div></div>
     <div class="ph-acts">
-      <button class="btn btn-success btn-sm" onclick="genPagos()">⚡ Generar mes</button>
-      <button class="btn btn-primary" onclick="openM('m-pa')">+ Registrar pago</button>
+      <button class="btn btn-success btn-sm" onclick="genPagos()">⚡ Generar mes actual</button>
+      <button class="btn btn-primary" onclick="newPago()">+ Registrar pago</button>
     </div>
   </div>
-  <div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);" id="pa-kpis"></div>
-  <div class="fb">
-    <div class="fi"><span class="fi-icon">🔍</span><input id="paq" placeholder="Buscar..." oninput="rPagos()"></div>
-    <select id="paef" onchange="rPagos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos</option><option value="pagado">✅ Pagados</option><option value="pendiente">⏳ Pendiente</option><option value="atrasado">🔴 Atrasado</option></select>
-    <select id="pamf" onchange="rPagos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:140px;outline:none;"><option value="">Todos los meses</option></select>
+
+  <!-- Navegador de mes -->
+  <div class="periodo-nav">
+    <div class="periodo-fila" style="align-items:center;">
+      <span class="periodo-lbl">Mes</span>
+      <button class="btn btn-ghost btn-xs" onclick="cambiarMesTablero(-1)">‹ Anterior</button>
+      <input type="month" id="pa-mes-tablero" onchange="rTableroPagos()" style="padding:7px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:13px;color:var(--ink);font-weight:600;outline:none;">
+      <button class="btn btn-ghost btn-xs" onclick="cambiarMesTablero(1)">Siguiente ›</button>
+      <button class="btn btn-secondary btn-xs" onclick="irMesActualTablero()">Hoy</button>
+    </div>
   </div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Inquilino</th><th>Piso/Hab</th><th>Concepto</th><th>Mes</th><th>Importe</th><th>Estado</th><th>Fecha pago</th><th></th></tr></thead><tbody id="pa-tb"></tbody></table></div></div>
+
+  <!-- Resumen del mes -->
+  <div id="pa-resumen" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+
+  <!-- Tablero por pisos y habitaciones -->
+  <div id="pa-tablero"></div>
+
+  <!-- Tabla detallada (colapsable) -->
+  <div class="card" style="margin-top:20px;">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleTablaPagos()">
+      <span>📋 Detalle de todos los movimientos</span>
+      <span id="pa-tabla-chevron" style="font-size:12px;">▼</span>
+    </div>
+    <div id="pa-tabla-wrap" style="display:none;">
+      <div class="fb" style="margin-top:12px;">
+        <div class="fi"><span class="fi-icon">🔍</span><input id="paq" placeholder="Buscar..." oninput="rPagos()"></div>
+        <select id="paef" onchange="rPagos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos</option><option value="pagado">✅ Pagados</option><option value="pendiente">⏳ Pendiente</option><option value="atrasado">🔴 Atrasado</option></select>
+        <select id="pamf" onchange="rPagos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:140px;outline:none;"><option value="">Todos los meses</option></select>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr><th>Inquilino</th><th>Piso/Hab</th><th>Concepto</th><th>Mes</th><th>Importe</th><th>Estado</th><th>Fecha pago</th><th></th></tr></thead><tbody id="pa-tb"></tbody></table></div>
+    </div>
+  </div>
 </section>
 
 <!-- ═══════════════ GASTOS ═══════════════ -->
@@ -2319,7 +2346,7 @@ function clearPdfZone(zoneId, dataId) {
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════
 const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,propietarios:rPropietarios,
-  activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rPagos,
+  activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rTableroPagos,
   gastos:rGastos,facturas:rFacturas,hist:rHist,fiscal:rFiscal,
   informes:rInfs,incs:rIncs,provs:rProvs,hipotecas:rHipotecas,cfg:rCfg,
   pDash:rPDash, pMovs:rMovs, pCuentas:rCuentas, pSubs:rSubs, pPresup:rPresup,
@@ -3109,6 +3136,14 @@ function autoGenerarPagosPendientes(){
   if(gen>0){ saveAndSync(); }
   return gen;
 }
+function newPago(){
+  ['pa-imp','pa-fecha','pa-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  const s=$i('pa-i'); if(s)s.value='';
+  const fecha=$i('pa-fecha'); if(fecha)fecha.value=new Date().toISOString().split('T')[0];
+  clearPdfZone&&clearPdfZone('pa-pdf-zone','pa-pdf-data');
+  openM('m-pa');
+}
+
 function addPago(){
   const iId=gi('pa-i'),imp=gn('pa-imp');if(!iId||!imp){toast('Completa inquilino e importe',false);return;}
   const pdfData=$i('pa-pdf-data')?.value||'';
@@ -3119,6 +3154,185 @@ function addPago(){
   rPagos();rDash();toast('Pago registrado');
 }
 function cobrar(id){const p=D.pagos.find(x=>x.id==id);if(p){p.estado='pagado';p.fecha=new Date().toISOString().split('T')[0];}saveAndSync();rPagos();rDash();toast('Cobrado ✓');}
+
+// ══════════════════════════════════════════════════════════════
+// TABLERO DE PAGOS POR PISO Y HABITACIÓN
+// ══════════════════════════════════════════════════════════════
+let _mesTablero = '';
+
+// Estado de cobro de un inquilino en un mes: 'cobrado' | 'parcial' | 'pendiente' | 'vencido' | 'sin'
+function estadoCobroInquilino(inqId, mes){
+  const pagos = D.pagos.filter(p=>p.inqId==inqId && p.mes===mes);
+  if(!pagos.length) return {estado:'sin', pagados:[], pendientes:[], total:0, cobrado:0};
+  const cobrado = pagos.filter(p=>p.estado==='pagado');
+  const pend = pagos.filter(p=>p.estado!=='pagado');
+  const totalImp = pagos.reduce((s,p)=>s+parseFloat(p.imp||0),0);
+  const cobradoImp = cobrado.reduce((s,p)=>s+parseFloat(p.imp||0),0);
+  // ¿Está vencido? El mes vence el día 1 de ese mismo mes
+  const venc = new Date(mes+'-01T00:00:00');
+  const hoy = new Date();
+  const vencido = hoy >= venc;   // ya llegó el día 1 del mes → debía estar pagado
+  let estado;
+  if(pend.length===0) estado='cobrado';
+  else if(cobrado.length>0) estado='parcial';
+  else estado = vencido ? 'vencido' : 'pendiente';
+  // Si es parcial y además está vencido, sigue siendo parcial (naranja) pero con matiz
+  return {estado, pagados:cobrado.map(p=>p.con), pendientes:pend.map(p=>p.con),
+          total:totalImp, cobrado:cobradoImp, vencido};
+}
+
+const COL_ESTADO = {
+  cobrado:{bg:'rgba(16,185,129,.12)',bd:'rgba(16,185,129,.4)',txt:'#059669',et:'Cobrado',ic:'✅'},
+  parcial:{bg:'rgba(245,158,11,.12)',bd:'rgba(245,158,11,.45)',txt:'#d97706',et:'Parcial',ic:'⚠️'},
+  pendiente:{bg:'rgba(120,120,120,.10)',bd:'rgba(120,120,120,.3)',txt:'#6b7280',et:'Pendiente',ic:'⏳'},
+  vencido:{bg:'rgba(239,68,68,.12)',bd:'rgba(239,68,68,.45)',txt:'#dc2626',et:'VENCIDO',ic:'🔴'},
+  sin:{bg:'var(--bg)',bd:'var(--line)',txt:'var(--ink3)',et:'Sin datos',ic:'–'}
+};
+
+function cambiarMesTablero(delta){
+  const [y,m]=_mesTablero.split('-').map(Number);
+  const d=new Date(y,m-1+delta,1);
+  _mesTablero=d.toISOString().slice(0,7);
+  $i('pa-mes-tablero').value=_mesTablero;
+  rTableroPagos();
+}
+function irMesActualTablero(){
+  _mesTablero=new Date().toISOString().slice(0,7);
+  $i('pa-mes-tablero').value=_mesTablero;
+  rTableroPagos();
+}
+function toggleTablaPagos(){
+  const w=$i('pa-tabla-wrap'), ch=$i('pa-tabla-chevron');
+  const abierto = w.style.display!=='none';
+  w.style.display = abierto?'none':'block';
+  ch.textContent = abierto?'▼':'▲';
+  if(!abierto) rPagos();
+}
+
+// Marcar/desmarcar todos los cobros de un inquilino en el mes
+function toggleCobroInquilino(inqId, mes){
+  const pagos=D.pagos.filter(p=>p.inqId==inqId && p.mes===mes);
+  if(!pagos.length){
+    // No hay pagos generados: generarlos para este inquilino/mes y dejarlos pendientes
+    generarPagosInquilinoMes(inqId, mes);
+    rTableroPagos();
+    return;
+  }
+  const todosCobrados = pagos.every(p=>p.estado==='pagado');
+  const hoy=new Date().toISOString().split('T')[0];
+  pagos.forEach(p=>{
+    p.estado = todosCobrados ? 'pendiente' : 'pagado';
+    p.fecha = todosCobrados ? '' : hoy;
+  });
+  saveAndSync(); rTableroPagos();
+  toast(todosCobrados?'Marcado como pendiente':'✓ Cobro completo registrado');
+}
+
+// Marcar un concepto suelto (cuota / luz / agua)
+function toggleCobroConcepto(inqId, mes, con){
+  let p=D.pagos.find(x=>x.inqId==inqId && x.mes===mes && x.con===con);
+  if(!p){
+    const inq=D.inqs.find(i=>i.id==inqId); if(!inq) return;
+    const imp = con==='Alquiler'?inq.alq : con==='Luz'?inq.luz : con==='Agua'?inq.agua : 0;
+    p={id:uid(),inqId,con,mes,imp,estado:'pendiente',fecha:'',notas:'Auto'};
+    D.pagos.push(p);
+  }
+  const hoy=new Date().toISOString().split('T')[0];
+  if(p.estado==='pagado'){ p.estado='pendiente'; p.fecha=''; }
+  else { p.estado='pagado'; p.fecha=hoy; }
+  saveAndSync(); rTableroPagos();
+}
+
+function generarPagosInquilinoMes(inqId, mes){
+  const inq=D.inqs.find(i=>i.id==inqId); if(!inq) return;
+  const conceptos=[['Alquiler',inq.alq],['Luz',inq.luz],['Agua',inq.agua]];
+  conceptos.forEach(([con,imp])=>{
+    if(imp>0 && !D.pagos.find(p=>p.inqId==inqId && p.mes===mes && p.con===con)){
+      D.pagos.push({id:uid(),inqId,con,mes,imp,estado:'pendiente',fecha:'',notas:'Auto'});
+    }
+  });
+  saveAndSync();
+}
+
+function rTableroPagos(){
+  if(!_mesTablero){ _mesTablero=new Date().toISOString().slice(0,7); }
+  if($i('pa-mes-tablero') && !$i('pa-mes-tablero').value) $i('pa-mes-tablero').value=_mesTablero;
+  const mes=_mesTablero;
+
+  // Asegurar que existen los pagos de este mes para inquilinos activos
+  D.inqs.filter(i=>i.estado==='ACTIVO').forEach(inq=>{
+    if(inq.ini && inq.ini.slice(0,7)<=mes){ generarPagosInquilinoMes(inq.id, mes); }
+  });
+
+  // Resumen del mes
+  const activos=D.inqs.filter(i=>i.estado==='ACTIVO');
+  let nCobrado=0,nParcial=0,nPend=0,nVenc=0, impCobrado=0, impPend=0;
+  activos.forEach(inq=>{
+    const e=estadoCobroInquilino(inq.id, mes);
+    if(e.estado==='cobrado')nCobrado++;
+    else if(e.estado==='parcial')nParcial++;
+    else if(e.estado==='vencido')nVenc++;
+    else if(e.estado==='pendiente')nPend++;
+    impCobrado+=e.cobrado; impPend+=(e.total-e.cobrado);
+  });
+  $i('pa-resumen').innerHTML=`
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">✅ Cobrado</div><div class="kpi-value">${eur(impCobrado)}</div><div class="kpi-sub">${nCobrado} al día</div></div>
+    <div class="kpi" style="--kc:var(--ye);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">⚠️ Parcial</div><div class="kpi-value">${nParcial}</div><div class="kpi-sub">a medias</div></div>
+    <div class="kpi" style="--kc:var(--rd);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">🔴 Vencido</div><div class="kpi-value">${nVenc}</div><div class="kpi-sub">sin pagar</div></div>
+    <div class="kpi" style="--kc:var(--ink2);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Por cobrar</div><div class="kpi-value">${eur(impPend)}</div></div>`;
+
+  // Tablero por pisos
+  const cont=$i('pa-tablero');
+  const props=D.props.slice();
+  if(!props.length){ cont.innerHTML='<div class="empty"><div class="empty-icon">🏢</div><p>Añade propiedades e inquilinos para ver el tablero</p></div>'; return; }
+
+  cont.innerHTML=props.map(prop=>{
+    const inqsProp=D.inqs.filter(i=>i.estado==='ACTIVO' && i.propId==prop.id);
+    // Ordenar por número de habitación
+    inqsProp.sort((a,b)=>(parseInt(a.hab)||99)-(parseInt(b.hab)||99));
+    if(!inqsProp.length) return '';
+    const celdas=inqsProp.map(inq=>{
+      const e=estadoCobroInquilino(inq.id, mes);
+      const col=COL_ESTADO[e.estado];
+      const nombre=(inq.nom||'')+' '+(inq.ap||'');
+      // Detalle de conceptos
+      const conceptos=D.pagos.filter(p=>p.inqId==inq.id && p.mes===mes);
+      const detalle=conceptos.map(p=>{
+        const ok=p.estado==='pagado';
+        return `<div onclick="event.stopPropagation();toggleCobroConcepto('${inq.id}','${mes}','${p.con}')" style="display:flex;justify-content:space-between;align-items:center;padding:3px 6px;border-radius:5px;background:${ok?'rgba(16,185,129,.12)':'rgba(120,120,120,.08)'};cursor:pointer;margin-top:3px;">
+          <span style="font-size:10px;color:${ok?'#059669':'var(--ink3)'};">${ok?'✓':'○'} ${p.con}</span>
+          <span class="mono" style="font-size:10px;color:${ok?'#059669':'var(--ink3)'};">${eur(p.imp,0)}</span>
+        </div>`;
+      }).join('');
+      return `<div style="background:${col.bg};border:1.5px solid ${col.bd};border-radius:10px;padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+          <div style="cursor:pointer;flex:1;" onclick="openPerfil('${inq.id}')">
+            <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:${col.txt};">Hab. ${inq.hab||'?'}</div>
+            <div style="font-size:12.5px;font-weight:700;margin-top:2px;line-height:1.2;">${nombre}</div>
+          </div>
+          <span style="font-size:16px;">${col.ic}</span>
+        </div>
+        <div style="margin-top:8px;">${detalle}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid ${col.bd};">
+          <span style="font-size:11px;font-weight:700;color:${col.txt};">${col.et}</span>
+          <button onclick="event.stopPropagation();toggleCobroInquilino('${inq.id}','${mes}')" style="padding:4px 10px;border-radius:6px;border:1px solid ${col.bd};background:${e.estado==='cobrado'?'transparent':col.txt};color:${e.estado==='cobrado'?col.txt:'#fff'};font-size:10px;font-weight:600;cursor:pointer;">${e.estado==='cobrado'?'Desmarcar':'✓ Cobrar todo'}</button>
+        </div>
+      </div>`;
+    }).join('');
+    const libres=(prop.habs||0)-inqsProp.length;
+    return `<div class="card mb">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;">🏢 ${prop.nom}</div>
+        <div style="font-size:11px;color:var(--ink3);">${inqsProp.length} ocupada${inqsProp.length!==1?'s':''}${libres>0?' · '+libres+' libre'+(libres!==1?'s':''):''}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">${celdas}</div>
+    </div>`;
+  }).join('');
+
+  // refrescar la tabla si está abierta
+  if($i('pa-tabla-wrap') && $i('pa-tabla-wrap').style.display!=='none') rPagos();
+}
+
 function rPagos(){
   const tb=$i('pa-tb'),q=gi('paq').toLowerCase(),estF=gi('paef'),mesF=gi('pamf');
   let list=D.pagos.filter(p=>{
@@ -6413,7 +6627,7 @@ function aplicarWS(){
   const bs=$i('ws-switch2'); if(bs) bs.style.display='block';
   // Si es Personal, precargar el patrimonio inmobiliario de Gentaury
   if(esP && gToken){ cargarGentaury(); }
-  if(WS==='gentaury'){ repararTodasPropiedades(); autoGenerarPagosPendientes(); }
+  if(WS==='gentaury'){ repararTodasPropiedades(); autoGenerarPagosPendientes(); _mesTablero=new Date().toISOString().slice(0,7); }
   // Activar la primera sección del espacio
   const primera = document.querySelector('.nav-item[data-ws="'+WS+'"]');
   if(primera) go(primera);
