@@ -1375,9 +1375,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Nº habitaciones *</label><input id="pr-h" type="number" placeholder="5" min="1" max="20"></div>
     <div class="fgrp"><label>Precio de compra (€)</label><input id="pr-p" type="number" placeholder="130000" oninput="calcCosteTotal()"></div>
     <div class="fgrp fgf">
-      <button type="button" class="btn btn-secondary" style="width:100%;justify-content:space-between;" onclick="abrirCostesAdq()">
-        <span>📐 Gastos de adquisición desglosados (escritura, notaría, registro, gestoría, comisión…)</span>
-        <span id="pr-costesadq-resumen" class="mono" style="font-weight:700;"></span>
+      <button type="button" class="btn btn-secondary" style="width:100%;justify-content:space-between;white-space:normal;text-align:left;height:auto;padding:10px 14px;gap:10px;" onclick="abrirCostesAdq()">
+        <span style="flex:1;">📐 Gastos de adquisición desglosados<br><span style="font-weight:400;font-size:10.5px;color:var(--ink3);">notaría, registro, gestoría, comisión, ITP…</span></span>
+        <span id="pr-costesadq-resumen" class="mono" style="font-weight:700;flex-shrink:0;"></span>
       </button>
     </div>
     <div class="fgrp"><label>Valor de tasación (€)</label><input id="pr-tasacion" type="number" placeholder="145000"></div>
@@ -2053,7 +2053,6 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="fg">
     <div class="fgrp"><label>Concepto *</label>
       <select id="ca-concepto">
-        <option>Escritura de compraventa (con arras)</option>
         <option>Notaría compraventa</option>
         <option>Registro de la propiedad</option>
         <option>Gestoría compraventa</option>
@@ -2343,6 +2342,22 @@ const CA_ICONS={
 
 // Migra automáticamente los campos antiguos planos (compra/gcompra) a partidas,
 // solo la primera vez que se abre el desglose de un piso, sin perder nada.
+function repararEscrituraDuplicada(p){
+  if(!p.costesAdq || !p.costesAdq.length) return false;
+  const idx = p.costesAdq.findIndex(it => /^Escritura de compraventa/i.test(it.concepto||''));
+  if(idx < 0) return false;
+  const item = p.costesAdq[idx];
+  // Si aún no hay precio de compra guardado, rescatamos el importe de la partida
+  if(!parseFloat(p.precio||0)) p.precio = item.imp;
+  // Si la partida traía un PDF y la propiedad no tiene ya guardada la compraventa, lo conservamos ahí
+  if(item.pdfData){
+    if(!p.docs) p.docs = {};
+    if(!p.docs.doc3 || !p.docs.doc3.data) p.docs.doc3 = { data:item.pdfData, name:item.pdfName||'compraventa.pdf' };
+  }
+  p.costesAdq.splice(idx,1);
+  return true;
+}
+
 function migrarCostesAdqLegacy(p){
   if(!p.costesAdq) p.costesAdq=[];
   if(p.costesAdq.length) return; // ya migrado o ya tiene partidas propias
@@ -2362,6 +2377,7 @@ function abrirCostesAdq(){
   if(!propId){ toast('Primero guarda la propiedad (con nombre y habitaciones) y vuelve a editarla para añadir gastos de adquisición', false); return; }
   const p=D.props.find(x=>x.id==propId); if(!p) return;
   migrarCostesAdqLegacy(p);
+  if(repararEscrituraDuplicada(p)){ saveAndSync(); toast('Se ha corregido un dato duplicado de escritura'); }
   $i('ca-prop-id').value=propId;
   $i('ca-piso-nom').textContent=p.nom;
   $i('ca-fecha').value=p.fcompra||new Date().toISOString().split('T')[0];
@@ -2440,13 +2456,13 @@ function rCostesAdqLista(){
   const div=$i('ca-lista');
   if(!items.length){ div.innerHTML='<div class="empty" style="padding:20px;"><p>Sin partidas todavía. Añade la primera arriba.</p></div>'; $i('ca-total').innerHTML=''; return; }
   div.innerHTML=items.map(it=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);">
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:600;">${CA_ICONS[it.concepto]||'📄'} ${it.concepto}</div>
-        <div style="font-size:10.5px;color:var(--ink3);margin-top:2px;">${it.fecha?fD(it.fecha):'sin fecha'}${it.notas?' · '+it.notas:''}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:13px;font-weight:600;word-break:break-word;">${CA_ICONS[it.concepto]||'📄'} ${it.concepto}</div>
+        <div style="font-size:10.5px;color:var(--ink3);margin-top:2px;word-break:break-word;">${it.fecha?fD(it.fecha):'sin fecha'}${it.notas?' · '+it.notas:''}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="mono" style="font-weight:700;color:var(--acc);">${eur(it.imp,2)}</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        <span class="mono" style="font-weight:700;color:var(--acc);white-space:nowrap;">${eur(it.imp,2)}</span>
         ${it.pdfData?`<button class="pdf-badge green" onclick="openPdf('${it.pdfData}','${it.pdfName||'documento.pdf'}')">📄</button>`:''}
         <button class="btn btn-secondary btn-xs" onclick="editCosteAdqInline('${propId}','${it.id}')">✏️</button>
         <button class="btn btn-danger btn-xs" onclick="delCosteAdq('${propId}','${it.id}')">🗑</button>
@@ -2539,7 +2555,13 @@ function saveProp(){
 }
 
 
+function repararTodasPropiedades(){
+  let cambio=false;
+  (D.props||[]).forEach(p=>{ if(repararEscrituraDuplicada(p)) cambio=true; });
+  if(cambio) saveAndSync();
+}
 function rProps(){
+  repararTodasPropiedades();
   const g=$i('props-grid');
   if(!D.props.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏢</div><p>Añade tu primera propiedad</p></div>';return;}
   g.innerHTML=D.props.map(p=>{
@@ -6033,6 +6055,7 @@ function aplicarWS(){
   const bs=$i('ws-switch2'); if(bs) bs.style.display='block';
   // Si es Personal, precargar el patrimonio inmobiliario de Gentaury
   if(esP && gToken){ cargarGentaury(); }
+  if(WS==='gentaury') repararTodasPropiedades();
   // Activar la primera sección del espacio
   const primera = document.querySelector('.nav-item[data-ws="'+WS+'"]');
   if(primera) go(primera);
