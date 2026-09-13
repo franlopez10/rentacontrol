@@ -103,7 +103,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--ink);display:flex;}
 }
 #topbar-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--ink);}
 #topbar-right{display:flex;align-items:center;gap:10px;}
-#topbar-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);}
+#topbar-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink2);background:var(--bg);padding:6px 12px;border-radius:8px;border:1px solid var(--line);white-space:nowrap;}
+@media(max-width:768px){#topbar-date{font-size:9px;padding:4px 8px;}}
 
 #content{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px 28px;}
 
@@ -692,6 +693,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <button id="menu-toggle" onclick="toggleSb()">☰</button>
 <div id="gdrive-bar">
   <button id="mob-menu-btn" onclick="toggleSb()">&#9776;</button>
+  <span id="topbar-date-mob" style="font-family:'DM Mono',monospace;font-size:8.5px;color:rgba(255,255,255,.7);white-space:nowrap;"></span>
   <div id="gdrive-status">
     <div id="gdrive-dot"></div>
     <span id="gdrive-label">Google Drive — No conectado</span>
@@ -3114,15 +3116,16 @@ function genPagos(){
 // Genera automáticamente los cobros pendientes de TODOS los meses desde que entró cada inquilino
 function autoGenerarPagosPendientes(){
   const hoy=new Date();
-  const mesActual=hoy.toISOString().slice(0,7);
+  // A partir del día 1 de cada mes, ya se genera el mes SIGUIENTE (límite de pago: día 15 de este mes)
+  const finGeneracion = new Date(hoy.getFullYear(), hoy.getMonth()+1, 1); // primer día del mes que viene
+  const mesLimite = finGeneracion.toISOString().slice(0,7);
   let gen=0;
   D.inqs.filter(i=>i.estado==='ACTIVO').forEach(inq=>{
     if(!inq.ini) return;
-    // Desde el mes de inicio hasta el mes actual
     let d=new Date(inq.ini.slice(0,7)+'-01');
-    const fin=new Date(mesActual+'-01');
+    const fin=new Date(mesLimite+'-01');
     let guard=0;
-    while(d<=fin && guard<60){
+    while(d<=fin && guard<80){
       const mk=d.toISOString().slice(0,7);
       const conceptos=[['Alquiler',inq.alq],['Luz',inq.luz],['Agua',inq.agua]];
       conceptos.forEach(([con,imp])=>{
@@ -3168,10 +3171,12 @@ function estadoCobroInquilino(inqId, mes){
   const pend = pagos.filter(p=>p.estado!=='pagado');
   const totalImp = pagos.reduce((s,p)=>s+parseFloat(p.imp||0),0);
   const cobradoImp = cobrado.reduce((s,p)=>s+parseFloat(p.imp||0),0);
-  // ¿Está vencido? El mes vence el día 1 de ese mismo mes
-  const venc = new Date(mes+'-01T00:00:00');
+  // ¿Está vencido? El pago de un mes vence el día 15 del mes ANTERIOR.
+  // Ej: octubre (2026-10) vence el 15 de septiembre (2026-09-15).
+  const [my,mm]=mes.split('-').map(Number);
+  const venc = new Date(my, mm-2, 15, 23, 59, 59);   // mes-2 porque los meses en JS van de 0-11
   const hoy = new Date();
-  const vencido = hoy >= venc;   // ya llegó el día 1 del mes → debía estar pagado
+  const vencido = hoy > venc;   // ya pasó el 15 del mes anterior → debía estar pagado
   let estado;
   if(pend.length===0) estado='cobrado';
   else if(cobrado.length>0) estado='parcial';
@@ -6460,11 +6465,13 @@ function clearAll(){if(!confirm('¿Borrar TODOS los datos?'))return;if(!confirm(
 // ══════════════════════════════════════════════════════════════
 
 function actualizarRelojTopbar(){
-  const el=$i('topbar-date'); if(!el) return;
+  const els=[$i('topbar-date'), $i('topbar-date-mob')].filter(Boolean);
+  if(!els.length) return;
   const d=new Date();
-  const fecha=d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
-  const hora=d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  el.textContent=fecha+' · '+hora;
+  const fecha=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const hora=d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  const txt='🗓 '+fecha.charAt(0).toUpperCase()+fecha.slice(1)+' · '+hora;
+  els.forEach(el=>el.textContent=txt);
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
