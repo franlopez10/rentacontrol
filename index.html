@@ -857,6 +857,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <section class="sec on" data-ws="gentaury" id="sec-dash">
   <div id="d-alerts" style="margin-bottom:14px;"></div>
   <div class="kpi-strip" id="d-kpis"></div>
+  <div class="card mb" id="d-cartera"></div>
   <div class="g2 mb">
     <div class="card"><div class="card-title">💳 Últimos movimientos</div><div id="d-pagos"></div></div>
     <div class="card"><div class="card-title">🏢 Ocupación por piso</div><div id="d-pisos"></div></div>
@@ -918,7 +919,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 <!-- ═══════════════ PASADOS ═══════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-pasados">
-  <div class="ph"><div class="ph-title">🗂 Pasados / BBDD</div></div>
+  <div class="ph"><div><div class="ph-title">🗂 Pasados / BBDD</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Historial de inquilinos y candidatos rechazados (lista negra)</div></div>
+    <button class="btn btn-primary" onclick="newCandidatoRechazado()">🚫 Registrar candidato rechazado</button></div>
   <div class="export-bar">
     <span class="export-bar-label">Exportar:</span>
     <button class="btn btn-warn btn-sm" onclick="expWA()">📱 WhatsApp</button>
@@ -1497,14 +1500,15 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- INQUILINO -->
 <div class="modal-overlay" id="m-inq"><div class="modal modal-lg">
   <h2>👤 Nuevo Inquilino</h2>
+  <div id="iq-alerta-veto" style="display:none;background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.4);border-radius:var(--r2);padding:12px;margin-bottom:14px;font-size:12px;color:#dc2626;"></div>
   <div class="form-section">Datos personales</div>
   <div class="fg">
-    <div class="fgrp"><label>Nombre *</label><input id="iq-n" placeholder="Nombre"></div>
-    <div class="fgrp"><label>Apellidos *</label><input id="iq-a" placeholder="Apellidos"></div>
-    <div class="fgrp"><label>DNI / NIE</label><input id="iq-dni" placeholder="12345678A"></div>
+    <div class="fgrp"><label>Nombre *</label><input id="iq-n" oninput="chequearVetadoEnVivo()" placeholder="Nombre"></div>
+    <div class="fgrp"><label>Apellidos *</label><input id="iq-a" oninput="chequearVetadoEnVivo()" placeholder="Apellidos"></div>
+    <div class="fgrp"><label>DNI / NIE</label><input id="iq-dni" oninput="chequearVetadoEnVivo()" placeholder="12345678A"></div>
     <div class="fgrp"><label>Nacionalidad</label><input id="iq-nac" placeholder="Española"></div>
-    <div class="fgrp"><label>Email</label><input id="iq-e" type="email" placeholder="email@ejemplo.com"></div>
-    <div class="fgrp"><label>Teléfono</label><input id="iq-t" placeholder="600 000 000"></div>
+    <div class="fgrp"><label>Email</label><input id="iq-e" oninput="chequearVetadoEnVivo()" type="email" placeholder="email@ejemplo.com"></div>
+    <div class="fgrp"><label>Teléfono</label><input id="iq-t" oninput="chequearVetadoEnVivo()" placeholder="600 000 000"></div>
     <div class="fgrp fgf"><label>WhatsApp (si distinto al tel.)</label><input id="iq-wa" placeholder="600 000 000"></div>
   </div>
   <div class="form-section">Datos del alquiler</div>
@@ -1519,10 +1523,20 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Día de pago</label><input id="iq-dia" type="number" placeholder="1" min="1" max="28"></div>
     <div class="fgrp"><label>Inicio contrato</label><input id="iq-ini" type="date"></div>
     <div class="fgrp"><label>Fin contrato</label><input id="iq-fin" type="date"></div>
+    <div class="fgrp fgf">
+      <label>Vencimiento habitual (mín. 1 año + resto)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinInq('02-28')">📅 Hasta 28 feb</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinInq('09-30')">📅 Hasta 30 sep</button>
+      </div>
+      <div id="iq-fin-info" style="font-size:10.5px;color:var(--ink3);margin-top:6px;"></div>
+    </div>
   </div>
-  <div class="form-section">Valoración</div>
+  <div class="form-section">Valoración y aptitud</div>
   <div class="fg">
     <div class="fgrp"><label>Valoración (1-5 ⭐)</label><select id="iq-v"><option value="">Sin valorar</option><option value="5">⭐⭐⭐⭐⭐ Excelente</option><option value="4">⭐⭐⭐⭐ Muy bueno</option><option value="3">⭐⭐⭐ Normal</option><option value="2">⭐⭐ Mejorable</option><option value="1">⭐ Malo</option></select></div>
+    <div class="fgrp"><label>¿Volverías a alquilarle?</label><select id="iq-apto" onchange="toggleAptoMotivo()"><option value="">Sin decidir</option><option value="si">✅ Sí, buen inquilino</option><option value="no">🚫 NO — no apto / lista negra</option></select></div>
+    <div class="fgrp fgf" id="iq-apto-motivo-wrap" style="display:none;"><label>Motivo del veto (impagos, destrozos, conflictos…)</label><input id="iq-apto-motivo" placeholder="Por qué no le alquilarías de nuevo"></div>
     <div class="fgrp"><label>Motivo de salida</label><input id="iq-mot" placeholder="Solo para PASADOS"></div>
     <div class="fgrp fgf"><label>Notas / referencias</label><textarea id="iq-not" rows="2" placeholder="Observaciones..."></textarea></div>
   </div>
@@ -1638,8 +1652,16 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp fgf"><label>Inquilino *</label><select id="co-i" onchange="autoPisoContrato()"></select></div>
     <div class="fgrp"><label>Piso</label><select id="co-prop"></select></div>
     <div class="fgrp"><label>Habitación nº</label><input id="co-hab" type="number" placeholder="3"></div>
-    <div class="fgrp"><label>Fecha de inicio *</label><input id="co-ini" type="date"></div>
+    <div class="fgrp"><label>Fecha de inicio *</label><input id="co-ini" type="date" onchange="sugerirFinContrato()"></div>
     <div class="fgrp"><label>Fecha de fin</label><input id="co-fin" type="date"></div>
+    <div class="fgrp fgf">
+      <label>Vencimiento habitual (mínimo 1 año + resto hasta la fecha)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinContrato('02-28')">📅 Hasta 28 de febrero</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinContrato('09-30')">📅 Hasta 30 de septiembre</button>
+      </div>
+      <div id="co-fin-info" style="font-size:10.5px;color:var(--ink3);margin-top:6px;"></div>
+    </div>
     <div class="fgrp"><label>Renta mensual (€)</label><input id="co-r" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Fianza entregada (€)</label><input id="co-f" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Garantía adicional (€)</label><input id="co-g" type="number" placeholder="0"></div>
@@ -2859,9 +2881,13 @@ function delPot(id){D.pots=D.pots.filter(p=>p.id!==id);saveAndSync();rPots();toa
 // ══════════════════════════════════════════════════════════════
 function addInq(){
   const nom=gi('iq-n');if(!nom){toast('Introduce el nombre',false);return;}
-  D.inqs.push({id:uid(),nom,ap:gi('iq-a'),dni:gi('iq-dni'),nac:gi('iq-nac'),email:gi('iq-e'),tel:gi('iq-t'),wa:gi('iq-wa'),estado:$i('iq-est').value,propId:gi('iq-p'),hab:gi('iq-h'),alq:gn('iq-alq'),luz:gn('iq-luz'),agua:gn('iq-agua'),fia:gn('iq-fia'),dia:gi('iq-dia'),ini:gi('iq-ini'),fin:gi('iq-fin'),val:gi('iq-v'),mot:gi('iq-mot'),notas:gi('iq-not')});
+  const vet=buscarVetado(nom,gi('iq-a'),gi('iq-dni'),gi('iq-e'),gi('iq-t')||gi('iq-wa'));
+  if(vet && $i('iq-apto').value!=='no'){
+    if(!confirm(`🚫 ATENCIÓN: "${vet.nom} ${vet.ap}" está en tu lista negra como NO APTO${vet.aptoMotivo?' ('+vet.aptoMotivo+')':''}.\n\n¿Seguro que quieres registrarlo de todas formas?`)) return;
+  }
+  D.inqs.push({id:uid(),nom,ap:gi('iq-a'),dni:gi('iq-dni'),nac:gi('iq-nac'),email:gi('iq-e'),tel:gi('iq-t'),wa:gi('iq-wa'),estado:$i('iq-est').value,propId:gi('iq-p'),hab:gi('iq-h'),alq:gn('iq-alq'),luz:gn('iq-luz'),agua:gn('iq-agua'),fia:gn('iq-fia'),dia:gi('iq-dia'),ini:gi('iq-ini'),fin:gi('iq-fin'),val:gi('iq-v'),apto:$i('iq-apto').value,aptoMotivo:gi('iq-apto-motivo'),mot:gi('iq-mot'),notas:gi('iq-not')});
   saveAndSync();autoGenerarPagosPendientes();closeM('m-inq');rActivos();rPagos&&rPagos();toast('Inquilino añadido · cobros pendientes generados');
-  ['iq-n','iq-a','iq-dni','iq-nac','iq-e','iq-t','iq-wa','iq-h','iq-alq','iq-luz','iq-agua','iq-fia','iq-dia','iq-ini','iq-fin','iq-mot','iq-not'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  ['iq-n','iq-a','iq-dni','iq-nac','iq-e','iq-t','iq-wa','iq-h','iq-alq','iq-luz','iq-agua','iq-fia','iq-dia','iq-ini','iq-fin','iq-mot','iq-not','iq-apto-motivo'].forEach(id=>{const e=$i(id);if(e)e.value='';});
 }
 
 function iqRow(i,showState=false){
@@ -2897,14 +2923,16 @@ function rPasados(){
   const tb=$i('pas-tb'),q=gi('pq').toLowerCase(),mv=parseInt(gi('pv2'))||0,propF=gi('pp2');
   const list=D.inqs.filter(i=>i.estado==='PASADO'&&(!propF||i.propId==propF)&&(!mv||(parseInt(i.val)||0)>=mv)&&(!q||`${i.nom} ${i.ap} ${i.email} ${i.dni}`.toLowerCase().includes(q)));
   const tot=D.inqs.length,act=D.inqs.filter(i=>i.estado==='ACTIVO').length,pas=D.inqs.filter(i=>i.estado==='PASADO').length,res=D.inqs.filter(i=>i.estado==='RESERVADO').length,ems=D.inqs.filter(i=>i.email).length;
-  $i('bbdd-stats').innerHTML=`<div class="kpi" style="--kc:var(--bl);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Total BBDD</div><div class="kpi-value">${tot}</div></div><div class="kpi" style="--kc:var(--gn);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Activos</div><div class="kpi-value">${act}</div></div><div class="kpi" style="--kc:var(--rd);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Pasados</div><div class="kpi-value">${pas}</div></div><div class="kpi" style="--kc:var(--ye);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Reservados</div><div class="kpi-value">${res}</div></div><div class="kpi" style="--kc:var(--pu);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Con email</div><div class="kpi-value">${ems}</div></div>`;
+  $i('bbdd-stats').innerHTML=`<div class="kpi" style="--kc:var(--bl);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Total BBDD</div><div class="kpi-value">${tot}</div></div><div class="kpi" style="--kc:var(--gn);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Activos</div><div class="kpi-value">${act}</div></div><div class="kpi" style="--kc:var(--rd);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Pasados</div><div class="kpi-value">${pas}</div></div><div class="kpi" style="--kc:var(--ye);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Reservados</div><div class="kpi-value">${res}</div></div><div class="kpi" style="--kc:var(--pu);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">Con email</div><div class="kpi-value">${ems}</div></div><div class="kpi" style="--kc:var(--rd);flex:1;min-width:90px;padding:12px 14px;"><div class="kpi-accent"></div><div class="kpi-label">🚫 Lista negra</div><div class="kpi-value">${D.inqs.filter(i=>i.apto==='no').length}</div></div>`;
   if(!list.length){tb.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="empty-icon">🗂</div><p>Sin inquilinos pasados</p></div></td></tr>`;return;}
   tb.innerHTML=list.map(i=>{
     const pr=D.props.find(p=>p.id==i.propId);
     const paI=D.pagos.filter(pa=>pa.inqId==i.id&&pa.estado==='pagado');
     const totP=paI.reduce((s,pa)=>s+parseFloat(pa.imp||0),0);
     const st=i.val?'⭐'.repeat(parseInt(i.val)):'–';
-    const eb=i.estado==='ACTIVO'?'<span class="badge badge-g">ACTIVO</span>':i.estado==='RESERVADO'?'<span class="badge badge-y">RESERVADO</span>':'<span class="badge badge-r">PASADO</span>';
+    let eb=i.estado==='ACTIVO'?'<span class="badge badge-g">ACTIVO</span>':i.estado==='RESERVADO'?'<span class="badge badge-y">RESERVADO</span>':'<span class="badge badge-r">PASADO</span>';
+    if(i.apto==='no') eb='<span class="badge badge-r">🚫 NO APTO</span>'+eb;
+    else if(i.apto==='si') eb='<span class="badge badge-g">✅ OK</span>'+eb;
     return `<tr>
       <td>${eb}</td>
       <td><div class="name-link" onclick="openPerfil('${i.id}')">${i.nom} ${i.ap}</div><div style="font-size:10px;color:var(--ink3);">${i.nac||''}</div></td>
@@ -3003,6 +3031,44 @@ function newCont(){
   const p=$i('co-prop'); if(p)p.value='';
   clearPdfZone('co-pdf-zone','co-pdf-data');
   openM('m-co');
+}
+
+
+// Calcula el fin de contrato: mínimo 1 año desde el inicio, extendido hasta la próxima fecha tipo (28-feb o 30-sep)
+
+function calcFinInq(mmdd){
+  const ini=gi('iq-ini');
+  if(!ini){ toast('Pon primero la fecha de inicio', false); return; }
+  const d=new Date(ini+'T00:00:00');
+  const minimo=new Date(d); minimo.setFullYear(minimo.getFullYear()+1);
+  const [mes,dia]=mmdd.split('-').map(Number);
+  let anyo=minimo.getFullYear();
+  let candidata=new Date(anyo, mes-1, dia);
+  while(candidata < minimo){ anyo++; candidata=new Date(anyo, mes-1, dia); }
+  const iso=candidata.toISOString().split('T')[0];
+  $i('iq-fin').value=iso;
+  const meses=Math.round((candidata-d)/(1000*60*60*24*30.4));
+  $i('iq-fin-info').innerHTML=`✓ Hasta <strong>${fD(iso)}</strong> · ${meses} meses`;
+}
+
+function calcFinContrato(mmdd){
+  const ini=gi('co-ini');
+  if(!ini){ toast('Pon primero la fecha de inicio', false); return; }
+  const d=new Date(ini+'T00:00:00');
+  const minimo=new Date(d); minimo.setFullYear(minimo.getFullYear()+1); // 1 año mínimo
+  const [mes,dia]=mmdd.split('-').map(Number);
+  // Buscar la primera fecha (mmdd) que sea >= minimo
+  let anyo=minimo.getFullYear();
+  let candidata=new Date(anyo, mes-1, dia);
+  while(candidata < minimo){ anyo++; candidata=new Date(anyo, mes-1, dia); }
+  const iso=candidata.toISOString().split('T')[0];
+  $i('co-fin').value=iso;
+  const meses=Math.round((candidata-d)/(1000*60*60*24*30.4));
+  $i('co-fin-info').innerHTML=`✓ Contrato hasta <strong>${fD(iso)}</strong> · duración aprox. ${meses} meses (1 año + ${meses-12} de ajuste)`;
+}
+function sugerirFinContrato(){
+  const info=$i('co-fin-info');
+  if(info && !gi('co-fin')) info.innerHTML='Elige una de las dos fechas de vencimiento habitual arriba 👆';
 }
 
 function autoPisoContrato(){
@@ -4444,6 +4510,59 @@ function pintarAyudaIRPF(){
   const el=$i('mv-fis-ayuda'); if(!el)return;
   el.textContent=(IRPF_TIPOS[$i('mv-fis').value]||{}).ayuda||'';
 }
+
+
+// Registrar a alguien que vino a ver la habitación pero no es apto — para futura referencia
+function newCandidatoRechazado(){
+  // Reusar el modal de inquilino, preconfigurado como PASADO + no apto
+  ['iq-n','iq-a','iq-dni','iq-nac','iq-e','iq-t','iq-wa','iq-h','iq-alq','iq-luz','iq-agua','iq-fia','iq-dia','iq-ini','iq-fin','iq-mot','iq-not','iq-apto-motivo'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('iq-est').value='PASADO';
+  $i('iq-apto').value='no';
+  $i('iq-v').value='1';
+  toggleAptoMotivo();
+  const box=$i('iq-alerta-veto'); if(box) box.style.display='none';
+  $i('iq-not').value='Candidato rechazado (no llegó a ser inquilino)';
+  openM('m-inq');
+  setTimeout(()=>{ const e=$i('iq-n'); if(e)e.focus(); },100);
+}
+
+function toggleAptoMotivo(){
+  const es=$i('iq-apto').value==='no';
+  const w=$i('iq-apto-motivo-wrap'); if(w) w.style.display=es?'block':'none';
+}
+
+// ── Detección de inquilinos vetados (lista negra) ──
+// Comprueba si los datos que se están metiendo coinciden con alguien marcado como no apto
+function buscarVetado(nom, ap, dni, email, tel){
+  const norm=s=>(s||'').toLowerCase().trim().replace(/\s+/g,' ');
+  const nomComp=norm(nom+' '+ap);
+  const dniN=norm(dni), emailN=norm(email), telN=(tel||'').replace(/\D/g,'');
+  return (D.inqs||[]).find(i=>{
+    if(i.apto!=='no') return false;
+    const iNom=norm((i.nom||'')+' '+(i.ap||''));
+    const iDni=norm(i.dni), iEmail=norm(i.email), iTel=(i.tel||i.wa||'').replace(/\D/g,'');
+    if(dniN && iDni && dniN===iDni) return true;
+    if(emailN && iEmail && emailN===iEmail) return true;
+    if(telN && iTel && telN.length>=6 && telN===iTel) return true;
+    if(nomComp.length>4 && iNom===nomComp) return true;
+    return false;
+  });
+}
+
+// Chequeo en vivo mientras se escribe el nombre/DNI en el modal de inquilino
+function chequearVetadoEnVivo(){
+  const box=$i('iq-alerta-veto'); if(!box) return;
+  const vet=buscarVetado(gi('iq-n'),gi('iq-a'),gi('iq-dni'),gi('iq-e'),gi('iq-t')||gi('iq-wa'));
+  if(vet){
+    box.style.display='block';
+    box.innerHTML=`🚫 <strong>¡ALERTA! Este candidato está en tu lista negra.</strong><br>
+      <strong>${vet.nom} ${vet.ap}</strong> fue marcado como NO APTO${vet.aptoMotivo?': '+vet.aptoMotivo:''}.
+      ${vet.fin?'<br>Estuvo hasta '+fD(vet.fin)+'.':''}`;
+  } else {
+    box.style.display='none';
+  }
+}
+
 function toggleMovCatOtros(){
   const sel=$i('mv-cat'), inp=$i('mv-cat-otros'); if(!sel||!inp)return;
   const es=sel.value==='Otros';
@@ -6387,7 +6506,92 @@ function rAgenda(){
 // ══════════════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// RESUMEN DE CARTERA DE INMUEBLES (dashboard)
+// ══════════════════════════════════════════════════════════════
+function facturacionBrutaPiso(p){
+  // Ingresos brutos anuales: renta de inquilinos activos × 12
+  return D.inqs.filter(i=>i.estado==='ACTIVO'&&i.propId==p.id).reduce((s,i)=>s+parseFloat(i.alq||0),0)*12;
+}
+function facturacionNetaPiso(p){
+  // Lo que entra limpio a tu bolsillo: ingresos − hipoteca anual
+  const h=(D.hipotecas||[]).find(x=>x.propId==p.id);
+  const hipoAnual=h?parseFloat(h.cuota||0)*12:parseFloat(p.hipo||0)*12;
+  return facturacionBrutaPiso(p)-hipoAnual;
+}
+
+function rCartera(){
+  const el=$i('d-cartera'); if(!el) return;
+  const props=D.props||[];
+  if(!props.length){ el.style.display='none'; return; }
+  el.style.display='block';
+
+  // Totales de la cartera
+  let patBruto=0, patNeto=0, factBruta=0, factNeta=0, dineroTotal=0, deudaTotal=0;
+  props.forEach(p=>{
+    const va=valorActualizadoPiso(p);
+    const valor=va.valor||parseFloat(p.tasacion||p.mercado||p.precio||0);
+    const deuda=hipotecaPendiente(p);
+    patBruto+=valor; patNeto+=(valor-deuda); deudaTotal+=deuda;
+    factBruta+=facturacionBrutaPiso(p); factNeta+=facturacionNetaPiso(p);
+    dineroTotal+=dineroPropio(p);
+  });
+  // ROCE global de la cartera = flujo neto anual / dinero propio total
+  const roceGlobal = dineroTotal>0 ? (factNeta/dineroTotal*100) : null;
+  const rentBrutaGlobal = patBruto>0 ? (factBruta/patBruto*100) : null;
+
+  el.innerHTML=`
+    <div class="card-title">📊 Resumen de la cartera · ${props.length} inmueble${props.length!==1?'s':''}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Patrimonio bruto</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">${eur(patBruto)}</div></div>
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Patrimonio neto</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--gn);">${eur(patNeto)}</div>
+        <div style="font-size:9px;color:var(--ink3);">−${eur(deudaTotal)} hipotecas</div></div>
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Facturación bruta</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">${eur(factBruta)}<span style="font-size:11px;color:var(--ink3);font-weight:400;">/año</span></div>
+        <div style="font-size:9px;color:var(--ink3);">${eur(factBruta/12)}/mes</div></div>
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Facturación neta</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--gn);">${eur(factNeta)}<span style="font-size:11px;color:var(--ink3);font-weight:400;">/año</span></div>
+        <div style="font-size:9px;color:var(--ink3);">tras hipotecas · ${eur(factNeta/12)}/mes</div></div>
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Dinero propio invertido</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">${eur(dineroTotal)}</div></div>
+      ${roceGlobal!==null?`<div style="background:linear-gradient(135deg,var(--acc),#7c3aed);border-radius:var(--r2);padding:12px;color:#fff;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;opacity:.8;">ROCE cartera</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">${roceGlobal.toFixed(1)}%</div>
+        <div style="font-size:9px;opacity:.8;">${rentBrutaGlobal!==null?'Rent. bruta '+rentBrutaGlobal.toFixed(1)+'%':''}</div></div>`:''}
+    </div>
+
+    <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:18px 0 8px;">Desglose por inmueble</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Inmueble</th><th class="n">Valor</th><th class="n">Deuda</th><th class="n">Neto</th><th class="n">Fact. bruta/año</th><th class="n">Fact. neta/año</th><th class="n">Dinero propio</th><th class="n">ROCE</th></tr></thead><tbody>
+    ${props.map(p=>{
+      const va=valorActualizadoPiso(p);
+      const valor=va.valor||parseFloat(p.tasacion||p.mercado||p.precio||0);
+      const deuda=hipotecaPendiente(p);
+      const fb=facturacionBrutaPiso(p), fn=facturacionNetaPiso(p);
+      const dp=dineroPropio(p), roce=roceDe(p);
+      return `<tr>
+        <td style="font-weight:600;font-size:12px;">${p.nom}</td>
+        <td class="n mono">${eur(valor)}</td>
+        <td class="n mono" style="color:var(--rd);">${deuda>0?eur(deuda):'–'}</td>
+        <td class="n mono" style="font-weight:600;">${eur(valor-deuda)}</td>
+        <td class="n mono">${eur(fb)}</td>
+        <td class="n mono" style="color:${fn>=0?'var(--gn)':'var(--rd)'};">${eur(fn)}</td>
+        <td class="n mono">${eur(dp)}</td>
+        <td class="n mono" style="font-weight:700;color:${roce!==null&&roce>=0?'var(--gn)':'var(--rd)'};">${roce!==null?roce.toFixed(1)+'%':'–'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>`;
+}
+
 function rDash(){
+  rCartera();
   const hoy=new Date(),mesAct=hoy.toISOString().slice(0,7),hoyS=hoy.toISOString().split('T')[0];
   const alerts=[];
   D.inqs.filter(i=>i.estado==='ACTIVO'&&i.fin).forEach(i=>{const d=Math.round((new Date(i.fin)-hoy)/86400000);if(d<=30&&d>=0)alerts.push({t:'y',m:`⏰ Contrato de ${i.nom} ${i.ap} vence en ${d} días`});if(d<0)alerts.push({t:'r',m:`🔴 Contrato de ${i.nom} ${i.ap} expirado`});});
