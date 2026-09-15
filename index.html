@@ -1740,7 +1740,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Propietario *</label><select id="cp-owner"></select></div>
     <div class="fgrp"><label>Propiedad</label><select id="cp-prop" onchange="autoOwnerFactura()"></select></div>
     <div class="fgrp"><label>Habitación nº (opcional)</label><input id="cp-hab" type="number" placeholder="3"></div>
-    <div class="fgrp"><label>Nº de factura <span style="color:var(--acc);">(auto: 1/08.26)</span></label><input id="cp-num" placeholder="1/08.26"></div>
+    <div class="fgrp"><label>Nº de factura <span style="color:var(--ink3);font-weight:400;">(automático, se recalcula solo)</span></label><input id="cp-num" placeholder="1/08.26" disabled style="background:var(--bg);color:var(--ink3);cursor:not-allowed;"></div>
     <div class="fgrp"><label>Forma de pago</label>
       <select id="cp-pago"><option>Tarjeta</option><option>Transferencia</option><option>Efectivo</option><option>Bizum</option><option>Financiado</option><option>Otro</option></select>
     </div>
@@ -3782,17 +3782,24 @@ function saveCompra(){
   let cat=$i('cp-cat').value;
   if(cat==='Otros'){ const libre=gi('cp-cat-otros'); if(libre) cat=libre; }
   const campos={con,emp,fecha:gi('cp-fecha'),imp,cat,ownerId:gi('cp-owner'),propId:gi('cp-prop'),
-    hab:gi('cp-hab'),num:gi('cp-num'),pago:$i('cp-pago').value,ded:$i('cp-ded').value,
+    hab:gi('cp-hab'),pago:$i('cp-pago').value,ded:$i('cp-ded').value,
     gar:gi('cp-gar'),notas:gi('cp-notas')};
   const pdfData=$i('cp-pdf-data')?.value||'', pdfName=$i('cp-pdf-name')?.value||'';
+  const mesesATocar=new Set();
+  if(campos.fecha) mesesATocar.add(campos.fecha.slice(0,7));
   if(editId){
     const x=D.compras.find(o=>o.id==editId);
-    if(x){ Object.assign(x,campos); if(pdfData){x.pdfData=pdfData;x.pdfName=pdfName;} }
+    if(x){
+      if(x.fecha) mesesATocar.add(x.fecha.slice(0,7));   // el mes antiguo también hay que renumerarlo
+      Object.assign(x,campos); if(pdfData){x.pdfData=pdfData;x.pdfName=pdfName;}
+    }
     toast('Factura actualizada');
   } else {
     D.compras.push(Object.assign({id:uid(),pdfData,pdfName},campos));
     toast('Factura guardada');
   }
+  // Renumerar SIEMPRE el/los mes(es) afectados, garantizando 1,2,3... sin huecos ni duplicados
+  mesesATocar.forEach(mk=>renumerarFacturasMes(mk));
   saveAndSync(); closeM('m-compra'); rCompras();
 }
 
@@ -3808,14 +3815,16 @@ function delCompra(id){
 function renumerarFacturasMes(mesYYYYMM){
   if(!mesYYYYMM) return;
   const [y,m]=mesYYYYMM.split('-');
+  // Orden estable: primero por fecha; si coinciden, por el orden en que se crearon (posición en D.compras)
+  const indice=new Map(D.compras.map((x,i)=>[x.id,i]));
   const delMes=D.compras.filter(x=>(x.fecha||'').slice(0,7)===mesYYYYMM)
-    .sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'') || (a.id||'').localeCompare(b.id||''));
-  delMes.forEach((x,idx)=>{
-    // Solo renumeramos las que siguen el formato automático N/MM.AA, respetando números manuales personalizados
-    if(!x.num || /^\d+\/\d{2}\.\d{2}$/.test(x.num)){
-      x.num=(idx+1)+'/'+m+'.'+y.slice(2);
-    }
-  });
+    .sort((a,b)=>{
+      const df=(a.fecha||'').localeCompare(b.fecha||'');
+      if(df!==0) return df;
+      return (indice.get(a.id)||0)-(indice.get(b.id)||0);
+    });
+  // Renumeramos SIEMPRE todas las del mes, en orden de fecha, sin huecos ni duplicados
+  delMes.forEach((x,idx)=>{ x.num=(idx+1)+'/'+m+'.'+y.slice(2); });
 }
 
 const MESES_N=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
