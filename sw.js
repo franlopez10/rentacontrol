@@ -1,4 +1,4 @@
-const CACHE = 'gentaury-v5';
+const CACHE = 'gentaury-v6';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -15,8 +15,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
-  // Google APIs: siempre red directa
-  if (url.includes('googleapis.com') || url.includes('accounts.google.com') || url.includes('gstatic.com')) {
+  // APIs externas y CDNs: siempre red directa (no interceptar)
+  if (url.includes('googleapis.com') || url.includes('accounts.google.com') || url.includes('gstatic.com') || url.includes('cdnjs.cloudflare.com')) {
     return;
   }
 
