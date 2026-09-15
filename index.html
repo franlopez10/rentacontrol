@@ -872,7 +872,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- ═══════════════ AGENDA ═══════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-agenda">
   <div class="ph"><div class="ph-title">📅 Agenda</div>
-    <button class="btn btn-primary" onclick="openM('m-ag')">+ Nueva tarea</button>
+    <button class="btn btn-primary" onclick="newAgenda()">+ Nueva tarea</button>
   </div>
   <div class="g2"><div class="card"><div class="card-title">Pendientes</div><div id="ag-pend"></div></div>
     <div class="card"><div class="card-title">Completadas</div><div id="ag-done"></div></div>
@@ -1712,7 +1712,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 <!-- AGENDA -->
 <div class="modal-overlay" id="m-ag"><div class="modal">
-  <h2>📅 Nueva Tarea</h2>
+  <h2 id="m-ag-title"><input type="hidden" id="ag-edit-id">📅 Nueva Tarea</h2>
   <div class="fg">
     <div class="fgrp fgf"><label>Título *</label><input id="ag-t" placeholder="Ej: Renovar contrato Piso 1 hab. 3"></div>
     <div class="fgrp"><label>Fecha</label><input id="ag-f" type="date"></div>
@@ -1747,11 +1747,12 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp fgf"><label>Tratamiento fiscal (IRPF)</label>
       <div id="cp-sugerencia" style="display:none;background:var(--acc-l);border:1px solid rgba(200,75,47,.2);border-radius:var(--r2);padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--acc);"></div>
       <select id="cp-ded" onchange="pintarAyudaFiscal()">
-        <option value="corriente">✅ Deducible (gasto corriente)</option>
+        <option value="corriente">✅ Deducible directo (gasto corriente: suministros, IBI, comunidad, seguros…)</option>
+        <option value="reparacion">🔧 Reparación / sustitución (deducible directo, con límite art. 23)</option>
+        <option value="mejora">🏗️ Mejora (amortizable al 3%, aumenta valor del inmueble)</option>
+        <option value="amort10">🪑 Mobiliario y electrodomésticos (amortizable 10%)</option>
+        <option value="amort3">🏠 Gasto de adquisición (amortizable 3%: notaría, ITP, comisión…)</option>
         <option value="no">❌ No deducible</option>
-        <option value="amort10">🪑 Amortizable – mobiliario y electrodomésticos (10% anual)</option>
-        <option value="amort3">🏠 Amortizable – inmueble / gasto de adquisición (≈3% anual)</option>
-        <option value="mejora">🏗️ Inversión / mejora (no deducible directa, aumenta valor)</option>
       </select>
       <div id="cp-ded-ayuda" style="font-size:10.5px;color:var(--ink3);line-height:1.5;margin-top:2px;"></div>
     </div>
@@ -2500,7 +2501,7 @@ function migrarCostesAdqLegacy(p){
 
 
 function totalFacturasVinculadas(p){
-  return (D.compras||[]).filter(x=>x.propId==p.id && ['amort3','mejora'].includes(fiscalKey(x.ded)))
+  return (D.compras||[]).filter(x=>x.propId==p.id && ['amort3','mejora','reparacion'].includes(fiscalKey(x.ded)))
     .reduce((s,x)=>s+parseFloat(x.imp||0),0);
 }
 function totalAdquisicionCompleto(p){
@@ -2590,7 +2591,7 @@ function delCosteAdq(propId, itemId){
 
 function rFacturasVinculadas(propId){
   const div=$i('ca-facturas-vinc'); if(!div) return;
-  const facts=(D.compras||[]).filter(x=>x.propId==propId && ['amort3','mejora'].includes(fiscalKey(x.ded)));
+  const facts=(D.compras||[]).filter(x=>x.propId==propId && ['amort3','mejora','reparacion'].includes(fiscalKey(x.ded)));
   if(!facts.length){ div.innerHTML='<div style="font-size:11px;color:var(--ink3);padding:8px 0;">Ninguna factura de este piso está marcada como amortizable o mejora todavía.</div>'; return; }
   const total=facts.reduce((s,x)=>s+parseFloat(x.imp||0),0);
   div.innerHTML = facts.map(x=>{
@@ -3669,7 +3670,7 @@ function sugerirClasifCompra(){
 
   if(esReforma){
     box.style.display='block';
-    box.innerHTML='🔨 Esto parece una <strong>reforma</strong>. Si es una mejora (no sustitución/reparación), márcala como <strong>🏗️ Mejora</strong> abajo — no se deduce como gasto pero sube el valor del piso. Si es reparación o sustitución, es <strong>✅ Deducible</strong> directo.';
+    box.innerHTML='🔨 Esto parece una <strong>reforma</strong>. ¿Es <strong>reparación/sustitución</strong> (arreglar o cambiar algo estropeado por otro equivalente)? → marca <strong>🔧 Reparación</strong>, se deduce directo. ¿Es <strong>mejora</strong> (algo nuevo o mejor que aumenta el valor)? → marca <strong>🏗️ Mejora</strong>, amortiza al 3%. Si la factura tiene de las dos cosas, méte dos facturas separando importes.';
     if($i('cp-ded').value==='corriente') { /* dejamos elegir, solo avisamos */ }
   } else if(esAdquisicion){
     box.style.display='block';
@@ -3684,11 +3685,12 @@ const CP_ICONS={'Mobiliario':'🪑','Electrodomésticos':'🔌','Colchones y tex
 
 // ── Tratamiento fiscal ────────────────────────────────────────
 const FISCAL = {
-  corriente:{et:'Deducible',ico:'✅',col:'g',ayuda:'Se resta entero en el IRPF de este año: suministros, mantenimiento, reparaciones, comunidad, IBI, seguros, intereses de hipoteca…'},
-  no:{et:'No deducible',ico:'❌',col:'r',ayuda:'Sin ningún efecto fiscal: gastos personales, multas o cualquier cosa no ligada al alquiler.'},
-  amort10:{et:'Amortiz. 10%',ico:'🪑',col:'b',ayuda:'Muebles y electrodomésticos (camas, armarios, nevera, lavadora, vitro…). Se deducen al 10% anual, no de golpe.'},
-  amort3:{et:'Amortiz. 3%',ico:'🏠',col:'p',ayuda:'Comisión inmobiliaria, notaría, registro, gestoría, ITP. Suma al valor de compra: se amortiza al ~3% anual y reduce la plusvalía en la venta.'},
-  mejora:{et:'Mejora',ico:'🏗️',col:'y',ayuda:'Reformas que son mejora, no reparación. No se deducen como gasto, pero aumentan el valor del inmueble.'}
+  corriente:{et:'Deducible',ico:'✅',col:'g',ayuda:'Gasto corriente del alquiler: suministros, IBI, comunidad, seguros. Se resta entero este año.'},
+  reparacion:{et:'Reparación',ico:'🔧',col:'g',ayuda:'Reparaciones y sustituciones (cambiar caldera vieja, arreglar fontanería, sustituir electrodoméstico estropeado). Deducible directo, pero con límite: junto a los intereses de hipoteca no puede superar los ingresos del año. El exceso se deduce en los 4 años siguientes.'},
+  mejora:{et:'Mejora',ico:'🏗️',col:'y',ayuda:'Mejoras que aumentan valor o vida útil (reforma integral, ampliación, cambiar ventanas por otras mejores). NO se deduce como gasto: se amortiza al 3% anual junto al inmueble.'},
+  amort10:{et:'Amortiz. 10%',ico:'🪑',col:'b',ayuda:'Muebles y electrodomésticos nuevos (camas, armarios, nevera, lavadora). Se amortizan al 10% anual.'},
+  amort3:{et:'Amortiz. 3%',ico:'🏠',col:'p',ayuda:'Comisión inmobiliaria, notaría, registro, gestoría, ITP. Suma al valor de compra: se amortiza al 3% anual.'},
+  no:{et:'No deducible',ico:'❌',col:'r',ayuda:'Sin efecto fiscal: gastos personales, multas o cualquier cosa no ligada al alquiler.'}
 };
 const CATS_FIJAS=['Mobiliario','Electrodomésticos','Colchones y textil','Menaje','Reforma y obra','Decoración','Herramientas','Suministros','Notaría y registro','Gestoría y asesoría','Comisión inmobiliaria','Impuestos compra (ITP/AJD)','Otros'];
 
@@ -3795,8 +3797,25 @@ function saveCompra(){
 }
 
 function delCompra(id){
-  if(!confirm('¿Eliminar esta factura?'))return;
-  D.compras=D.compras.filter(o=>o.id!==id); saveAndSync(); rCompras(); toast('Eliminada');
+  if(!confirm('¿Eliminar esta factura? Se renumerarán automáticamente las del mismo mes.'))return;
+  const borrada=D.compras.find(o=>o.id===id);
+  D.compras=D.compras.filter(o=>o.id!==id);
+  if(borrada && borrada.fecha) renumerarFacturasMes(borrada.fecha.slice(0,7));
+  saveAndSync(); rCompras(); toast('Eliminada y renumerada');
+}
+
+// Renumera todas las facturas de un mes con el formato N/MM.AA en orden de fecha
+function renumerarFacturasMes(mesYYYYMM){
+  if(!mesYYYYMM) return;
+  const [y,m]=mesYYYYMM.split('-');
+  const delMes=D.compras.filter(x=>(x.fecha||'').slice(0,7)===mesYYYYMM)
+    .sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'') || (a.id||'').localeCompare(b.id||''));
+  delMes.forEach((x,idx)=>{
+    // Solo renumeramos las que siguen el formato automático N/MM.AA, respetando números manuales personalizados
+    if(!x.num || /^\d+\/\d{2}\.\d{2}$/.test(x.num)){
+      x.num=(idx+1)+'/'+m+'.'+y.slice(2);
+    }
+  });
 }
 
 const MESES_N=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -5913,7 +5932,8 @@ function amortDelMes(anyo,mes,props,compras,amPct){
   });
   compras.forEach(x=>{
     const k=fiscalKey(x.ded);
-    const pct = k==='amort10'?0.10 : k==='amort3'?0.03 : 0;
+    // mobiliario 10%, y (adquisición 3% + mejoras 3%) van al pool del 3%
+    const pct = k==='amort10'?0.10 : (k==='amort3'||k==='mejora')?0.03 : 0;
     if(!pct) return;
     const imp=parseFloat(x.imp||0); if(!imp) return;
     const val=(imp*pct/12)*fraccionMes(x.fecha,anyo,mes);
@@ -5971,13 +5991,24 @@ function rFiscal(){
     const mm=String(mi+1).padStart(2,'0'),mk=`${anyo}-${mm}`;
     const ing=pagosOwner.filter(p=>p.mes===mk&&p.estado==='pagado').reduce((s,p)=>s+p.imp,0);
     const gdG=gastosOwner.filter(g=>g.fecha&&g.fecha.startsWith(mk)&&g.ded==='si'&&g.cat!=='Hipoteca').reduce((s,g)=>s+g.imp,0);
-    const gdF=comprasOwner.filter(x=>x.fecha&&x.fecha.startsWith(mk)&&fiscalKey(x.ded)==='corriente').reduce((s,x)=>s+parseFloat(x.imp||0),0);
+    const gdF=comprasOwner.filter(x=>x.fecha&&x.fecha.startsWith(mk)&&['corriente','reparacion'].includes(fiscalKey(x.ded))).reduce((s,x)=>s+parseFloat(x.imp||0),0);
     const gd=gdG+gdF;
     const hipo=gastosOwner.filter(g=>g.fecha&&g.fecha.startsWith(mk)&&g.cat==='Hipoteca').reduce((s,g)=>s+g.imp,0);
     const amMes=amortMeses[mi].total;
     const neto=ing-gd-hipo-amMes;acum+=neto;tI+=ing;tGd+=gd;tH+=hipo;tAm+=amMes;tN+=neto;
     return `<tr><td style="font-weight:500;">${mNom[mi]}</td><td class="mono" style="color:var(--gn);">${eur(ing)}</td><td class="mono" style="color:var(--rd);">${eur(gd)}</td><td class="mono" style="color:var(--rd);">${eur(hipo)}</td><td class="mono" style="color:var(--ink3);">${eur(amMes)}</td><td class="mono" style="font-weight:600;color:${neto>=0?'var(--gn)':'var(--rd)'};">${eur(neto)}</td><td class="mono" style="color:${acum>=0?'var(--bl)':'var(--rd)'};">${eur(acum)}</td></tr>`;
   });
+  // ── LÍMITE ARTÍCULO 23 LIRPF ──
+  // Reparaciones/sustituciones + intereses de hipoteca no pueden superar los ingresos.
+  // El exceso se traslada a los 4 años siguientes.
+  const repAnual = comprasOwner.filter(x=>fiscalKey(x.ded)==='reparacion' && (x.fecha||'').startsWith(anyo)).reduce((s,x)=>s+parseFloat(x.imp||0),0);
+  // Intereses de hipoteca del año (los gastos de categoría Hipoteca marcados como interés/deducibles)
+  const interesesAnual = tH; // aproximación: cuotas registradas; el interés real está en los gastos generados por cuota
+  const topeReparaciones = tI; // no puede pasar de los ingresos
+  const sumaLimitada = repAnual + interesesAnual;
+  const excesoTrasladable = Math.max(0, sumaLimitada - topeReparaciones);
+  window._fiscalLimite = { repAnual, interesesAnual, topeReparaciones, excesoTrasladable };
+
   $i('fi-tb').innerHTML=rows.join('')+`<tr style="background:var(--bg2);font-weight:700;"><td>TOTAL ${anyo}</td><td class="mono" style="color:var(--gn);">${eur(tI)}</td><td class="mono" style="color:var(--rd);">${eur(tGd)}</td><td class="mono" style="color:var(--rd);">${eur(tH)}</td><td class="mono" style="color:var(--ink3);">${eur(tAm)}</td><td class="mono" style="color:${tN>=0?'var(--gn)':'var(--rd)'};">${eur(tN)}</td><td></td></tr>`;
 
   // ── Panel de amortizaciones ──
@@ -6020,11 +6051,14 @@ function rFiscal(){
     <div class="fiscal-row"><span class="fiscal-label">Amortizaciones (${amPct}% + 10% + 3%)</span><span class="fiscal-val" style="color:var(--ink3);">– ${eur(tAm)}</span></div>
     <div class="fiscal-row" style="border-top:1.5px solid var(--line2);padding-top:12px;margin-top:4px;"><span class="fiscal-label" style="font-weight:700;color:var(--ink);">Rendimiento neto</span><span class="fiscal-val" style="font-size:17px;color:${tN>=0?'var(--gn)':'var(--rd)'};">${eur(tN)}</span></div>
     <div class="fiscal-row"><span class="fiscal-label">IRPF estimado (${irpf}%)</span><span class="fiscal-val" style="color:var(--ye);">${eur(cuota)}</span></div>
+    ${(window._fiscalLimite && window._fiscalLimite.excesoTrasladable>0)?`<div style="margin-top:12px;padding:10px 12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--r2);font-size:11px;color:var(--rd);line-height:1.6;">
+      ⚠️ <strong>Límite art. 23 LIRPF:</strong> reparaciones (${eur(window._fiscalLimite.repAnual)}) + intereses (${eur(window._fiscalLimite.interesesAnual)}) superan los ingresos (${eur(window._fiscalLimite.topeReparaciones)}). El exceso de <strong>${eur(window._fiscalLimite.excesoTrasladable)}</strong> no se pierde: se deduce en los <strong>4 años siguientes</strong>.
+    </div>`:''}
     <div style="margin-top:12px;padding:10px;background:var(--ye-l);border:1px solid rgba(181,118,42,.2);border-radius:var(--r2);font-size:11px;color:var(--ye);">⚠️ Estimación orientativa. Consulta con tu asesor fiscal.</div>`;
 
   // ── Detalle de gastos deducibles del año ──
   const gDed=gastosOwner.filter(g=>g.ded==='si'&&g.fecha&&g.fecha.startsWith(anyo));
-  const fDed=comprasOwner.filter(x=>fiscalKey(x.ded)==='corriente'&&x.fecha&&x.fecha.startsWith(anyo));
+  const fDed=comprasOwner.filter(x=>['corriente','reparacion'].includes(fiscalKey(x.ded))&&x.fecha&&x.fecha.startsWith(anyo));
   const filas=[
     ...gDed.map(g=>({t:(GI[g.cat]||'')+' '+g.desc,i:g.imp,o:'Gastos'})),
     ...fDed.map(x=>({t:(CP_ICONS[x.cat]||'🧾')+' '+x.con+(x.num?' ('+x.num+')':''),i:x.imp,o:'Factura'}))
@@ -6080,11 +6114,12 @@ function datosFiscales(ownerId, anyo){
   });
   compras.forEach(x=>{
     const k=fiscalKey(x.ded);
-    const pct = k==='amort10'?10 : k==='amort3'?3 : 0;
+    const pct = k==='amort10'?10 : (k==='amort3'||k==='mejora')?3 : 0;
     if(!pct) return;
     const base=parseFloat(x.imp||0); if(!base) return;
     let t=0; for(let m=1;m<=12;m++) t+=(base*pct/100/12)*fraccionMes(x.fecha,parseInt(anyo),m);
-    if(t>0) detAmort.push({tipo:(k==='amort10'?'Mobiliario 10%':'Adquisición 3%'),desc:x.con+' ('+x.emp+')',alta:x.fecha,base:base,pct:pct,anual:base*pct/100,esteAnyo:t});
+    const tipoTxt = k==='amort10'?'Mobiliario 10%' : k==='mejora'?'Mejora 3%' : 'Adquisición 3%';
+    if(t>0) detAmort.push({tipo:tipoTxt,desc:x.con+' ('+x.emp+')',alta:x.fecha,base:base,pct:pct,anual:base*pct/100,esteAnyo:t});
   });
 
   const ingresos = pagos.filter(p=>p.estado==='pagado').reduce((s,p)=>s+parseFloat(p.imp||0),0);
@@ -6262,15 +6297,56 @@ ${listaFiscal('6.2 · No deducibles',factNo,d.noDedu)}
 </body></html>`;
 }
 
-function informeFiscalPDF(){
+async function informeFiscalPDF(){
   const anyo=$i('fy')?.value||String(new Date().getFullYear());
   const ownF=gi('fi-owner');
   const d=datosFiscales(ownF,anyo);
+
+  // Recopilar todos los justificantes del ejercicio (facturas, gastos, cuotas hipoteca) con PDF/imagen
+  const conJust=[];
+  (d.compras||[]).filter(x=>(x.fecha||'').startsWith(anyo)&&x.pdfData).forEach(x=>conJust.push({tit:x.con+' — '+x.emp,ref:x.pdfData,name:x.pdfName}));
+  (d.gastos||[]).filter(x=>(x.fecha||'').startsWith(anyo)&&x.pdfData).forEach(x=>conJust.push({tit:(x.desc||'Gasto')+' — '+(x.prov||''),ref:x.pdfData,name:x.pdfName}));
+  d.props.forEach(p=>{(p.costesAdq||[]).filter(it=>it.pdfData).forEach(it=>conJust.push({tit:p.nom+' — '+it.concepto,ref:it.pdfData,name:it.pdfName}));});
+  (D.hipotecas||[]).forEach(h=>{(h.cuotas||[]).filter(cu=>(cu.mes||'').startsWith(anyo)&&cu.pdfData).forEach(cu=>conJust.push({tit:'Cuota hipoteca '+cu.mes,ref:cu.pdfData,name:cu.pdfName}));});
+
+  let adjuntarJust=false;
+  if(conJust.length){
+    adjuntarJust=confirm(`Hay ${conJust.length} justificante(s) adjuntos de este ejercicio.\n\n¿Quieres incluirlos al final del PDF de la renta? (tardará unos segundos en descargarlos de Drive)`);
+  }
+
   const w=window.open('','_blank');
   if(!w){toast('Permite las ventanas emergentes para generar el informe',false);return;}
-  w.document.write(informeHTML(d));
+  let html=informeHTML(d);
+
+  if(adjuntarJust){
+    toast('Descargando justificantes… espera unos segundos');
+    let anexos='<div style="page-break-before:always;"></div><h2>Anexo · Justificantes ('+conJust.length+')</h2>';
+    for(const j of conJust){
+      try{
+        let dataUrl='';
+        if(j.ref.startsWith('drive:')){
+          const r=await fetch('https://www.googleapis.com/drive/v3/files/'+j.ref.slice(6)+'?alt=media',{headers:{'Authorization':'Bearer '+gToken}});
+          if(!r.ok) continue;
+          const blob=await r.blob();
+          const esImg=(blob.type||'').startsWith('image/');
+          if(esImg){
+            dataUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(blob);});
+            anexos+='<div style="page-break-before:always;"><div style="font-size:11px;font-weight:600;margin-bottom:6px;">'+j.tit+'</div><img src="'+dataUrl+'" style="max-width:100%;max-height:250mm;"></div>';
+          } else {
+            // PDF: no se puede incrustar como imagen; lo referenciamos
+            anexos+='<div style="page-break-before:always;"><div style="font-size:11px;font-weight:600;">'+j.tit+'</div><div style="font-size:10px;color:#7a7268;margin-top:4px;">📄 '+(j.name||'documento.pdf')+' — adjunto en PDF (descárgalo por separado desde la ficha)</div></div>';
+          }
+        } else if(j.ref.startsWith('data:image')){
+          anexos+='<div style="page-break-before:always;"><div style="font-size:11px;font-weight:600;margin-bottom:6px;">'+j.tit+'</div><img src="'+j.ref+'" style="max-width:100%;max-height:250mm;"></div>';
+        }
+      }catch(e){ console.warn('Justificante no incluido:',j.tit,e); }
+    }
+    html=html.replace('</body>', anexos+'</body>');
+  }
+
+  w.document.write(html);
   w.document.close();
-  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},700);
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},900);
   toast('Informe generado — elige "Guardar como PDF"');
 }
 
@@ -6484,8 +6560,39 @@ function rProvs(){
 // ══════════════════════════════════════════════════════════════
 function addAgenda(){
   const t=gi('ag-t');if(!t){toast('Introduce el título',false);return;}
-  D.agenda.push({id:uid(),titulo:t,fecha:gi('ag-f'),tipo:$i('ag-ti').value,propId:gi('ag-p'),notas:gi('ag-n'),done:false});
-  saveAndSync();closeM('m-ag');rAgenda();toast('Tarea añadida');
+  const editId=gi('ag-edit-id');
+  const campos={titulo:t,fecha:gi('ag-f'),tipo:$i('ag-ti').value,propId:gi('ag-p'),notas:gi('ag-n')};
+  if(editId){
+    const a=D.agenda.find(x=>x.id==editId);
+    if(a) Object.assign(a,campos);
+    toast('Tarea actualizada');
+  } else {
+    D.agenda.push(Object.assign({id:uid(),done:false},campos));
+    toast('Tarea añadida');
+  }
+  saveAndSync();closeM('m-ag');rAgenda();rDash();
+  if($i('ag-edit-id')) $i('ag-edit-id').value='';
+}
+function newAgenda(){
+  if($i('ag-edit-id')) $i('ag-edit-id').value='';
+  ['ag-t','ag-f','ag-n'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  const s=$i('ag-p'); if(s)s.value='';
+  const ti=$i('ag-ti'); if(ti)ti.selectedIndex=0;
+  $i('ag-f').value=new Date().toISOString().split('T')[0];
+  const t=$i('m-ag-title'); if(t)t.textContent='📅 Nueva tarea';
+  openM('m-ag');
+}
+function editAgenda(id){
+  const a=D.agenda.find(x=>x.id==id); if(!a)return;
+  if(!$i('ag-edit-id')){
+    // crear el input oculto si no existe
+    const m=$i('m-ag'); 
+  }
+  $i('ag-edit-id').value=a.id;
+  $i('ag-t').value=a.titulo||''; $i('ag-f').value=a.fecha||'';
+  $i('ag-ti').value=a.tipo||''; $i('ag-p').value=a.propId||''; $i('ag-n').value=a.notas||'';
+  const t=$i('m-ag-title'); if(t)t.textContent='✏️ Editar tarea';
+  openM('m-ag');
 }
 function toggleAgenda(id){
   const a=D.agenda.find(x=>x.id==id); if(!a)return;
@@ -6498,7 +6605,7 @@ function rAgenda(){
   const pend=D.agenda.filter(a=>!a.done).sort((a,b)=>a.fecha>b.fecha?1:-1);
   const done=D.agenda.filter(a=>a.done).slice(-5).reverse();
   const hoyS=new Date().toISOString().split('T')[0];
-  const rItem=(a,canDone=true)=>{const pr=D.props.find(p=>p.id==a.propId);const atr=a.fecha&&a.fecha<hoyS;return `<div class="agenda-item"><div class="agenda-dot" style="background:${atr?'var(--rd)':a.done?'var(--gn)':'var(--acc)'}"></div><div style="flex:1;"><div style="font-size:13px;font-weight:500;${a.done?'text-decoration:line-through;color:var(--ink3);':''}">${a.titulo}</div><div style="font-size:10px;color:var(--ink3);margin-top:2px;">${a.tipo}${pr?' · '+pr.nom:''}${a.fecha?' · '+fD(a.fecha):''}</div>${a.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${a.notas}</div>`:''}</div>${canDone?`<button class="btn btn-success btn-xs" onclick="D.agenda.find(x=>x.id=='${a.id}').done=true;saveAndSync();rAgenda();toast('Completada')">✓</button>`:''}<button class="btn btn-danger btn-xs" onclick="D.agenda=D.agenda.filter(x=>x.id!='${a.id}');saveAndSync();rAgenda();">🗑</button></div>`;};
+  const rItem=(a,canDone=true)=>{const pr=D.props.find(p=>p.id==a.propId);const atr=a.fecha&&a.fecha<hoyS;return `<div class="agenda-item"><div class="agenda-dot" style="background:${atr?'var(--rd)':a.done?'var(--gn)':'var(--acc)'}"></div><div style="flex:1;"><div style="font-size:13px;font-weight:500;${a.done?'text-decoration:line-through;color:var(--ink3);':''}">${a.titulo}</div><div style="font-size:10px;color:var(--ink3);margin-top:2px;">${a.tipo}${pr?' · '+pr.nom:''}${a.fecha?' · '+fD(a.fecha):''}</div>${a.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${a.notas}</div>`:''}</div><button class="btn btn-secondary btn-xs" onclick="editAgenda('${a.id}')">✏️</button>${canDone?`<button class="btn btn-success btn-xs" onclick="D.agenda.find(x=>x.id=='${a.id}').done=true;saveAndSync();rAgenda();toast('Completada')">✓</button>`:''}<button class="btn btn-danger btn-xs" onclick="D.agenda=D.agenda.filter(x=>x.id!='${a.id}');saveAndSync();rAgenda();">🗑</button></div>`;};
   $i('ag-pend').innerHTML=pend.length?pend.map(a=>rItem(a)).join(''):'<div class="empty"><p>Sin tareas pendientes 🎉</p></div>';
   $i('ag-done').innerHTML=done.length?done.map(a=>rItem(a,false)).join(''):'<div class="empty"><p>Sin tareas completadas</p></div>';
 }
@@ -6566,6 +6673,23 @@ function rCartera(){
         <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;opacity:.8;">ROCE cartera</div>
         <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">${roceGlobal.toFixed(1)}%</div>
         <div style="font-size:9px;opacity:.8;">${rentBrutaGlobal!==null?'Rent. bruta '+rentBrutaGlobal.toFixed(1)+'%':''}</div></div>`:''}
+      <div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">% Financiación (LTV)</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:${patBruto>0&&(deudaTotal/patBruto)>0.7?'var(--rd)':'var(--ye)'};">${patBruto>0?(deudaTotal/patBruto*100).toFixed(1):'0'}%</div>
+        <div style="font-size:9px;color:var(--ink3);">deuda sobre patrimonio</div></div>
+    </div>
+    <div style="margin-top:12px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-bottom:4px;">
+        <span>Tu parte (patrimonio neto)</span><span>Financiado por bancos</span>
+      </div>
+      <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line);">
+        <div style="width:${patBruto>0?((patBruto-deudaTotal)/patBruto*100):100}%;background:var(--gn);"></div>
+        <div style="width:${patBruto>0?(deudaTotal/patBruto*100):0}%;background:var(--rd);"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px;">
+        <span style="color:var(--gn);font-weight:600;">${eur(patBruto-deudaTotal)} (${patBruto>0?((patBruto-deudaTotal)/patBruto*100).toFixed(0):100}%)</span>
+        <span style="color:var(--rd);font-weight:600;">${eur(deudaTotal)} (${patBruto>0?(deudaTotal/patBruto*100).toFixed(0):0}%)</span>
+      </div>
     </div>
 
     <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:18px 0 8px;">Desglose por inmueble</div>
