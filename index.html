@@ -6297,57 +6297,254 @@ ${listaFiscal('6.2 · No deducibles',factNo,d.noDedu)}
 </body></html>`;
 }
 
+
+// ── Carga de pdf-lib bajo demanda (para fusionar los justificantes en el PDF de la renta) ──
+let _pdfLibCargando = null;
+function cargarPdfLib(){
+  if(window.PDFLib) return Promise.resolve(window.PDFLib);
+  if(_pdfLibCargando) return _pdfLibCargando;
+  _pdfLibCargando = new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+    s.onload=()=>resolve(window.PDFLib);
+    s.onerror=()=>reject(new Error('No se pudo cargar la librería de PDF'));
+    document.head.appendChild(s);
+  });
+  return _pdfLibCargando;
+}
+
 async function informeFiscalPDF(){
   const anyo=$i('fy')?.value||String(new Date().getFullYear());
   const ownF=gi('fi-owner');
   const d=datosFiscales(ownF,anyo);
 
-  // Recopilar todos los justificantes del ejercicio (facturas, gastos, cuotas hipoteca) con PDF/imagen
-  const conJust=[];
-  (d.compras||[]).filter(x=>(x.fecha||'').startsWith(anyo)&&x.pdfData).forEach(x=>conJust.push({tit:x.con+' — '+x.emp,ref:x.pdfData,name:x.pdfName}));
-  (d.gastos||[]).filter(x=>(x.fecha||'').startsWith(anyo)&&x.pdfData).forEach(x=>conJust.push({tit:(x.desc||'Gasto')+' — '+(x.prov||''),ref:x.pdfData,name:x.pdfName}));
-  d.props.forEach(p=>{(p.costesAdq||[]).filter(it=>it.pdfData).forEach(it=>conJust.push({tit:p.nom+' — '+it.concepto,ref:it.pdfData,name:it.pdfName}));});
-  (D.hipotecas||[]).forEach(h=>{(h.cuotas||[]).filter(cu=>(cu.mes||'').startsWith(anyo)&&cu.pdfData).forEach(cu=>conJust.push({tit:'Cuota hipoteca '+cu.mes,ref:cu.pdfData,name:cu.pdfName}));});
-
-  let adjuntarJust=false;
-  if(conJust.length){
-    adjuntarJust=confirm(`Hay ${conJust.length} justificante(s) adjuntos de este ejercicio.\n\n¿Quieres incluirlos al final del PDF de la renta? (tardará unos segundos en descargarlos de Drive)`);
-  }
-
-  const w=window.open('','_blank');
-  if(!w){toast('Permite las ventanas emergentes para generar el informe',false);return;}
-  let html=informeHTML(d);
-
-  if(adjuntarJust){
-    toast('Descargando justificantes… espera unos segundos');
-    let anexos='<div style="page-break-before:always;"></div><h2>Anexo · Justificantes ('+conJust.length+')</h2>';
-    for(const j of conJust){
-      try{
-        let dataUrl='';
-        if(j.ref.startsWith('drive:')){
-          const r=await fetch('https://www.googleapis.com/drive/v3/files/'+j.ref.slice(6)+'?alt=media',{headers:{'Authorization':'Bearer '+gToken}});
-          if(!r.ok) continue;
-          const blob=await r.blob();
-          const esImg=(blob.type||'').startsWith('image/');
-          if(esImg){
-            dataUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(blob);});
-            anexos+='<div style="page-break-before:always;"><div style="font-size:11px;font-weight:600;margin-bottom:6px;">'+j.tit+'</div><img src="'+dataUrl+'" style="max-width:100%;max-height:250mm;"></div>';
-          } else {
-            // PDF: no se puede incrustar como imagen; lo referenciamos
-            anexos+='<div style="page-break-before:always;"><div style="font-size:11px;font-weight:600;">'+j.tit+'</div><div style="font-size:10px;color:#7a7268;margin-top:4px;">📄 '+(j.name||'documento.pdf')+' — adjunto en PDF (descárgalo por separado desde la ficha)</div></div>';
-          }
-        } else if(j.ref.startsWith('data:image')){
-          anexos+='<div style="page-break-before:always;"><div style="font-size:11px;font-weight:600;margin-bottom:6px;">'+j.tit+'</div><img src="'+j.ref+'" style="max-width:100%;max-height:250mm;"></div>';
-        }
-      }catch(e){ console.warn('Justificante no incluido:',j.tit,e); }
+  // ── Recopilar TODOS los justificantes del ejercicio ──
+  const just=[];
+  const add=(tit,ref,name)=>{ if(ref) just.push({tit,ref,name}); };
+  (d.compras||[]).filter(x=>(x.fecha||'').startsWith(anyo)).forEach(x=>add('Factura · '+x.con+' ('+x.emp+')',x.pdfData,x.pdfName));
+  (d.gastos||[]).filter(x=>(x.fecha||'').startsWith(anyo)).forEach(x=>add('Gasto · '+(x.desc||'')+' ('+(x.prov||'')+')',x.pdfData,x.pdfName));
+  d.props.forEach(p=>{(p.costesAdq||[]).forEach(it=>add('Adquisición · '+p.nom+' — '+it.concepto,it.pdfData,it.pdfName));});
+  (D.hipotecas||[]).forEach(h=>{
+    const pr=D.props.find(x=>x.id==h.propId);
+    if(!ownF || fiscalOwnerDe(pr||{})==ownF){
+      if(h.feinData) add('Hipoteca · FEIN '+(pr?pr.nom:''),h.feinData,h.feinName);
+      (h.cuotas||[]).filter(cu=>(cu.mes||'').startsWith(anyo)&&cu.pdfData).forEach(cu=>add('Cuota hipoteca '+cu.mes+' ('+(pr?pr.nom:'')+')',cu.pdfData,cu.pdfName));
     }
-    html=html.replace('</body>', anexos+'</body>');
+  });
+
+  const totalJust=just.length;
+
+  // ── 1. Generar el informe base como PDF usando la ventana de impresión → pero necesitamos
+  //       un PDF real para fusionar. Estrategia: renderizamos el informe HTML a PDF con pdf-lib
+  //       creando páginas a partir del texto no es viable; en su lugar usamos el flujo de impresión
+  //       para el informe y adjuntamos los justificantes en el MISMO documento vía pdf-lib. ──
+
+  if(!gToken && just.some(j=>j.ref.startsWith('drive:'))){
+    toast('Conéctate a Google Drive para incluir los justificantes', false);
   }
 
-  w.document.write(html);
-  w.document.close();
-  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},900);
-  toast('Informe generado — elige "Guardar como PDF"');
+  let lib;
+  try{ toast('Preparando PDF y descargando justificantes…'); lib = await cargarPdfLib(); }
+  catch(e){ toast('No se pudo cargar el generador de PDF. Se abrirá solo el informe.', false); abrirInformeSolo(d); return; }
+
+  const { PDFDocument, StandardFonts, rgb } = lib;
+
+  // ── Construir el PDF del informe (texto) directamente con pdf-lib para tener un PDF real ──
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const fontB = await pdf.embedFont(StandardFonts.HelveticaBold);
+  await dibujarInformeEnPDF(pdf, font, fontB, d, anyo, totalJust);
+
+  // ── Fusionar cada justificante ──
+  let incluidos=0, fallidos=0;
+  for(const j of just){
+    try{
+      let bytes=null, mime='';
+      if(j.ref.startsWith('drive:')){
+        const r=await fetch('https://www.googleapis.com/drive/v3/files/'+j.ref.slice(6)+'?alt=media',{headers:{'Authorization':'Bearer '+gToken}});
+        if(!r.ok){ fallidos++; continue; }
+        const blob=await r.blob(); mime=blob.type||''; bytes=new Uint8Array(await blob.arrayBuffer());
+        if(!mime){ mime = esProbablePDF(bytes)?'application/pdf':'image/jpeg'; }
+      } else if(j.ref.startsWith('data:')){
+        mime=(j.ref.match(/data:(.*?);/)||[])[1]||'';
+        const b64=j.ref.split(',')[1]; const bin=atob(b64); bytes=new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      } else { continue; }
+
+      // Página separadora con el título del justificante
+      const sep=pdf.addPage([595,842]);
+      sep.drawRectangle({x:0,y:812,width:595,height:30,color:rgb(0.784,0.294,0.184)});
+      sep.drawText('JUSTIFICANTE '+(incluidos+1)+' de '+totalJust,{x:24,y:820,size:11,font:fontB,color:rgb(1,1,1)});
+      sep.drawText(limpiarTexto(j.tit).slice(0,90),{x:24,y:788,size:12,font:fontB,color:rgb(0.1,0.09,0.08)});
+
+      if(mime.includes('pdf') || esProbablePDF(bytes)){
+        // Fusionar todas las páginas del PDF
+        const src=await PDFDocument.load(bytes,{ignoreEncryption:true});
+        const paginas=await pdf.copyPages(src, src.getPageIndices());
+        paginas.forEach(pg=>pdf.addPage(pg));
+      } else {
+        // Imagen: incrustar en una página
+        let img;
+        try{ img = mime.includes('png') ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes); }
+        catch(_){ try{ img=await pdf.embedJpg(bytes); }catch(__){ img=await pdf.embedPng(bytes); } }
+        const pg=pdf.addPage([595,842]);
+        const maxW=545, maxH=760;
+        let {width:iw,height:ih}=img.scale(1);
+        const r=Math.min(maxW/iw, maxH/ih, 1);
+        iw*=r; ih*=r;
+        pg.drawImage(img,{x:(595-iw)/2, y:(812-ih)/2 - 10, width:iw, height:ih});
+      }
+      incluidos++;
+    }catch(e){ console.warn('Justificante no incluido:',j.tit,e); fallidos++; }
+  }
+
+  // ── Descargar el PDF combinado ──
+  const pdfBytes=await pdf.save();
+  const nombre='Renta_'+anyo+'_'+((d.owner?d.owner.nom:'Todos').replace(/[^a-z0-9]/gi,'_'))+'.pdf';
+  descargarBlob(new Blob([pdfBytes],{type:'application/pdf'}), nombre);
+  toast('✓ PDF de la renta con '+incluidos+' justificante(s)'+(fallidos?' ('+fallidos+' no disponibles)':''));
+}
+
+
+// ── Dibuja el informe fiscal completo como páginas PDF reales (pdf-lib) ──
+async function dibujarInformeEnPDF(pdf, font, fontB, d, anyo, totalJust){
+  const { rgb } = window.PDFLib;
+  const AC=rgb(0.784,0.294,0.184), TX=rgb(0.1,0.09,0.08), GR=rgb(0.48,0.45,0.41);
+  const VE=rgb(0.02,0.6,0.41), RO=rgb(0.86,0.15,0.15);
+  const W=595, H=842, M=42;
+  let page=pdf.addPage([W,H]);
+  let y=H-M;
+
+  const nl=(n=1)=>{ y-=14*n; if(y<60){ page=pdf.addPage([W,H]); y=H-M; } };
+  const txt=(s,x,size,f,col)=>{ page.drawText(limpiarTexto(String(s)), {x,y,size,font:f||font,color:col||TX}); };
+  const linea=(l,r,val,col)=>{
+    txt(l, M, 9.5, font, GR);
+    const vs=limpiarTexto(val);
+    const w=(fontB).widthOfTextAtSize(vs,9.5);
+    page.drawText(vs,{x:W-M-w,y,size:9.5,font:fontB,color:col||TX});
+    nl();
+  };
+  const h2=(s)=>{
+    nl(0.5);
+    if(y<90){ page=pdf.addPage([W,H]); y=H-M; }
+    page.drawRectangle({x:M,y:y-3,width:W-2*M,height:1.5,color:AC});
+    nl(0.4);
+    txt(s, M, 12, fontB, AC); nl(1.4);
+  };
+
+  // Cabecera
+  page.drawRectangle({x:0,y:H-70,width:W,height:70,color:AC});
+  page.drawText('Informe fiscal '+anyo,{x:M,y:H-42,size:20,font:fontB,color:rgb(1,1,1)});
+  page.drawText(limpiarTexto(d.owner?d.owner.nom:'Todos los propietarios'),{x:M,y:H-60,size:11,font:font,color:rgb(1,1,1)});
+  const fechaGen='Generado '+new Date().toLocaleDateString('es-ES')+' - RentaControl';
+  page.drawText(fechaGen,{x:W-M-font.widthOfTextAtSize(fechaGen,8),y:H-60,size:8,font:font,color:rgb(1,1,1)});
+  y=H-92;
+
+  // KPIs resumen
+  const eu=n=>{ return (parseFloat(n)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' EUR'; };
+  h2('Resumen del ejercicio');
+  linea('Ingresos integros cobrados', '', eu(d.ingresos), VE);
+  linea('Gastos deducibles (corrientes + facturas)', '', '- '+eu(d.gDedu+d.fDedu), RO);
+  linea('Intereses / cuotas de hipoteca', '', '- '+eu(d.hipoteca), RO);
+  linea('Amortizaciones (3% + 10%)', '', '- '+eu(d.amTotal), GR);
+  nl(0.3);
+  page.drawRectangle({x:M,y:y+4,width:W-2*M,height:1,color:rgb(0.85,0.83,0.8)}); nl(0.5);
+  linea('RENDIMIENTO NETO', '', eu(d.neto), d.neto>=0?VE:RO);
+  linea('Tipo IRPF estimado', '', d.irpf+'%', TX);
+  linea('CUOTA IRPF ESTIMADA', '', eu(d.cuota), rgb(0.71,0.46,0.16));
+
+  // Inmuebles
+  h2('1. Inmuebles ('+d.props.length+')');
+  d.props.forEach(p=>{
+    txt(p.nom, M, 10, fontB); nl();
+    txt('Direccion: '+(p.dir||'-')+(p.ciu?', '+p.ciu:''), M+8, 8.5, font, GR); nl(0.9);
+    txt('Compra: '+(p.fcompra?new Date(p.fcompra).toLocaleDateString('es-ES'):(p.anyo||'-'))+'  |  Precio: '+eu(p.precio)+'  |  V.construccion: '+eu(baseConstruccion(p)), M+8, 8.5, font, GR); nl(0.9);
+    txt('Habitaciones: '+(p.habs||0), M+8, 8.5, font, GR); nl(1.1);
+  });
+
+  // Ingresos mensuales
+  h2('2. Ingresos mensuales');
+  const mN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  txt('Mes', M, 8.5, fontB, GR);
+  txt('Ingresos', M+120, 8.5, fontB, GR);
+  txt('Gastos', M+220, 8.5, fontB, GR);
+  txt('Hipoteca', M+310, 8.5, fontB, GR);
+  txt('Amortiz.', M+400, 8.5, fontB, GR);
+  txt('Neto', M+480, 8.5, fontB, GR);
+  nl(1.1);
+  for(let mi=0;mi<12;mi++){
+    const mk=anyo+'-'+String(mi+1).padStart(2,'0');
+    const ing=d.pagos.filter(p=>p.mes===mk&&p.estado==='pagado').reduce((s,p)=>s+parseFloat(p.imp||0),0);
+    const gd=d.gastos.filter(g=>(g.fecha||'').startsWith(mk)&&g.ded==='si'&&g.cat!=='Hipoteca').reduce((s,g)=>s+parseFloat(g.imp||0),0)
+           + d.comprasA.filter(x=>(x.fecha||'').startsWith(mk)&&['corriente','reparacion'].includes(fiscalKey(x.ded))).reduce((s,x)=>s+parseFloat(x.imp||0),0);
+    const hp=d.gastos.filter(g=>(g.fecha||'').startsWith(mk)&&g.cat==='Hipoteca').reduce((s,g)=>s+parseFloat(g.imp||0),0);
+    const am=d.meses[mi].total;
+    const nt=ing-gd-hp-am;
+    txt(mN[mi], M, 8.5, font);
+    txt(eu(ing).replace(' EUR',''), M+120, 8.5, font, VE);
+    txt(eu(gd).replace(' EUR',''), M+220, 8.5, font, RO);
+    txt(eu(hp).replace(' EUR',''), M+310, 8.5, font, RO);
+    txt(eu(am).replace(' EUR',''), M+400, 8.5, font, GR);
+    txt(eu(nt).replace(' EUR',''), M+480, 8.5, font, nt>=0?VE:RO);
+    nl();
+  }
+
+  // Amortizaciones detalladas
+  h2('3. Amortizaciones');
+  if(!d.detAmort.length) { txt('Sin elementos amortizables', M, 9, font, GR); nl(); }
+  d.detAmort.forEach(a=>{
+    txt(limpiarTexto(a.tipo+' · '+a.desc).slice(0,70), M, 8.5, font); 
+    const v=eu(a.esteAnyo);
+    page.drawText(v,{x:W-M-fontB.widthOfTextAtSize(v,8.5),y,size:8.5,font:fontB,color:TX});
+    nl();
+  });
+
+  // Gastos deducibles con detalle
+  h2('4. Gastos deducibles del ejercicio');
+  const deducibles=[
+    ...d.gastos.filter(g=>g.ded==='si'&&g.cat!=='Hipoteca'&&(g.fecha||'').startsWith(anyo)).map(g=>({f:g.fecha,c:g.desc,e:g.prov,i:g.imp})),
+    ...d.comprasA.filter(x=>['corriente','reparacion'].includes(fiscalKey(x.ded))).map(x=>({f:x.fecha,c:x.con,e:x.emp,i:x.imp}))
+  ].sort((a,b)=>(a.f||'').localeCompare(b.f||''));
+  if(!deducibles.length){ txt('Sin gastos deducibles registrados', M, 9, font, GR); nl(); }
+  deducibles.forEach(g=>{
+    const fe=g.f?new Date(g.f).toLocaleDateString('es-ES'):'-';
+    txt(fe+'  '+limpiarTexto((g.c||'')+' ('+(g.e||'')+')').slice(0,60), M, 8.5, font);
+    const v=eu(g.i);
+    page.drawText(v,{x:W-M-fontB.widthOfTextAtSize(v,8.5),y,size:8.5,font:fontB,color:RO});
+    nl();
+  });
+
+  // Aviso del límite art. 23 si aplica
+  if(window._fiscalLimite && window._fiscalLimite.excesoTrasladable>0){
+    nl(0.5);
+    page.drawRectangle({x:M,y:y-38,width:W-2*M,height:44,color:rgb(0.99,0.93,0.80)});
+    txt('LIMITE ART. 23 LIRPF', M+8, 9, fontB, rgb(0.71,0.46,0.16)); nl();
+    txt('Exceso de reparaciones+intereses sobre ingresos: '+eu(window._fiscalLimite.excesoTrasladable), M+8, 8.5, font, TX); nl();
+    txt('Este exceso se deduce en los 4 anos siguientes.', M+8, 8.5, font, GR); nl(1.2);
+  }
+
+  // Nota final
+  nl(0.5);
+  txt('Documento orientativo generado por RentaControl. Revisar con asesor fiscal antes de presentar.', M, 7.5, font, GR); nl();
+  txt('No se ha aplicado la reduccion del 60% (art. 23.2): en alquiler por habitaciones su aplicacion es discutida.', M, 7.5, font, GR);
+  if(totalJust>0){ nl(); txt('A continuacion se adjuntan '+totalJust+' justificante(s).', M, 8.5, fontB, AC); }
+}
+
+// Detecta si unos bytes son un PDF (empiezan por %PDF)
+function esProbablePDF(bytes){
+  return bytes && bytes.length>4 && bytes[0]===0x25 && bytes[1]===0x50 && bytes[2]===0x44 && bytes[3]===0x46;
+}
+// Limpia caracteres no-latin1 que Helvetica no puede dibujar
+function limpiarTexto(s){
+  return (s||'').replace(/[^\x00-\xFF]/g,'?');
+}
+
+// Fallback: si no se puede cargar pdf-lib, abrir el informe para imprimir
+function abrirInformeSolo(d){
+  const w=window.open('','_blank');
+  if(!w){toast('Permite las ventanas emergentes',false);return;}
+  w.document.write(informeHTML(d)); w.document.close();
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},700);
 }
 
 // ── Informe en texto plano, pensado para pegar en una IA ──
@@ -6830,6 +7027,44 @@ document.addEventListener('DOMContentLoaded',()=>{
   saveAndSync();
 });
 
+
+// ══════════════════════════════════════════════════════════════
+// SEGURIDAD: bloqueo por inactividad
+// ══════════════════════════════════════════════════════════════
+let _inactividadTimer=null;
+const INACTIVIDAD_MIN=15;   // minutos hasta bloqueo automático
+
+function reiniciarInactividad(){
+  clearTimeout(_inactividadTimer);
+  if(!currentUser) return;
+  _inactividadTimer=setTimeout(bloquearApp, INACTIVIDAD_MIN*60*1000);
+}
+function bloquearApp(){
+  if(!currentUser) return;
+  // Guardar antes de bloquear
+  try{ if(_hayCambiosSinSubir && gToken) syncFull(false); }catch(e){}
+  // Mostrar pantalla de bloqueo (reusa el login pero con la sesión intacta)
+  const ov=document.createElement('div');
+  ov.id='lock-screen';
+  ov.style.cssText='position:fixed;inset:0;z-index:2000;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;';
+  ov.innerHTML=`
+    <img src="icon-192.png?v=5" style="width:64px;height:64px;border-radius:14px;">
+    <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--ink);">Sesión bloqueada</div>
+    <div style="font-size:13px;color:var(--ink3);">Bloqueada por inactividad · ${currentUser?currentUser.email:''}</div>
+    <button class="btn btn-primary" onclick="desbloquearApp()" style="margin-top:8px;">🔓 Desbloquear</button>
+    <button class="btn btn-ghost btn-sm" onclick="cerrarSesion()">Cerrar sesión</button>`;
+  document.body.appendChild(ov);
+}
+function desbloquearApp(){
+  // Re-verificar que el token sigue vivo; si no, renovarlo
+  const ov=$i('lock-screen'); if(ov) ov.remove();
+  if(gToken){ renovarTokenAhora().catch(()=>{}); }
+  reiniciarInactividad();
+}
+['click','keydown','mousemove','touchstart','scroll'].forEach(ev=>{
+  document.addEventListener(ev, ()=>{ if(!$i('lock-screen')) reiniciarInactividad(); }, {passive:true});
+});
+
 // ══════════════════════════════════════════════════════════════
 // AUTH / LOGIN
 // ══════════════════════════════════════════════════════════════
@@ -6875,6 +7110,7 @@ function loginWithGoogle() {
           // Authorized!
           currentUser = { email, token: resp.access_token };
           gToken = resp.access_token;
+          reiniciarInactividad();
           localStorage.setItem('rc_auth_email', email);
           localStorage.setItem('rc_auth_token', resp.access_token);
           localStorage.setItem('rc_auth_exp', String(Date.now()+(resp.expires_in||3600)*1000));
@@ -6974,6 +7210,7 @@ function checkExistingSession() {
   const exp   = parseInt(localStorage.getItem('rc_auth_exp')||'0');
   if (email && ALLOWED_EMAILS.includes(email.toLowerCase())) {
     currentUser = { email, token };
+    reiniciarInactividad();
     // Si el token sigue vigente lo usamos; si caducó, entramos igual y lo renovamos en silencio
     if (token && exp > Date.now()+60000) {
       gToken = token;
