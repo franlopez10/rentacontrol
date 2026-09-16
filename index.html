@@ -1029,7 +1029,10 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <span>📅 Calendario de ocupación</span>
       <div style="display:flex;gap:8px;align-items:center;">
         <select id="cal-prop" onchange="rCalendarioOcupacion()" style="padding:6px 10px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;background:var(--card);color:var(--ink);"></select>
-        <input type="number" id="cal-anyo" onchange="rCalendarioOcupacion()" style="width:80px;padding:6px 10px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;">
+        <button class="btn btn-ghost btn-xs" onclick="calMes(-1)">‹</button>
+        <input type="month" id="cal-mes" onchange="rCalendarioOcupacion()" style="padding:6px 10px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;background:var(--card);color:var(--ink);">
+        <button class="btn btn-ghost btn-xs" onclick="calMes(1)">›</button>
+        <button class="btn btn-secondary btn-xs" onclick="calHoy()">Hoy</button>
       </div>
     </div>
     <div id="cal-ocupacion"></div>
@@ -2768,6 +2771,7 @@ function newProp(){
   $i('pr-docs-actuales').innerHTML='';
   $i('pr-owner').value=''; $i('pr-usufructo').value=''; $i('pr-coste-total').innerHTML='';
   const res=$i('pr-costesadq-resumen'); if(res){res.textContent='+ añadir';res.style.color='var(--ink3)';}
+  const resH=$i('pr-habs-resumen'); if(resH){resH.textContent='+ configurar';resH.style.color='var(--ink3)';}
   openM('m-prop');
 }
 
@@ -2781,7 +2785,7 @@ function editProp(id){
   $i('pr-vc').value=p.vc||''; $i('pr-owner').value=p.ownerId||''; $i('pr-usufructo').value=p.usufructoId||'';
   migrarCostesAdqLegacy(p);
   $i('pr-tasacion').value=p.tasacion||''; $i('pr-fecha-tasacion').value=p.fechaTasacion||''; $i('pr-mercado').value=p.mercado||''; $i('pr-pctc').value=p.pctConstruccion||'';
-  actualizarResumenCostesAdq(p); calcCosteTotal();
+  actualizarResumenCostesAdq(p); actualizarResumenHabs(p); calcCosteTotal();
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
   // Mostrar documentos ya guardados
   const docs=p.docs||{};
@@ -4393,8 +4397,11 @@ function abrirConfigHabs(){
   const p=D.props.find(x=>x.id==propId); if(!p) return;
   $i('ch-prop-id').value=propId;
   $i('ch-piso-nom').textContent=p.nom;
-  const n=parseInt(p.habs)||0;
-  if(!p.habsConfig) p.habsConfig={};
+  // Nº de habitaciones: el que hay ahora en el formulario, o el guardado si está vacío
+  const n=parseInt(gi('pr-h'))||parseInt(p.habs)||0;
+  // Copia propia por propiedad (nunca compartida entre pisos)
+  if(!p.habsConfig || typeof p.habsConfig!=='object') p.habsConfig={};
+  p.habsConfig=JSON.parse(JSON.stringify(p.habsConfig));
   let html='';
   for(let i=1;i<=n;i++){
     const cfg=p.habsConfig[i]||{tipo:'individual'};
@@ -4411,12 +4418,13 @@ function abrirConfigHabs(){
 }
 function guardarConfigHabs(){
   const propId=gi('ch-prop-id'); const p=D.props.find(x=>x.id==propId); if(!p) return;
-  const n=parseInt(p.habs)||0;
-  p.habsConfig={};
+  const n=parseInt(gi('pr-h'))||parseInt(p.habs)||0;
+  const nuevaCfg={};
   for(let i=1;i<=n;i++){
     const s=$i('ch-tipo-'+i);
-    if(s) p.habsConfig[i]={tipo:s.value, plazas: s.value==='doble'?2:1};
+    if(s) nuevaCfg[i]={tipo:s.value, plazas: s.value==='doble'?2:1};
   }
+  p.habsConfig=nuevaCfg;
   saveAndSync(); closeM('m-confighabs'); actualizarResumenHabs(p);
   toast('Habitaciones configuradas');
 }
@@ -4430,105 +4438,152 @@ function actualizarResumenHabs(p){
 }
 
 
-// ── CALENDARIO VISUAL DE OCUPACIÓN (quién ocupó cada habitación, mes a mes) ──
+// ── CALENDARIO DE OCUPACIÓN: un mes completo, día a día ──
 const COLORES_INQ=['#c84b2f','#2563eb','#059669','#7c3aed','#d97706','#0891b2','#be185d','#65a30d','#dc2626','#4f46e5'];
 function colorInquilino(inqId){
   const idx=D.inqs.findIndex(i=>i.id==inqId);
   return COLORES_INQ[(idx>=0?idx:0)%COLORES_INQ.length];
+}
+function calMes(delta){
+  const el=$i('cal-mes');
+  const base=el.value||new Date().toISOString().slice(0,7);
+  const [y,m]=base.split('-').map(Number);
+  const d=new Date(y,m-1+delta,1);
+  el.value=d.toISOString().slice(0,7);
+  rCalendarioOcupacion();
+}
+function calHoy(){
+  $i('cal-mes').value=new Date().toISOString().slice(0,7);
+  rCalendarioOcupacion();
 }
 
 function rCalendarioOcupacion(){
   populateSels();
   const selP=$i('cal-prop');
   if(selP && !selP.value && D.props.length) selP.value=D.props[0].id;
-  const anyoI=$i('cal-anyo');
-  if(anyoI && !anyoI.value) anyoI.value=new Date().getFullYear();
-  const propId=gi('cal-prop'), anyo=parseInt(gi('cal-anyo'))||new Date().getFullYear();
+  const elMes=$i('cal-mes');
+  if(elMes && !elMes.value) elMes.value=new Date().toISOString().slice(0,7);
+  const propId=gi('cal-prop');
+  const mesStr=gi('cal-mes')||new Date().toISOString().slice(0,7);
+  const [anyo,mes]=mesStr.split('-').map(Number);
   const cont=$i('cal-ocupacion'); if(!cont) return;
   const prop=D.props.find(p=>p.id==propId);
   if(!prop){ cont.innerHTML='<div class="empty" style="padding:20px;"><p>Selecciona un piso</p></div>'; return; }
 
+  const diasMes=new Date(anyo,mes,0).getDate();
   const nHabs=parseInt(prop.habs)||0;
   const inqs=D.inqs.filter(i=>i.propId==propId);
-  const mN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const MESES_LG=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const DOW=['D','L','M','X','J','V','S'];
+  const hoyStr=new Date().toISOString().split('T')[0];
 
-  // ¿Quién ocupa la habitación h en el mes m?
-  const ocupanteEn=(hab,mes)=>{
-    const ini=new Date(anyo,mes,1), fin=new Date(anyo,mes+1,0);
-    return inqs.filter(i=>{
+  // ¿Qué inquilino ocupa la habitación h el día d?
+  const ocupanteDia=(hab,dia)=>{
+    const fecha=new Date(anyo,mes-1,dia);
+    return inqs.find(i=>{
       if(String(i.hab)!==String(hab)) return false;
       if(!i.ini) return false;
       const iIni=new Date(i.ini+'T00:00:00');
       const iFin=i.fin?new Date(i.fin+'T00:00:00'):new Date('2099-12-31');
-      return iIni<=fin && iFin>=ini;
+      return fecha>=iIni && fecha<=iFin;
     });
   };
 
-  let html='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:640px;">';
-  html+='<thead><tr><th style="text-align:left;padding:6px 8px;font-size:9px;text-transform:uppercase;color:var(--ink3);">Habitación</th>';
-  mN.forEach(m=>html+=`<th style="padding:6px 2px;font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;">${m}</th>`);
-  html+='</tr></thead><tbody>';
+  let html=`<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:10px;">${MESES_LG[mes-1]} ${anyo} · ${prop.nom}</div>`;
+  html+='<div style="overflow-x:auto;"><table style="border-collapse:collapse;min-width:100%;">';
 
+  // Cabecera con los días del mes
+  html+='<thead><tr><th style="text-align:left;padding:4px 8px;font-size:9px;text-transform:uppercase;color:var(--ink3);position:sticky;left:0;background:var(--card);z-index:2;min-width:110px;">Habitación</th>';
+  for(let d=1;d<=diasMes;d++){
+    const dow=new Date(anyo,mes-1,d).getDay();
+    const finde=(dow===0||dow===6);
+    html+=`<th style="padding:2px 0;width:22px;font-size:8.5px;color:${finde?'var(--acc)':'var(--ink3)'};font-weight:${finde?'700':'400'};">
+      <div>${DOW[dow]}</div><div style="font-size:10px;">${d}</div></th>`;
+  }
+  html+='<th style="padding:4px 8px;font-size:9px;color:var(--ink3);text-transform:uppercase;">Días</th></tr></thead><tbody>';
+
+  // Una fila por habitación
   for(let h=1;h<=nHabs;h++){
     const cfg=(prop.habsConfig||{})[h]||{tipo:'individual'};
-    html+=`<tr><td style="padding:6px 8px;font-size:11.5px;font-weight:600;white-space:nowrap;">🚪 Hab. ${h} <span style="font-size:9px;color:var(--ink3);font-weight:400;">${cfg.tipo==='doble'?'(doble)':''}</span></td>`;
-    for(let m=0;m<12;m++){
-      const ocu=ocupanteEn(h,m);
-      if(ocu.length){
-        const i=ocu[0];
-        const col=colorInquilino(i.id);
-        const ini=(i.nom||'?')[0].toUpperCase();
-        const nombre=(i.nom||'')+' '+(i.ap||'');
-        html+=`<td style="padding:2px;" title="${nombre}">
-          <div onclick="openPerfil('${i.id}')" style="background:${col};color:#fff;border-radius:5px;padding:6px 2px;text-align:center;font-size:10px;font-weight:700;cursor:pointer;" >${ini}${i.personas>1?'²':''}</div></td>`;
+    const esDoble=cfg.tipo==='doble';
+    html+=`<tr><td style="padding:5px 8px;font-size:11.5px;font-weight:600;white-space:nowrap;position:sticky;left:0;background:var(--card);z-index:1;border-right:1px solid var(--line);">
+      🚪 ${h} <span style="font-size:9px;color:var(--ink3);font-weight:400;">${esDoble?'doble':'indiv.'}</span></td>`;
+    let diasOcup=0;
+    for(let d=1;d<=diasMes;d++){
+      const inq=ocupanteDia(h,d);
+      const fechaStr=`${anyo}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const esHoy=fechaStr===hoyStr;
+      if(inq){
+        diasOcup++;
+        const col=colorInquilino(inq.id);
+        // Bordes redondeados solo al principio y fin del tramo
+        const antes=d>1?ocupanteDia(h,d-1):null;
+        const desp=d<diasMes?ocupanteDia(h,d+1):null;
+        const ini=!antes||antes.id!==inq.id;
+        const fin=!desp||desp.id!==inq.id;
+        const radio=`${ini?'5px':'0'} ${fin?'5px':'0'} ${fin?'5px':'0'} ${ini?'5px':'0'}`;
+        html+=`<td style="padding:1px 0;" title="${inq.nom} ${inq.ap||''} · Hab ${h} · ${fechaStr}">
+          <div onclick="openPerfil('${inq.id}')" style="background:${col};height:22px;border-radius:${radio};cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:8px;font-weight:700;${esHoy?'outline:2px solid var(--ink);outline-offset:-2px;':''}">${ini?(inq.nom||'?')[0].toUpperCase():''}</div></td>`;
       } else {
-        html+='<td style="padding:2px;"><div style="background:var(--bg);border:1px dashed var(--line2);border-radius:5px;padding:6px 2px;text-align:center;font-size:9px;color:var(--ink3);">–</div></td>';
+        html+=`<td style="padding:1px 0;"><div style="height:22px;background:${esHoy?'rgba(0,0,0,.08)':'var(--bg)'};border:1px dashed var(--line2);border-radius:4px;"></div></td>`;
       }
     }
-    html+='</tr>';
+    const pctOcup=Math.round(diasOcup/diasMes*100);
+    html+=`<td style="padding:4px 8px;font-size:10px;text-align:center;white-space:nowrap;"><strong>${diasOcup}</strong>/${diasMes}<br><span style="color:${pctOcup>=90?'var(--gn)':pctOcup>=50?'var(--ye)':'var(--rd)'};font-weight:700;">${pctOcup}%</span></td></tr>`;
   }
   html+='</tbody></table></div>';
 
-  // Leyenda con los inquilinos que aparecen
-  const usados=[...new Set(inqs.filter(i=>{
+  // Resumen del mes
+  let totalPD=0, diasVaciosPiso=0;
+  for(let d=1;d<=diasMes;d++){
+    let personasHoy=0;
+    for(let h=1;h<=nHabs;h++){
+      const inq=ocupanteDia(h,d);
+      if(inq) personasHoy+=(parseInt(inq.personas)||1);
+    }
+    if(personasHoy===0) diasVaciosPiso++;
+    totalPD+=personasHoy;
+  }
+  const plazasTotales=Object.values(prop.habsConfig||{}).reduce((s,x)=>s+(x.plazas||1),0)||nHabs;
+  const pdMax=plazasTotales*diasMes;
+  html+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:110px;padding:10px 12px;"><div class="kpi-accent"></div><div class="kpi-label">Personas-día</div><div class="kpi-value">${totalPD}</div><div class="kpi-sub">de ${pdMax} posibles</div></div>
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:110px;padding:10px 12px;"><div class="kpi-accent"></div><div class="kpi-label">Ocupación</div><div class="kpi-value">${pdMax>0?Math.round(totalPD/pdMax*100):0}%</div></div>
+    <div class="kpi" style="--kc:var(--ye);flex:1;min-width:110px;padding:10px 12px;"><div class="kpi-accent"></div><div class="kpi-label">Días piso vacío</div><div class="kpi-value">${diasVaciosPiso}</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:110px;padding:10px 12px;"><div class="kpi-accent"></div><div class="kpi-label">Plazas</div><div class="kpi-value">${plazasTotales}</div><div class="kpi-sub">${nHabs} habitaciones</div></div>
+  </div>`;
+
+  // Leyenda de inquilinos del mes
+  const delMes=[...new Set(inqs.filter(i=>{
     if(!i.ini) return false;
     const iIni=new Date(i.ini+'T00:00:00');
     const iFin=i.fin?new Date(i.fin+'T00:00:00'):new Date('2099-12-31');
-    return iIni<=new Date(anyo,11,31) && iFin>=new Date(anyo,0,1);
+    return iIni<=new Date(anyo,mes-1,diasMes) && iFin>=new Date(anyo,mes-1,1);
   }).map(i=>i.id))];
-  if(usados.length){
+  if(delMes.length){
     html+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">';
-    usados.forEach(id=>{
+    delMes.forEach(id=>{
       const i=D.inqs.find(x=>x.id==id);
       html+=`<div style="display:flex;align-items:center;gap:5px;font-size:11px;">
         <span style="width:12px;height:12px;border-radius:3px;background:${colorInquilino(id)};display:inline-block;"></span>
-        ${i.nom} ${i.ap||''}${i.personas>1?' (×'+i.personas+')':''}</div>`;
+        ${i.nom} ${i.ap||''} <span style="color:var(--ink3);">(hab. ${i.hab||'?'}${(parseInt(i.personas)||1)>1?' · '+i.personas+' pers.':''})</span></div>`;
     });
     html+='</div>';
   }
 
-  // Resumen de suministros del piso por mes
-  const pagosSum=D.pagos.filter(p=>['Luz','Agua','Gas','Internet','Comunidad','Otro suministro'].includes(p.con))
+  // Suministros cobrados ese mes en ese piso
+  const sumMes=D.pagos.filter(p=>['Luz','Agua','Gas','Internet','Comunidad','Otro suministro'].includes(p.con))
+    .filter(p=>p.mes===mesStr)
     .filter(p=>{const inq=D.inqs.find(i=>i.id==p.inqId); return inq && inq.propId==propId;});
-  const porMes={};
-  pagosSum.filter(p=>(p.mes||'').startsWith(String(anyo))).forEach(p=>{
-    const m=parseInt((p.mes||'').slice(5,7))-1;
-    porMes[m]=(porMes[m]||0)+parseFloat(p.imp||0);
-  });
-  const totalAnual=Object.values(porMes).reduce((s,v)=>s+v,0);
-  if(totalAnual>0){
-    const maxM=Math.max(...Object.values(porMes),1);
-    html+=`<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line);">
-      <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:8px;">Suministros cobrados en ${anyo} · total ${eur(totalAnual)}</div>
-      <div style="display:flex;gap:4px;align-items:flex-end;height:60px;">`;
-    for(let m=0;m<12;m++){
-      const v=porMes[m]||0;
-      const alt=maxM>0?Math.max(3,(v/maxM)*56):3;
-      html+=`<div style="flex:1;text-align:center;" title="${mN[m]}: ${eur(v)}">
-        <div style="height:${alt}px;background:${v>0?'var(--bl)':'var(--line)'};border-radius:3px 3px 0 0;"></div>
-        <div style="font-size:8px;color:var(--ink3);margin-top:3px;">${mN[m]}</div></div>`;
-    }
-    html+='</div></div>';
+  if(sumMes.length){
+    const tot=sumMes.reduce((s,p)=>s+parseFloat(p.imp||0),0);
+    const porInq={};
+    sumMes.forEach(p=>{ const i=D.inqs.find(x=>x.id==p.inqId); const n=i?i.nom+' '+(i.ap||''):'?'; porInq[n]=(porInq[n]||0)+parseFloat(p.imp||0); });
+    html+=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
+      <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:8px;">Suministros de ${MESES_LG[mes-1]} · total ${eur(tot)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${Object.entries(porInq).map(([n,v])=>`<div style="background:var(--bg);border-radius:6px;padding:6px 10px;font-size:11px;">${n}: <strong>${eur(v,2)}</strong></div>`).join('')}
+      </div></div>`;
   }
 
   cont.innerHTML=html;
