@@ -735,6 +735,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="nav-item" data-ws="gentaury" data-s="anuncios" onclick="go(this)">
       <span class="nav-icon">📸</span> Anuncios Idealista
     </div>
+    <div class="nav-item" data-ws="gentaury" data-s="plantillas" onclick="go(this)">
+      <span class="nav-icon">📑</span> Plantillas
+    </div>
   </div>
 
   <div class="nav-group" data-ws="gentaury">
@@ -1204,6 +1207,23 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </section>
 
 
+
+
+<!-- ════════════ PLANTILLAS ════════════ -->
+<section class="sec" data-ws="gentaury" id="sec-plantillas">
+  <div class="ph"><div><div class="ph-title">📑 Plantillas</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Contratos, ofertas y mensajes tipo, organizados por piso</div></div>
+    <button class="btn btn-primary" onclick="newPlantilla()">+ Nueva plantilla</button></div>
+  <div id="pl2-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="fb">
+    <div class="fi"><span class="fi-icon">🔍</span><input id="pl2-q" placeholder="Buscar plantilla..." oninput="rPlantillas()"></div>
+    <select id="pl2-tipo-f" onchange="rPlantillas()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:150px;"><option value="">Todos los tipos</option></select>
+    <select id="pl2-prop-f" onchange="rPlantillas()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:170px;"></select>
+    <select id="pl2-agrupar" onchange="rPlantillas()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
+      <option value="tipo">Agrupar por tipo</option><option value="piso">Agrupar por piso</option></select>
+  </div>
+  <div id="pl2-lista"></div>
+</section>
 
 <!-- ════════════ HIPOTECAS ════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-hipotecas">
@@ -2169,6 +2189,46 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="modal-footer"><button class="btn btn-primary" onclick="closeM('m-costeadq');rProps();">✓ Hecho</button></div>
 </div></div>
 
+
+<!-- MODAL PLANTILLA -->
+<div class="modal-overlay" id="m-plantilla"><div class="modal modal-lg">
+  <h2 id="m-pl2-title">📑 Nueva plantilla</h2>
+  <input type="hidden" id="pl2-edit-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Nombre *</label><input id="pl2-nom" placeholder="Contrato habitación estándar / Mensaje bienvenida"></div>
+    <div class="fgrp"><label>Tipo</label>
+      <select id="pl2-tipo">
+        <option>Contrato de arrendamiento</option>
+        <option>Anexo / cláusula</option>
+        <option>Oferta / propuesta</option>
+        <option>Mensaje WhatsApp</option>
+        <option>Email tipo</option>
+        <option>Normas de convivencia</option>
+        <option>Inventario de habitación</option>
+        <option>Check-in / entrada</option>
+        <option>Check-out / salida</option>
+        <option>Aviso de impago</option>
+        <option>Subida de renta</option>
+        <option>Fin de contrato</option>
+        <option>Otro</option>
+      </select>
+    </div>
+    <div class="fgrp"><label>Piso (opcional)</label><select id="pl2-prop"></select></div>
+    <div class="fgrp fgf"><label>Notas / cuándo usarla</label><input id="pl2-notas" placeholder="Para qué sirve, cuándo enviarla..."></div>
+    <div class="fgrp fgf"><label>Texto de la plantilla (para copiar y pegar)</label>
+      <textarea id="pl2-texto" rows="8" placeholder="Hola {nombre}, te confirmo la reserva de la habitación {habitacion} del piso {piso}...&#10;&#10;Puedes usar marcadores como {nombre}, {piso}, {habitacion}, {renta}, {fecha} para rellenarlos luego."></textarea></div>
+    <div class="fgrp fgf"><label>Adjuntar documento (PDF, Word, imagen…)</label>
+      <div class="pdf-upload-zone" id="pl2-pdf-zone" onclick="document.getElementById('pl2-pdf').click()">
+        <input type="file" id="pl2-pdf" accept=".pdf,.doc,.docx,image/*" style="display:none;" onchange="handlePdfUpload('pl2-pdf','pl2-pdf-zone','pl2-pdf-data')">
+        <input type="hidden" id="pl2-pdf-data"><input type="hidden" id="pl2-pdf-name">
+        <span class="pdf-upload-label">📎 Adjuntar plantilla en PDF</span>
+      </div>
+    </div>
+  </div>
+  <div id="pl2-doc-actual"></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-plantilla')">Cancelar</button><button class="btn btn-primary" onclick="savePlantilla()">Guardar</button></div>
+</div></div>
+
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -2181,10 +2241,11 @@ const WS_CFG = {
 };
 let KEY = WS_CFG[WS] ? WS_CFG[WS].key : 'rc5';
 let D=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||def();}catch{return def();}})();
-function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],hipotecas:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
+function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],hipotecas:[],plantillas:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
 if(!D.compras)D.compras=[];
 if(!D.propietarios)D.propietarios=[];
 if(!D.hipotecas)D.hipotecas=[];
+if(!D.plantillas)D.plantillas=[];
 ['cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'].forEach(k=>{if(!D[k])D[k]=[];});
 if(!D.anuncios)D.anuncios=[];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(D));
@@ -2352,7 +2413,8 @@ const PDF_PLACEHOLDERS = {
   'hp-fein-zone':'📎 Adjuntar FEIN en PDF',
   'hp-esc-zone':'📎 Adjuntar escritura',
   'hp-cuadro-zone':'📎 Adjuntar cuadro de amortización',
-  'cu-pdf-zone':'📎 Adjuntar justificante bancario'
+  'cu-pdf-zone':'📎 Adjuntar justificante bancario',
+  'pl2-pdf-zone':'📎 Adjuntar plantilla en PDF'
 };
 function clearPdfZone(zoneId, dataId) {
   const zone = document.getElementById(zoneId);
@@ -2373,7 +2435,7 @@ function clearPdfZone(zoneId, dataId) {
 const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,propietarios:rPropietarios,
   activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rTableroPagos,
   gastos:rGastos,facturas:rFacturas,hist:rHist,fiscal:rFiscal,
-  informes:rInfs,incs:rIncs,provs:rProvs,hipotecas:rHipotecas,cfg:rCfg,
+  informes:rInfs,incs:rIncs,provs:rProvs,hipotecas:rHipotecas,plantillas:rPlantillas,cfg:rCfg,
   pDash:rPDash, pMovs:rMovs, pCuentas:rCuentas, pSubs:rSubs, pPresup:rPresup,
   pMetas:rMetas, pInver:rInver, pDeudas:rDeudas, pPatrimonio:rPatrimonio,
   pDocs:rDocs, pRenta:rRenta, pLibros:rLibros, pCfg:rPCfg};
@@ -2392,7 +2454,7 @@ function go(el){
 function populateSels(){
   const pO='<option value="">Sin asignar</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');
   const iO='<option value="">— Seleccionar —</option>'+D.inqs.map(i=>`<option value="${i.id}">${i.nom} ${i.ap} (${i.estado})</option>`).join('');
-  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop','hp-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
+  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop','hp-prop','pl2-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
   // Selectores de propietario
   const oO='<option value="">— Sin asignar —</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['pr-owner','cp-owner','hp-owner','pr-usufructo'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oO;e.value=v;}});
@@ -2404,7 +2466,7 @@ function populateSels(){
   const oF='<option value="">Todos los propietarios</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['cp-owner-f','fi-owner','hp-owner-f'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oF;e.value=v;}});
   ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=iO;});
-  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
+  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f','pl2-prop-f'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
   const pmf=$i('pamf');if(pmf){const ms=[...new Set(D.pagos.map(p=>p.mes).filter(Boolean))].sort().reverse();pmf.innerHTML='<option value="">Todos los meses</option>'+ms.map(m=>`<option value="${m}">${m}</option>`).join('');}
   const fy=$i('fy');if(fy){const ys=[...new Set([...D.pagos.map(p=>p.mes?.slice(0,4)),...D.gastos.map(g=>g.fecha?.slice(0,4)),...(D.compras||[]).map(x=>x.fecha?.slice(0,4))].filter(Boolean))].sort().reverse();if(!ys.includes(String(new Date().getFullYear())))ys.unshift(String(new Date().getFullYear()));fy.innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');}
 }
@@ -4153,6 +4215,158 @@ function rAnuncios(){
 
 
 
+
+
+// ══════════════════════════════════════════════════════════════
+// PLANTILLAS (contratos, ofertas, mensajes)
+// ══════════════════════════════════════════════════════════════
+const PL_ICONS={
+  'Contrato de arrendamiento':'📄','Anexo / cláusula':'📎','Oferta / propuesta':'💼',
+  'Mensaje WhatsApp':'💬','Email tipo':'📧','Normas de convivencia':'📋',
+  'Inventario de habitación':'🪑','Check-in / entrada':'🔑','Check-out / salida':'🚪',
+  'Aviso de impago':'⚠️','Subida de renta':'📈','Fin de contrato':'🏁','Otro':'📑'
+};
+
+function newPlantilla(){
+  $i('pl2-edit-id').value=''; $i('m-pl2-title').textContent='📑 Nueva plantilla';
+  ['pl2-nom','pl2-notas','pl2-texto'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  $i('pl2-tipo').value='Contrato de arrendamiento';
+  populateSels(); $i('pl2-prop').value='';
+  clearPdfZone('pl2-pdf-zone','pl2-pdf-data');
+  $i('pl2-doc-actual').innerHTML='';
+  openM('m-plantilla');
+}
+function editPlantilla(id){
+  const p=(D.plantillas||[]).find(x=>x.id==id); if(!p)return;
+  $i('pl2-edit-id').value=p.id; $i('m-pl2-title').textContent='✏️ Editar plantilla';
+  populateSels();
+  $i('pl2-nom').value=p.nom||''; $i('pl2-tipo').value=p.tipo||'Otro';
+  $i('pl2-prop').value=p.propId||''; $i('pl2-notas').value=p.notas||'';
+  $i('pl2-texto').value=p.texto||'';
+  clearPdfZone('pl2-pdf-zone','pl2-pdf-data');
+  $i('pl2-doc-actual').innerHTML = p.pdfData
+    ? `<div class="form-section" style="margin-top:14px;">Documento guardado</div><button class="pdf-badge green" onclick="openPdf('${p.pdfData}','${p.pdfName||'plantilla.pdf'}')">📄 ${p.pdfName||'Ver'}</button>`
+    : '';
+  openM('m-plantilla');
+}
+function savePlantilla(){
+  const nom=gi('pl2-nom'); if(!nom){toast('Introduce el nombre',false);return;}
+  const campos={nom,tipo:$i('pl2-tipo').value,propId:gi('pl2-prop'),notas:gi('pl2-notas'),texto:gi('pl2-texto')};
+  const pdfData=$i('pl2-pdf-data')?.value||'', pdfName=$i('pl2-pdf-name')?.value||'';
+  const id=gi('pl2-edit-id');
+  if(id){
+    const p=D.plantillas.find(x=>x.id==id);
+    if(p){ Object.assign(p,campos); if(pdfData){p.pdfData=pdfData;p.pdfName=pdfName;} }
+    toast('Plantilla actualizada');
+  } else {
+    D.plantillas.push(Object.assign({id:uid(),pdfData,pdfName,fecha:new Date().toISOString().split('T')[0]},campos));
+    toast('Plantilla guardada');
+  }
+  saveAndSync(); closeM('m-plantilla'); rPlantillas();
+}
+function delPlantilla(id){
+  if(!confirm('¿Eliminar esta plantilla?'))return;
+  D.plantillas=D.plantillas.filter(x=>x.id!==id); saveAndSync(); rPlantillas(); toast('Eliminada');
+}
+function copiarPlantilla(id){
+  const p=(D.plantillas||[]).find(x=>x.id==id); if(!p)return;
+  if(!p.texto){ toast('Esta plantilla no tiene texto, solo documento adjunto', false); return; }
+  copyT(p.texto, 'Plantilla copiada — pégala donde la necesites');
+}
+// Rellena los marcadores {nombre} {piso} {habitacion} {renta} con los datos de un inquilino
+function usarPlantillaCon(id){
+  const p=(D.plantillas||[]).find(x=>x.id==id); if(!p||!p.texto)return;
+  const activos=D.inqs.filter(i=>i.estado==='ACTIVO');
+  if(!activos.length){ toast('No hay inquilinos activos', false); return; }
+  const lista=activos.map((i,n)=>`${n+1}. ${i.nom} ${i.ap}`).join('\\n');
+  const sel=prompt('¿Para qué inquilino?\\n\\n'+lista+'\\n\\nEscribe el número:');
+  if(sel===null)return;
+  const idx=parseInt(sel)-1;
+  const inq=activos[idx];
+  if(!inq){ toast('Número no válido', false); return; }
+  const pr=D.props.find(x=>x.id==inq.propId);
+  let txt=p.texto
+    .replace(/\\{nombre\\}/gi, inq.nom+' '+(inq.ap||''))
+    .replace(/\\{piso\\}/gi, pr?pr.nom:'')
+    .replace(/\\{direccion\\}/gi, pr?((pr.dir||'')+(pr.ciu?', '+pr.ciu:'')):'')
+    .replace(/\\{habitacion\\}/gi, inq.hab||'')
+    .replace(/\\{renta\\}/gi, (inq.alq||0)+' €')
+    .replace(/\\{fianza\\}/gi, (inq.fia||0)+' €')
+    .replace(/\\{email\\}/gi, inq.email||'')
+    .replace(/\\{telefono\\}/gi, inq.tel||inq.wa||'')
+    .replace(/\\{dni\\}/gi, inq.dni||'')
+    .replace(/\\{fecha\\}/gi, new Date().toLocaleDateString('es-ES'));
+  copyT(txt, '✓ Plantilla rellenada para '+inq.nom+' y copiada');
+}
+
+function rPlantillas(){
+  populateSels();
+  const ps=D.plantillas||[];
+  // Filtro de tipos dinámico
+  const st=$i('pl2-tipo-f');
+  if(st){ const us=[...new Set(ps.map(p=>p.tipo).filter(Boolean))].sort(); const v=st.value;
+    st.innerHTML='<option value="">Todos los tipos</option>'+us.map(x=>`<option>${x}</option>`).join(''); st.value=v; }
+
+  const conDoc=ps.filter(p=>p.pdfData).length;
+  const conTexto=ps.filter(p=>p.texto).length;
+  $i('pl2-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Plantillas</div><div class="kpi-value">${ps.length}</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Con documento</div><div class="kpi-value">${conDoc}</div></div>
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Con texto</div><div class="kpi-value">${conTexto}</div><div class="kpi-sub">listas para copiar</div></div>`;
+
+  const q=gi('pl2-q').toLowerCase(), tF=gi('pl2-tipo-f'), prF=gi('pl2-prop-f');
+  const agrupar=gi('pl2-agrupar')||'tipo';
+  const list=ps.filter(p=>{
+    if(tF&&p.tipo!==tF)return false;
+    if(prF&&p.propId!=prF)return false;
+    if(q&&!`${p.nom} ${p.tipo} ${p.notas} ${p.texto}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const div=$i('pl2-lista');
+  if(!list.length){
+    div.innerHTML='<div class="empty"><div class="empty-icon">📑</div><p>Guarda aquí tus contratos tipo, ofertas y mensajes para reutilizarlos cuando los necesites</p></div>';
+    return;
+  }
+
+  const tarjeta=p=>{
+    const pr=D.props.find(x=>x.id==p.propId);
+    return `<div style="background:var(--bg);border:1px solid var(--line);border-radius:var(--r2);padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;line-height:1.3;">${PL_ICONS[p.tipo]||'📑'} ${p.nom}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:3px;">${p.tipo}${pr?' · 🏢 '+pr.nom:' · Todos los pisos'}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;">
+          <button class="btn btn-secondary btn-xs" onclick="editPlantilla('${p.id}')">✏️</button>
+          <button class="btn btn-danger btn-xs" onclick="delPlantilla('${p.id}')">🗑</button>
+        </div>
+      </div>
+      ${p.notas?`<div style="font-size:10.5px;color:var(--ink3);margin-top:6px;font-style:italic;">${p.notas}</div>`:''}
+      ${p.texto?`<div style="font-size:11px;color:var(--ink2);margin-top:8px;line-height:1.5;max-height:60px;overflow:hidden;white-space:pre-wrap;background:var(--card);border-radius:6px;padding:8px;">${p.texto}</div>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
+        ${p.texto?`<button class="btn btn-primary btn-sm" onclick="copiarPlantilla('${p.id}')">📋 Copiar</button>`:''}
+        ${p.texto&&/\\{/.test(p.texto)?`<button class="btn btn-success btn-sm" onclick="usarPlantillaCon('${p.id}')">✨ Rellenar</button>`:''}
+        ${p.pdfData?`<button class="btn btn-secondary btn-sm" onclick="openPdf('${p.pdfData}','${p.pdfName||p.nom}')">📄 Abrir</button>`:''}
+      </div>
+    </div>`;
+  };
+
+  const grupos={};
+  list.forEach(p=>{
+    const k = agrupar==='piso'
+      ? (p.propId ? (D.props.find(x=>x.id==p.propId)?.nom || 'Piso desconocido') : 'Todos los pisos')
+      : (p.tipo||'Otro');
+    (grupos[k]=grupos[k]||[]).push(p);
+  });
+  div.innerHTML=Object.keys(grupos).sort().map(k=>`
+    <div class="card mb">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--line);">
+        <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;">${agrupar==='piso'?'🏢':(PL_ICONS[k]||'📑')} ${k}</div>
+        <div style="font-size:11px;color:var(--ink3);">${grupos[k].length} plantilla${grupos[k].length!==1?'s':''}</div>
+      </div>
+      <div class="g2">${grupos[k].map(tarjeta).join('')}</div>
+    </div>`).join('');
+}
 
 // ══════════════════════════════════════════════════════════════
 // HIPOTECAS
@@ -7505,7 +7719,7 @@ async function gFindOrCreateSheet() {
     method:'POST',
     body: JSON.stringify({
       properties:{title:SHEET_NAME()},
-      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios','Hipotecas','CostesAdquisicion','Cuentas','Movimientos','Presupuestos','Suscripciones','Objetivos','Inversiones','Deudas','DocsPersonales','Libros'].map(t=>({properties:{title:t}}))
+      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios','Hipotecas','Plantillas','CostesAdquisicion','Cuentas','Movimientos','Presupuestos','Suscripciones','Objetivos','Inversiones','Deudas','DocsPersonales','Libros'].map(t=>({properties:{title:t}}))
     })
   });
   try {
@@ -7554,6 +7768,7 @@ async function volcarSheets() {
     const sheets = [
       {sheet:'Propietarios', h:['ID','Nombre','Alias','DNI','Relacion','IRPF','Email','Tel','Notas'], rows:(D.propietarios||[]).map(o=>[o.id,o.nom,o.alias,o.dni,o.rel,o.irpf,o.email,o.tel,o.notas])},
       {sheet:'Hipotecas', h:['ID','Piso','Propietario','Banco','Tipo','CapitalInicial','Pendiente','Cuota','DiaCobro','TipoResultante','Vinculaciones','CosteVincAnual','FechaFin'], rows:(D.hipotecas||[]).map(h=>{const p=D.props.find(x=>x.id==h.propId);return [h.id,p?p.nom:'',ownerNom(h.ownerId||(p?p.ownerId:'')),h.banco,h.tipo,h.ini,h.pend,h.cuota,h.dia,tipoResultante(h).toFixed(2)+'%',vinculaciones(h).join(', '),costeVincAnual(h),h.fin];})},
+      {sheet:'Plantillas', h:['ID','Nombre','Tipo','Piso','Notas','TieneTexto','Documento'], rows:(D.plantillas||[]).map(p=>{const pr=D.props.find(x=>x.id==p.propId);return [p.id,p.nom,p.tipo,pr?pr.nom:'Todos',p.notas,p.texto?'SI':'NO',p.pdfName||''];})},
       {sheet:'CostesAdquisicion', h:['PisoID','Piso','Propietario','Concepto','Importe','Fecha','Notas','Documento'], rows:D.props.flatMap(p=>(p.costesAdq||[]).map(it=>[p.id,p.nom,ownerNom(p.ownerId),it.concepto,it.imp,it.fecha,it.notas,it.pdfName||'']))},
       {sheet:'Propiedades', h:['ID','Nombre','Propietario','Usufructuario','Dir','Ciudad','CP','Habs','Precio','Tasacion','Mercado','PctConstruccion','FechaCompra','Hipo','Capital','VCons','DineroPropio','ROCE'], rows:D.props.map(p=>[p.id,p.nom,ownerNom(p.ownerId),p.usufructoId?ownerNom(p.usufructoId):'',p.dir,p.ciu,p.cp,p.habs,p.precio,p.tasacion,p.mercado,p.pctConstruccion,p.fcompra||p.anyo,p.hipo,p.capital,p.vc,dineroPropio(p),roceDe(p)!==null?roceDe(p).toFixed(1)+'%':''])},
       {sheet:'Inquilinos', h:['ID','Nombre','Apellidos','DNI','Nac','Email','Tel','WA','Estado','PisoID','Hab','Alq','Fia','Dia','Ini','Fin','Val','Mot','Notas'], rows:D.inqs.map(i=>[i.id,i.nom,i.ap,i.dni,i.nac,i.email,i.tel,i.wa,i.estado,i.propId,i.hab,i.alq,i.fia,i.dia,i.ini,i.fin,i.val,i.mot,i.notas])},
@@ -7593,7 +7808,7 @@ async function volcarSheets() {
 // ══════════════════════════════════════════════════════════════
 // SINCRONIZACIÓN AUTOMÁTICA CON FUSIÓN (anti pérdida de datos)
 // ══════════════════════════════════════════════════════════════
-const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','hipotecas','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
+const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','hipotecas','plantillas','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
 
 let _snap = {};              // huella de cada registro para detectar cambios
 let _syncEnCurso = false;
