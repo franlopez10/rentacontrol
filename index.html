@@ -3439,12 +3439,30 @@ function addGasto(){
 }
 function rGastos(){
   const tb=$i('ga-tb'),q=gi('gq').toLowerCase(),catF=gi('gcf'),propF=gi('gpf');
+  // Gastos propios de esta sección
   let list=D.gastos.filter(g=>(!catF||g.cat===catF)&&(!propF||g.propId==propF)&&(!q||`${g.desc} ${g.cat} ${g.prov}`.toLowerCase().includes(q))).slice().reverse();
+  // + Facturas deducibles registradas en la sección Facturas (se muestran aquí, NO se duplican en Fiscal)
+  const desdeFacturas=(D.compras||[]).filter(x=>['corriente','reparacion'].includes(fiscalKey(x.ded)))
+    .filter(x=>(!propF||x.propId==propF)&&(!q||`${x.con} ${x.cat} ${x.emp}`.toLowerCase().includes(q)))
+    .map(x=>({id:x.id,fecha:x.fecha,desc:x.con,cat:x.cat,propId:x.propId,imp:parseFloat(x.imp||0),
+      ded:'si',prov:x.emp,notas:x.notas,pdfData:x.pdfData,pdfName:x.pdfName,_origenFactura:true,_num:x.num}));
+  if(!catF) list=list.concat(desdeFacturas);
+  list.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
   const cats=['Mantenimiento','Suministros','Seguros','Comunidad','IBI','Hipoteca','Reformas','Gestoría','Otros'];
-  const tots=cats.map(c=>({c,t:D.gastos.filter(g=>g.cat===c).reduce((s,g)=>s+g.imp,0)})).filter(x=>x.t>0);
+  const facturasDed=(D.compras||[]).filter(x=>['corriente','reparacion'].includes(fiscalKey(x.ded)));
+  const tots=cats.map(c=>({c,t:D.gastos.filter(g=>g.cat===c).reduce((s,g)=>s+g.imp,0)
+    + facturasDed.filter(x=>x.cat===c).reduce((s,x)=>s+parseFloat(x.imp||0),0)})).filter(x=>x.t>0);
+  // Categorías propias de facturas que no están en la lista de gastos
+  const catsExtra=[...new Set(facturasDed.map(x=>x.cat).filter(cc=>cc&&!cats.includes(cc)))];
+  catsExtra.forEach(cc=>{
+    const t=facturasDed.filter(x=>x.cat===cc).reduce((s,x)=>s+parseFloat(x.imp||0),0);
+    if(t>0) tots.push({c:cc,t});
+  });
   $i('gc-tots').innerHTML=tots.map(x=>`<div class="kpi" style="--kc:var(--rd);padding:10px 14px;flex:1;min-width:110px;"><div class="kpi-accent"></div><div class="kpi-label">${GI[x.c]||''} ${x.c}</div><div class="kpi-value">${eur(x.t)}</div></div>`).join('')||'<div style="color:var(--ink3);font-size:12px;">Sin gastos registrados</div>';
   if(!list.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">📉</div><p>Sin gastos</p></div></td></tr>';return;}
-  tb.innerHTML=list.map(g=>{const pr=D.props.find(p=>p.id==g.propId);return `<tr><td class="mono" style="font-size:11px;">${g.fecha?fD(g.fecha):'–'}</td><td><div style="font-size:12px;font-weight:500;">${g.desc}</div>${g.notas?`<div style="font-size:10px;color:var(--ink3);">${g.notas}</div>`:''}</td><td>${GI[g.cat]||''} ${g.cat}</td><td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:'General'}</td><td class="mono" style="font-weight:700;color:var(--rd);">${eur(g.imp)}</td><td>${g.ded==='si'?'<span class="badge badge-g">✅ Sí</span>':'<span class="badge badge-r">❌ No</span>'}</td><td style="font-size:11px;color:var(--ink3);">${g.prov||'–'}</td><td style="display:flex;gap:4px;flex-wrap:wrap;">${g.pdfData?`<button class="pdf-badge green" onclick="openPdf('${g.pdfData}','${g.pdfName||'factura.pdf'}')" style="max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">📄 ${g.pdfName?g.pdfName.slice(0,14):'Factura'}</button>`:''}<button class="btn btn-danger btn-xs" onclick="D.gastos=D.gastos.filter(x=>x.id!='${g.id}');saveAndSync();rGastos();toast('Eliminado')">🗑</button></td></tr>`;}).join('');
+  tb.innerHTML=list.map(g=>{const pr=D.props.find(p=>p.id==g.propId);return `<tr><td class="mono" style="font-size:11px;">${g.fecha?fD(g.fecha):'–'}</td><td><div style="font-size:12px;font-weight:500;">${g.desc}</div>${g.notas?`<div style="font-size:10px;color:var(--ink3);">${g.notas}</div>`:''}</td><td>${GI[g.cat]||''} ${g.cat}</td><td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:'General'}</td><td class="mono" style="font-weight:700;color:var(--rd);">${eur(g.imp)}</td><td>${g.ded==='si'?'<span class="badge badge-g">✅ Sí</span>':'<span class="badge badge-r">❌ No</span>'}</td><td style="font-size:11px;color:var(--ink3);">${g.prov||'–'}${g._origenFactura?`<br><span class="badge badge-b" style="font-size:8px;">🧾 Factura ${g._num||''}</span>`:''}</td><td style="display:flex;gap:4px;flex-wrap:wrap;">${g.pdfData?`<button class="pdf-badge green" onclick="openPdf('${g.pdfData}','${g.pdfName||'factura.pdf'}')" style="max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">📄 ${g.pdfName?g.pdfName.slice(0,14):'Factura'}</button>`:''}${g._origenFactura
+      ? `<button class="btn btn-secondary btn-xs" onclick="go(document.querySelector('.nav-item[data-s=\'compras\']'));setTimeout(()=>editCompra('${g.id}'),150);" title="Editar en Facturas">✏️ En Facturas</button>`
+      : `<button class="btn btn-danger btn-xs" onclick="D.gastos=D.gastos.filter(x=>x.id!='${g.id}');saveAndSync();rGastos();toast('Eliminado')">🗑</button>`}</td></tr>`;}).join('');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3897,7 +3915,28 @@ function rCompras(){
     if(propF&&x.propId!=propF)return false;
     if(q&&!`${x.con} ${x.emp} ${x.num} ${x.notas} ${x.cat}`.toLowerCase().includes(q))return false;
     return true;
-  }).slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  }).slice();
+
+  // ── + Gastos registrados en la sección Gastos (vista unificada, NO se duplican en Fiscal) ──
+  const desdeGastos=(D.gastos||[]).map(g=>({
+      id:g.id, fecha:g.fecha, con:g.desc, emp:g.prov||'', cat:g.cat, imp:parseFloat(g.imp||0),
+      propId:g.propId, ded: g.cat==='Hipoteca' ? 'no' : (g.ded==='si'?'corriente':'no'),
+      notas:g.notas, pdfData:g.pdfData, pdfName:g.pdfName, num:'', _origenGasto:true
+    })).filter(x=>{
+      const f=x.fecha||'';
+      if(cpAnyo!=='TODO'){
+        if(!f.startsWith(cpAnyo))return false;
+        if(cpMes && f.slice(5,7)!==cpMes)return false;
+      }
+      if(catF&&x.cat!==catF)return false;
+      if(fisF&&fiscalKey(x.ded)!==fisF)return false;
+      if(ownF&&ownerDe(x)!=ownF)return false;
+      if(propF&&x.propId!=propF)return false;
+      if(q&&!`${x.con} ${x.emp} ${x.notas} ${x.cat}`.toLowerCase().includes(q))return false;
+      return true;
+    });
+  list.push(...desdeGastos);
+  list.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
 
   // ── KPIs ──
   const total=list.reduce((s,x)=>s+parseFloat(x.imp||0),0);
@@ -3935,7 +3974,7 @@ function rCompras(){
     const garOk=x.gar&&x.gar>=hoy;
     filas.push(`<tr>
       <td class="mono" style="font-size:11px;white-space:nowrap;">${x.fecha?fD(x.fecha):'–'}</td>
-      <td><div style="font-size:12px;font-weight:600;">${x.con}</div>${x.num?`<div class="mono" style="font-size:10px;color:var(--acc);font-weight:600;">${x.num}</div>`:''}${x.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${x.notas}</div>`:''}</td>
+      <td><div style="font-size:12px;font-weight:600;">${x.con}</div>${x.num?`<div class="mono" style="font-size:10px;color:var(--acc);font-weight:600;">${x.num}</div>`:''}${x._origenGasto?`<div><span class="badge badge-b" style="font-size:8px;">📉 Desde Gastos</span></div>`:''}${x.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${x.notas}</div>`:''}</td>
       <td style="font-size:12px;">${x.emp}</td>
       <td style="font-size:11px;white-space:nowrap;">${CP_ICONS[x.cat]||''} ${x.cat}</td>
       <td style="font-size:11px;"><span class="badge badge-p">${ownerNom(ownerDe(x))}</span></td>
@@ -3944,7 +3983,9 @@ function rCompras(){
       <td style="font-size:10px;">${x.gar?(garOk?`<span class="badge badge-g">${fD(x.gar)}</span>`:`<span class="badge badge-r">Caducada</span>`):'–'}</td>
       <td>${fiscalBadge(x.ded)}</td>
       <td>${x.pdfData?`<button class="pdf-badge green" onclick="openPdf('${x.pdfData}','${x.pdfName||'factura.pdf'}')">📄 Ver</button>`:'<span style="font-size:10px;color:var(--ink3);">–</span>'}</td>
-      <td style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editCompra('${x.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCompra('${x.id}')">🗑</button></td>
+      <td style="display:flex;gap:4px;">${x._origenGasto
+        ? `<button class="btn btn-secondary btn-xs" onclick="go(document.querySelector('.nav-item[data-s=\'gastos\']'))" title="Gestionar en Gastos">📉 En Gastos</button>`
+        : `<button class="btn btn-secondary btn-xs" onclick="editCompra('${x.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCompra('${x.id}')">🗑</button>`}</td>
     </tr>`);
   });
   tb.innerHTML=filas.join('');
