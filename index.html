@@ -1019,7 +1019,20 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <div class="ph-title">🧾 Facturas → Habitaciones</div>
       <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Divide cualquier factura automáticamente entre los inquilinos de un piso</div>
     </div>
-    <button class="btn btn-primary" onclick="openM('m-factura')">+ Nueva factura</button>
+    <div class="ph-acts">
+      <button class="btn btn-success" onclick="abrirReparto()">⚖️ Reparto por persona-día</button>
+      <button class="btn btn-primary" onclick="openM('m-factura')">+ División simple</button>
+    </div>
+  </div>
+  <div class="card mb">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <span>📅 Calendario de ocupación</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="cal-prop" onchange="rCalendarioOcupacion()" style="padding:6px 10px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;background:var(--card);color:var(--ink);"></select>
+        <input type="number" id="cal-anyo" onchange="rCalendarioOcupacion()" style="width:80px;padding:6px 10px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;">
+      </div>
+    </div>
+    <div id="cal-ocupacion"></div>
   </div>
   <div class="g2 mb">
     <div class="card">
@@ -1435,6 +1448,12 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Ciudad</label><input id="pr-c" placeholder="Alicante"></div>
     <div class="fgrp"><label>Código postal</label><input id="pr-cp" placeholder="03001" oninput="mostrarCcaaDetectada()"></div>
     <div class="fgrp fgf" id="pr-ccaa-info" style="font-size:10.5px;color:var(--ink3);"></div>
+    <div class="fgrp fgf">
+      <button type="button" class="btn btn-secondary" style="width:100%;justify-content:space-between;white-space:normal;text-align:left;height:auto;padding:10px 14px;" onclick="abrirConfigHabs()">
+        <span>🚪 Configurar habitaciones (individual / doble)</span>
+        <span id="pr-habs-resumen" class="mono" style="font-weight:700;"></span>
+      </button>
+    </div>
     <div class="fgrp"><label>Nº habitaciones *</label><input id="pr-h" type="number" placeholder="5" min="1" max="20"></div>
     <div class="fgrp"><label>Precio de compra (€)</label><input id="pr-p" type="number" placeholder="130000" oninput="calcCosteTotal()"></div>
     <div class="fgrp fgf">
@@ -1536,6 +1555,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Estado</label><select id="iq-est"><option value="ACTIVO">🟢 ACTIVO</option><option value="RESERVADO">🟡 RESERVADO</option><option value="PASADO">🔴 PASADO</option></select></div>
     <div class="fgrp"><label>Propiedad</label><select id="iq-p"></select></div>
     <div class="fgrp"><label>Habitación nº</label><input id="iq-h" type="number" placeholder="1" min="1"></div>
+    <div class="fgrp"><label>Personas en la habitación</label><select id="iq-personas"><option value="1">1 persona (individual)</option><option value="2">2 personas (doble, solidario)</option><option value="3">3 personas</option></select></div>
     <div class="fgrp"><label>Alquiler mensual (€)</label><input id="iq-alq" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Luz mensual (€) — opcional</label><input id="iq-luz" type="number" placeholder="30"></div>
     <div class="fgrp"><label>Agua mensual (€) — opcional</label><input id="iq-agua" type="number" placeholder="15"></div>
@@ -2229,6 +2249,36 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-plantilla')">Cancelar</button><button class="btn btn-primary" onclick="savePlantilla()">Guardar</button></div>
 </div></div>
 
+
+<!-- MODAL CONFIGURAR HABITACIONES -->
+<div class="modal-overlay" id="m-confighabs"><div class="modal">
+  <h2>🚪 Habitaciones de <span id="ch-piso-nom" style="color:var(--acc);"></span></h2>
+  <div style="font-size:11.5px;color:var(--ink3);margin-bottom:14px;line-height:1.6;">
+    Marca si cada habitación es individual o doble. Esto se usa para calcular el reparto de suministros por persona-día.
+  </div>
+  <input type="hidden" id="ch-prop-id">
+  <div id="ch-lista"></div>
+  <div class="modal-footer"><button class="btn btn-primary" onclick="guardarConfigHabs()">✓ Guardar</button></div>
+</div></div>
+
+<!-- MODAL REPARTO DE SUMINISTROS -->
+<div class="modal-overlay" id="m-reparto"><div class="modal modal-lg">
+  <h2>💡 Reparto de suministros por persona-día</h2>
+  <div class="fg">
+    <div class="fgrp"><label>Piso *</label><select id="rp-prop" onchange="calcularReparto()"></select></div>
+    <div class="fgrp"><label>Concepto</label><select id="rp-con" onchange="calcularReparto()"><option>Luz</option><option>Agua</option><option>Gas</option><option>Internet</option><option>Comunidad</option><option>Otro suministro</option></select></div>
+    <div class="fgrp"><label>Desde (inicio factura) *</label><input id="rp-ini" type="date" onchange="calcularReparto()"></div>
+    <div class="fgrp"><label>Hasta (fin factura) *</label><input id="rp-fin" type="date" onchange="calcularReparto()"></div>
+    <div class="fgrp"><label>Importe total factura (€) *</label><input id="rp-imp" type="number" step="0.01" placeholder="100.00" oninput="calcularReparto()"></div>
+    <div class="fgrp"><label>Mes de cobro a inquilinos</label><input id="rp-mes" type="month"></div>
+  </div>
+  <div id="rp-resultado" style="margin-top:16px;"></div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeM('m-reparto')">Cancelar</button>
+    <button class="btn btn-primary" onclick="generarCobrosReparto()">✓ Generar cobros pendientes</button>
+  </div>
+</div></div>
+
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -2434,7 +2484,7 @@ function clearPdfZone(zoneId, dataId) {
 // ══════════════════════════════════════════════════════════════
 const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,propietarios:rPropietarios,
   activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rTableroPagos,
-  gastos:rGastos,facturas:rFacturas,hist:rHist,fiscal:rFiscal,
+  gastos:rGastos,facturas:()=>{rFacturas();rCalendarioOcupacion();},hist:rHist,fiscal:rFiscal,
   informes:rInfs,incs:rIncs,provs:rProvs,hipotecas:rHipotecas,plantillas:rPlantillas,cfg:rCfg,
   pDash:rPDash, pMovs:rMovs, pCuentas:rCuentas, pSubs:rSubs, pPresup:rPresup,
   pMetas:rMetas, pInver:rInver, pDeudas:rDeudas, pPatrimonio:rPatrimonio,
@@ -2454,7 +2504,7 @@ function go(el){
 function populateSels(){
   const pO='<option value="">Sin asignar</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');
   const iO='<option value="">— Seleccionar —</option>'+D.inqs.map(i=>`<option value="${i.id}">${i.nom} ${i.ap} (${i.estado})</option>`).join('');
-  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop','hp-prop','pl2-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
+  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop','hp-prop','pl2-prop','rp-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
   // Selectores de propietario
   const oO='<option value="">— Sin asignar —</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['pr-owner','cp-owner','hp-owner','pr-usufructo'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oO;e.value=v;}});
@@ -2466,7 +2516,7 @@ function populateSels(){
   const oF='<option value="">Todos los propietarios</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['cp-owner-f','fi-owner','hp-owner-f'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oF;e.value=v;}});
   ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=iO;});
-  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f','pl2-prop-f'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
+  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f','pl2-prop-f','cal-prop'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
   const pmf=$i('pamf');if(pmf){const ms=[...new Set(D.pagos.map(p=>p.mes).filter(Boolean))].sort().reverse();pmf.innerHTML='<option value="">Todos los meses</option>'+ms.map(m=>`<option value="${m}">${m}</option>`).join('');}
   const fy=$i('fy');if(fy){const ys=[...new Set([...D.pagos.map(p=>p.mes?.slice(0,4)),...D.gastos.map(g=>g.fecha?.slice(0,4)),...(D.compras||[]).map(x=>x.fecha?.slice(0,4))].filter(Boolean))].sort().reverse();if(!ys.includes(String(new Date().getFullYear())))ys.unshift(String(new Date().getFullYear()));fy.innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');}
 }
@@ -2948,7 +2998,7 @@ function addInq(){
   if(vet && $i('iq-apto').value!=='no'){
     if(!confirm(`🚫 ATENCIÓN: "${vet.nom} ${vet.ap}" está en tu lista negra como NO APTO${vet.aptoMotivo?' ('+vet.aptoMotivo+')':''}.\n\n¿Seguro que quieres registrarlo de todas formas?`)) return;
   }
-  D.inqs.push({id:uid(),nom,ap:gi('iq-a'),dni:gi('iq-dni'),nac:gi('iq-nac'),email:gi('iq-e'),tel:gi('iq-t'),wa:gi('iq-wa'),estado:$i('iq-est').value,propId:gi('iq-p'),hab:gi('iq-h'),alq:gn('iq-alq'),luz:gn('iq-luz'),agua:gn('iq-agua'),fia:gn('iq-fia'),dia:gi('iq-dia'),ini:gi('iq-ini'),fin:gi('iq-fin'),val:gi('iq-v'),apto:$i('iq-apto').value,aptoMotivo:gi('iq-apto-motivo'),mot:gi('iq-mot'),notas:gi('iq-not')});
+  D.inqs.push({id:uid(),nom,ap:gi('iq-a'),dni:gi('iq-dni'),nac:gi('iq-nac'),email:gi('iq-e'),tel:gi('iq-t'),wa:gi('iq-wa'),estado:$i('iq-est').value,propId:gi('iq-p'),hab:gi('iq-h'),alq:gn('iq-alq'),personas:parseInt($i('iq-personas').value)||1,luz:gn('iq-luz'),agua:gn('iq-agua'),fia:gn('iq-fia'),dia:gi('iq-dia'),ini:gi('iq-ini'),fin:gi('iq-fin'),val:gi('iq-v'),apto:$i('iq-apto').value,aptoMotivo:gi('iq-apto-motivo'),mot:gi('iq-mot'),notas:gi('iq-not')});
   saveAndSync();autoGenerarPagosPendientes();closeM('m-inq');rActivos();rPagos&&rPagos();toast('Inquilino añadido · cobros pendientes generados');
   ['iq-n','iq-a','iq-dni','iq-nac','iq-e','iq-t','iq-wa','iq-h','iq-alq','iq-luz','iq-agua','iq-fia','iq-dia','iq-ini','iq-fin','iq-mot','iq-not','iq-apto-motivo'].forEach(id=>{const e=$i(id);if(e)e.value='';});
 }
@@ -4216,6 +4266,273 @@ function rAnuncios(){
 
 
 
+
+
+// ══════════════════════════════════════════════════════════════
+// REPARTO DE SUMINISTROS POR PERSONA-DÍA
+// ══════════════════════════════════════════════════════════════
+function diasInclusive(a,b){
+  return Math.floor((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000) + 1;
+}
+
+// Núcleo del cálculo. Reparte el importe entre los inquilinos según personas-día.
+// Los días en que el piso está TOTALMENTE vacío los asume el propietario (cuenta como 1 persona).
+function calcularRepartoSuministros(inqs, fIni, fFin, importe){
+  if(!fIni||!fFin) return null;
+  const ini=new Date(fIni+'T00:00:00'), fin=new Date(fFin+'T00:00:00');
+  if(fin<ini) return null;
+  const totalDias=diasInclusive(fIni,fFin);
+  const detalle=[]; let totalPD=0;
+  const diasOcupados=new Set();
+
+  inqs.forEach(i=>{
+    if(!i.ini) return;
+    const iIni=new Date(i.ini+'T00:00:00');
+    const iFin=i.fin?new Date(i.fin+'T00:00:00'):new Date('2099-12-31T00:00:00');
+    const desde=new Date(Math.max(ini.getTime(), iIni.getTime()));
+    const hasta=new Date(Math.min(fin.getTime(), iFin.getTime()));
+    if(desde>hasta) return;
+    const dias=Math.floor((hasta-desde)/86400000)+1;
+    const personas=parseInt(i.personas)||1;
+    const pd=dias*personas;
+    totalPD+=pd;
+    detalle.push({inqId:i.id, nom:(i.nom||'')+' '+(i.ap||''), hab:i.hab, dias, personas, pd,
+                  desde:desde.toISOString().split('T')[0], hasta:hasta.toISOString().split('T')[0]});
+    for(let d=new Date(desde); d<=hasta; d.setDate(d.getDate()+1)){
+      diasOcupados.add(d.toISOString().split('T')[0]);
+    }
+  });
+
+  const diasVacios=totalDias-diasOcupados.size;
+  if(diasVacios>0) totalPD+=diasVacios;
+  detalle.forEach(d=>{ d.importe = totalPD>0 ? (d.pd*importe/totalPD) : 0; });
+  const importePropietario = totalPD>0 ? (diasVacios*importe/totalPD) : 0;
+  return {detalle, totalPD, totalDias, diasVacios, importePropietario, importe};
+}
+
+function abrirReparto(propIdPre, conPre, iniPre, finPre, impPre){
+  populateSels();
+  if(propIdPre) $i('rp-prop').value=propIdPre;
+  if(conPre) $i('rp-con').value=conPre;
+  $i('rp-ini').value=iniPre||'';
+  $i('rp-fin').value=finPre||'';
+  $i('rp-imp').value=impPre||'';
+  $i('rp-mes').value=new Date().toISOString().slice(0,7);
+  calcularReparto();
+  openM('m-reparto');
+}
+
+function calcularReparto(){
+  const propId=gi('rp-prop'), fIni=gi('rp-ini'), fFin=gi('rp-fin'), imp=gn('rp-imp');
+  const box=$i('rp-resultado'); if(!box) return;
+  if(!propId||!fIni||!fFin||!imp){
+    box.innerHTML='<div style="font-size:11.5px;color:var(--ink3);padding:12px;background:var(--bg);border-radius:var(--r2);">Rellena piso, fechas de la factura e importe para ver el reparto.</div>';
+    return;
+  }
+  // Todos los inquilinos del piso (activos y pasados) que solapen con el periodo
+  const inqs=D.inqs.filter(i=>i.propId==propId);
+  const r=calcularRepartoSuministros(inqs,fIni,fFin,imp);
+  if(!r){ box.innerHTML='<div style="color:var(--rd);font-size:12px;">Las fechas no son válidas.</div>'; return; }
+  window._ultimoReparto=r;
+
+  const filas=r.detalle.map(d=>`
+    <tr>
+      <td style="font-size:12px;font-weight:600;">${d.nom}</td>
+      <td style="font-size:11px;">Hab. ${d.hab||'?'}</td>
+      <td style="font-size:11px;color:var(--ink3);">${fD(d.desde)} → ${fD(d.hasta)}</td>
+      <td class="mono" style="text-align:right;font-size:11px;">${d.dias}</td>
+      <td class="mono" style="text-align:right;font-size:11px;">${d.personas}</td>
+      <td class="mono" style="text-align:right;font-weight:600;">${d.pd}</td>
+      <td class="mono" style="text-align:right;font-weight:700;color:var(--acc);">${eur(d.importe,2)}</td>
+    </tr>`).join('');
+
+  const sumaInq=r.detalle.reduce((s,d)=>s+d.importe,0);
+  box.innerHTML=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <div class="kpi" style="--kc:var(--bl);flex:1;min-width:110px;padding:10px 12px;"><div class="kpi-accent"></div><div class="kpi-label">Días del periodo</div><div class="kpi-value">${r.totalDias}</div></div>
+      <div class="kpi" style="--kc:var(--acc);flex:1;min-width:110px;padding:10px 12px;"><div class="kpi-accent"></div><div class="kpi-label">Personas-día</div><div class="kpi-value">${r.totalPD}</div></div>
+      <div class="kpi" style="--kc:var(--ye);flex:1;min-width:110px;padding:10px 12px;"><div class="kpi-accent"></div><div class="kpi-label">Días vacío</div><div class="kpi-value">${r.diasVacios}</div></div>
+      <div class="kpi" style="--kc:var(--gn);flex:1;min-width:110px;padding:10px 12px;"><div class="kpi-accent"></div><div class="kpi-label">Coste/persona-día</div><div class="kpi-value">${eur(r.totalPD>0?r.importe/r.totalPD:0,3)}</div></div>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Inquilino</th><th>Hab.</th><th>Periodo ocupado</th><th class="n">Días</th><th class="n">Pers.</th><th class="n">P-día</th><th class="n">A pagar</th></tr></thead>
+      <tbody>${filas || '<tr><td colspan="7" style="text-align:center;color:var(--ink3);padding:14px;">Ningún inquilino en este periodo</td></tr>'}</tbody>
+      <tfoot>
+        ${r.diasVacios>0?`<tr style="background:var(--ye-l);"><td colspan="5" style="font-size:11.5px;">🏠 Propietario (piso vacío ${r.diasVacios} día${r.diasVacios!==1?'s':''})</td><td class="mono" style="text-align:right;font-weight:600;">${r.diasVacios}</td><td class="mono" style="text-align:right;font-weight:700;color:var(--ye);">${eur(r.importePropietario,2)}</td></tr>`:''}
+        <tr style="background:var(--bg2);font-weight:700;"><td colspan="5">TOTAL FACTURA</td><td class="mono" style="text-align:right;">${r.totalPD}</td><td class="mono" style="text-align:right;">${eur(sumaInq+r.importePropietario,2)}</td></tr>
+      </tfoot>
+    </table></div>
+    <div style="font-size:10.5px;color:var(--ink3);margin-top:8px;line-height:1.6;">
+      Se cobrará <strong style="color:var(--ink2);">${eur(sumaInq,2)}</strong> a los inquilinos${r.importePropietario>0?` y el propietario asume <strong style="color:var(--ink2);">${eur(r.importePropietario,2)}</strong> por los días vacíos`:''}.
+    </div>`;
+}
+
+function generarCobrosReparto(){
+  const r=window._ultimoReparto;
+  if(!r||!r.detalle.length){ toast('No hay reparto que generar', false); return; }
+  const mes=gi('rp-mes')||new Date().toISOString().slice(0,7);
+  const con=$i('rp-con').value;
+  const fIni=gi('rp-ini'), fFin=gi('rp-fin');
+  let n=0;
+  r.detalle.forEach(d=>{
+    if(d.importe<=0) return;
+    D.pagos.push({id:uid(), inqId:d.inqId, con:con, mes:mes,
+      imp:Math.round(d.importe*100)/100, estado:'pendiente', fecha:'',
+      notas:`${con} ${fD(fIni)}–${fD(fFin)} · ${d.dias}d × ${d.personas}p = ${d.pd} p-día`});
+    n++;
+  });
+  saveAndSync(); closeM('m-reparto');
+  if(typeof rTableroPagos==='function') rTableroPagos();
+  toast(`✓ ${n} cobro(s) de ${con} generados`);
+}
+
+// ── Configuración de habitaciones (individual/doble) ──
+function abrirConfigHabs(){
+  const propId=gi('pr-edit-id');
+  if(!propId){ toast('Guarda primero la propiedad y vuelve a editarla', false); return; }
+  const p=D.props.find(x=>x.id==propId); if(!p) return;
+  $i('ch-prop-id').value=propId;
+  $i('ch-piso-nom').textContent=p.nom;
+  const n=parseInt(p.habs)||0;
+  if(!p.habsConfig) p.habsConfig={};
+  let html='';
+  for(let i=1;i<=n;i++){
+    const cfg=p.habsConfig[i]||{tipo:'individual'};
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);">
+      <span style="font-size:13px;font-weight:600;width:100px;">🚪 Habitación ${i}</span>
+      <select id="ch-tipo-${i}" style="flex:1;padding:6px 10px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;">
+        <option value="individual" ${cfg.tipo==='individual'?'selected':''}>Individual (1 persona)</option>
+        <option value="doble" ${cfg.tipo==='doble'?'selected':''}>Doble (2 personas)</option>
+      </select>
+    </div>`;
+  }
+  $i('ch-lista').innerHTML = n>0 ? html : '<div style="font-size:12px;color:var(--ink3);">Indica primero el número de habitaciones.</div>';
+  openM('m-confighabs');
+}
+function guardarConfigHabs(){
+  const propId=gi('ch-prop-id'); const p=D.props.find(x=>x.id==propId); if(!p) return;
+  const n=parseInt(p.habs)||0;
+  p.habsConfig={};
+  for(let i=1;i<=n;i++){
+    const s=$i('ch-tipo-'+i);
+    if(s) p.habsConfig[i]={tipo:s.value, plazas: s.value==='doble'?2:1};
+  }
+  saveAndSync(); closeM('m-confighabs'); actualizarResumenHabs(p);
+  toast('Habitaciones configuradas');
+}
+function actualizarResumenHabs(p){
+  const el=$i('pr-habs-resumen'); if(!el) return;
+  const cfg=p.habsConfig||{};
+  const dobles=Object.values(cfg).filter(x=>x.tipo==='doble').length;
+  const plazas=Object.values(cfg).reduce((s,x)=>s+(x.plazas||1),0);
+  el.textContent = Object.keys(cfg).length ? `${plazas} plazas${dobles?' ('+dobles+' doble'+(dobles!==1?'s':'')+')':''}` : '+ configurar';
+  el.style.color = Object.keys(cfg).length ? 'var(--acc)' : 'var(--ink3)';
+}
+
+
+// ── CALENDARIO VISUAL DE OCUPACIÓN (quién ocupó cada habitación, mes a mes) ──
+const COLORES_INQ=['#c84b2f','#2563eb','#059669','#7c3aed','#d97706','#0891b2','#be185d','#65a30d','#dc2626','#4f46e5'];
+function colorInquilino(inqId){
+  const idx=D.inqs.findIndex(i=>i.id==inqId);
+  return COLORES_INQ[(idx>=0?idx:0)%COLORES_INQ.length];
+}
+
+function rCalendarioOcupacion(){
+  populateSels();
+  const selP=$i('cal-prop');
+  if(selP && !selP.value && D.props.length) selP.value=D.props[0].id;
+  const anyoI=$i('cal-anyo');
+  if(anyoI && !anyoI.value) anyoI.value=new Date().getFullYear();
+  const propId=gi('cal-prop'), anyo=parseInt(gi('cal-anyo'))||new Date().getFullYear();
+  const cont=$i('cal-ocupacion'); if(!cont) return;
+  const prop=D.props.find(p=>p.id==propId);
+  if(!prop){ cont.innerHTML='<div class="empty" style="padding:20px;"><p>Selecciona un piso</p></div>'; return; }
+
+  const nHabs=parseInt(prop.habs)||0;
+  const inqs=D.inqs.filter(i=>i.propId==propId);
+  const mN=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // ¿Quién ocupa la habitación h en el mes m?
+  const ocupanteEn=(hab,mes)=>{
+    const ini=new Date(anyo,mes,1), fin=new Date(anyo,mes+1,0);
+    return inqs.filter(i=>{
+      if(String(i.hab)!==String(hab)) return false;
+      if(!i.ini) return false;
+      const iIni=new Date(i.ini+'T00:00:00');
+      const iFin=i.fin?new Date(i.fin+'T00:00:00'):new Date('2099-12-31');
+      return iIni<=fin && iFin>=ini;
+    });
+  };
+
+  let html='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:640px;">';
+  html+='<thead><tr><th style="text-align:left;padding:6px 8px;font-size:9px;text-transform:uppercase;color:var(--ink3);">Habitación</th>';
+  mN.forEach(m=>html+=`<th style="padding:6px 2px;font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;">${m}</th>`);
+  html+='</tr></thead><tbody>';
+
+  for(let h=1;h<=nHabs;h++){
+    const cfg=(prop.habsConfig||{})[h]||{tipo:'individual'};
+    html+=`<tr><td style="padding:6px 8px;font-size:11.5px;font-weight:600;white-space:nowrap;">🚪 Hab. ${h} <span style="font-size:9px;color:var(--ink3);font-weight:400;">${cfg.tipo==='doble'?'(doble)':''}</span></td>`;
+    for(let m=0;m<12;m++){
+      const ocu=ocupanteEn(h,m);
+      if(ocu.length){
+        const i=ocu[0];
+        const col=colorInquilino(i.id);
+        const ini=(i.nom||'?')[0].toUpperCase();
+        const nombre=(i.nom||'')+' '+(i.ap||'');
+        html+=`<td style="padding:2px;" title="${nombre}">
+          <div onclick="openPerfil('${i.id}')" style="background:${col};color:#fff;border-radius:5px;padding:6px 2px;text-align:center;font-size:10px;font-weight:700;cursor:pointer;" >${ini}${i.personas>1?'²':''}</div></td>`;
+      } else {
+        html+='<td style="padding:2px;"><div style="background:var(--bg);border:1px dashed var(--line2);border-radius:5px;padding:6px 2px;text-align:center;font-size:9px;color:var(--ink3);">–</div></td>';
+      }
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table></div>';
+
+  // Leyenda con los inquilinos que aparecen
+  const usados=[...new Set(inqs.filter(i=>{
+    if(!i.ini) return false;
+    const iIni=new Date(i.ini+'T00:00:00');
+    const iFin=i.fin?new Date(i.fin+'T00:00:00'):new Date('2099-12-31');
+    return iIni<=new Date(anyo,11,31) && iFin>=new Date(anyo,0,1);
+  }).map(i=>i.id))];
+  if(usados.length){
+    html+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">';
+    usados.forEach(id=>{
+      const i=D.inqs.find(x=>x.id==id);
+      html+=`<div style="display:flex;align-items:center;gap:5px;font-size:11px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:${colorInquilino(id)};display:inline-block;"></span>
+        ${i.nom} ${i.ap||''}${i.personas>1?' (×'+i.personas+')':''}</div>`;
+    });
+    html+='</div>';
+  }
+
+  // Resumen de suministros del piso por mes
+  const pagosSum=D.pagos.filter(p=>['Luz','Agua','Gas','Internet','Comunidad','Otro suministro'].includes(p.con))
+    .filter(p=>{const inq=D.inqs.find(i=>i.id==p.inqId); return inq && inq.propId==propId;});
+  const porMes={};
+  pagosSum.filter(p=>(p.mes||'').startsWith(String(anyo))).forEach(p=>{
+    const m=parseInt((p.mes||'').slice(5,7))-1;
+    porMes[m]=(porMes[m]||0)+parseFloat(p.imp||0);
+  });
+  const totalAnual=Object.values(porMes).reduce((s,v)=>s+v,0);
+  if(totalAnual>0){
+    const maxM=Math.max(...Object.values(porMes),1);
+    html+=`<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line);">
+      <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:8px;">Suministros cobrados en ${anyo} · total ${eur(totalAnual)}</div>
+      <div style="display:flex;gap:4px;align-items:flex-end;height:60px;">`;
+    for(let m=0;m<12;m++){
+      const v=porMes[m]||0;
+      const alt=maxM>0?Math.max(3,(v/maxM)*56):3;
+      html+=`<div style="flex:1;text-align:center;" title="${mN[m]}: ${eur(v)}">
+        <div style="height:${alt}px;background:${v>0?'var(--bl)':'var(--line)'};border-radius:3px 3px 0 0;"></div>
+        <div style="font-size:8px;color:var(--ink3);margin-top:3px;">${mN[m]}</div></div>`;
+    }
+    html+='</div></div>';
+  }
+
+  cont.innerHTML=html;
+}
 
 // ══════════════════════════════════════════════════════════════
 // PLANTILLAS (contratos, ofertas, mensajes)
