@@ -2558,8 +2558,11 @@ function populateSels(){
   ['pm-cta-f'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=ctF;e.value=v;}});
   const oF='<option value="">Todos los propietarios</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['cp-owner-f','fi-owner','hp-owner-f'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oF;e.value=v;}});
-  ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e)e.innerHTML=iO;});
-  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f','pl2-prop-f','cal-prop'].forEach(id=>{const e=$i(id);if(e)e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');});
+  ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=iO;e.value=v;}});
+  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f','pl2-prop-f','cal-prop'].forEach(id=>{
+    const e=$i(id);
+    if(e){ const v=e.value; e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join(''); e.value=v; }
+  });
   const pmf=$i('pamf');if(pmf){const ms=[...new Set(D.pagos.map(p=>p.mes).filter(Boolean))].sort().reverse();pmf.innerHTML='<option value="">Todos los meses</option>'+ms.map(m=>`<option value="${m}">${m}</option>`).join('');}
   const fy=$i('fy');if(fy){const ys=[...new Set([...D.pagos.map(p=>p.mes?.slice(0,4)),...D.gastos.map(g=>g.fecha?.slice(0,4)),...(D.compras||[]).map(x=>x.fecha?.slice(0,4))].filter(Boolean))].sort().reverse();if(!ys.includes(String(new Date().getFullYear())))ys.unshift(String(new Date().getFullYear()));fy.innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');}
 }
@@ -4445,24 +4448,51 @@ function abrirConfigHabs(){
   let html='';
   for(let i=1;i<=n;i++){
     const cfg=p.habsConfig[i]||{tipo:'individual'};
-    html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);">
-      <span style="font-size:13px;font-weight:600;width:100px;">🚪 Habitación ${i}</span>
-      <select id="ch-tipo-${i}" style="flex:1;padding:6px 10px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;">
-        <option value="individual" ${cfg.tipo==='individual'?'selected':''}>Individual (1 persona)</option>
-        <option value="doble" ${cfg.tipo==='doble'?'selected':''}>Doble (2 personas)</option>
+    const inqHab=D.inqs.find(x=>x.estado==='ACTIVO'&&x.propId==propId&&String(x.hab)===String(i));
+    html+=`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;">
+      <span style="font-size:13px;font-weight:600;width:96px;flex-shrink:0;">🚪 Hab. ${i}</span>
+      <select id="ch-tipo-${i}" style="flex:1;min-width:120px;padding:6px 10px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;">
+        <option value="individual" ${cfg.tipo==='individual'?'selected':''}>Individual (1 pers.)</option>
+        <option value="doble" ${cfg.tipo==='doble'?'selected':''}>Doble (2 pers.)</option>
       </select>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <input id="ch-precio-${i}" type="number" step="0.01" value="${cfg.precio||''}" placeholder="350" style="width:88px;padding:6px 8px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;">
+        <span style="font-size:11px;color:var(--ink3);">€/mes</span>
+      </div>
+      <span style="font-size:10px;color:${inqHab?'var(--gn)':'var(--ink3)'};min-width:92px;">${inqHab?'● '+inqHab.nom:'○ libre'}</span>
     </div>`;
   }
-  $i('ch-lista').innerHTML = n>0 ? html : '<div style="font-size:12px;color:var(--ink3);">Indica primero el número de habitaciones.</div>';
+  $i('ch-lista').innerHTML = n>0 ? html + '<div id="ch-total" style="margin-top:12px;padding:10px 12px;background:var(--bg);border-radius:var(--r2);font-size:12px;"></div>' : '<div style="font-size:12px;color:var(--ink3);">Indica primero el número de habitaciones.</div>';
+  actualizarTotalHabs();
   openM('m-confighabs');
 }
+
+function actualizarTotalHabs(){
+  const el=$i('ch-total'); if(!el) return;
+  const propId=gi('ch-prop-id'); const p=D.props.find(x=>x.id==propId); if(!p) return;
+  const n=parseInt(gi('pr-h'))||parseInt(p.habs)||0;
+  let total=0, plazas=0;
+  for(let i=1;i<=n;i++){
+    const pr=$i('ch-precio-'+i), s=$i('ch-tipo-'+i);
+    if(pr) total+=parseFloat(pr.value)||0;
+    if(s) plazas+=(s.value==='doble'?2:1);
+  }
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;">
+    <span style="color:var(--ink3);">Renta potencial si se alquila todo</span>
+    <strong style="font-family:'Syne',sans-serif;font-size:17px;color:var(--gn);">${eur(total)}/mes</strong></div>
+    <div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">${plazas} plazas · ${eur(total*12)}/año</div>`;
+}
+document.addEventListener('input', e=>{ if(e.target && /^ch-(precio|tipo)-/.test(e.target.id)) actualizarTotalHabs(); });
+document.addEventListener('change', e=>{ if(e.target && /^ch-(precio|tipo)-/.test(e.target.id)) actualizarTotalHabs(); });
+
 function guardarConfigHabs(){
   const propId=gi('ch-prop-id'); const p=D.props.find(x=>x.id==propId); if(!p) return;
   const n=parseInt(gi('pr-h'))||parseInt(p.habs)||0;
   const nuevaCfg={};
   for(let i=1;i<=n;i++){
     const s=$i('ch-tipo-'+i);
-    if(s) nuevaCfg[i]={tipo:s.value, plazas: s.value==='doble'?2:1};
+    const pr=$i('ch-precio-'+i);
+    if(s) nuevaCfg[i]={tipo:s.value, plazas: s.value==='doble'?2:1, precio: pr?(parseFloat(pr.value)||0):0};
   }
   p.habsConfig=nuevaCfg;
   saveAndSync(); closeM('m-confighabs'); actualizarResumenHabs(p);
@@ -4473,7 +4503,8 @@ function actualizarResumenHabs(p){
   const cfg=p.habsConfig||{};
   const dobles=Object.values(cfg).filter(x=>x.tipo==='doble').length;
   const plazas=Object.values(cfg).reduce((s,x)=>s+(x.plazas||1),0);
-  el.textContent = Object.keys(cfg).length ? `${plazas} plazas${dobles?' ('+dobles+' doble'+(dobles!==1?'s':'')+')':''}` : '+ configurar';
+  const rentaPot=Object.values(cfg).reduce((s,x)=>s+(parseFloat(x.precio)||0),0);
+  el.textContent = Object.keys(cfg).length ? `${plazas} plazas${dobles?' ('+dobles+' doble'+(dobles!==1?'s':'')+')':''}${rentaPot>0?' · '+eur(rentaPot)+'/mes':''}` : '+ configurar';
   el.style.color = Object.keys(cfg).length ? 'var(--acc)' : 'var(--ink3)';
 }
 
@@ -7034,52 +7065,76 @@ async function informeFiscalPDF(){
 
   // ── Fusionar cada justificante ──
   let incluidos=0, fallidos=0;
+  const errores=[];
   for(const j of just){
     try{
       let bytes=null, mime='';
       if(j.ref.startsWith('drive:')){
-        const r=await fetch('https://www.googleapis.com/drive/v3/files/'+j.ref.slice(6)+'?alt=media',{headers:{'Authorization':'Bearer '+gToken}});
-        if(!r.ok){ fallidos++; continue; }
-        const blob=await r.blob(); mime=blob.type||''; bytes=new Uint8Array(await blob.arrayBuffer());
-        if(!mime){ mime = esProbablePDF(bytes)?'application/pdf':'image/jpeg'; }
+        const fid=j.ref.slice(6);
+        if(!gToken){ errores.push(j.tit+': sin sesión de Drive'); fallidos++; continue; }
+        let r=await fetch('https://www.googleapis.com/drive/v3/files/'+fid+'?alt=media',{headers:{'Authorization':'Bearer '+gToken}});
+        if(r.status===401){ if(await renovarTokenAhora()) r=await fetch('https://www.googleapis.com/drive/v3/files/'+fid+'?alt=media',{headers:{'Authorization':'Bearer '+gToken}}); }
+        if(!r.ok){ errores.push(j.tit+': Drive devolvió '+r.status); fallidos++; continue; }
+        const buf=await r.arrayBuffer();
+        bytes=new Uint8Array(buf);
+        mime=r.headers.get('content-type')||'';
       } else if(j.ref.startsWith('data:')){
-        mime=(j.ref.match(/data:(.*?);/)||[])[1]||'';
-        const b64=j.ref.split(',')[1]; const bin=atob(b64); bytes=new Uint8Array(bin.length);
-        for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-      } else { continue; }
+        mime=(j.ref.match(/data:(.*?)[;,]/)||[])[1]||'';
+        const b64=j.ref.split(',')[1]||'';
+        try{
+          const bin=atob(b64); bytes=new Uint8Array(bin.length);
+          for(let k=0;k<bin.length;k++) bytes[k]=bin.charCodeAt(k);
+        }catch(e){ errores.push(j.tit+': base64 ilegible'); fallidos++; continue; }
+      } else { errores.push(j.tit+': formato desconocido'); fallidos++; continue; }
 
-      // Página separadora con el título del justificante
+      if(!bytes || bytes.length<10){ errores.push(j.tit+': archivo vacío'); fallidos++; continue; }
+
+      // Detectar el tipo REAL por la firma del archivo, no por el mime declarado
+      const esPDF = esProbablePDF(bytes);
+      const esPNG = bytes[0]===0x89 && bytes[1]===0x50 && bytes[2]===0x4E && bytes[3]===0x47;
+      const esJPG = bytes[0]===0xFF && bytes[1]===0xD8 && bytes[2]===0xFF;
+
+      // Página separadora con el título
       const sep=pdf.addPage([595,842]);
-      sep.drawRectangle({x:0,y:812,width:595,height:30,color:rgb(0.784,0.294,0.184)});
-      sep.drawText('JUSTIFICANTE '+(incluidos+1)+' de '+totalJust,{x:24,y:820,size:11,font:fontB,color:rgb(1,1,1)});
-      sep.drawText(limpiarTexto(j.tit).slice(0,90),{x:24,y:788,size:12,font:fontB,color:rgb(0.1,0.09,0.08)});
+      sep.drawRectangle({x:0,y:802,width:595,height:40,color:rgb(0.784,0.294,0.184)});
+      sep.drawText('JUSTIFICANTE '+(incluidos+1)+' de '+totalJust,{x:24,y:826,size:10,font:fontB,color:rgb(1,1,1)});
+      sep.drawText(limpiarTexto(j.tit).slice(0,95),{x:24,y:810,size:9,font:font,color:rgb(1,1,1)});
 
-      if(mime.includes('pdf') || esProbablePDF(bytes)){
-        // Fusionar todas las páginas del PDF
-        const src=await PDFDocument.load(bytes,{ignoreEncryption:true});
-        const paginas=await pdf.copyPages(src, src.getPageIndices());
+      if(esPDF){
+        const src=await PDFDocument.load(bytes,{ignoreEncryption:true, throwOnInvalidObject:false});
+        const idxs=src.getPageIndices();
+        const paginas=await pdf.copyPages(src, idxs);
         paginas.forEach(pg=>pdf.addPage(pg));
-      } else {
-        // Imagen: incrustar en una página
+      } else if(esPNG || esJPG || mime.startsWith('image/')){
         let img;
-        try{ img = mime.includes('png') ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes); }
-        catch(_){ try{ img=await pdf.embedJpg(bytes); }catch(__){ img=await pdf.embedPng(bytes); } }
+        if(esPNG) img=await pdf.embedPng(bytes);
+        else if(esJPG) img=await pdf.embedJpg(bytes);
+        else { try{ img=await pdf.embedJpg(bytes); }catch(_){ img=await pdf.embedPng(bytes); } }
         const pg=pdf.addPage([595,842]);
-        const maxW=545, maxH=760;
+        const maxW=535, maxH=740;
         let {width:iw,height:ih}=img.scale(1);
-        const r=Math.min(maxW/iw, maxH/ih, 1);
-        iw*=r; ih*=r;
-        pg.drawImage(img,{x:(595-iw)/2, y:(812-ih)/2 - 10, width:iw, height:ih});
+        const ratio=Math.min(maxW/iw, maxH/ih, 1);
+        iw*=ratio; ih*=ratio;
+        pg.drawImage(img,{x:(595-iw)/2, y:(790-ih)/2, width:iw, height:ih});
+      } else {
+        errores.push(j.tit+': tipo no soportado ('+(mime||'desconocido')+')');
+        sep.drawText('No se pudo incrustar este archivo: '+limpiarTexto(mime||'tipo desconocido'),{x:24,y:760,size:10,font:font,color:rgb(0.6,0.15,0.15)});
+        fallidos++; continue;
       }
       incluidos++;
-    }catch(e){ console.warn('Justificante no incluido:',j.tit,e); fallidos++; }
+    }catch(e){
+      console.warn('Justificante no incluido:',j.tit,e);
+      errores.push(j.tit+': '+(e.message||'error'));
+      fallidos++;
+    }
   }
+  if(errores.length) console.warn('Justificantes con problemas:', errores);
 
   // ── Descargar el PDF combinado ──
   const pdfBytes=await pdf.save();
   const nombre='Renta_'+anyo+'_'+((d.owner?d.owner.nom:'Todos').replace(/[^a-z0-9]/gi,'_'))+'.pdf';
   descargarBlob(new Blob([pdfBytes],{type:'application/pdf'}), nombre);
-  toast('✓ PDF de la renta con '+incluidos+' justificante(s)'+(fallidos?' ('+fallidos+' no disponibles)':''));
+  toast('✓ PDF con '+incluidos+' de '+totalJust+' justificantes'+(fallidos?' · '+fallidos+' con problemas (ver consola F12)':''));
 }
 
 
@@ -7199,6 +7254,24 @@ async function dibujarInformeEnPDF(pdf, font, fontB, d, anyo, totalJust){
     txt('Exceso de reparaciones+intereses sobre ingresos: '+eu(window._fiscalLimite.excesoTrasladable), M+8, 8.5, font, TX); nl();
     txt('Este exceso se deduce en los 4 anos siguientes.', M+8, 8.5, font, GR); nl(1.2);
   }
+
+  // ── Comprobaciones fiscales automáticas ──
+  h2('6. Comprobaciones y avisos');
+  const avisos=[];
+  d.props.forEach(p=>{
+    if(!parseFloat(p.vc||0) && !parseFloat(p.pctConstruccion||0))
+      avisos.push(p.nom+': sin valor de construccion; se estima el 70% del coste. Revisa el valor catastral para afinar.');
+    if(!p.fcompra) avisos.push(p.nom+': sin fecha de escritura; la amortizacion no se prorratea bien.');
+  });
+  const hipSinDesglose=(D.hipotecas||[]).filter(h=>(h.cuotas||[]).length===0);
+  if(hipSinDesglose.length) avisos.push(hipSinDesglose.length+' hipoteca(s) sin cuotas registradas: solo se deducen intereses registrados.');
+  if(window._fiscalLimite && window._fiscalLimite.excesoTrasladable>0)
+    avisos.push('Exceso art.23 de '+eu(window._fiscalLimite.excesoTrasladable)+' trasladable a los 4 anos siguientes.');
+  avisos.push('Reduccion 60% (art. 23.2 LIRPF): NO aplicada. En alquiler por habitaciones la Administracion la discute; consultar con asesor.');
+  avisos.push('Deduccion por vivienda habitual: solo aplica a TU vivienda (compra anterior a 2013) o a deducciones autonomicas por alquiler de vivienda. NO se aplica a inmuebles arrendados.');
+  avisos.push('Los inmuebles estan en Region de Murcia; el contribuyente tributa en su comunidad de residencia (deducciones autonomicas de Comunidad Valenciana si reside en Alicante).');
+  if(!avisos.length) avisos.push('Sin incidencias detectadas.');
+  avisos.forEach(a=>{ txt('- '+a, M, 8.5, font, GR); nl(1.1); });
 
   // Nota final
   nl(0.5);
