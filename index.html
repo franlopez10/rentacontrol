@@ -2943,28 +2943,68 @@ function rHabs(){
     const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado!=='PASADO');
     const renta=iqs.filter(i=>i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0);
     const libre=p.habs-iqs.filter(i=>i.estado==='ACTIVO').length;
+    const cfgAll=p.habsConfig||{};
+    // Renta potencial: precio configurado de cada habitación
+    const rentaPot=Array.from({length:p.habs},(_,n)=>parseFloat((cfgAll[n+1]||{}).precio)||0).reduce((a,b)=>a+b,0);
+
     const cards=Array.from({length:p.habs},(_,n)=>{
-      const inq=iqs.find(i=>parseInt(i.hab)==n+1);
+      const num=n+1;
+      const inq=iqs.find(i=>parseInt(i.hab)==num);
+      const cfg=cfgAll[num]||{tipo:'individual',plazas:1,precio:0};
       const est=inq?(inq.estado==='RESERVADO'?'res':'occ'):'free';
       const col=est==='occ'?'var(--gn)':est==='res'?'var(--ye)':'var(--rd)';
       const label=est==='occ'?'Ocupada':est==='res'?'Reservada':'Libre';
-      return `<div class="room-card ${est}" ${inq?`onclick="openPerfil('${inq.id}')" style="cursor:pointer;"`:''}">
-        <div class="room-num" style="color:${col};">H${n+1}</div>
-        <div class="room-name">${inq?inq.nom+' '+inq.ap:'Disponible'}</div>
-        ${inq?`<div class="room-rent" style="color:${col};">${inq.alq||0}€/mes</div>`:''}
-        <div style="font-size:9px;color:var(--ink3);margin-top:4px;font-family:'DM Mono',monospace;">${label}</div>
-        ${inq?`<div style="font-size:9px;color:var(--ink3);margin-top:1px;">Desde ${fD(inq.ini)}</div>`:''}
+      const esDoble=cfg.tipo==='doble';
+      const precioCfg=parseFloat(cfg.precio)||0;
+      return `<div class="room-card ${est}" style="text-align:left;padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span class="room-num" style="color:${col};font-size:15px;">H${num}</span>
+          <span style="font-size:8.5px;font-family:'DM Mono',monospace;color:${col};text-transform:uppercase;letter-spacing:.6px;">${label}</span>
+        </div>
+        <div class="room-name" style="font-size:12px;${inq?'cursor:pointer;':''}" ${inq?`onclick="openPerfil('${inq.id}')"`:''}>${inq?inq.nom+' '+(inq.ap||''):'Disponible'}</div>
+        ${inq?`<div style="font-size:10px;color:var(--ink3);margin-top:2px;">Desde ${fD(inq.ini)} · ${inq.alq||0}€/mes</div>`:''}
+        <div style="display:flex;gap:5px;align-items:center;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);">
+          <select onchange="editHabCfg('${p.id}',${num},'tipo',this.value)" style="flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line2);border-radius:5px;font-size:10.5px;background:var(--card);color:var(--ink);">
+            <option value="individual" ${!esDoble?'selected':''}>Individual</option>
+            <option value="doble" ${esDoble?'selected':''}>Doble</option>
+          </select>
+          <input type="number" step="1" value="${precioCfg||''}" placeholder="€" onchange="editHabCfg('${p.id}',${num},'precio',this.value)"
+            style="width:58px;padding:4px 6px;border:1px solid var(--line2);border-radius:5px;font-size:10.5px;background:var(--card);color:var(--ink);text-align:right;">
+        </div>
+        ${(!inq&&precioCfg>0)?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">Precio de oferta: <strong style="color:var(--ink2);">${precioCfg}€</strong></div>`:''}
+        ${(inq&&precioCfg>0&&Math.abs(precioCfg-(parseFloat(inq.alq)||0))>0.5)?`<div style="font-size:9.5px;color:var(--ye);margin-top:5px;">⚠ Cobra ${inq.alq}€, configurado ${precioCfg}€</div>`:''}
       </div>`;
     }).join('');
+
     return `<div class="card mb">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
         <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${p.nom}</div><div style="font-size:11px;color:var(--ink3);">${p.dir||''}</div></div>
-        <div style="text-align:right;"><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gn);">${renta}€/mes</div><div style="font-size:10px;color:var(--ink3);">${libre} hab. libre${libre!==1?'s':''}</div></div>
+        <div style="text-align:right;">
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gn);">${renta}€/mes</div>
+          <div style="font-size:10px;color:var(--ink3);">${libre} hab. libre${libre!==1?'s':''}${rentaPot>0?` · potencial ${eur(rentaPot)}`:''}</div>
+        </div>
       </div>
       <div class="room-grid">${cards}</div>
+      ${rentaPot>renta?`<div style="margin-top:12px;padding:9px 12px;background:var(--bg);border-radius:var(--r2);font-size:11.5px;color:var(--ink2);">
+        💡 Si alquilaras todas las habitaciones a su precio configurado ingresarías <strong>${eur(rentaPot)}/mes</strong> — ${eur(rentaPot-renta)} más que ahora.</div>`:''}
     </div>`;
   }).join('');
 }
+
+// Edición en línea del tipo y precio de una habitación (se guarda en la propiedad)
+function editHabCfg(propId, num, campo, valor){
+  const p=D.props.find(x=>x.id==propId); if(!p) return;
+  if(!p.habsConfig || typeof p.habsConfig!=='object') p.habsConfig={};
+  p.habsConfig=JSON.parse(JSON.stringify(p.habsConfig));
+  const cfg=p.habsConfig[num]||{tipo:'individual',plazas:1,precio:0};
+  if(campo==='tipo'){ cfg.tipo=valor; cfg.plazas = valor==='doble'?2:1; }
+  else if(campo==='precio'){ cfg.precio=parseFloat(valor)||0; }
+  p.habsConfig[num]=cfg;
+  saveAndSync();
+  rHabs();
+  toast(campo==='tipo' ? `Hab. ${num}: ${valor}` : `Hab. ${num}: ${cfg.precio}€/mes`);
+}
+
 
 // ══════════════════════════════════════════════════════════════
 // PISOS POTENCIALES
