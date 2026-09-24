@@ -1238,10 +1238,12 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="card">
       <div class="card-title">📈 Revalorización anual por IPC</div>
       <div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-bottom:12px;">
-        El valor de tasación de cada piso se actualiza cada año aplicando el IPC del año correspondiente. Revisa y ajusta estos porcentajes una vez al año con el dato oficial de tu Comunidad Autónoma en <a href="https://www.ine.es" target="_blank" style="color:var(--acc);">ine.es</a>.
+        El valor de tasación de cada piso se revaloriza <strong style="color:var(--ink2);">mes a mes</strong>, aplicando la parte proporcional del IPC de cada año desde la fecha de la tasación.<br>
+        Ajusta estos porcentajes con el dato oficial de la <strong style="color:var(--ink2);">Región de Murcia</strong> (donde están los pisos) en <a href="https://www.ine.es/jaxiT3/Tabla.htm?t=50934" target="_blank" style="color:var(--acc);">ine.es · IPC por comunidades</a>. Revísalo en enero de cada año.
       </div>
       <div id="ipc-tabla" style="display:flex;flex-direction:column;gap:6px;"></div>
       <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="anyadirAnyoIPC()">+ Añadir año</button>
+      <div id="ipc-efecto" style="margin-top:12px;"></div>
     </div>
     <div class="card"><div class="card-title">Backup de datos</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
@@ -1749,6 +1751,22 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Fianza entregada (€)</label><input id="co-f" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Garantía adicional (€)</label><input id="co-g" type="number" placeholder="0"></div>
     <div class="fgrp fgf"><label>Cláusulas adicionales</label><textarea id="co-n" rows="3" placeholder="Mascotas, subarriendo, suministros incluidos..."></textarea></div>
+    <div class="fgrp fgf">
+      <div class="form-section" style="margin-top:4px;">📸 Estado de la habitación (prueba para la fianza)</div>
+      <div style="font-size:10.5px;color:var(--ink3);line-height:1.6;margin-bottom:8px;">
+        Fotografía la habitación el día de la entrada. Si al salir hay desperfectos, estas fotos son la prueba que justifica retener parte de la fianza.
+      </div>
+      <div class="pdf-upload-zone" id="co-fotos-zone" onclick="document.getElementById('co-fotos').click()">
+        <input type="file" id="co-fotos" accept="image/*" multiple style="display:none;" onchange="subirFotosContrato(event,'entrada')">
+        <span class="pdf-upload-label">📷 Fotos del ESTADO DE ENTRADA</span>
+      </div>
+      <div id="co-fotos-entrada" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"></div>
+      <div class="pdf-upload-zone" id="co-fotos-sal-zone" onclick="document.getElementById('co-fotos-sal').click()" style="margin-top:12px;">
+        <input type="file" id="co-fotos-sal" accept="image/*" multiple style="display:none;" onchange="subirFotosContrato(event,'salida')">
+        <span class="pdf-upload-label">📷 Fotos del ESTADO DE SALIDA</span>
+      </div>
+      <div id="co-fotos-salida" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"></div>
+    </div>
     <div class="fgrp fgf"><label>Adjuntar contrato firmado en PDF (opcional)</label>
       <div class="pdf-upload-zone" id="co-pdf-zone" onclick="document.getElementById('co-pdf').click()">
         <input type="file" id="co-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('co-pdf','co-pdf-zone','co-pdf-data')">
@@ -2507,7 +2525,9 @@ const PDF_PLACEHOLDERS = {
   'hp-esc-zone':'📎 Adjuntar escritura',
   'hp-cuadro-zone':'📎 Adjuntar cuadro de amortización',
   'cu-pdf-zone':'📎 Adjuntar justificante bancario',
-  'pl2-pdf-zone':'📎 Adjuntar plantilla en PDF'
+  'pl2-pdf-zone':'📎 Adjuntar plantilla en PDF',
+  'co-fotos-zone':'📷 Fotos del ESTADO DE ENTRADA',
+  'co-fotos-sal-zone':'📷 Fotos del ESTADO DE SALIDA'
 };
 function clearPdfZone(zoneId, dataId) {
   const zone = document.getElementById(zoneId);
@@ -2916,7 +2936,7 @@ function rProps(){
       <div class="pbar"><div class="pbar-fill" style="width:${pc}%;background:${col};"></div></div>
       ${(p.fcompra||p.anyo)?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;">Comprado ${p.fcompra?fD(p.fcompra):p.anyo}${totalCostesAdq(p)>0?' · Coste total '+eur(parseFloat(p.precio||0)+totalCostesAdq(p)):''} · Hipoteca ${p.hipo||0}€/mes</div>`:''}${totalCostesAdq(p)>0?`<div style="font-size:10px;color:var(--acc);margin-top:3px;">📐 ${(p.costesAdq||[]).length} gasto${((p.costesAdq||[]).length!==1)?'s':''} de adquisición · ${eur(totalCostesAdq(p))}</div>`:''}
     ${totalFacturasVinculadas(p)>0?`<div style="font-size:10px;color:var(--acc);margin-top:2px;">🧾 + ${eur(totalFacturasVinculadas(p))} en facturas vinculadas (amortizables)</div>`:''}
-    ${(()=>{const va=valorActualizadoPiso(p); const det=detectarCCAA(p.cp); return va.desdeAnyo&&va.pctAcum>0?`<div style="font-size:10px;color:var(--bl);margin-top:2px;">📈 Valor actualizado por IPC${det?' ('+det[1]+')':''}: <strong>${eur(va.valor)}</strong> (+${va.pctAcum.toFixed(1)}% desde ${va.desdeAnyo})</div>`:'';})()}
+    ${(()=>{const va=valorActualizadoPiso(p); const det=detectarCCAA(p.cp); return va.meses>0&&Math.abs(va.pctAcum)>0.01?`<div style="font-size:10px;color:var(--bl);margin-top:2px;">📈 Valor hoy: <strong>${eur(va.valor)}</strong> (${va.pctAcum>=0?'+':''}${va.pctAcum.toFixed(1)}% en ${va.meses} mes${va.meses!==1?'es':''}${det?' · IPC '+det[1]:''})</div>`:'';})()}
     ${dineroPropio(p)>0?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Dinero propio</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${eur(dineroPropio(p))}</div></div>
       ${roceDe(p)!==null?`<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">ROCE anual</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:${roceDe(p)>=0?'var(--gn)':'var(--rd)'};">${roceDe(p).toFixed(1)}%</div></div>`:''}
@@ -3225,11 +3245,98 @@ function closeDrw(){$i('drawer').classList.remove('open');$i('drawer-overlay').c
 
 // Al elegir inquilino en un contrato, hereda su piso y habitación
 
+
+// ══════════════════════════════════════════════════════════════
+// FOTOS DEL ESTADO DE LA HABITACIÓN (prueba para la fianza)
+// ══════════════════════════════════════════════════════════════
+let _fotosContrato={entrada:[],salida:[]};
+
+async function subirFotosContrato(ev, tipo){
+  const files=[...ev.target.files]; if(!files.length) return;
+  const zoneId = tipo==='entrada' ? 'co-fotos-zone' : 'co-fotos-sal-zone';
+  const lbl=$i(zoneId).querySelector('.pdf-upload-label');
+  const original=lbl.textContent;
+  lbl.textContent='⏳ Procesando y subiendo…';
+  for(const f of files){
+    if(!f.type.startsWith('image/')) continue;
+    try{
+      // Comprimir para no saturar el almacenamiento
+      const dataUri=await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(f);});
+      const comp=await comprimirImagen2(dataUri,1600,0.75);
+      // Subir a Drive si hay sesión; si no, guardar en local
+      let ref='';
+      if(gToken && gFolderId){
+        const nombre='estado_'+tipo+'_'+Date.now()+'.jpg';
+        const meta=JSON.stringify({name:nombre, parents:[gFolderId]});
+        const boundary='bd'+Date.now();
+        const head='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: image/jpeg\r\n\r\n';
+        const foot='\r\n--'+boundary+'--';
+        const r=await gUpload('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+          {method:'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body:new Blob([head,comp.blob,foot])});
+        if(r.ok){ const d=await r.json(); ref='drive:'+d.id; }
+      }
+      if(!ref){
+        // Sin Drive: guardar como data URI comprimida
+        ref=await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(comp.blob);});
+      }
+      _fotosContrato[tipo].push({ref, fecha:new Date().toISOString().split('T')[0]});
+    }catch(e){ console.warn('Foto no procesada',e); }
+  }
+  ev.target.value='';
+  lbl.textContent=original;
+  pintarFotosContrato();
+}
+
+function pintarFotosContrato(){
+  ['entrada','salida'].forEach(tipo=>{
+    const box=$i('co-fotos-'+tipo); if(!box) return;
+    const arr=_fotosContrato[tipo]||[];
+    box.innerHTML=arr.map((f,i)=>`
+      <div style="position:relative;width:78px;height:78px;border-radius:8px;overflow:hidden;border:2px solid ${tipo==='entrada'?'var(--gn)':'var(--ye)'};">
+        <img src="${f.ref.startsWith('drive:')?'':f.ref}" data-ref="${f.ref}" style="width:100%;height:100%;object-fit:cover;cursor:pointer;background:var(--bg);"
+             onclick="openPdf('${f.ref}','estado_${tipo}_${i+1}.jpg')"
+             onerror="this.style.display='none';this.parentElement.querySelector('.ph-ico').style.display='flex';">
+        <div class="ph-ico" style="display:${f.ref.startsWith('drive:')?'flex':'none'};position:absolute;inset:0;align-items:center;justify-content:center;font-size:24px;cursor:pointer;background:var(--bg);" onclick="openPdf('${f.ref}','estado_${tipo}_${i+1}.jpg')">📷</div>
+        <button onclick="quitarFotoContrato('${tipo}',${i})" style="position:absolute;top:2px;right:2px;width:19px;height:19px;border-radius:50%;border:none;background:rgba(200,75,47,.92);color:#fff;font-size:11px;cursor:pointer;line-height:1;padding:0;">✕</button>
+      </div>`).join('');
+  });
+}
+function quitarFotoContrato(tipo,i){ _fotosContrato[tipo].splice(i,1); pintarFotosContrato(); }
+
+// Ver las fotos de un contrato ya guardado
+function verFotosContrato(contId, tipo){
+  const co=D.conts.find(x=>x.id==contId); if(!co) return;
+  const arr=(tipo==='entrada'?co.fotosEntrada:co.fotosSalida)||[];
+  if(!arr.length){ toast('Sin fotos de '+tipo, false); return; }
+  const inq=D.inqs.find(i=>i.id==co.inqId);
+  const pr=D.props.find(p=>p.id==(co.propId||inq?.propId));
+  $i('drw-c').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+      <div><div style="font-family:'Syne',sans-serif;font-size:19px;font-weight:800;">📸 Estado de ${tipo}</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:3px;">${inq?inq.nom+' '+(inq.ap||''):''} · ${pr?pr.nom:''}${co.hab?' Hab. '+co.hab:''}</div>
+      <div style="font-size:11px;color:var(--ink3);">${arr.length} foto(s) · ${arr[0].fecha?fD(arr[0].fecha):''}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;">
+      ${arr.map((f,i)=>`<div style="border:2px solid ${tipo==='entrada'?'var(--gn)':'var(--ye)'};border-radius:10px;overflow:hidden;cursor:pointer;" onclick="openPdf('${f.ref}','estado_${tipo}_${i+1}.jpg')">
+        ${f.ref.startsWith('drive:')
+          ? `<div style="height:110px;display:flex;align-items:center;justify-content:center;background:var(--bg);font-size:30px;">📷</div>`
+          : `<img src="${f.ref}" style="width:100%;height:110px;object-fit:cover;display:block;">`}
+        <div style="padding:6px;font-size:10px;text-align:center;color:var(--ink3);">Foto ${i+1} · descargar</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:14px;padding:10px 12px;background:var(--bg);border-radius:var(--r2);font-size:11px;color:var(--ink3);line-height:1.6;">
+      Estas fotos documentan el estado de la habitación en el momento de la ${tipo}. Consérvalas como prueba en caso de discrepancia sobre la devolución de la fianza.
+    </div>`;
+  $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
+}
+
 function newCont(){
   ['co-ini','co-fin','co-r','co-f','co-g','co-n','co-hab'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   const s=$i('co-i'); if(s)s.value='';
   const p=$i('co-prop'); if(p)p.value='';
   clearPdfZone('co-pdf-zone','co-pdf-data');
+  _fotosContrato={entrada:[],salida:[]}; pintarFotosContrato();
   openM('m-co');
 }
 
@@ -3299,7 +3406,7 @@ function addCont(){
   const iId=gi('co-i');if(!iId){toast('Selecciona un inquilino',false);return;}
   const pdfData=$i('co-pdf-data')?.value||'';
   const pdfName=$i('co-pdf-name')?.value||'';
-  D.conts.push({id:uid(),inqId:iId,propId:gi('co-prop'),hab:gi('co-hab'),ini:gi('co-ini'),fin:gi('co-fin'),r:gn('co-r'),f:gn('co-f'),g:gn('co-g'),n:gi('co-n'),pdfData,pdfName});
+  D.conts.push({id:uid(),inqId:iId,propId:gi('co-prop'),hab:gi('co-hab'),ini:gi('co-ini'),fin:gi('co-fin'),r:gn('co-r'),f:gn('co-f'),g:gn('co-g'),n:gi('co-n'),pdfData,pdfName,fotosEntrada:[..._fotosContrato.entrada],fotosSalida:[..._fotosContrato.salida]});
   saveAndSync();closeM('m-co');
   clearPdfZone('co-pdf-zone','co-pdf-data');
   rConts();toast('Contrato guardado');
@@ -3351,6 +3458,8 @@ function rConts(){
             <span class="badge badge-b">🏢 ${pr?pr.nom:'Piso sin asignar'}</span>
             ${habCo?`<span class="badge badge-p">🚪 Hab. ${habCo}</span>`:''}
             ${pr&&pr.ownerId?`<span class="badge badge-y">👑 ${ownerNom(pr.ownerId)}</span>`:''}
+            ${(c.fotosEntrada&&c.fotosEntrada.length)?`<button class="pdf-badge green" onclick="event.stopPropagation();verFotosContrato('${c.id}','entrada')">📸 Entrada (${c.fotosEntrada.length})</button>`:''}
+            ${(c.fotosSalida&&c.fotosSalida.length)?`<button class="pdf-badge" style="background:var(--ye-l);color:var(--ye);border-color:rgba(181,118,42,.3);" onclick="event.stopPropagation();verFotosContrato('${c.id}','salida')">📸 Salida (${c.fotosSalida.length})</button>`:''}
           </div>${c.n?`<div style="font-size:11px;color:var(--ink3);margin-top:2px;font-style:italic;">${c.n}</div>`:''}</div><div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="descCont('${c.id}')">📥 Plantilla</button>${c.pdfData?`<button class="pdf-badge green" onclick="openPdf('${c.pdfData}','${c.pdfName||'contrato.pdf'}')" style="max-width:130px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">📄 ${c.pdfName?c.pdfName.slice(0,14):'Firmado'}</button>`:''}<button class="btn btn-danger btn-xs" onclick="delCont('${c.id}')">🗑</button></div></div></div>`;
   }).join('');
 }
@@ -6621,10 +6730,36 @@ function rTablaIPC(){
       <span style="font-size:11px;color:var(--ink3);">%</span>
       <button class="btn btn-danger btn-xs" onclick="borrarAnyoIPC('${a}')">🗑</button>
     </div>`).join('');
+  pintarEfectoIPC();
 }
+function pintarEfectoIPC(){
+  const el=$i('ipc-efecto'); if(!el) return;
+  const props=D.props||[];
+  if(!props.length){ el.innerHTML=''; return; }
+  let base=0, actual=0, conFecha=0;
+  props.forEach(p=>{
+    const va=valorActualizadoPiso(p);
+    if(va.base>0){ base+=va.base; actual+=va.valor; if(va.meses>0) conFecha++; }
+  });
+  if(base<=0){ el.innerHTML=''; return; }
+  const dif=actual-base;
+  el.innerHTML=`<div style="background:var(--bg);border-radius:var(--r2);padding:12px;">
+    <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Efecto en tu cartera</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;">
+      <span style="font-size:12px;color:var(--ink3);">Valor de tasación original</span><span class="mono">${eur(base)}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:3px;">
+      <span style="font-size:12px;color:var(--ink3);">Valor actualizado hoy</span><span class="mono" style="font-weight:700;color:var(--gn);">${eur(actual)}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;padding-top:6px;border-top:1px solid var(--line);">
+      <span style="font-size:12px;font-weight:600;">Revalorización</span>
+      <span class="mono" style="font-weight:700;color:${dif>=0?'var(--gn)':'var(--rd)'};">${dif>=0?'+':''}${eur(dif)} (${base>0?(dif/base*100).toFixed(2):0}%)</span></div>
+    <div style="font-size:10px;color:var(--ink3);margin-top:5px;">${conFecha} de ${props.length} inmuebles con fecha de tasación registrada</div>
+  </div>`;
+}
+
 function editarIPC(anyo, valor){
   D.cfg.ipcAnual[anyo]=parseFloat(valor)||0;
   saveAndSync();
+  pintarEfectoIPC();
 }
 function anyadirAnyoIPC(){
   if(!D.cfg.ipcAnual) D.cfg.ipcAnual = tablaIPC();
@@ -6640,19 +6775,34 @@ function borrarAnyoIPC(anyo){
 
 function valorActualizadoPiso(p){
   const base = parseFloat(p.tasacion||p.mercado||p.precio||0);
-  if(!base) return {valor:0,pct:0,desdeAnyo:null};
-  const fechaBase = p.tasacion>0 ? (p.fcompra||'') : (p.fcompra||'');
-  // Año desde el que empezamos a revalorizar: el de la tasación si la hay, si no el de compra
-  const anyoBase = parseInt((p.fechaTasacion||p.fcompra||'').slice(0,4)) || parseInt((p.fcompra||'').slice(0,4));
-  if(!anyoBase) return {valor:base,pct:0,desdeAnyo:null};
-  const anyoActual = new Date().getFullYear();
-  const tabla = tablaIPC();
-  let valor = base, pctAcum=0;
-  for(let y=anyoBase+1; y<=anyoActual; y++){
-    const tasa = tabla[String(y)];
-    if(typeof tasa==='number'){ valor *= (1+tasa/100); pctAcum += tasa; }
+  if(!base) return {valor:0, pctAcum:0, desdeAnyo:null, base:0, meses:0};
+  // Fecha de partida: la de la tasación si existe, si no la de compra
+  const fechaBase = p.fechaTasacion || p.fcompra || '';
+  if(!fechaBase) return {valor:base, pctAcum:0, desdeAnyo:null, base, meses:0};
+  const dIni=new Date(fechaBase+'T00:00:00');
+  if(isNaN(dIni)) return {valor:base, pctAcum:0, desdeAnyo:null, base, meses:0};
+  const hoy=new Date();
+  if(dIni>hoy) return {valor:base, pctAcum:0, desdeAnyo:dIni.getFullYear(), base, meses:0};
+
+  const tabla=tablaIPC();
+  let valor=base, meses=0;
+  // Recorremos mes a mes desde la fecha base hasta hoy, aplicando 1/12 del IPC de cada año
+  let cur=new Date(dIni.getFullYear(), dIni.getMonth(), 1);
+  const fin=new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  while(cur < fin){
+    cur.setMonth(cur.getMonth()+1);
+    if(cur>fin) break;
+    const anyoMes=cur.getFullYear();
+    const tasaAnual=tabla[String(anyoMes)];
+    if(typeof tasaAnual==='number' && tasaAnual!==0){
+      // Interés compuesto mensual equivalente a la tasa anual
+      const tasaMensual=Math.pow(1+tasaAnual/100, 1/12)-1;
+      valor*= (1+tasaMensual);
+    }
+    meses++;
   }
-  return {valor, pctAcum, desdeAnyo:anyoBase, base};
+  const pctAcum = base>0 ? ((valor-base)/base*100) : 0;
+  return {valor, pctAcum, desdeAnyo:dIni.getFullYear(), base, meses, desdeFecha:fechaBase};
 }
 
 function baseConstruccion(p){
@@ -8332,7 +8482,7 @@ async function volcarSheets() {
       {sheet:'Inquilinos', h:['ID','Nombre','Apellidos','DNI','Nac','Email','Tel','WA','Estado','PisoID','Hab','Alq','Fia','Dia','Ini','Fin','Val','Mot','Notas'], rows:D.inqs.map(i=>[i.id,i.nom,i.ap,i.dni,i.nac,i.email,i.tel,i.wa,i.estado,i.propId,i.hab,i.alq,i.fia,i.dia,i.ini,i.fin,i.val,i.mot,i.notas])},
       {sheet:'Pagos', h:['ID','InqID','Concepto','Mes','Importe','Estado','Fecha','Notas','PDF'], rows:D.pagos.map(p=>[p.id,p.inqId,p.con,p.mes,p.imp,p.estado,p.fecha,p.notas,p.pdfName||''])},
       {sheet:'Gastos', h:['ID','Desc','Cat','Importe','PisoID','Fecha','Ded','Prov','Notas','PDF'], rows:D.gastos.map(g=>[g.id,g.desc,g.cat,g.imp,g.propId,g.fecha,g.ded,g.prov,g.notas,g.pdfName||''])},
-      {sheet:'Contratos', h:['ID','InqID','Inquilino','Piso','Hab','Ini','Fin','Renta','Fianza','Garantia','Notas','PDF'], rows:D.conts.map(c=>{const q=D.inqs.find(i=>i.id==c.inqId);const p=D.props.find(x=>x.id==(c.propId||q?.propId));return [c.id,c.inqId,q?q.nom+' '+q.ap:'',p?p.nom:'',c.hab||q?.hab||'',c.ini,c.fin,c.r,c.f,c.g,c.n,c.pdfName||''];})},
+      {sheet:'Contratos', h:['ID','InqID','Inquilino','Piso','Hab','Ini','Fin','Renta','Fianza','Garantia','Notas','PDF','FotosEntrada','FotosSalida'], rows:D.conts.map(c=>{const q=D.inqs.find(i=>i.id==c.inqId);const p=D.props.find(x=>x.id==(c.propId||q?.propId));return [c.id,c.inqId,q?q.nom+' '+q.ap:'',p?p.nom:'',c.hab||q?.hab||'',c.ini,c.fin,c.r,c.f,c.g,c.n,c.pdfName||'',(c.fotosEntrada||[]).length,(c.fotosSalida||[]).length];})},
       {sheet:'Incidencias', h:['ID','Desc','PisoID','Hab','Pri','Estado','Fecha','Coste','Prov','Notas'], rows:D.incs.map(i=>[i.id,i.desc,i.propId,i.hab,i.pri,i.estado,i.fecha,i.coste,i.prov,i.notas])},
       {sheet:'Proveedores', h:['ID','Nom','Ofi','Tel','Email','Val','Precio','Notas'], rows:D.provs.map(p=>[p.id,p.nom,p.ofi,p.tel,p.email,p.val,p.precio,p.notas])},
       {sheet:'Potenciales', h:['ID','Nom','URL','Precio','Alq','Habs','EBITDA','ROCE','Yield','Inv','Fecha'], rows:D.pots.map(p=>[p.id,p.nom,p.url,p.p,p.alq,p.h,p.ebitda,p.roce,p.yld,p.inv,p.fecha])},
