@@ -668,6 +668,10 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   letter-spacing:-.5px;
   max-width:100%;
 }
+#d-graf-patrimonio svg, #d-graf-ingresos svg{color:var(--ink);}
+@media(max-width:820px){
+  #d-graf-patrimonio, #d-graf-ingresos{min-height:auto;}
+}
 .cartera-box .cb-sub{
   font-size:9.5px;color:var(--ink3);margin-top:4px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -901,6 +905,10 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div id="d-alerts" style="margin-bottom:14px;"></div>
   <div class="kpi-strip" id="d-kpis"></div>
   <div class="card mb" id="d-cartera"></div>
+  <div class="g2 mb">
+    <div class="card"><div class="card-title">📈 Evolución del patrimonio</div><div id="d-graf-patrimonio"></div></div>
+    <div class="card"><div class="card-title">💰 Evolución de ingresos</div><div id="d-graf-ingresos"></div></div>
+  </div>
   <div class="g2 mb">
     <div class="card"><div class="card-title">💳 Últimos movimientos</div><div id="d-pagos"></div></div>
     <div class="card"><div class="card-title">🏢 Ocupación por piso</div><div id="d-pisos"></div></div>
@@ -7765,6 +7773,210 @@ function facturacionNetaPiso(p){
   return facturacionBrutaPiso(p)-hipoAnual;
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// GRÁFICAS DEL DASHBOARD (SVG, sin librerías externas)
+// ══════════════════════════════════════════════════════════════
+
+// Valor de un piso en una fecha concreta, revalorizado por IPC hasta ese mes
+function valorPisoEnFecha(p, fechaRef){
+  const base=parseFloat(p.tasacion||p.mercado||p.precio||0);
+  if(!base) return 0;
+  const fBase=p.fechaTasacion||p.fcompra||'';
+  if(!fBase) return base;
+  const dIni=new Date(fBase+'T00:00:00');
+  if(isNaN(dIni)||dIni>fechaRef) return 0;   // aún no era nuestro
+  const tabla=tablaIPC();
+  let valor=base;
+  let cur=new Date(dIni.getFullYear(), dIni.getMonth(), 1);
+  const fin=new Date(fechaRef.getFullYear(), fechaRef.getMonth(), 1);
+  let guard=0;
+  while(cur<fin && guard<600){
+    cur.setMonth(cur.getMonth()+1);
+    if(cur>fin) break;
+    const t=tabla[String(cur.getFullYear())];
+    if(typeof t==='number'&&t!==0) valor*=(1+(Math.pow(1+t/100,1/12)-1));
+    guard++;
+  }
+  return valor;
+}
+
+// Deuda hipotecaria estimada de un piso en una fecha (capital pendiente + cuotas aún no pagadas)
+function deudaPisoEnFecha(p, fechaRef){
+  const h=(D.hipotecas||[]).find(x=>x.propId==p.id);
+  if(!h) return 0;
+  const firma=h.firma||p.fcompra||'';
+  if(firma){
+    const dF=new Date(firma+'T00:00:00');
+    if(!isNaN(dF)&&dF>fechaRef) return 0;   // aún no existía la hipoteca
+  }
+  const pendHoy=parseFloat(h.pend||0);
+  // Sumamos el capital amortizado DESPUÉS de la fecha de referencia
+  const mesRef=fechaRef.toISOString().slice(0,7);
+  const amortPosterior=(h.cuotas||[])
+    .filter(cu=>(cu.mes||'')>mesRef)
+    .reduce((s,cu)=>s+parseFloat(cu.cap||0),0);
+  return pendHoy+amortPosterior;
+}
+
+// Serie mensual de patrimonio bruto y neto desde la primera compra
+function serieHistoricoPatrimonio(){
+  const props=D.props||[];
+  if(!props.length) return [];
+  const fechas=props.map(p=>p.fcompra||p.fechaTasacion||(p.anyo?p.anyo+'-01-01':'')).filter(Boolean).sort();
+  if(!fechas.length) return [];
+  const ini=new Date(fechas[0]+'T00:00:00');
+  const hoy=new Date();
+  const serie=[];
+  let cur=new Date(ini.getFullYear(), ini.getMonth(), 1);
+  let guard=0;
+  while(cur<=hoy && guard<400){
+    const ref=new Date(cur.getFullYear(), cur.getMonth()+1, 0); // fin de ese mes
+    let bruto=0, deuda=0;
+    props.forEach(p=>{
+      const v=valorPisoEnFecha(p, ref);
+      if(v>0){ bruto+=v; deuda+=deudaPisoEnFecha(p, ref); }
+    });
+    serie.push({mes:cur.toISOString().slice(0,7), bruto, neto:bruto-deuda, deuda});
+    cur.setMonth(cur.getMonth()+1);
+    guard++;
+  }
+  return serie;
+}
+
+// Serie mensual de ingresos cobrados y gastos
+function serieHistoricoIngresos(){
+  const pagos=D.pagos||[];
+  const meses=[...new Set(pagos.filter(p=>p.estado==='pagado'&&p.mes).map(p=>p.mes))].sort();
+  if(!meses.length) return [];
+  const ini=meses[0], fin=new Date().toISOString().slice(0,7);
+  const serie=[];
+  let cur=new Date(ini+'-01T00:00:00');
+  const dFin=new Date(fin+'-01T00:00:00');
+  let guard=0;
+  while(cur<=dFin && guard<400){
+    const mk=cur.toISOString().slice(0,7);
+    const ing=pagos.filter(p=>p.mes===mk&&p.estado==='pagado').reduce((s,p)=>s+parseFloat(p.imp||0),0);
+    const gas=(D.gastos||[]).filter(g=>(g.fecha||'').startsWith(mk)).reduce((s,g)=>s+parseFloat(g.imp||0),0)
+             +(D.compras||[]).filter(x=>(x.fecha||'').startsWith(mk)).reduce((s,x)=>s+parseFloat(x.imp||0),0);
+    serie.push({mes:mk, ing, gas, neto:ing-gas});
+    cur.setMonth(cur.getMonth()+1);
+    guard++;
+  }
+  return serie;
+}
+
+// Dibuja un gráfico de líneas en SVG
+function graficoLineas(serie, series, opts){
+  opts=opts||{};
+  if(!serie.length) return '<div class="empty" style="padding:24px;"><p>'+(opts.vacio||'Sin datos todavía')+'</p></div>';
+  const W=opts.w||520, H=opts.h||210, ML=56, MR=12, MT=14, MB=30;
+  const iw=W-ML-MR, ih=H-MT-MB;
+  const todos=series.flatMap(s=>serie.map(d=>d[s.campo]||0));
+  let max=Math.max(...todos, 1), min=Math.min(...todos, 0);
+  if(max===min) max=min+1;
+  const pad=(max-min)*0.1; max+=pad; if(min<0) min-=pad; else min=Math.max(0,min-pad);
+  const x=i=>ML+(serie.length>1 ? (i/(serie.length-1))*iw : iw/2);
+  const y=v=>MT+ih-((v-min)/(max-min))*ih;
+  const fmt=n=>{
+    const a=Math.abs(n);
+    if(a>=1000000) return (n/1000000).toFixed(1)+'M';
+    if(a>=1000) return Math.round(n/1000)+'k';
+    return Math.round(n);
+  };
+
+  let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;" preserveAspectRatio="xMidYMid meet">`;
+  // Rejilla horizontal
+  for(let g=0;g<=4;g++){
+    const vy=MT+ (ih/4)*g;
+    const val=max-((max-min)/4)*g;
+    svg+=`<line x1="${ML}" y1="${vy}" x2="${W-MR}" y2="${vy}" stroke="currentColor" stroke-opacity=".12" stroke-width="1"/>`;
+    svg+=`<text x="${ML-6}" y="${vy+3.5}" text-anchor="end" font-size="8.5" fill="currentColor" fill-opacity=".5" font-family="DM Mono,monospace">${fmt(val)}</text>`;
+  }
+  // Series
+  series.forEach(s=>{
+    const pts=serie.map((d,i)=>`${x(i)},${y(d[s.campo]||0)}`).join(' ');
+    if(s.area){
+      svg+=`<polygon points="${ML},${MT+ih} ${pts} ${x(serie.length-1)},${MT+ih}" fill="${s.color}" fill-opacity=".10"/>`;
+    }
+    svg+=`<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // Punto final destacado
+    const ult=serie[serie.length-1];
+    svg+=`<circle cx="${x(serie.length-1)}" cy="${y(ult[s.campo]||0)}" r="3.5" fill="${s.color}"/>`;
+  });
+  // Etiquetas del eje X (primera, media, última)
+  const idxs=serie.length<=3?serie.map((_,i)=>i):[0,Math.floor(serie.length/2),serie.length-1];
+  idxs.forEach(i=>{
+    const [yy,mm]=serie[i].mes.split('-');
+    svg+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="8.5" fill="currentColor" fill-opacity=".5" font-family="DM Mono,monospace">${mm}/${yy.slice(2)}</text>`;
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+function rGraficas(){
+  // ── Patrimonio ──
+  const boxP=$i('d-graf-patrimonio');
+  if(boxP){
+    const sp=serieHistoricoPatrimonio();
+    if(!sp.length){
+      boxP.innerHTML='<div class="empty" style="padding:24px;"><p>Añade propiedades con fecha de compra para ver la evolución</p></div>';
+    } else {
+      const ult=sp[sp.length-1], pri=sp[0];
+      const crec=pri.bruto>0?((ult.bruto-pri.bruto)/pri.bruto*100):0;
+      boxP.innerHTML=
+        `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+          <div><div style="font-size:9px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);">Bruto hoy</div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--bl);">${eur(ult.bruto)}</div></div>
+          <div><div style="font-size:9px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);">Neto hoy</div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gn);">${eur(ult.neto)}</div></div>
+          <div><div style="font-size:9px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);">Deuda</div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--rd);">${eur(ult.deuda)}</div></div>
+        </div>`+
+        graficoLineas(sp,[
+          {campo:'bruto', color:'#2563eb', area:true},
+          {campo:'neto',  color:'#059669', area:false}
+        ],{vacio:'Sin histórico'})+
+        `<div style="display:flex;gap:14px;font-size:10.5px;color:var(--ink3);margin-top:8px;flex-wrap:wrap;">
+          <span><span style="display:inline-block;width:10px;height:3px;background:#2563eb;border-radius:2px;vertical-align:middle;"></span> Bruto</span>
+          <span><span style="display:inline-block;width:10px;height:3px;background:#059669;border-radius:2px;vertical-align:middle;"></span> Neto</span>
+          <span style="margin-left:auto;">${sp.length} meses${crec!==0?' · '+(crec>=0?'+':'')+crec.toFixed(1)+'%':''}</span>
+        </div>`;
+    }
+  }
+
+  // ── Ingresos ──
+  const boxI=$i('d-graf-ingresos');
+  if(boxI){
+    const si=serieHistoricoIngresos();
+    if(!si.length){
+      boxI.innerHTML='<div class="empty" style="padding:24px;"><p>Marca cobros como pagados para ver la evolución</p></div>';
+    } else {
+      const totalIng=si.reduce((s,d)=>s+d.ing,0);
+      const mediaIng=totalIng/si.length;
+      const ult=si[si.length-1];
+      boxI.innerHTML=
+        `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+          <div><div style="font-size:9px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);">Último mes</div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--gn);">${eur(ult.ing)}</div></div>
+          <div><div style="font-size:9px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);">Media mensual</div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;">${eur(mediaIng)}</div></div>
+          <div><div style="font-size:9px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);">Total cobrado</div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--acc);">${eur(totalIng)}</div></div>
+        </div>`+
+        graficoLineas(si,[
+          {campo:'ing', color:'#059669', area:true},
+          {campo:'gas', color:'#dc2626', area:false}
+        ],{vacio:'Sin cobros'})+
+        `<div style="display:flex;gap:14px;font-size:10.5px;color:var(--ink3);margin-top:8px;flex-wrap:wrap;">
+          <span><span style="display:inline-block;width:10px;height:3px;background:#059669;border-radius:2px;vertical-align:middle;"></span> Ingresos</span>
+          <span><span style="display:inline-block;width:10px;height:3px;background:#dc2626;border-radius:2px;vertical-align:middle;"></span> Gastos</span>
+          <span style="margin-left:auto;">${si.length} meses</span>
+        </div>`;
+    }
+  }
+}
+
 function rCartera(){
   const el=$i('d-cartera'); if(!el) return;
   const props=D.props||[];
@@ -7881,6 +8093,7 @@ function rCartera(){
 
 function rDash(){
   rCartera();
+  rGraficas();
   const hoy=new Date(),mesAct=hoy.toISOString().slice(0,7),hoyS=hoy.toISOString().split('T')[0];
   const alerts=[];
   D.inqs.filter(i=>i.estado==='ACTIVO'&&i.fin).forEach(i=>{const d=Math.round((new Date(i.fin)-hoy)/86400000);if(d<=30&&d>=0)alerts.push({t:'y',m:`⏰ Contrato de ${i.nom} ${i.ap} vence en ${d} días`});if(d<0)alerts.push({t:'r',m:`🔴 Contrato de ${i.nom} ${i.ap} expirado`});});
