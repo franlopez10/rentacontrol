@@ -4971,6 +4971,24 @@ function rPlantillas(){
 // ══════════════════════════════════════════════════════════════
 // HIPOTECAS
 // ══════════════════════════════════════════════════════════════
+
+// Capital total amortizado según las cuotas registradas
+function capitalAmortizado(h){
+  return (h.cuotas||[]).reduce((s,cu)=>s+parseFloat(cu.cap||0),0);
+}
+// Capital inicial: el declarado, o deducido (pendiente actual + lo ya amortizado)
+function capitalInicial(h){
+  const dec=parseFloat(h.ini||0);
+  const deducido=parseFloat(h.pend||0)+capitalAmortizado(h);
+  return dec>0 ? Math.max(dec, deducido) : deducido;
+}
+// % amortizado sobre el capital inicial
+function pctAmortizado(h){
+  const ini=capitalInicial(h);
+  if(ini<=0) return 0;
+  return Math.min(100, Math.max(0, (ini-parseFloat(h.pend||0))/ini*100));
+}
+
 function tipoResultante(h){
   // Variable/Mixta: euríbor + diferencial − bonificación. Fija: diferencial actúa como tipo fijo.
   if(h.tipo==='Fija') return Math.max(0,(parseFloat(h.dif||0))-(parseFloat(h.bonif||0)));
@@ -5172,6 +5190,11 @@ function saveCuota(){
   // registrar/actualizar los gastos asociados (interés deducible, capital no deducible)
   registrarGastosCuota(h, h.cuotas.find(x=>x.mes===mes) || campos, mes);
   saveAndSync(); closeM('m-cuota'); rHipotecas();
+  // Refrescar el dashboard: el patrimonio neto sube y la deuda baja
+  try{ rDash(); }catch(e){}
+  if(campos.cap>0){
+    setTimeout(()=>toast(`🏠 +${eur(campos.cap,2)} de patrimonio neto · pendiente ${eur(h.pend)}`), 900);
+  }
 }
 function registrarGastosCuota(h, cu, mes){
   const p=D.props.find(x=>x.id==h.propId);
@@ -5195,7 +5218,7 @@ function delCuota(hipId, cuId){
   if(!confirm('¿Eliminar esta cuota? El capital pendiente volverá a subir.'))return;
   revertirGastosCuota(h, cu);
   h.cuotas=h.cuotas.filter(x=>x.id!==cuId);
-  saveAndSync(); rHipotecas(); toast('Cuota eliminada');
+  saveAndSync(); rHipotecas(); try{ rDash(); }catch(e){} toast('Cuota eliminada');
 }
 function verCuotas(hipId){
   const h=(D.hipotecas||[]).find(x=>x.id==hipId); if(!h)return;
@@ -5243,12 +5266,15 @@ function rHipotecas(){
   });
   const pend=list.reduce((s,h)=>s+parseFloat(h.pend||0),0);
   const cuotas=list.reduce((s,h)=>s+parseFloat(h.cuota||0),0);
-  const ini=list.reduce((s,h)=>s+parseFloat(h.ini||0),0);
+  const ini=list.reduce((s,h)=>s+capitalInicial(h),0);
+  const amortTotal=list.reduce((s,h)=>s+capitalAmortizado(h),0);
+  const interesesTotal=list.reduce((s,h)=>s+(h.cuotas||[]).reduce((a,cu)=>a+parseFloat(cu.int||0),0),0);
   const vinc=list.reduce((s,h)=>s+costeVincAnual(h),0);
   $i('hp-kpis').innerHTML=`
     <div class="kpi" style="--kc:var(--rd);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Deuda hipotecaria</div><div class="kpi-value">${eur(pend)}</div><div class="kpi-sub">${list.length} hipotecas</div></div>
     <div class="kpi" style="--kc:var(--ye);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Cuotas al mes</div><div class="kpi-value">${eur(cuotas)}</div></div>
     <div class="kpi" style="--kc:var(--gn);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Ya amortizado</div><div class="kpi-value">${eur(Math.max(0,ini-pend))}</div><div class="kpi-sub">${ini>0?Math.round((ini-pend)/ini*100):0}% del total</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Intereses pagados</div><div class="kpi-value">${eur(interesesTotal)}</div><div class="kpi-sub">deducibles</div></div>
     <div class="kpi" style="--kc:var(--pu);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Coste vinculaciones</div><div class="kpi-value">${eur(vinc)}</div><div class="kpi-sub">al año</div></div>`;
   const g=$i('hp-grid');
   if(!list.length){ g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏦</div><p>Añade las hipotecas de tus pisos para controlar cuotas, tipos y capital pendiente</p></div>'; return; }
@@ -5258,7 +5284,10 @@ function rHipotecas(){
     const t=tipoResultante(h);
     const interesMes=parseFloat(h.pend||0)*t/100/12;
     const capitalMes=Math.max(0,parseFloat(h.cuota||0)-interesMes);
-    const pc=h.ini>0?Math.round((h.ini-h.pend)/h.ini*100):0;
+    const capIni=capitalInicial(h);
+    const capAmort=capitalAmortizado(h);
+    const pc=Math.round(pctAmortizado(h));
+    const nCuotas=(h.cuotas||[]).length;
     const vs=vinculaciones(h);
     let meses=null;
     if(h.fin) meses=Math.max(0,Math.round((new Date(h.fin)-new Date())/864e5/30.4));
@@ -5270,8 +5299,12 @@ function rHipotecas(){
         <div style="display:flex;gap:4px;"><button class="btn btn-success btn-xs" onclick="newCuota('${h.id}')" title="Registrar cuota">+ Cuota</button><button class="btn btn-secondary btn-xs" onclick="verCuotas('${h.id}')" title="Ver cuotas">🧾</button><button class="btn btn-secondary btn-xs" onclick="editHipoteca('${h.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delHipoteca('${h.id}')">🗑</button></div>
       </div>
       <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--rd);">${eur(h.pend)}</div>
-      <div style="font-size:11px;color:var(--ink3);margin-bottom:8px;">pendiente${h.ini?' de '+eur(h.ini):''}</div>
-      ${h.ini?`<div class="pbar" style="height:7px;"><div class="pbar-fill" style="width:${pc}%;background:var(--gn);"></div></div><div style="font-size:11px;color:var(--gn);margin-top:5px;font-weight:600;">${pc}% amortizado</div>`:''}
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:8px;">pendiente${capIni>0?' de '+eur(capIni):''}</div>
+      ${capIni>0?`<div class="pbar" style="height:7px;"><div class="pbar-fill" style="width:${pc}%;background:var(--gn);"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px;">
+        <span style="color:var(--gn);font-weight:600;">${pc}% amortizado</span>
+        ${capAmort>0?`<span style="color:var(--ink3);">${eur(capAmort)} en ${nCuotas} cuota${nCuotas!==1?'s':''}</span>`:''}
+      </div>`:''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
         <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Cuota/mes</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${eur(h.cuota,2)}</div>${h.dia?`<div style="font-size:9px;color:var(--ink3);">día ${h.dia}</div>`:''}</div>
         <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Tipo result.</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--bl);">${t.toFixed(2)}%</div>${h.tipo==='Variable'?`<div style="font-size:9px;color:var(--ink3);">Eur ${(+h.euribor||0)}% + ${(+h.dif||0)}%${h.bonif?' − '+h.bonif+'%':''}</div>`:''}</div>
@@ -8063,6 +8096,15 @@ function rCartera(){
         <span style="color:var(--gn);font-weight:600;">${eur(patBruto-deudaTotal)} (${patBruto>0?((patBruto-deudaTotal)/patBruto*100).toFixed(0):100}%)</span>
         <span style="color:var(--rd);font-weight:600;">${eur(deudaTotal)} (${patBruto>0?(deudaTotal/patBruto*100).toFixed(0):0}%)</span>
       </div>
+      ${(()=>{
+        const amort=(D.hipotecas||[]).reduce((s,h)=>s+capitalAmortizado(h),0);
+        const nCu=(D.hipotecas||[]).reduce((s,h)=>s+((h.cuotas||[]).length),0);
+        const intr=(D.hipotecas||[]).reduce((s,h)=>s+(h.cuotas||[]).reduce((a,cu)=>a+parseFloat(cu.int||0),0),0);
+        if(amort<=0 && nCu===0) return '';
+        return `<div style="margin-top:10px;padding:10px 12px;background:var(--gn-l,rgba(16,185,129,.08));border:1px solid rgba(16,185,129,.25);border-radius:var(--r2);font-size:11.5px;color:var(--ink2);line-height:1.6;">
+          🏠 Con ${nCu} cuota${nCu!==1?'s':''} pagada${nCu!==1?'s':''} ya has convertido <strong style="color:var(--gn);">${eur(amort)}</strong> de deuda en patrimonio propio${intr>0?` · ${eur(intr)} en intereses deducibles`:''}.
+        </div>`;
+      })()}
     </div>
 
     <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:18px 0 8px;">Desglose por inmueble</div>
