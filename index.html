@@ -799,6 +799,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
   <div class="nav-group" data-ws="gentaury">
     <div class="nav-label">Personas</div>
+    <div class="nav-item" data-ws="gentaury" data-s="visitas" onclick="go(this)">
+      <span class="nav-icon">📆</span> Visitas
+    </div>
     <div class="nav-item" data-ws="gentaury" data-s="propietarios" onclick="go(this)">
       <span class="nav-icon">👑</span> Propietarios
     </div>
@@ -1274,6 +1277,39 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 
 
+
+
+<!-- ════════════ VISITAS ════════════ -->
+<section class="sec" data-ws="gentaury" id="sec-visitas">
+  <div class="ph"><div><div class="ph-title">📆 Visitas</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Agenda de visitas a las habitaciones y seguimiento de candidatos</div></div>
+    <div class="ph-acts">
+      <button class="btn btn-secondary" onclick="pedirPermisoNotif()">🔔 Activar avisos</button>
+      <button class="btn btn-primary" onclick="newVisita()">+ Nueva visita</button>
+    </div>
+  </div>
+  <div id="vi-alertas" style="margin-bottom:14px;"></div>
+  <div id="vi-kpis" class="mb" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  <div class="fb">
+    <div class="fi"><span class="fi-icon">🔍</span><input id="vi-q" placeholder="Buscar por nombre, teléfono..." oninput="rVisitas()"></div>
+    <select id="vi-prop-f" onchange="rVisitas()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;min-width:160px;"></select>
+    <select id="vi-est-f" onchange="rVisitas()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
+      <option value="">Todos los estados</option>
+      <option value="pendiente">🕓 Por confirmar</option>
+      <option value="confirmada">✅ Confirmada</option>
+      <option value="realizada">👁 Realizada</option>
+      <option value="interesado">🔥 Interesado</option>
+      <option value="alquilado">🎉 Alquilado</option>
+      <option value="descartado">❌ Descartado</option>
+      <option value="noshow">👻 No se presentó</option>
+    </select>
+    <select id="vi-vista" onchange="rVisitas()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;">
+      <option value="agenda">📅 Agenda por días</option>
+      <option value="lista">📋 Lista completa</option>
+    </select>
+  </div>
+  <div id="vi-lista"></div>
+</section>
 
 <!-- ════════════ PLANTILLAS ════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-plantillas">
@@ -2348,6 +2384,43 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   </div>
 </div></div>
 
+
+<!-- MODAL VISITA -->
+<div class="modal-overlay" id="m-visita"><div class="modal modal-lg">
+  <h2 id="m-vi-title">📆 Nueva visita</h2>
+  <input type="hidden" id="vi-edit-id">
+  <div class="fg">
+    <div class="fgrp"><label>Nombre del interesado *</label><input id="vi-nom" placeholder="Nombre y apellidos" oninput="chequearVetadoVisita()"></div>
+    <div class="fgrp"><label>Teléfono *</label><input id="vi-tel" placeholder="600 000 000" oninput="chequearVetadoVisita()"></div>
+    <div class="fgrp"><label>Email</label><input id="vi-email" type="email" placeholder="correo@ejemplo.com" oninput="chequearVetadoVisita()"></div>
+    <div class="fgrp"><label>Fecha *</label><input id="vi-fecha" type="date"></div>
+    <div class="fgrp"><label>Hora *</label><input id="vi-hora" type="time"></div>
+    <div class="fgrp"><label>Duración estimada</label><select id="vi-dur"><option value="15">15 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">1 hora</option></select></div>
+    <div class="fgrp"><label>Piso *</label><select id="vi-prop" onchange="cargarHabsVisita()"></select></div>
+    <div class="fgrp"><label>Habitación</label><select id="vi-hab"></select></div>
+    <div class="fgrp"><label>Estado</label>
+      <select id="vi-est">
+        <option value="pendiente">🕓 Por confirmar</option>
+        <option value="confirmada">✅ Confirmada</option>
+        <option value="realizada">👁 Realizada</option>
+        <option value="interesado">🔥 Muy interesado</option>
+        <option value="alquilado">🎉 Alquilado</option>
+        <option value="descartado">❌ Descartado</option>
+        <option value="noshow">👻 No se presentó</option>
+      </select>
+    </div>
+    <div class="fgrp"><label>¿Cómo nos encontró?</label><select id="vi-origen"><option>Idealista</option><option>Fotocasa</option><option>Milanuncios</option><option>Recomendación</option><option>Cartel</option><option>WhatsApp directo</option><option>Otro</option></select></div>
+    <div class="fgrp"><label>Aviso previo</label><select id="vi-aviso"><option value="120">2 horas antes</option><option value="60">1 hora antes</option><option value="180">3 horas antes</option><option value="1440">1 día antes</option><option value="0">Sin aviso</option></select></div>
+    <div class="fgrp"><label>Recordatorio enviado</label><select id="vi-recordado"><option value="no">❌ Aún no</option><option value="si">✅ Ya avisado</option></select></div>
+    <div class="fgrp fgf"><label>Notas (impresión, qué busca, cuándo entraría…)</label><textarea id="vi-notas" rows="3" placeholder="Estudiante de enfermería, entraría el 1 de octubre, trabaja por las mañanas..."></textarea></div>
+  </div>
+  <div id="vi-alerta-veto" style="display:none;background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.4);border-radius:var(--r2);padding:12px;margin-top:12px;font-size:12px;color:#dc2626;"></div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeM('m-visita')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveVisita()">Guardar</button>
+  </div>
+</div></div>
+
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -2360,11 +2433,12 @@ const WS_CFG = {
 };
 let KEY = WS_CFG[WS] ? WS_CFG[WS].key : 'rc5';
 let D=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||def();}catch{return def();}})();
-function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],hipotecas:[],plantillas:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
+function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],hipotecas:[],plantillas:[],visitas:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
 if(!D.compras)D.compras=[];
 if(!D.propietarios)D.propietarios=[];
 if(!D.hipotecas)D.hipotecas=[];
 if(!D.plantillas)D.plantillas=[];
+if(!D.visitas)D.visitas=[];
 ['cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'].forEach(k=>{if(!D[k])D[k]=[];});
 if(!D.anuncios)D.anuncios=[];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(D));
@@ -2556,7 +2630,7 @@ function clearPdfZone(zoneId, dataId) {
 const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,propietarios:rPropietarios,
   activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rTableroPagos,
   gastos:rGastos,facturas:()=>{rFacturas();rCalendarioOcupacion();},hist:rHist,fiscal:rFiscal,
-  informes:rInfs,incs:rIncs,provs:rProvs,hipotecas:rHipotecas,plantillas:rPlantillas,cfg:rCfg,
+  informes:rInfs,incs:rIncs,provs:rProvs,hipotecas:rHipotecas,plantillas:rPlantillas,visitas:rVisitas,cfg:rCfg,
   pDash:rPDash, pMovs:rMovs, pCuentas:rCuentas, pSubs:rSubs, pPresup:rPresup,
   pMetas:rMetas, pInver:rInver, pDeudas:rDeudas, pPatrimonio:rPatrimonio,
   pDocs:rDocs, pRenta:rRenta, pLibros:rLibros, pCfg:rPCfg};
@@ -2575,7 +2649,7 @@ function go(el){
 function populateSels(){
   const pO='<option value="">Sin asignar</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');
   const iO='<option value="">— Seleccionar —</option>'+D.inqs.map(i=>`<option value="${i.id}">${i.nom} ${i.ap} (${i.estado})</option>`).join('');
-  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop','hp-prop','pl2-prop','rp-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
+  ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop','hp-prop','pl2-prop','rp-prop','vi-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
   // Selectores de propietario
   const oO='<option value="">— Sin asignar —</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['pr-owner','cp-owner','hp-owner','pr-usufructo'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oO;e.value=v;}});
@@ -2587,7 +2661,7 @@ function populateSels(){
   const oF='<option value="">Todos los propietarios</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['cp-owner-f','fi-owner','hp-owner-f'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oF;e.value=v;}});
   ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=iO;e.value=v;}});
-  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f','pl2-prop-f','cal-prop'].forEach(id=>{
+  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f','pl2-prop-f','cal-prop','vi-prop-f'].forEach(id=>{
     const e=$i(id);
     if(e){ const v=e.value; e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join(''); e.value=v; }
   });
@@ -2997,8 +3071,11 @@ function rHabs(){
             <option value="doble" ${esDoble?'selected':''}>Doble</option>
           </select>
           <input type="number" step="1" value="${precioCfg||''}" placeholder="€" onchange="editHabCfg('${p.id}',${num},'precio',this.value)"
-            style="width:58px;padding:4px 6px;border:1px solid var(--line2);border-radius:5px;font-size:10.5px;background:var(--card);color:var(--ink);text-align:right;">
+            style="width:54px;padding:4px 6px;border:1px solid var(--line2);border-radius:5px;font-size:10.5px;background:var(--card);color:var(--ink);text-align:right;" title="Precio €/mes">
+          <input type="number" step="0.5" value="${cfg.m2||''}" placeholder="m²" onchange="editHabCfg('${p.id}',${num},'m2',this.value)"
+            style="width:48px;padding:4px 6px;border:1px solid var(--line2);border-radius:5px;font-size:10.5px;background:var(--card);color:var(--ink);text-align:right;" title="Metros cuadrados">
         </div>
+        ${(cfg.m2>0&&precioCfg>0)?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">${cfg.m2} m² · ${(precioCfg/cfg.m2).toFixed(1)} €/m²</div>`:(cfg.m2>0?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">${cfg.m2} m²</div>`:'')}
         ${(!inq&&precioCfg>0)?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">Precio de oferta: <strong style="color:var(--ink2);">${precioCfg}€</strong></div>`:''}
         ${(inq&&precioCfg>0&&Math.abs(precioCfg-(parseFloat(inq.alq)||0))>0.5)?`<div style="font-size:9.5px;color:var(--ye);margin-top:5px;">⚠ Cobra ${inq.alq}€, configurado ${precioCfg}€</div>`:''}
       </div>`;
@@ -3027,10 +3104,11 @@ function editHabCfg(propId, num, campo, valor){
   const cfg=p.habsConfig[num]||{tipo:'individual',plazas:1,precio:0};
   if(campo==='tipo'){ cfg.tipo=valor; cfg.plazas = valor==='doble'?2:1; }
   else if(campo==='precio'){ cfg.precio=parseFloat(valor)||0; }
+  else if(campo==='m2'){ cfg.m2=parseFloat(valor)||0; }
   p.habsConfig[num]=cfg;
   saveAndSync();
   rHabs();
-  toast(campo==='tipo' ? `Hab. ${num}: ${valor}` : `Hab. ${num}: ${cfg.precio}€/mes`);
+  toast(campo==='tipo' ? `Hab. ${num}: ${valor}` : campo==='m2' ? `Hab. ${num}: ${cfg.m2} m²` : `Hab. ${num}: ${cfg.precio}€/mes`);
 }
 
 
@@ -4613,8 +4691,10 @@ function abrirConfigHabs(){
         <option value="doble" ${cfg.tipo==='doble'?'selected':''}>Doble (2 pers.)</option>
       </select>
       <div style="display:flex;align-items:center;gap:4px;">
-        <input id="ch-precio-${i}" type="number" step="0.01" value="${cfg.precio||''}" placeholder="350" style="width:88px;padding:6px 8px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;">
-        <span style="font-size:11px;color:var(--ink3);">€/mes</span>
+        <input id="ch-precio-${i}" type="number" step="0.01" value="${cfg.precio||''}" placeholder="350" style="width:78px;padding:6px 8px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;">
+        <span style="font-size:11px;color:var(--ink3);">€</span>
+        <input id="ch-m2-${i}" type="number" step="0.5" value="${cfg.m2||''}" placeholder="12" style="width:60px;padding:6px 8px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;">
+        <span style="font-size:11px;color:var(--ink3);">m²</span>
       </div>
       <span style="font-size:10px;color:${inqHab?'var(--gn)':'var(--ink3)'};min-width:92px;">${inqHab?'● '+inqHab.nom:'○ libre'}</span>
     </div>`;
@@ -4648,8 +4728,8 @@ function guardarConfigHabs(){
   const nuevaCfg={};
   for(let i=1;i<=n;i++){
     const s=$i('ch-tipo-'+i);
-    const pr=$i('ch-precio-'+i);
-    if(s) nuevaCfg[i]={tipo:s.value, plazas: s.value==='doble'?2:1, precio: pr?(parseFloat(pr.value)||0):0};
+    const pr=$i('ch-precio-'+i), m2=$i('ch-m2-'+i);
+    if(s) nuevaCfg[i]={tipo:s.value, plazas: s.value==='doble'?2:1, precio: pr?(parseFloat(pr.value)||0):0, m2: m2?(parseFloat(m2.value)||0):0};
   }
   p.habsConfig=nuevaCfg;
   saveAndSync(); closeM('m-confighabs'); actualizarResumenHabs(p);
@@ -4815,6 +4895,296 @@ function rCalendarioOcupacion(){
   }
 
   cont.innerHTML=html;
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// VISITAS / CANDIDATOS
+// ══════════════════════════════════════════════════════════════
+const VI_ESTADOS={
+  pendiente:{et:'Por confirmar',ico:'🕓',col:'#6b7280',bg:'rgba(120,120,120,.10)'},
+  confirmada:{et:'Confirmada',ico:'✅',col:'#2563eb',bg:'rgba(37,99,235,.10)'},
+  realizada:{et:'Realizada',ico:'👁',col:'#7c3aed',bg:'rgba(124,58,237,.10)'},
+  interesado:{et:'Muy interesado',ico:'🔥',col:'#d97706',bg:'rgba(217,119,6,.12)'},
+  alquilado:{et:'Alquilado',ico:'🎉',col:'#059669',bg:'rgba(5,150,105,.12)'},
+  descartado:{et:'Descartado',ico:'❌',col:'#dc2626',bg:'rgba(220,38,38,.08)'},
+  noshow:{et:'No se presentó',ico:'👻',col:'#dc2626',bg:'rgba(220,38,38,.08)'}
+};
+
+function cargarHabsVisita(){
+  const propId=gi('vi-prop'); const sel=$i('vi-hab'); if(!sel) return;
+  const p=D.props.find(x=>x.id==propId);
+  if(!p){ sel.innerHTML='<option value="">—</option>'; return; }
+  const n=parseInt(p.habs)||0;
+  let html='<option value="">Cualquiera / sin decidir</option>';
+  for(let i=1;i<=n;i++){
+    const cfg=(p.habsConfig||{})[i]||{};
+    const ocupada=D.inqs.some(x=>x.estado==='ACTIVO'&&x.propId==propId&&String(x.hab)===String(i));
+    html+=`<option value="${i}">Hab. ${i}${cfg.tipo==='doble'?' (doble)':''}${cfg.precio?' · '+cfg.precio+'€':''}${cfg.m2?' · '+cfg.m2+'m²':''}${ocupada?' — OCUPADA':' — libre'}</option>`;
+  }
+  sel.innerHTML=html;
+}
+
+function chequearVetadoVisita(){
+  const box=$i('vi-alerta-veto'); if(!box) return;
+  const nom=gi('vi-nom'), tel=gi('vi-tel'), em=gi('vi-email');
+  const vet=buscarVetado(nom,'', '', em, tel);
+  if(vet){
+    box.style.display='block';
+    box.innerHTML=`🚫 <strong>¡OJO! Este candidato está en tu lista negra.</strong><br>
+      <strong>${vet.nom} ${vet.ap||''}</strong> fue marcado como NO APTO${vet.aptoMotivo?': '+vet.aptoMotivo:''}.`;
+  } else box.style.display='none';
+}
+
+function newVisita(){
+  $i('vi-edit-id').value=''; $i('m-vi-title').textContent='📆 Nueva visita';
+  ['vi-nom','vi-tel','vi-email','vi-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  const ahora=new Date();
+  $i('vi-fecha').value=ahora.toISOString().split('T')[0];
+  $i('vi-hora').value='18:00';
+  $i('vi-dur').value='30'; $i('vi-est').value='pendiente';
+  $i('vi-origen').value='Idealista'; $i('vi-aviso').value='120'; $i('vi-recordado').value='no';
+  populateSels(); cargarHabsVisita();
+  const box=$i('vi-alerta-veto'); if(box) box.style.display='none';
+  openM('m-visita');
+}
+function editVisita(id){
+  const v=(D.visitas||[]).find(x=>x.id==id); if(!v) return;
+  $i('vi-edit-id').value=v.id; $i('m-vi-title').textContent='✏️ Editar visita';
+  populateSels();
+  $i('vi-nom').value=v.nom||''; $i('vi-tel').value=v.tel||''; $i('vi-email').value=v.email||'';
+  $i('vi-fecha').value=v.fecha||''; $i('vi-hora').value=v.hora||''; $i('vi-dur').value=v.dur||'30';
+  $i('vi-prop').value=v.propId||''; cargarHabsVisita(); $i('vi-hab').value=v.hab||'';
+  $i('vi-est').value=v.est||'pendiente'; $i('vi-origen').value=v.origen||'Idealista';
+  $i('vi-aviso').value=v.aviso||'120'; $i('vi-recordado').value=v.recordado||'no';
+  $i('vi-notas').value=v.notas||'';
+  chequearVetadoVisita();
+  openM('m-visita');
+}
+function saveVisita(){
+  const nom=gi('vi-nom'), tel=gi('vi-tel'), fecha=gi('vi-fecha'), hora=gi('vi-hora');
+  if(!nom||!tel){ toast('Completa nombre y teléfono', false); return; }
+  if(!fecha||!hora){ toast('Indica fecha y hora', false); return; }
+  const campos={nom,tel,email:gi('vi-email'),fecha,hora,dur:gi('vi-dur'),
+    propId:gi('vi-prop'),hab:gi('vi-hab'),est:$i('vi-est').value,origen:$i('vi-origen').value,
+    aviso:gi('vi-aviso'),recordado:$i('vi-recordado').value,notas:gi('vi-notas')};
+  const id=gi('vi-edit-id');
+  if(id){ const v=D.visitas.find(x=>x.id==id); if(v)Object.assign(v,campos); toast('Visita actualizada'); }
+  else { D.visitas.push(Object.assign({id:uid(),creada:new Date().toISOString()},campos)); toast('Visita agendada'); }
+  saveAndSync(); closeM('m-visita'); rVisitas();
+  programarAvisosVisitas();
+}
+function delVisita(id){
+  if(!confirm('¿Eliminar esta visita?')) return;
+  D.visitas=D.visitas.filter(x=>x.id!==id); saveAndSync(); rVisitas(); toast('Eliminada');
+}
+function cambiarEstadoVisita(id, est){
+  const v=(D.visitas||[]).find(x=>x.id==id); if(!v) return;
+  v.est=est; saveAndSync(); rVisitas();
+  toast((VI_ESTADOS[est]||{}).et||'Actualizado');
+}
+function marcarRecordada(id){
+  const v=(D.visitas||[]).find(x=>x.id==id); if(!v) return;
+  v.recordado = v.recordado==='si' ? 'no' : 'si';
+  saveAndSync(); rVisitas();
+  toast(v.recordado==='si'?'✓ Marcada como avisada':'Marcada como pendiente de avisar');
+}
+
+// WhatsApp de recordatorio con los datos de la visita
+function waVisita(id){
+  const v=(D.visitas||[]).find(x=>x.id==id); if(!v) return;
+  const p=D.props.find(x=>x.id==v.propId);
+  const dir=p?((p.dir||'')+(p.ciu?', '+p.ciu:'')):'';
+  const txt=`Hola ${v.nom}, te recuerdo que hoy a las ${v.hora} tenemos la visita a la habitación`+
+    (p?` del piso de ${p.nom}`:'')+(dir?`\\n📍 ${dir}`:'')+
+    `\\n\\n¿Me confirmas que puedes venir? ¡Gracias!`;
+  const tel=(v.tel||'').replace(/\\D/g,'');
+  const url='https://wa.me/'+(tel.length===9?'34'+tel:tel)+'?text='+encodeURIComponent(txt);
+  window.open(url,'_blank');
+  // Marcar como avisado
+  v.recordado='si'; saveAndSync(); rVisitas();
+}
+
+// Convertir una visita en inquilino
+function visitaAInquilino(id){
+  const v=(D.visitas||[]).find(x=>x.id==id); if(!v) return;
+  if(!confirm(`¿Dar de alta a ${v.nom} como inquilino?\\n\\nSe abrirá la ficha con sus datos ya rellenos.`)) return;
+  v.est='alquilado'; saveAndSync();
+  const partes=(v.nom||'').trim().split(' ');
+  $i('iq-n').value=partes[0]||'';
+  $i('iq-a').value=partes.slice(1).join(' ');
+  $i('iq-t').value=v.tel||''; $i('iq-wa').value=v.tel||'';
+  $i('iq-e').value=v.email||'';
+  $i('iq-est').value='ACTIVO';
+  populateSels();
+  $i('iq-p').value=v.propId||'';
+  $i('iq-h').value=v.hab||'';
+  const p=D.props.find(x=>x.id==v.propId);
+  const cfg=p&&v.hab?((p.habsConfig||{})[v.hab]||{}):{};
+  if(cfg.precio) $i('iq-alq').value=cfg.precio;
+  if(cfg.tipo==='doble') $i('iq-personas').value='2';
+  $i('iq-not').value=(v.notas?v.notas+'\\n':'')+'Procede de visita del '+(v.fecha?fD(v.fecha):'');
+  openM('m-inq');
+}
+
+// ── Avisos antes de cada visita ──
+function pedirPermisoNotif(){
+  if(!('Notification' in window)){ toast('Tu navegador no admite notificaciones', false); return; }
+  Notification.requestPermission().then(p=>{
+    if(p==='granted'){ toast('🔔 Avisos activados'); programarAvisosVisitas(); new Notification('RentaControl',{body:'Te avisaré antes de cada visita.'}); }
+    else toast('No se han activado los avisos', false);
+  });
+}
+let _timersVisitas=[];
+function programarAvisosVisitas(){
+  _timersVisitas.forEach(t=>clearTimeout(t)); _timersVisitas=[];
+  if(!('Notification' in window) || Notification.permission!=='granted') return;
+  const ahora=Date.now();
+  (D.visitas||[]).forEach(v=>{
+    if(!v.fecha||!v.hora) return;
+    if(['alquilado','descartado','noshow','realizada'].includes(v.est)) return;
+    const mins=parseInt(v.aviso||120); if(!mins) return;
+    const cuando=new Date(v.fecha+'T'+v.hora+':00').getTime()-mins*60000;
+    const espera=cuando-ahora;
+    if(espera>0 && espera<24*3600*1000){   // solo las próximas 24h
+      const p=D.props.find(x=>x.id==v.propId);
+      _timersVisitas.push(setTimeout(()=>{
+        new Notification('📆 Visita en '+(mins>=60?(mins/60)+'h':mins+' min'),{
+          body:`${v.nom} · ${v.hora}${p?' · '+p.nom:''}${v.hab?' Hab. '+v.hab:''}\\nRecuérdale la cita.`,
+          tag:'visita-'+v.id
+        });
+      }, espera));
+    }
+  });
+}
+
+function rVisitas(){
+  populateSels();
+  const vs=D.visitas||[];
+  const ahora=new Date();
+  const hoyStr=ahora.toISOString().split('T')[0];
+
+  // ── Avisos: visitas de hoy sin recordatorio enviado ──
+  const porAvisar=vs.filter(v=>{
+    if(v.recordado==='si') return false;
+    if(['alquilado','descartado','noshow','realizada'].includes(v.est)) return false;
+    if(v.fecha!==hoyStr) return false;
+    const t=new Date(v.fecha+'T'+(v.hora||'00:00')+':00');
+    const mins=parseInt(v.aviso||120);
+    return (t-ahora)<=mins*60000 && t>ahora;
+  });
+  const pasadasSinCerrar=vs.filter(v=>{
+    if(['alquilado','descartado','noshow','realizada','interesado'].includes(v.est)) return false;
+    if(!v.fecha) return false;
+    return new Date(v.fecha+'T'+(v.hora||'23:59')+':00') < ahora;
+  });
+  let alertas='';
+  porAvisar.forEach(v=>{
+    const p=D.props.find(x=>x.id==v.propId);
+    alertas+=`<div class="alert alert-y" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span>🔔 Visita de <strong>${v.nom}</strong> hoy a las ${v.hora}${p?' · '+p.nom:''} — recuérdaselo</span>
+      <span style="display:flex;gap:6px;">
+        <button class="btn btn-success btn-xs" onclick="waVisita('${v.id}')">📱 WhatsApp</button>
+        <button class="btn btn-secondary btn-xs" onclick="marcarRecordada('${v.id}')">✓ Ya avisado</button>
+      </span></div>`;
+  });
+  if(pasadasSinCerrar.length)
+    alertas+=`<div class="alert alert-b">👁 Tienes ${pasadasSinCerrar.length} visita(s) ya pasadas sin marcar el resultado.</div>`;
+  $i('vi-alertas').innerHTML=alertas;
+
+  // ── KPIs ──
+  const prox=vs.filter(v=>v.fecha&&new Date(v.fecha+'T'+(v.hora||'00:00'))>=ahora&&!['alquilado','descartado','noshow'].includes(v.est));
+  const hoy=vs.filter(v=>v.fecha===hoyStr);
+  const interesados=vs.filter(v=>v.est==='interesado').length;
+  const alquilados=vs.filter(v=>v.est==='alquilado').length;
+  const realizadas=vs.filter(v=>['realizada','interesado','alquilado','descartado'].includes(v.est)).length;
+  const tasa=realizadas>0?Math.round(alquilados/realizadas*100):0;
+  $i('vi-kpis').innerHTML=`
+    <div class="kpi" style="--kc:var(--acc);flex:1;min-width:115px;"><div class="kpi-accent"></div><div class="kpi-label">Hoy</div><div class="kpi-value">${hoy.length}</div><div class="kpi-sub">visitas</div></div>
+    <div class="kpi" style="--kc:var(--bl);flex:1;min-width:115px;"><div class="kpi-accent"></div><div class="kpi-label">Próximas</div><div class="kpi-value">${prox.length}</div></div>
+    <div class="kpi" style="--kc:var(--ye);flex:1;min-width:115px;"><div class="kpi-accent"></div><div class="kpi-label">🔥 Interesados</div><div class="kpi-value">${interesados}</div></div>
+    <div class="kpi" style="--kc:var(--gn);flex:1;min-width:115px;"><div class="kpi-accent"></div><div class="kpi-label">Alquilados</div><div class="kpi-value">${alquilados}</div><div class="kpi-sub">${tasa}% de conversión</div></div>`;
+
+  // ── Filtros ──
+  const q=gi('vi-q').toLowerCase(), propF=gi('vi-prop-f'), estF=gi('vi-est-f');
+  const vista=gi('vi-vista')||'agenda';
+  const list=vs.filter(v=>{
+    if(propF&&v.propId!=propF)return false;
+    if(estF&&v.est!==estF)return false;
+    if(q&&!`${v.nom} ${v.tel} ${v.email} ${v.notas}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const div=$i('vi-lista');
+  if(!list.length){
+    div.innerHTML='<div class="empty"><div class="empty-icon">📆</div><p>Sin visitas agendadas. Cuando te llamen interesados por el anuncio, apúntalos aquí.</p></div>';
+    return;
+  }
+
+  const tarjeta=v=>{
+    const e=VI_ESTADOS[v.est]||VI_ESTADOS.pendiente;
+    const p=D.props.find(x=>x.id==v.propId);
+    const cuando=v.fecha?new Date(v.fecha+'T'+(v.hora||'00:00')+':00'):null;
+    const pasada=cuando&&cuando<ahora;
+    const tel=(v.tel||'').replace(/\D/g,'');
+    return `<div style="background:${e.bg};border:1.5px solid ${e.col}33;border-left:4px solid ${e.col};border-radius:10px;padding:13px;${pasada&&!['alquilado','descartado','noshow','realizada','interesado'].includes(v.est)?'opacity:.75;':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:700;">${v.nom}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px;">
+            🕐 ${v.hora||'--:--'}${v.dur?' ('+v.dur+' min)':''} · ${v.fecha?fD(v.fecha):''}
+          </div>
+          <div style="font-size:11px;color:var(--ink3);">${p?'🏢 '+p.nom:''}${v.hab?' · Hab. '+v.hab:''}</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;color:${e.col};white-space:nowrap;">${e.ico} ${e.et}</span>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;font-size:11px;color:var(--ink3);flex-wrap:wrap;">
+        <span>📞 ${v.tel||'—'}</span>${v.email?`<span>✉️ ${v.email}</span>`:''}${v.origen?`<span>📣 ${v.origen}</span>`:''}
+      </div>
+      ${v.notas?`<div style="font-size:10.5px;color:var(--ink3);margin-top:7px;font-style:italic;line-height:1.5;">${v.notas}</div>`:''}
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px solid ${e.col}22;">
+        ${tel?`<button class="btn btn-success btn-xs" onclick="waVisita('${v.id}')" title="Enviar recordatorio">📱</button>`:''}
+        ${tel?`<a href="tel:${v.tel}" class="btn btn-secondary btn-xs">📞</a>`:''}
+        <select onchange="cambiarEstadoVisita('${v.id}',this.value)" style="flex:1;min-width:120px;padding:3px 6px;border:1px solid var(--line2);border-radius:5px;font-size:10.5px;background:var(--card);color:var(--ink);">
+          ${Object.entries(VI_ESTADOS).map(([k,o])=>`<option value="${k}" ${v.est===k?'selected':''}>${o.ico} ${o.et}</option>`).join('')}
+        </select>
+        ${['interesado','realizada'].includes(v.est)?`<button class="btn btn-primary btn-xs" onclick="visitaAInquilino('${v.id}')" title="Dar de alta como inquilino">🎉</button>`:''}
+        <button class="btn btn-secondary btn-xs" onclick="editVisita('${v.id}')">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="delVisita('${v.id}')">🗑</button>
+      </div>
+      ${(v.recordado!=='si'&&!pasada)?`<div style="font-size:9.5px;color:var(--ye);margin-top:6px;">⏳ Recordatorio pendiente (${v.aviso||120} min antes)</div>`:''}
+    </div>`;
+  };
+
+  if(vista==='lista'){
+    const ord=[...list].sort((a,b)=>((b.fecha||'')+(b.hora||'')).localeCompare((a.fecha||'')+(a.hora||'')));
+    div.innerHTML='<div class="g2">'+ord.map(tarjeta).join('')+'</div>';
+    return;
+  }
+
+  // Vista agenda: agrupada por día
+  const porDia={};
+  list.forEach(v=>{ const d=v.fecha||'Sin fecha'; (porDia[d]=porDia[d]||[]).push(v); });
+  const dias=Object.keys(porDia).sort();
+  div.innerHTML=dias.map(d=>{
+    const vsDia=porDia[d].sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
+    let etiq=d, color='var(--ink)';
+    if(d===hoyStr){ etiq='HOY · '+fD(d); color='var(--acc)'; }
+    else if(d==='Sin fecha'){ etiq='Sin fecha'; color='var(--ink3)'; }
+    else {
+      const dd=new Date(d+'T00:00:00');
+      const manana=new Date(ahora.getTime()+864e5).toISOString().split('T')[0];
+      if(d===manana) etiq='MAÑANA · '+fD(d);
+      else etiq=dd.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+      if(dd<new Date(hoyStr+'T00:00:00')) color='var(--ink3)';
+    }
+    return `<div class="card mb">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--line);">
+        <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:${color};text-transform:capitalize;">${etiq}</div>
+        <div style="font-size:11px;color:var(--ink3);">${vsDia.length} visita${vsDia.length!==1?'s':''}</div>
+      </div>
+      <div class="g2">${vsDia.map(tarjeta).join('')}</div>
+    </div>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -8148,6 +8518,14 @@ function rDash(){
   Object.entries(porInq).slice(0,4).forEach(([nom,cons])=>{
     alerts.push({t:'y',m:`💰 ${nom}: pendiente ${cons.join(' + ')}`});
   });
+  // Visitas de hoy
+  const hoyVi=new Date().toISOString().split('T')[0];
+  (D.visitas||[]).filter(v=>v.fecha===hoyVi&&!['alquilado','descartado','noshow','realizada'].includes(v.est))
+    .sort((a,b)=>(a.hora||'').localeCompare(b.hora||''))
+    .slice(0,3).forEach(v=>{
+      const p=D.props.find(x=>x.id==v.propId);
+      alerts.push({t:'b',m:`📆 Visita hoy ${v.hora}: ${v.nom}${p?' · '+p.nom:''}${v.recordado!=='si'?' — sin avisar':''}`});
+    });
   D.incs.filter(i=>i.estado!=='resuelta'&&i.pri==='alta').forEach(inc=>{const p=D.props.find(pr=>pr.id==inc.propId);alerts.push({t:'r',m:`🔴 Incidencia urgente: ${inc.desc} — ${p?p.nom:'?'}`});});
   $i('d-alerts').innerHTML=alerts.slice(0,4).map(a=>`<div class="alert alert-${a.t}">${a.m}</div>`).join('');
 
@@ -8425,7 +8803,7 @@ function aplicarWS(){
   const bs=$i('ws-switch2'); if(bs) bs.style.display='block';
   // Si es Personal, precargar el patrimonio inmobiliario de Gentaury
   if(esP && gToken){ cargarGentaury(); }
-  if(WS==='gentaury'){ repararTodasPropiedades(); autoGenerarPagosPendientes(); _mesTablero=new Date().toISOString().slice(0,7); }
+  if(WS==='gentaury'){ repararTodasPropiedades(); autoGenerarPagosPendientes(); _mesTablero=new Date().toISOString().slice(0,7); try{ programarAvisosVisitas(); }catch(e){} }
   // Activar la primera sección del espacio
   const primera = document.querySelector('.nav-item[data-ws="'+WS+'"]');
   if(primera) go(primera);
@@ -8682,7 +9060,7 @@ async function gFindOrCreateSheet() {
     method:'POST',
     body: JSON.stringify({
       properties:{title:SHEET_NAME()},
-      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios','Hipotecas','Plantillas','CostesAdquisicion','Cuentas','Movimientos','Presupuestos','Suscripciones','Objetivos','Inversiones','Deudas','DocsPersonales','Libros'].map(t=>({properties:{title:t}}))
+      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios','Hipotecas','Plantillas','Visitas','CostesAdquisicion','Cuentas','Movimientos','Presupuestos','Suscripciones','Objetivos','Inversiones','Deudas','DocsPersonales','Libros'].map(t=>({properties:{title:t}}))
     })
   });
   try {
@@ -8731,6 +9109,7 @@ async function volcarSheets() {
     const sheets = [
       {sheet:'Propietarios', h:['ID','Nombre','Alias','DNI','Relacion','IRPF','Email','Tel','Notas'], rows:(D.propietarios||[]).map(o=>[o.id,o.nom,o.alias,o.dni,o.rel,o.irpf,o.email,o.tel,o.notas])},
       {sheet:'Hipotecas', h:['ID','Piso','Propietario','Banco','Tipo','CapitalInicial','Pendiente','Cuota','DiaCobro','TipoResultante','Vinculaciones','CosteVincAnual','FechaFin'], rows:(D.hipotecas||[]).map(h=>{const p=D.props.find(x=>x.id==h.propId);return [h.id,p?p.nom:'',ownerNom(h.ownerId||(p?p.ownerId:'')),h.banco,h.tipo,h.ini,h.pend,h.cuota,h.dia,tipoResultante(h).toFixed(2)+'%',vinculaciones(h).join(', '),costeVincAnual(h),h.fin];})},
+      {sheet:'Visitas', h:['ID','Nombre','Telefono','Email','Fecha','Hora','Piso','Hab','Estado','Origen','Avisado','Notas'], rows:(D.visitas||[]).map(v=>{const p=D.props.find(x=>x.id==v.propId);return [v.id,v.nom,v.tel,v.email,v.fecha,v.hora,p?p.nom:'',v.hab,(VI_ESTADOS[v.est]||{}).et||v.est,v.origen,v.recordado,v.notas];})},
       {sheet:'Plantillas', h:['ID','Nombre','Tipo','Piso','Notas','TieneTexto','Documento'], rows:(D.plantillas||[]).map(p=>{const pr=D.props.find(x=>x.id==p.propId);return [p.id,p.nom,p.tipo,pr?pr.nom:'Todos',p.notas,p.texto?'SI':'NO',p.pdfName||''];})},
       {sheet:'CostesAdquisicion', h:['PisoID','Piso','Propietario','Concepto','Importe','Fecha','Notas','Documento'], rows:D.props.flatMap(p=>(p.costesAdq||[]).map(it=>[p.id,p.nom,ownerNom(p.ownerId),it.concepto,it.imp,it.fecha,it.notas,it.pdfName||'']))},
       {sheet:'Propiedades', h:['ID','Nombre','Propietario','Usufructuario','Dir','Ciudad','CP','Habs','Precio','Tasacion','Mercado','PctConstruccion','FechaCompra','Hipo','Capital','VCons','DineroPropio','ROCE'], rows:D.props.map(p=>[p.id,p.nom,ownerNom(p.ownerId),p.usufructoId?ownerNom(p.usufructoId):'',p.dir,p.ciu,p.cp,p.habs,p.precio,p.tasacion,p.mercado,p.pctConstruccion,p.fcompra||p.anyo,p.hipo,p.capital,p.vc,dineroPropio(p),roceDe(p)!==null?roceDe(p).toFixed(1)+'%':''])},
@@ -8771,7 +9150,7 @@ async function volcarSheets() {
 // ══════════════════════════════════════════════════════════════
 // SINCRONIZACIÓN AUTOMÁTICA CON FUSIÓN (anti pérdida de datos)
 // ══════════════════════════════════════════════════════════════
-const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','hipotecas','plantillas','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
+const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','hipotecas','plantillas','visitas','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
 
 let _snap = {};              // huella de cada registro para detectar cambios
 let _syncEnCurso = false;
