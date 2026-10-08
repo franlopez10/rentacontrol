@@ -4575,11 +4575,11 @@ function rCompras(){
       <td><div style="font-size:12px;font-weight:600;">${x.con}</div>${x.num?`<div class="mono" style="font-size:10px;color:var(--acc);font-weight:600;">${x.num}</div>`:''}${x._origenGasto?`<div><span class="badge badge-b" style="font-size:8px;">📉 Desde Gastos</span></div>`:''}${x.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${x.notas}</div>`:''}${v2HtmlFilaEstado(x._origenGasto?'gasto':'compra',x.id)}</td>
       <td style="font-size:12px;">${x.emp}</td>
       <td style="font-size:11px;white-space:nowrap;">${CP_ICONS[x.cat]||''} ${x.cat}</td>
-      <td style="font-size:11px;"><span class="badge badge-p">${ownerNom(ownerDe(x))}</span></td>
-      <td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:(x.repartoTodos||x.repartoAuto?'<span style="color:var(--bl);">↔ Todos</span>':(Array.isArray(x.repartoProps)&&x.repartoProps.length?'<span style="color:var(--bl);">↔ Varios</span>':'<span style="color:var(--rd);">Sin asignar</span>'))}${x.hab?`<br>Hab. ${x.hab}`:''}</td>
+      <td style="font-size:11px;">${v2TitularFila(x._origenGasto?'gasto':'compra',x.id,x)}</td>
+      <td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:(x.repartoTodos||x.repartoAuto?'<span style="color:var(--bl);">↔ Todos</span>':(Array.isArray(x.repartoProps)&&x.repartoProps.length?'<span style="color:var(--bl);">↔ Varios</span>':v2SinPisoFila(x._origenGasto?'gasto':'compra',x.id)))}${x.hab?`<br>Hab. ${x.hab}`:''}</td>
       <td class="mono" style="font-weight:700;color:var(--acc);white-space:nowrap;">${eur(x.imp,2)}</td>
       <td style="font-size:10px;">${x.gar?(garOk?`<span class="badge badge-g">${fD(x.gar)}</span>`:`<span class="badge badge-r">Caducada</span>`):'–'}</td>
-      <td>${fiscalBadge(x.ded)}</td>
+      <td>${v2BadgeFiscal(x._origenGasto?'gasto':'compra',x.id,x.ded)}</td>
       <td>${x.pdfData?`<button class="pdf-badge green" onclick="openPdf('${x.pdfData}','${x.pdfName||'factura.pdf'}')">📄 Ver</button>`:'<span style="font-size:10px;color:var(--ink3);">–</span>'}</td>
       <td style="display:flex;gap:4px;">${x._origenGasto
         ? `<button class="btn btn-secondary btn-xs" onclick="go(document.querySelector('.nav-item[data-s=\'gastos\']'))" title="Gestionar en Gastos">📉 En Gastos</button>`
@@ -9997,6 +9997,9 @@ function v2EtqItem(it){ if(!it.virt||!it.reparto) return it.con; const p=(D.prop
 
 function v2Periodo(it){
   if(it.pIni&&it.pFin&&it.pFin>=it.pIni) return [it.pIni,it.pFin];
+  // Intereses de una cuota: se devengan durante el mes que liquida esa cuota, no el de su cobro
+  const mcu=(it.notas||'').match(/\[cuota:[^:\]]+:(\d{4}-\d{2})\]/);
+  if(mcu){ const [yy,mm]=mcu[1].split('-').map(Number); return [mcu[1]+'-01', mcu[1]+'-'+String(new Date(yy,mm,0).getDate()).padStart(2,'0')]; }
   if(!it.fecha) return [null,null];
   const y=it.fecha.slice(0,4);
   if(/\bibi\b|basura|seguro|tasa municipal/i.test(it.con)) return [y+'-01-01',y+'-12-31'];
@@ -10141,7 +10144,8 @@ function v2CalcAnyo(y,items,bolsa,cfg){
     if(k==='D'||k==='G'){
       if(!(it.fecha||'').startsWith(String(y))) return;
       const t=titularidadDia(p.id,it.fecha), c=t.disfrute, tit=it.titular||c;
-      if(!c||tit!==c){ noDed(tit,it,it.imp,'El titular del gasto no obtiene las rentas del inmueble en esa fecha'); return; }
+      if(!c){ noDed(tit,it,it.imp,'Nadie tiene registrado el derecho a las rentas de este inmueble en esa fecha (revisa 📜 Titularidad)'); return; }
+      if(tit!==c){ noDed(tit,it,it.imp,'El gasto es de '+nombreC(tit)+', pero en esa fecha las rentas del inmueble las cobra '+nombreC(c)); return; }
       const dc=v2DestOK(it,c); if(!dc.ok){ noDed(c,it,it.imp,dc.motivo); return; }
       if(k==='G'&&cfg.gModo==='factor'){
         const f=serieAnual(p.id,y).fac[fxIdx(y,it.fecha)]||0, ded=it.imp*f;
@@ -10161,8 +10165,9 @@ function v2CalcAnyo(y,items,bolsa,cfg){
         const iso=fxIso(d), s=serieAnual(p.id,y), ix=fxIdx(y,iso), c=s.dis[ix], tit=it.titular||c;
         let f=(k==='H')?1:(it.hab?(habOcupada(p,it.hab,iso)?1:0):s.fac[ix]), m='';
         if(!s.adq[ix]){ f=0; m='Inmueble aún no adquirido'; }
-        else if(!c||tit!==c){ f=0; m='El titular del gasto no obtiene rentas del inmueble ese día'; }
-        else if(k==='F'){ const deu=v2Deudor(it)||tit; if(deu!==c){ f=0; m='El deudor del préstamo no es quien obtiene las rentas'; } }
+        else if(!c){ f=0; m='Nadie tiene registrado el derecho a las rentas de este inmueble ese día (revisa 📜 Titularidad)'; }
+        else if(tit!==c){ f=0; m='El gasto es de '+nombreC(tit)+', pero esos días las rentas las cobra '+nombreC(c); }
+        else if(k==='F'){ const deu=v2Deudor(it)||tit; if(deu!==c){ f=0; m='El préstamo es de '+nombreC(deu)+', pero las rentas las cobra '+nombreC(c); } }
         if(f>0){ const dc=v2DestOK(it,c); if(!dc.ok){ f=0; m=dc.motivo; } }
         if(f<1&&!m) m='Periodo no arrendado (STS 25-02-2021)';
         if(f>0) acc[c]=(acc[c]||0)+porDia*f;
@@ -10376,10 +10381,12 @@ function rTitularidad(){
         <div style="font-size:11px;color:var(--ink3);">${p.refCat?'Ref. '+p.refCat:'⚠️ sin referencia catastral'}</div></div>
         <div style="text-align:right;font-size:11.5px;">Hoy cobra las rentas: <strong style="color:var(--gn);">${nombreC(t.disfrute)}</strong>${t.nuda?'<br><span style="color:var(--ink3);">Nuda propiedad: '+nombreC(t.nuda.ownerId)+'</span>':''}</div>
       </div>
+      ${v2ConflictosDerechos(p).map(t=>`<div class="alert alert-r" style="font-size:11.5px;">⛔ Periodos incompatibles: ${t}. Edita o borra el que sobre.</div>`).join('')}
+      ${(()=>{ const h=v2HuecoDerechos(p); return h?`<div class="alert alert-r" style="font-size:11.5px;">⛔ Del ${fD(h.ini)} al ${fD(h.fin)} nadie figura con derecho a las rentas.</div>`:''; })()}
       ${ds.length?`<div class="tbl-wrap"><table><thead><tr><th>Titular</th><th>Derecho</th><th>Desde</th><th>Hasta</th><th>%</th><th></th></tr></thead><tbody>
         ${ds.map(d=>`<tr><td style="font-weight:600;">${nombreC(d.ownerId)}</td><td>${v2DescTipo(d.tipo)}${d.gratuitoPariente?' <span class="badge badge-y" style="font-size:8px;">art. 24</span>':''}${d.pctUsuf?' <span style="font-size:10px;color:var(--ink3);">('+d.pctUsuf+'% valor)</span>':''}</td>
           <td class="mono">${d.desde?fD(d.desde):'—'}</td><td class="mono">${d.hasta?fD(d.hasta):'vigente'}</td><td class="mono">${d.pct||100}</td>
-          <td style="white-space:nowrap;"><button class="btn btn-secondary btn-xs" onclick="v2EditDerecho('${d.id}')">✏️</button> <button class="btn btn-danger btn-xs" onclick="v2BorrarDerecho('${d.id}')">🗑</button></td></tr>`).join('')}
+          <td style="white-space:nowrap;">${(d.tipo==='usufVit'||d.tipo==='usufTemp')?`<button class="btn btn-ghost btn-xs" onclick="v2CambiarFechaUsufructo('${d.id}')" title="Mueve a la vez usufructo, nuda propiedad y fin del pleno dominio">📅 Fecha de firma</button> `:''}<button class="btn btn-secondary btn-xs" onclick="v2EditDerecho('${d.id}')">✏️</button> <button class="btn btn-danger btn-xs" onclick="v2BorrarDerecho('${d.id}')">🗑</button></td></tr>`).join('')}
       </tbody></table></div>`:`<div style="font-size:12px;color:var(--ink3);">Sin periodos registrados: se considera pleno dominio de ${nombreC(p.ownerId)} desde ${p.fcompra?fD(p.fcompra):'la compra'}.</div>`}
     </div>`;
   }).join('');
@@ -10414,6 +10421,8 @@ function v2GuardarUsufructo(){
   if(nudo===us){ toast('El nudo propietario y el usufructuario no pueden ser la misma persona',false); return; }
   const p=(D.props||[]).find(x=>x.id==pid), antes=fxAdd(f,-1);
   if(derechosProp(pid).some(d=>(d.tipo==='usufVit'||d.tipo==='usufTemp')&&(!d.hasta||d.hasta>=f))){ toast('Ya hay un usufructo vigente en esa fecha',false); return; }
+  const ajenos=derechosProp(pid).filter(d=>d.tipo==='pleno'&&d.ownerId!=nudo&&(!d.desde||d.desde<=f)&&(!d.hasta||d.hasta>=f));
+  if(ajenos.length){ toast('En esa fecha el pleno dominio figura a nombre de '+nombreC(ajenos[0].ownerId)+', no de '+nombreC(nudo)+'. Corrige primero la titularidad del inmueble.',false); return; }
   let pl=derechosProp(pid).find(d=>d.tipo==='pleno'&&d.ownerId==nudo&&(!d.desde||d.desde<=f)&&(!d.hasta||d.hasta>=f));
   if(pl) pl.hasta=antes; else D.derechos.push({id:uid(),propId:pid,ownerId:nudo,tipo:'pleno',pct:100,desde:p.fcompra||'',hasta:antes,auto:true});
   const anyos=gn('us-anyos'); let hasta='';
@@ -10921,7 +10930,7 @@ function v2IssuesItems(calc){
     if(ref.titularAuto) add(it,'aviso','titAuto','Titular asignado automáticamente ('+nombreC(it.titular)+')');
     if(ref.leidaAuto) add(it,'aviso','ocr','Datos leídos automáticamente de la factura: revisa importe, fecha y categoría');
     if((it.propId||it.virt)&&!it.titular&&it.catF!=='J') add(it,'aviso','sinTitular','Sin titular económico: se atribuye a quien cobra las rentas');
-    if(['E','F','I'].includes(it.catF)&&!(ref.pIni&&ref.pFin)) add(it,'aviso','sinPeriodo','Sin periodo facturado: se estima '+(/\bibi\b|basura|seguro|tasa municipal/i.test(it.con)?'el año natural':'el mes de la fecha'));
+    if(['E','F','I'].includes(it.catF)&&!(ref.pIni&&ref.pFin)&&!/\[cuota:/.test(it.notas||'')) add(it,'aviso','sinPeriodo','Sin periodo facturado: se estima '+(/\bibi\b|basura|seguro|tasa municipal/i.test(it.con)?'el año natural':'el mes de la fecha'));
     if(it.ctaId&&it.titular){ const ct=(D.ctasBanc||[]).find(x=>x.id==it.ctaId); if(ct&&ct.titularId&&ct.titularId!==it.titular&&!it.provId) add(it,'error','cuenta','Pagado desde una cuenta de '+nombreC(ct.titularId)+' pero el titular es '+nombreC(it.titular)+' (sin provisión de fondos)'); }
     if(it.propId&&it.fecha&&it.titular&&['D','E','F','G','I'].includes(it.catF)){ const t=titularidadDia(it.propId,it.fecha); if(t.nuda&&t.nuda.ownerId===it.titular) add(it,'error','nuda','Gasto de '+nombreC(it.titular)+' en un periodo de nuda propiedad: no deducible'); }
   });
@@ -10943,6 +10952,8 @@ function v2Validaciones(y,calc){
     if(pc.pct>1) addP(p,'error','pct100','el % de construcción supera el 100%.');
     if(!p.revCat) addP(p,'aviso','revCat','sin año de revisión catastral → se aplica el 2% de imputación (conservador).');
     if(!p.fcompra) addP(p,'error','fcompra','falta la fecha de escritura.');
+    v2ConflictosDerechos(p).forEach((t,ix)=>addP(p,'error','solape'+ix,'periodos de titularidad incompatibles: '+t+'. Corrígelo en 📜 Titularidad.'));
+    const hu=v2HuecoDerechos(p); if(hu) addP(p,'error','hueco','nadie figura con derecho a las rentas del '+fD(hu.ini)+' al '+fD(hu.fin)+'. Corrígelo en 📜 Titularidad.');
     const mc=v2M2Comunes(p);
     if(mc.auto&&mc.neg) addP(p,'error','m2neg','los m² de las habitaciones ('+mc.sumH+') superan los m² útiles del piso ('+mc.t+').');
     else if(/igual/.test(pesosHabs(p).metodo)&&(parseInt(p.habs)||0)>1) addP(p,'aviso','m2','faltan m² de alguna habitación → reparto por número de habitaciones.');
@@ -11261,6 +11272,90 @@ function populateSels(){
   const e=$i('cp-prop'), prev=e?e.value:'';
   populateSelsBase();
   if($i('cp-prop')){ v2PrepPropTodos(); if(prev==='__todos') $i('cp-prop').value='__todos'; }
+}
+
+
+// ── Comprobación de la titularidad registrada ──
+function v2ConflictosDerechos(p){
+  const ds=derechosProp(p.id), out=[], g=t=>t==='pleno'?'P':(t==='nuda'?'N':'U');
+  const ov=(a,b)=>(!a.hasta||!b.desde||a.hasta>=b.desde)&&(!b.hasta||!a.desde||b.hasta>=a.desde);
+  const per=d=>(d.desde?fD(d.desde):'inicio')+'–'+(d.hasta?fD(d.hasta):'vigente');
+  for(let i=0;i<ds.length;i++) for(let j=i+1;j<ds.length;j++){
+    const a=ds[i], b=ds[j]; if(!ov(a,b)) continue; const ga=g(a.tipo), gb=g(b.tipo);
+    if(ga==='P'&&gb==='P'&&((parseFloat(a.pct)||100)+(parseFloat(b.pct)||100))<=100) continue;
+    if(ga===gb||ga==='P'||gb==='P') out.push(v2DescTipo(a.tipo)+' de '+nombreC(a.ownerId)+' ('+per(a)+') con '+v2DescTipo(b.tipo)+' de '+nombreC(b.ownerId)+' ('+per(b)+')');
+  }
+  return out;
+}
+function v2HuecoDerechos(p){
+  if(!derechosProp(p.id).length||!p.fcompra) return null;
+  const hoy=fxIso(new Date()); let d=fxDate(p.fcompra), ini=null, fin=null, n=0;
+  while(fxIso(d)<=hoy&&n<1500){ const iso=fxIso(d), t=titularidadDia(p.id,iso);
+    if(!t.disfrute){ if(!ini) ini=iso; fin=iso; } else if(ini) break;
+    d.setDate(d.getDate()+1); n++; }
+  return ini?{ini,fin}:null;
+}
+// ── Columnas de la lista de facturas con el resultado real del motor ──
+function v2EstadoItem(it,calc){
+  const k=it.src+'|'+it.id, imp=it.virt?it.origImp:it.imp, pi=(calc.porItem||{})[k]||{ded:0,no:{}}, mot=Object.entries(pi.no).sort((a,b)=>b[1]-a[1]);
+  const C=(c,t,d,b)=>({c,t,d,b});
+  if(it.catF==='J') return C('gris','No deducible','','J · No deducible');
+  if(!it.propId&&!it.virt) return C('rojo','No computa','sin inmueble asignado','No computa');
+  if(['A','B','C','K'].includes(it.catF)){
+    const pids=[...new Set(calc.items.filter(x=>x.src===it.src&&x.id===it.id&&x.propId).map(x=>x.propId))];
+    const t={A:'Amortizable · coste de compra',B:'Amortizable 3% · mejora',C:'Amortizable 10% · mobiliario',K:'Amortizable · coste del usufructo'}[it.catF];
+    const d={A:'se suma al coste y amortiza el 3% de la parte de construcción solo los días alquilados',B:'amortiza el 3% solo los días alquilados',C:'amortiza el 10% solo los días alquilados',K:'amortiza el usufructo solo los días alquilados, con el límite de los ingresos'}[it.catF];
+    const b={A:'A · Amortiza 3%',B:'B · Amortiza 3%',C:'C · Amortiza 10%',K:'K · Amortiza usufructo'}[it.catF];
+    return C('azul',t,d+' — '+pids.map(pid=>v2OcupTxt(pid,calc)).join(' · '),b);
+  }
+  const ded=pi.ded;
+  if(it.catF==='D'){
+    if(ded>0.005) return C(pi.bolsa?'naranja':'verde','Reparación: '+eur(ded,2)+' computan',pi.bolsa?'deducible aunque el piso esté vacío; si los ingresos del año no lo cubren, se deduce en los 4 años siguientes':'deducible dentro del límite de ingresos del inmueble',pi.bolsa?'D · Deducible (con arrastre)':'D · Deducible');
+    return C('rojo','No deducible',mot.length?mot[0][0]:'','D · No deducible');
+  }
+  if(ded>=imp-0.01) return C('verde','Deducible '+eur(ded,2),it.catF==='H'?'suministro repercutido: también computa como ingreso':'',it.catF+' · Deducible');
+  if(ded>0.005) return C('naranja','Deducible '+eur(ded,2)+' de '+eur(imp,2),mot.map(m=>m[0]+' ('+eur(m[1],2)+')').join(' · '),it.catF+' · Deducible en parte');
+  return C('rojo','No deducible ahora',mot.length?mot[0][0]:'sin días arrendados en el periodo',it.catF+' · No deducible ahora');
+}
+function v2EstadoFacturas(){
+  let tY=new Date().getFullYear();
+  v2ItemsBase().forEach(it=>{ const yy=parseInt((it.fecha||'').slice(0,4)); if(yy>tY&&yy<=tY+2) tY=yy; });
+  const calc=v2Calc(tY,true), iss=v2IssuesItems(calc), out={};
+  v2Unicos(calc.items).forEach(it=>{ const k=it.src+'|'+it.id; out[k]={estado:v2EstadoItem(it,calc),issues:(iss[k]||{lst:[]}).lst,titular:it.titular||'',catF:it.catF}; });
+  return out;
+}
+function v2BadgeFiscal(src,id,ded){
+  const e=(window._v2Est||{})[src+'|'+id]; if(!e) return fiscalBadge(ded);
+  const est={verde:['rgba(16,185,129,.12)','#059669'],naranja:['rgba(245,158,11,.14)','#b45309'],rojo:['rgba(239,68,68,.10)','#dc2626'],azul:['rgba(37,99,235,.10)','#2563eb'],gris:['rgba(120,120,120,.12)','#6b7280']}[e.estado.c]||['var(--bg)','var(--ink3)'];
+  return `<span style="display:inline-block;padding:3px 9px;border-radius:999px;background:${est[0]};color:${est[1]};font-size:10px;font-weight:700;white-space:nowrap;font-family:'DM Mono',monospace;">${e.estado.b||e.estado.t}</span>`;
+}
+function v2TitularFila(src,id,x){
+  const e=(window._v2Est||{})[src+'|'+id], tit=e?e.titular:(x.titular||x.ownerId);
+  if(!tit) return `<span style="font-size:10.5px;color:var(--ye);">⚠️ sin titular</span>`;
+  return `<span class="badge badge-p">${ownerNom(tit)}</span>`;
+}
+function v2SinPisoFila(src,id){
+  const e=(window._v2Est||{})[src+'|'+id];
+  if(e&&e.catF==='J') return '<span style="color:var(--ink3);">—</span>';
+  return '<span style="color:var(--rd);">Sin asignar</span>';
+}
+
+
+// Cambia la fecha de firma del usufructo moviendo a la vez los tres periodos afectados
+function v2CambiarFechaUsufructo(id){
+  const u=(D.derechos||[]).find(d=>d.id==id); if(!u) return;
+  const old=u.desde, nueva=prompt('Fecha real de firma de la escritura de usufructo (AAAA-MM-DD):', old||fxIso(new Date()));
+  if(!nueva) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(nueva)||isNaN(fxDate(nueva))){ toast('Fecha no válida',false); return; }
+  const p=(D.props||[]).find(x=>x.id==u.propId);
+  if(p&&p.fcompra&&nueva<=p.fcompra){ toast('La fecha debe ser posterior a la compra ('+fD(p.fcompra)+')',false); return; }
+  const nuda=(D.derechos||[]).find(d=>d.propId==u.propId&&d.tipo==='nuda'&&d.desde===old);
+  const pleno=nuda?(D.derechos||[]).find(d=>d.propId==u.propId&&d.tipo==='pleno'&&d.ownerId==nuda.ownerId&&d.hasta===fxAdd(old,-1)):null;
+  u.desde=nueva; if(u.tipo==='usufTemp'&&u.anyos>0){ const h=fxDate(nueva); h.setFullYear(h.getFullYear()+parseFloat(u.anyos)); h.setDate(h.getDate()-1); u.hasta=fxIso(h); }
+  if(nuda){ nuda.desde=nueva; if(u.tipo==='usufTemp') nuda.hasta=u.hasta; }
+  if(pleno) pleno.hasta=fxAdd(nueva,-1);
+  saveAndSync(); rTitularidad();
+  toast('✓ Usufructo desde el '+fD(nueva)+(pleno?'; pleno dominio hasta el '+fD(pleno.hasta):'')+(nuda?'':' (no se encontró la nuda propiedad: revísala)'));
 }
 
 </script>
