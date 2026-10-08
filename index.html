@@ -827,6 +827,15 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="nav-item" data-ws="gentaury" data-s="hipotecas" onclick="go(this)">
       <span class="nav-icon">🏦</span> Hipotecas
     </div>
+    <div class="nav-item" data-ws="gentaury" data-s="titularidad" onclick="go(this)">
+      <span class="nav-icon">📜</span> Titularidad y usufructos
+    </div>
+    <div class="nav-item" data-ws="gentaury" data-s="ctasbanc" onclick="go(this)">
+      <span class="nav-icon">💳</span> Cuentas y tarjetas
+    </div>
+    <div class="nav-item" data-ws="gentaury" data-s="provisiones" onclick="go(this)">
+      <span class="nav-icon">🔁</span> Provisiones de fondos
+    </div>
     <div class="nav-item" data-ws="gentaury" data-s="facturas" onclick="go(this)">
       <span class="nav-icon">🧾</span> Facturas → Habs
     </div>
@@ -1156,6 +1165,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     </div>
     <button class="btn btn-primary" onclick="newAnuncio()">+ Nuevo anuncio</button>
   </div>
+  <div class="alert alert-y" style="font-size:11.5px;line-height:1.6;margin-bottom:14px;">📢 <strong>Publicidad (art. 20 RDL 29/2026):</strong> toda oferta de arrendamiento de vivienda debe incluir el índice de referencia del precio del alquiler; en su caso, la renta del último contrato de vivienda habitual de los 5 años anteriores; el límite de renta aplicable si existe, y la condición de gran tenedor si procede. Al configurarse el temporal como modalidad de arrendamiento de vivienda, entendemos que también le alcanza: confírmalo con tu abogado.</div>
   <div class="fb">
     <div class="fi"><span class="fi-icon">🔍</span><input id="an-q" placeholder="Buscar anuncio..." oninput="rAnuncios()"></div>
     <select id="an-prop-f" onchange="rAnuncios()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:160px;outline:none;"></select>
@@ -1200,11 +1210,14 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <button class="btn btn-ghost" onclick="informeFiscalTXT()">⬇ .txt</button>
     </div>
   </div>
+  <div id="fi-v2"></div>
+  <div id="fi-legacy" style="display:none;">
   <div id="fi-owner-tabs" class="periodo-nav" style="margin-bottom:16px;"></div>
   <div id="fi-amort" class="mb"></div>
   <div class="g2 mb"><div class="card" id="fi-res"></div><div class="card" id="fi-ded"></div></div>
   <div class="card mb"><div class="card-title">Tabla mensual</div><div class="tbl-wrap"><table><thead><tr><th>Mes</th><th>Ingresos</th><th>Gastos deducibles</th><th>Hipoteca</th><th>Amortización</th><th>Resultado neto</th><th>Acumulado</th></tr></thead><tbody id="fi-tb"></tbody></table></div></div>
   <div class="card"><div class="card-title">⚠️ Nota fiscal</div><p style="font-size:12px;color:var(--ink3);line-height:1.7;">Los ingresos tributan como <strong style="color:var(--ink);">Rendimiento de Capital Inmobiliario</strong>. Deducibles: intereses de hipoteca, IBI, seguros, reparaciones, gestoría y amortización (3% del valor de construcción, sin suelo). La reducción del 60% por vivienda habitual puede <strong style="color:var(--ye);">no aplicar al alquiler por habitaciones</strong>. Consulta siempre con tu asesor fiscal.</p></div>
+</div>
 </section>
 
 <!-- ═══════════════ INFORMES ═══════════════ -->
@@ -1278,6 +1291,31 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 
 
+
+
+<!-- ════════════ TITULARIDAD Y USUFRUCTOS ════════════ -->
+<section class="sec" data-ws="gentaury" id="sec-titularidad">
+  <div class="ph"><div><div class="ph-title">📜 Titularidad y usufructos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Quién es titular de cada inmueble en cada periodo. El cálculo fiscal se hace día a día según estos derechos.</div></div>
+    <div class="ph-acts">
+      <button class="btn btn-ghost" onclick="v2AbrirSplit()">✂️ Dividir inmueble</button>
+      <button class="btn btn-secondary" onclick="v2NuevoDerecho()">+ Periodo manual</button>
+      <button class="btn btn-primary" onclick="v2NuevoUsufructo()">📜 Registrar usufructo</button>
+    </div></div>
+  <div id="tit-lista"></div>
+</section>
+<section class="sec" data-ws="gentaury" id="sec-ctasbanc">
+  <div class="ph"><div><div class="ph-title">💳 Cuentas y tarjetas</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Cada gasto debe pagarse desde una cuenta del contribuyente que lo deduce, o justificarse con una provisión de fondos.</div></div>
+    <button class="btn btn-primary" onclick="v2NuevaCta()">+ Nueva cuenta o tarjeta</button></div>
+  <div id="ctab-lista" class="g2"></div>
+</section>
+<section class="sec" data-ws="gentaury" id="sec-provisiones">
+  <div class="ph"><div><div class="ph-title">🔁 Provisiones de fondos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Cuando una persona paga gastos en nombre de otra con dinero que esta le adelanta. Deben quedar justificadas al euro.</div></div>
+    <button class="btn btn-primary" onclick="v2NuevaProv()">+ Nueva provisión</button></div>
+  <div id="prov-lista"></div>
+</section>
 
 <!-- ════════════ VISITAS ════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-visitas">
@@ -1531,7 +1569,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="fg">
     <div class="fgrp fgf"><label>Nombre *</label><input id="pr-n" placeholder="Ej: Piso Gran Vía 1"></div>
     <div class="fgrp"><label>Propietario (nudo propietario)</label><select id="pr-owner"></select></div>
-    <div class="fgrp"><label>Usufructuario (opcional)</label><select id="pr-usufructo"></select></div>
+    <div class="fgrp"><label>Usufructuario (regístralo con fecha en 📜 Titularidad)</label><select id="pr-usufructo"></select></div>
     <div class="fgrp fgf" style="font-size:10.5px;color:var(--ink3);">Si asignas un usufructuario, los ingresos y la fiscalidad de este piso computan a su nombre. Al quitarlo, vuelven al propietario.</div>
     <div class="fgrp fgf"><label>Dirección</label><input id="pr-d" placeholder="Calle, número, piso, puerta"></div>
     <div class="fgrp"><label>Ciudad</label><input id="pr-c" placeholder="Alicante"></div>
@@ -1561,6 +1599,18 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Valor construcción (€) <span style="color:var(--acc);font-size:9px;">para amortizar 3%</span></label><input id="pr-vc" type="number" placeholder="auto: 70% del precio"></div>
     <div class="fgrp"><label>% construcción (si no pones valor)</label><input id="pr-pctc" type="number" placeholder="70" oninput="calcCosteTotal()"></div>
     <div class="fgrp fgf" style="font-size:10.5px;color:var(--ink3);">💡 Solo la construcción se amortiza al 3% (el suelo no). Si no sabes el valor exacto, se estima el 70% del coste. Puedes afinar con el valor catastral: (valor construcción catastral ÷ valor catastral total) × precio.</div>
+    <div class="fgrp fgf"><div class="form-section" style="margin-top:6px;">🏛️ Datos catastrales (recibo del IBI) — base legal del cálculo</div>
+      <div style="font-size:10.5px;color:var(--ink3);line-height:1.6;">El % de construcción legal es <strong>valor catastral construcción ÷ valor catastral total</strong> (art. 14.2.a RIRPF). La amortización es el 3% sobre el mayor de coste de adquisición o valor catastral, sin el suelo.</div></div>
+    <div class="fgrp"><label>Referencia catastral</label><input id="pr-refcat" placeholder="6746504XH5064F0002BO"></div>
+    <div class="fgrp"><label>Año de la última revisión catastral</label><input id="pr-revcat" type="number" placeholder="2012"></div>
+    <div class="fgrp"><label>Valor catastral total (€)</label><input id="pr-vct" type="number" step="0.01"></div>
+    <div class="fgrp"><label>Valor catastral del suelo (€)</label><input id="pr-vcs" type="number" step="0.01"></div>
+    <div class="fgrp"><label>Valor catastral de la construcción (€)</label><input id="pr-vcc" type="number" step="0.01"></div>
+    <div class="fgrp"><label>m² útiles totales</label><input id="pr-m2t" type="number" step="0.5"></div>
+    <div class="fgrp"><label>m² de zonas comunes (cocina, salón, baños…)</label><input id="pr-m2c" type="number" step="0.5"></div>
+    <div class="fgrp"><label>Renta del contrato unitario de referencia (€/mes)</label><input id="pr-runit" type="number" placeholder="límite suma habitaciones"></div>
+    <div class="fgrp"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="pr-tens" style="width:auto;"> En zona de mercado residencial tensionado</label></div>
+    <div class="fgrp"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="pr-nosusc" style="width:auto;"> No susceptible de uso (sin imputación de rentas)</label></div>
   </div>
   <div class="form-section" style="margin-top:18px;">Documentos de la propiedad (opcional)</div>
   <div style="display:flex;flex-direction:column;gap:10px;">
@@ -1635,6 +1685,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Apellidos *</label><input id="iq-a" oninput="chequearVetadoEnVivo()" placeholder="Apellidos"></div>
     <div class="fgrp"><label>DNI / NIE</label><input id="iq-dni" oninput="chequearVetadoEnVivo()" placeholder="12345678A"></div>
     <div class="fgrp"><label>Nacionalidad</label><input id="iq-nac" placeholder="Española"></div>
+    <div class="fgrp"><label>Fecha de nacimiento</label><input id="iq-fnac" type="date"></div>
     <div class="fgrp"><label>Email</label><input id="iq-e" oninput="chequearVetadoEnVivo()" type="email" placeholder="email@ejemplo.com"></div>
     <div class="fgrp"><label>Teléfono</label><input id="iq-t" oninput="chequearVetadoEnVivo()" placeholder="600 000 000"></div>
     <div class="fgrp fgf"><label>WhatsApp (si distinto al tel.)</label><input id="iq-wa" placeholder="600 000 000"></div>
@@ -1653,10 +1704,11 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Inicio contrato</label><input id="iq-ini" type="date"></div>
     <div class="fgrp"><label>Fin contrato</label><input id="iq-fin" type="date"></div>
     <div class="fgrp fgf">
-      <label>Vencimiento habitual (mín. 1 año + resto)</label>
+      <label>Fin del contrato temporal (más de 31 días · máximo 12 meses)</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinInq('02-28')">📅 Hasta 28 feb</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinInq('09-30')">📅 Hasta 30 sep</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinInq('12m')">📅 12 meses</button>
       </div>
       <div id="iq-fin-info" style="font-size:10.5px;color:var(--ink3);margin-top:6px;"></div>
     </div>
@@ -1784,16 +1836,30 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Fecha de inicio *</label><input id="co-ini" type="date" onchange="sugerirFinContrato()"></div>
     <div class="fgrp"><label>Fecha de fin</label><input id="co-fin" type="date"></div>
     <div class="fgrp fgf">
-      <label>Vencimiento habitual (mínimo 1 año + resto hasta la fecha)</label>
+      <label>Fin del contrato temporal (más de 31 días · máximo 12 meses)</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinContrato('02-28')">📅 Hasta 28 de febrero</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinContrato('09-30')">📅 Hasta 30 de septiembre</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinContrato('12m')">📅 12 meses</button>
       </div>
       <div id="co-fin-info" style="font-size:10.5px;color:var(--ink3);margin-top:6px;"></div>
     </div>
     <div class="fgrp"><label>Renta mensual (€)</label><input id="co-r" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Fianza entregada (€)</label><input id="co-f" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Garantía adicional (€)</label><input id="co-g" type="number" placeholder="0"></div>
+    <div class="fgrp"><label>Tipo de contrato *</label><select id="co-tipo"><option value="temporal">Temporal (art. 3 LAU · causa acreditada)</option><option value="habitual">Vivienda habitual (LAU)</option><option value="temporadaPre">Temporada firmado antes del 08/10/2026</option><option value="usoDistinto">Uso distinto de vivienda</option><option value="esal">Social / Administración o entidad sin ánimo de lucro</option></select></div>
+    <div class="fgrp"><label>Fecha de firma</label><input id="co-firma" type="date"></div>
+    <div class="fgrp fgf"><label>Causa de temporalidad (obligatoria en temporal)</label><input id="co-causa" placeholder="Desplazamiento por prácticas en Hospital X hasta junio"></div>
+    <div class="fgrp fgf"><label>Vivienda habitual del inquilino de la que se desplaza</label><input id="co-vivhab" placeholder="C/ Mayor 3, Albacete"></div>
+    <div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-subsiste" style="width:auto;"> La causa subsiste más allá de 12 meses y está justificada</label></div>
+    <div class="fgrp"><label>Renta del contrato anterior de la vivienda (€)</label><input id="co-rant" type="number"></div>
+    <div class="fgrp" style="display:flex;flex-direction:column;gap:6px;justify-content:center;">
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-primer" style="width:auto;"> Primer alquiler de la vivienda</label>
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-indice" style="width:auto;"> Renta inicial inferior al índice de referencia</label>
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-pj" style="width:auto;"> Arrendatario persona jurídica</label>
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-entero" style="width:auto;"> Contrato de la vivienda completa</label>
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-tacita" style="width:auto;"> En prórroga tácita (art. 10.1 LAU)</label>
+    </div>
     <div class="fgrp fgf"><label>Cláusulas adicionales</label><textarea id="co-n" rows="3" placeholder="Mascotas, subarriendo, suministros incluidos..."></textarea></div>
     <div class="fgrp fgf">
       <div class="form-section" style="margin-top:4px;">📸 Estado de la habitación (prueba para la fianza)</div>
@@ -1903,6 +1969,20 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     </div>
     <div class="fgrp"><label>Garantía hasta</label><input id="cp-gar" type="date"></div>
     <div class="fgrp fgf"><label>Notas</label><textarea id="cp-notas" rows="2" placeholder="Modelo, color, dónde está instalado, referencia..." oninput="sugerirClasifCompra()"></textarea></div>
+    <div class="fgrp fgf"><div class="form-section" style="margin-top:4px;">🧾 Ficha fiscal (motor v2)</div></div>
+    <div class="fgrp fgf"><label>Categoría fiscal *</label><select id="cpf-catf"><option value="A">A · Coste de adquisición del inmueble</option><option value="B">B · Mejora (amortiza 3%)</option><option value="C">C · Mobiliario y enseres (10%)</option><option value="D">D · Reparación y conservación</option><option value="E">E · Gasto anual (IBI, comunidad, seguros, suministros)</option><option value="F">F · Intereses del préstamo</option><option value="G">G · Formalización del préstamo</option><option value="H">H · Suministro repercutido al inquilino</option><option value="I">I · Servicios (gestoría, abogado…)</option><option value="J">J · No deducible</option><option value="K">K · Coste de adquisición del usufructo</option></select></div>
+    <div class="fgrp"><label>Fecha de pago</label><input id="cpf-fpago" type="date"></div>
+    <div class="fgrp"><label>Tipo de documento</label><select id="cpf-tipodoc"><option value="factura">Factura completa</option><option value="ticket">Ticket / simplificada</option><option value="recibo">Recibo bancario</option></select></div>
+    <div class="fgrp"><label>NIF del emisor</label><input id="cpf-nifemi"></div>
+    <div class="fgrp"><label>Destinatario de la factura</label><input id="cpf-destnom" placeholder="Nombre que figura en la factura"></div>
+    <div class="fgrp"><label>NIF del destinatario</label><input id="cpf-destnif"></div>
+    <div class="fgrp"><label>Cuenta o tarjeta de pago</label><select id="cpf-cta"></select></div>
+    <div class="fgrp"><label>Base imponible (€)</label><input id="cpf-base" type="number" step="0.01"></div>
+    <div class="fgrp"><label>IVA (€)</label><input id="cpf-iva" type="number" step="0.01"></div>
+    <div class="fgrp"><label>Periodo facturado desde</label><input id="cpf-pini" type="date"></div>
+    <div class="fgrp"><label>Periodo facturado hasta</label><input id="cpf-pfin" type="date"></div>
+    <div class="fgrp"><label>Provisión de fondos vinculada</label><select id="cpf-prov"></select></div>
+    <div class="fgrp"><label>Situación</label><select id="cpf-sit"><option value="">Automática</option><option value="uso propio">Uso propio (no deducible)</option></select></div>
     <div class="fgrp fgf"><label>Adjuntar factura (PDF o foto)</label>
       <div class="pdf-upload-zone" id="cp-pdf-zone" onclick="document.getElementById('cp-pdf').click()">
         <input type="file" id="cp-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('cp-pdf','cp-pdf-zone','cp-pdf-data')">
@@ -2377,6 +2457,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Importe total factura (€) *</label><input id="rp-imp" type="number" step="0.01" placeholder="100.00" oninput="calcularReparto()"></div>
     <div class="fgrp"><label>Mes de cobro a inquilinos</label><input id="rp-mes" type="month"></div>
   </div>
+  <div style="margin-top:12px;padding:9px 12px;background:var(--ye-l);border-radius:var(--r2);font-size:11px;color:var(--ink2);line-height:1.6;">Solo deben repercutirse consumos reales (luz, agua, gas, internet). El RDL 29/2026 prohíbe repercutir al inquilino los impuestos de la vivienda (IBI) y los gastos de gestión inmobiliaria de la formalización; la repercusión de la comunidad revísala con tu abogado.</div>
   <div id="rp-resultado" style="margin-top:16px;"></div>
   <div class="modal-footer">
     <button class="btn btn-ghost" onclick="closeM('m-reparto')">Cancelar</button>
@@ -2421,6 +2502,106 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   </div>
 </div></div>
 
+
+<div class="modal-overlay" id="m-usuf"><div class="modal modal-lg">
+  <h2>📜 Registrar usufructo</h2>
+  <div style="font-size:11.5px;color:var(--ink3);line-height:1.6;margin-bottom:14px;">Desde la fecha de firma, las rentas, los gastos y la imputación de rentas pasan al usufructuario. El nudo propietario deja de amortizar el inmueble.</div>
+  <div class="fg">
+    <div class="fgrp"><label>Inmueble *</label><select id="us-prop" onchange="v2UsufPrefill()"></select></div>
+    <div class="fgrp"><label>Fecha de firma de la escritura *</label><input id="us-fecha" type="date"></div>
+    <div class="fgrp"><label>Nudo propietario (quien lo constituye) *</label><select id="us-nudo"></select></div>
+    <div class="fgrp"><label>Usufructuario *</label><select id="us-usuf"></select></div>
+    <div class="fgrp"><label>Tipo</label><select id="us-tipo" onchange="v2UsufPct()"><option value="usufVit">Vitalicio</option><option value="usufTemp">Temporal</option></select></div>
+    <div class="fgrp"><label>Duración (años, si es temporal)</label><input id="us-anyos" type="number" oninput="v2UsufPct()"></div>
+    <div class="fgrp"><label>Fecha de nacimiento del usufructuario</label><input id="us-fnac" type="date" onchange="v2UsufPct()"></div>
+    <div class="fgrp"><label>% valor del usufructo</label><input id="us-pct" type="number" step="0.01"><div id="us-pct-info" style="font-size:10px;color:var(--ink3);margin-top:3px;"></div></div>
+    <div class="fgrp"><label>Valor declarado del pleno dominio en la escritura (€)</label><input id="us-valor" type="number" step="0.01"></div>
+    <div class="fgrp" style="display:flex;align-items:center;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="us-grat" style="width:auto;" checked> Constituido gratis a favor de pariente (art. 24 LIRPF)</label></div>
+    <div class="fgrp fgf"><label>Notas</label><input id="us-notas" placeholder="Notaría, protocolo…"></div>
+  </div>
+  <div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:var(--r2);font-size:11px;color:var(--ink2);line-height:1.6;">Después registra en Facturas, con categoría <strong>K</strong> y a nombre del usufructuario, el Impuesto de Donaciones, la notaría, el registro y la plusvalía de esta escritura.</div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-usuf')">Cancelar</button><button class="btn btn-primary" onclick="v2GuardarUsufructo()">Guardar usufructo</button></div>
+</div></div>
+
+<div class="modal-overlay" id="m-derecho"><div class="modal">
+  <h2>📜 Periodo de titularidad</h2><input type="hidden" id="dr-id">
+  <div class="fg">
+    <div class="fgrp"><label>Inmueble *</label><select id="dr-prop"></select></div>
+    <div class="fgrp"><label>Titular *</label><select id="dr-owner"></select></div>
+    <div class="fgrp"><label>Derecho</label><select id="dr-tipo"><option value="pleno">Pleno dominio</option><option value="nuda">Nuda propiedad</option><option value="usufVit">Usufructo vitalicio</option><option value="usufTemp">Usufructo temporal</option></select></div>
+    <div class="fgrp"><label>Porcentaje</label><input id="dr-pct" type="number" value="100"></div>
+    <div class="fgrp"><label>Desde</label><input id="dr-desde" type="date"></div>
+    <div class="fgrp"><label>Hasta (vacío = vigente)</label><input id="dr-hasta" type="date"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-derecho')">Cancelar</button><button class="btn btn-primary" onclick="v2GuardarDerecho()">Guardar</button></div>
+</div></div>
+
+<div class="modal-overlay" id="m-ficha"><div class="modal modal-lg">
+  <h2>📋 Ficha fiscal del gasto</h2>
+  <div id="fic-cab" style="font-size:12px;color:var(--ink2);margin-bottom:12px;"></div>
+  <input type="hidden" id="fic-src"><input type="hidden" id="fic-id">
+  <div class="fg">
+    <div class="fgrp"><label>Inmueble *</label><select id="fic-prop"></select></div>
+    <div class="fgrp"><label>Habitación (solo si el gasto es de una)</label><input id="fic-hab" type="number"></div>
+    <div class="fgrp"><label>Titular económico *</label><select id="fic-tit"></select></div>
+    <div class="fgrp fgf"><label>Categoría fiscal *</label><select id="fic-catf"><option value="A">A · Coste de adquisición del inmueble</option><option value="B">B · Mejora (amortiza 3%)</option><option value="C">C · Mobiliario y enseres (10%)</option><option value="D">D · Reparación y conservación</option><option value="E">E · Gasto anual (IBI, comunidad, seguros, suministros)</option><option value="F">F · Intereses del préstamo</option><option value="G">G · Formalización del préstamo</option><option value="H">H · Suministro repercutido al inquilino</option><option value="I">I · Servicios (gestoría, abogado…)</option><option value="J">J · No deducible</option><option value="K">K · Coste de adquisición del usufructo</option></select></div>
+    <div class="fgrp"><label>Fecha de pago</label><input id="fic-fpago" type="date"></div>
+    <div class="fgrp"><label>Tipo de documento</label><select id="fic-tipodoc"><option value="factura">Factura completa</option><option value="ticket">Ticket / simplificada</option><option value="recibo">Recibo bancario</option></select></div>
+    <div class="fgrp"><label>NIF del emisor</label><input id="fic-nifemi"></div>
+    <div class="fgrp"><label>Destinatario</label><input id="fic-destnom"></div>
+    <div class="fgrp"><label>NIF del destinatario</label><input id="fic-destnif"></div>
+    <div class="fgrp"><label>Cuenta o tarjeta de pago</label><select id="fic-cta"></select></div>
+    <div class="fgrp"><label>Base imponible (€)</label><input id="fic-base" type="number" step="0.01"></div>
+    <div class="fgrp"><label>IVA (€)</label><input id="fic-iva" type="number" step="0.01"></div>
+    <div class="fgrp"><label>Periodo desde</label><input id="fic-pini" type="date"></div>
+    <div class="fgrp"><label>Periodo hasta</label><input id="fic-pfin" type="date"></div>
+    <div class="fgrp"><label>Provisión de fondos</label><select id="fic-prov"></select></div>
+    <div class="fgrp"><label>Situación</label><select id="fic-sit"><option value="">Automática</option><option value="uso propio">Uso propio (no deducible)</option></select></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-ficha')">Cancelar</button><button class="btn btn-primary" onclick="v2GuardarFicha()">Guardar</button></div>
+</div></div>
+
+<div class="modal-overlay" id="m-ctab"><div class="modal">
+  <h2>💳 Cuenta o tarjeta</h2><input type="hidden" id="cb-id">
+  <div class="fg">
+    <div class="fgrp fgf"><label>Nombre *</label><input id="cb-nom" placeholder="Cuenta Santander madre"></div>
+    <div class="fgrp"><label>Tipo</label><select id="cb-tipo"><option value="cuenta">Cuenta</option><option value="tarjeta">Tarjeta</option></select></div>
+    <div class="fgrp"><label>Entidad</label><input id="cb-banco"></div>
+    <div class="fgrp"><label>Últimos 4 dígitos</label><input id="cb-num" maxlength="4"></div>
+    <div class="fgrp"><label>Titular *</label><select id="cb-tit"></select></div>
+    <div class="fgrp fgf"><label>Notas</label><input id="cb-notas"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-ctab')">Cancelar</button><button class="btn btn-primary" onclick="v2GuardarCta()">Guardar</button></div>
+</div></div>
+
+<div class="modal-overlay" id="m-prov"><div class="modal">
+  <h2>🔁 Provisión de fondos</h2><input type="hidden" id="pv-id">
+  <div class="fg">
+    <div class="fgrp"><label>Aporta el dinero (quien deduce) *</label><select id="pv-apor"></select></div>
+    <div class="fgrp"><label>Lo gestiona y paga</label><select id="pv-gest"></select></div>
+    <div class="fgrp"><label>Fecha de la transferencia *</label><input id="pv-fecha" type="date"></div>
+    <div class="fgrp"><label>Importe (€) *</label><input id="pv-imp" type="number" step="0.01"></div>
+    <div class="fgrp"><label>Cuenta de origen</label><select id="pv-cta"></select></div>
+    <div class="fgrp fgf"><label>Concepto</label><input id="pv-notas" placeholder="Provisión gastos reforma piso 2"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-prov')">Cancelar</button><button class="btn btn-primary" onclick="v2GuardarProv()">Guardar</button></div>
+</div></div>
+
+<div class="modal-overlay" id="m-split"><div class="modal">
+  <h2>✂️ Dividir inmueble</h2>
+  <div style="font-size:11.5px;color:var(--ink3);line-height:1.6;margin-bottom:12px;">Separa una parte (p. ej. una plaza de garaje) en un inmueble independiente. Los gastos de adquisición se reparten en proporción al precio escriturado de cada parte.</div>
+  <div class="fg">
+    <div class="fgrp fgf"><label>Inmueble a dividir *</label><select id="sp-prop" oninput="v2SplitPrev()"></select></div>
+    <div class="fgrp fgf"><label>Nombre de la nueva parte *</label><input id="sp-nom" placeholder="Garaje Santa Ana"></div>
+    <div class="fgrp"><label>Precio escriturado de la parte (€) *</label><input id="sp-precio" type="number" step="0.01" oninput="v2SplitPrev()"></div>
+    <div class="fgrp"><label>Referencia catastral de la parte</label><input id="sp-refcat"></div>
+    <div class="fgrp"><label>Valor catastral total de la parte</label><input id="sp-vct" type="number" step="0.01"></div>
+    <div class="fgrp"><label>Valor catastral construcción de la parte</label><input id="sp-vcc" type="number" step="0.01"></div>
+  </div>
+  <div id="sp-prev" style="margin-top:10px;font-size:12px;"></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-split')">Cancelar</button><button class="btn btn-primary" onclick="v2HacerSplit()">Dividir</button></div>
+</div></div>
+
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -2433,12 +2614,13 @@ const WS_CFG = {
 };
 let KEY = WS_CFG[WS] ? WS_CFG[WS].key : 'rc5';
 let D=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||def();}catch{return def();}})();
-function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],hipotecas:[],plantillas:[],visitas:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
+function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],hipotecas:[],plantillas:[],visitas:[],derechos:[],ctasBanc:[],provisiones:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
 if(!D.compras)D.compras=[];
 if(!D.propietarios)D.propietarios=[];
 if(!D.hipotecas)D.hipotecas=[];
 if(!D.plantillas)D.plantillas=[];
 if(!D.visitas)D.visitas=[];
+['derechos','ctasBanc','provisiones'].forEach(k=>{if(!D[k])D[k]=[];});
 ['cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'].forEach(k=>{if(!D[k])D[k]=[];});
 if(!D.anuncios)D.anuncios=[];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(D));
@@ -2630,7 +2812,7 @@ function clearPdfZone(zoneId, dataId) {
 const RENDERS={dash:rDash,agenda:rAgenda,props:rProps,habs:rHabs,pots:rPots,compras:rCompras,anuncios:rAnuncios,propietarios:rPropietarios,
   activos:rActivos,pasados:rPasados,contratos:rConts,pagos:rTableroPagos,
   gastos:rGastos,facturas:()=>{rFacturas();rCalendarioOcupacion();},hist:rHist,fiscal:rFiscal,
-  informes:rInfs,incs:rIncs,provs:rProvs,hipotecas:rHipotecas,plantillas:rPlantillas,visitas:rVisitas,cfg:rCfg,
+  informes:rInfs,incs:rIncs,provs:rProvs,hipotecas:rHipotecas,plantillas:rPlantillas,visitas:rVisitas,titularidad:rTitularidad,ctasbanc:rCtasBanc,provisiones:rProvisiones,cfg:rCfg,
   pDash:rPDash, pMovs:rMovs, pCuentas:rCuentas, pSubs:rSubs, pPresup:rPresup,
   pMetas:rMetas, pInver:rInver, pDeudas:rDeudas, pPatrimonio:rPatrimonio,
   pDocs:rDocs, pRenta:rRenta, pLibros:rLibros, pCfg:rPCfg};
@@ -2887,7 +3069,7 @@ function rCostesAdqLista(){
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="mono" style="font-weight:700;color:var(--acc);white-space:nowrap;">${eur(it.imp,2)}</span>
         ${it.pdfData?`<button class="pdf-badge green" onclick="openPdf('${it.pdfData}','${it.pdfName||'documento.pdf'}')">📄</button>`:''}
-        <button class="btn btn-secondary btn-xs" onclick="editCosteAdqInline('${propId}','${it.id}')">✏️</button>
+        <button class="btn btn-ghost btn-xs" onclick="v2AbrirFicha('adq','${it.id}')" title="Ficha fiscal">📋</button><button class="btn btn-secondary btn-xs" onclick="editCosteAdqInline('${propId}','${it.id}')">✏️</button>
         <button class="btn btn-danger btn-xs" onclick="delCosteAdq('${propId}','${it.id}')">🗑</button>
       </div>
     </div>`).join('');
@@ -2917,7 +3099,7 @@ function newProp(){
   $i('pr-owner').value=''; $i('pr-usufructo').value=''; $i('pr-coste-total').innerHTML='';
   const res=$i('pr-costesadq-resumen'); if(res){res.textContent='+ añadir';res.style.color='var(--ink3)';}
   const resH=$i('pr-habs-resumen'); if(resH){resH.textContent='+ configurar';resH.style.color='var(--ink3)';}
-  openM('m-prop');
+  v2PropLoad({}); openM('m-prop');
 }
 
 function editProp(id){
@@ -2942,7 +3124,7 @@ function editProp(id){
       <button class="pdf-badge" onclick="borrarDocProp('${p.id}','${d}')" title="Eliminar">✕</button>`).join('')}
     </div>
     <div style="font-size:10px;color:var(--ink3);margin-top:8px;">Para sustituir uno, adjunta un archivo nuevo arriba en su casilla.</div>` : '';
-  openM('m-prop');
+  v2PropLoad(p); openM('m-prop');
 }
 
 function borrarDocProp(pid,dkey){
@@ -2964,6 +3146,7 @@ function saveProp(){
   const fc=gi('pr-fc');
   const campos={nom,ownerId:gi('pr-owner'),usufructoId:gi('pr-usufructo'),dir:gi('pr-d'),ciu:gi('pr-c'),cp:gi('pr-cp'),habs:gn('pr-h')||1,
     precio:gn('pr-p'),compra:gn('pr-com'),gcompra:gn('pr-gc'),tasacion:gn('pr-tasacion'),fechaTasacion:gi('pr-fecha-tasacion'),mercado:gn('pr-mercado'),pctConstruccion:gn('pr-pctc'),fcompra:fc,anyo:fc?fc.slice(0,4):gi('pr-a'),hipo:gn('pr-hip'),capital:gn('pr-cap'),vc:gn('pr-vc')};
+  Object.assign(campos, v2PropRead());
   if(editId){
     const p=D.props.find(x=>x.id==editId);
     if(p){ Object.assign(p,campos); p.docs=Object.assign({},p.docs||{},nuevosDocs); }
@@ -3191,7 +3374,7 @@ function addInq(){
   if(vet && $i('iq-apto').value!=='no'){
     if(!confirm(`🚫 ATENCIÓN: "${vet.nom} ${vet.ap}" está en tu lista negra como NO APTO${vet.aptoMotivo?' ('+vet.aptoMotivo+')':''}.\n\n¿Seguro que quieres registrarlo de todas formas?`)) return;
   }
-  D.inqs.push({id:uid(),nom,ap:gi('iq-a'),dni:gi('iq-dni'),nac:gi('iq-nac'),email:gi('iq-e'),tel:gi('iq-t'),wa:gi('iq-wa'),estado:$i('iq-est').value,propId:gi('iq-p'),hab:gi('iq-h'),alq:gn('iq-alq'),personas:parseInt($i('iq-personas').value)||1,luz:gn('iq-luz'),agua:gn('iq-agua'),fia:gn('iq-fia'),dia:gi('iq-dia'),ini:gi('iq-ini'),fin:gi('iq-fin'),val:gi('iq-v'),apto:$i('iq-apto').value,aptoMotivo:gi('iq-apto-motivo'),mot:gi('iq-mot'),notas:gi('iq-not')});
+  D.inqs.push({id:uid(),nom,ap:gi('iq-a'),dni:gi('iq-dni'),nac:gi('iq-nac'),email:gi('iq-e'),tel:gi('iq-t'),wa:gi('iq-wa'),estado:$i('iq-est').value,propId:gi('iq-p'),hab:gi('iq-h'),alq:gn('iq-alq'),personas:parseInt($i('iq-personas').value)||1,luz:gn('iq-luz'),agua:gn('iq-agua'),fia:gn('iq-fia'),dia:gi('iq-dia'),ini:gi('iq-ini'),fin:gi('iq-fin'),val:gi('iq-v'),apto:$i('iq-apto').value,aptoMotivo:gi('iq-apto-motivo'),mot:gi('iq-mot'),notas:gi('iq-not'),fnac:gi('iq-fnac')});
   saveAndSync();autoGenerarPagosPendientes();closeM('m-inq');rActivos();rPagos&&rPagos();toast('Inquilino añadido · cobros pendientes generados');
   ['iq-n','iq-a','iq-dni','iq-nac','iq-e','iq-t','iq-wa','iq-h','iq-alq','iq-luz','iq-agua','iq-fia','iq-dia','iq-ini','iq-fin','iq-mot','iq-not','iq-apto-motivo'].forEach(id=>{const e=$i(id);if(e)e.value='';});
 }
@@ -3423,7 +3606,7 @@ function newCont(){
   const p=$i('co-prop'); if(p)p.value='';
   clearPdfZone('co-pdf-zone','co-pdf-data');
   _fotosContrato={entrada:[],salida:[]}; pintarFotosContrato();
-  openM('m-co');
+  v2ContReset(); openM('m-co');
 }
 
 
@@ -3492,7 +3675,10 @@ function addCont(){
   const iId=gi('co-i');if(!iId){toast('Selecciona un inquilino',false);return;}
   const pdfData=$i('co-pdf-data')?.value||'';
   const pdfName=$i('co-pdf-name')?.value||'';
-  D.conts.push({id:uid(),inqId:iId,propId:gi('co-prop'),hab:gi('co-hab'),ini:gi('co-ini'),fin:gi('co-fin'),r:gn('co-r'),f:gn('co-f'),g:gn('co-g'),n:gi('co-n'),pdfData,pdfName,fotosEntrada:[..._fotosContrato.entrada],fotosSalida:[..._fotosContrato.salida]});
+  const nuevoCo={...v2ContRead(),inqId:iId,propId:gi('co-prop'),hab:gi('co-hab'),ini:gi('co-ini'),fin:gi('co-fin'),r:gn('co-r')};
+  const prob=v2ChequeoTemporal(nuevoCo,null).filter(x=>x.n==='error');
+  if(prob.length&&!confirm('⚠️ Problemas legales del contrato temporal:\n\n• '+prob.map(x=>x.t).join('\n• ')+'\n\n¿Guardarlo igualmente?')) return;
+  D.conts.push({...v2ContRead(),id:uid(),inqId:iId,propId:gi('co-prop'),hab:gi('co-hab'),ini:gi('co-ini'),fin:gi('co-fin'),r:gn('co-r'),f:gn('co-f'),g:gn('co-g'),n:gi('co-n'),pdfData,pdfName,fotosEntrada:[..._fotosContrato.entrada],fotosSalida:[..._fotosContrato.salida]});
   saveAndSync();closeM('m-co');
   clearPdfZone('co-pdf-zone','co-pdf-data');
   rConts();toast('Contrato guardado');
@@ -3856,7 +4042,7 @@ function rGastos(){
   if(!list.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">📉</div><p>Sin gastos</p></div></td></tr>';return;}
   tb.innerHTML=list.map(g=>{const pr=D.props.find(p=>p.id==g.propId);return `<tr><td class="mono" style="font-size:11px;">${g.fecha?fD(g.fecha):'–'}</td><td><div style="font-size:12px;font-weight:500;">${g.desc}</div>${g.notas?`<div style="font-size:10px;color:var(--ink3);">${g.notas}</div>`:''}</td><td>${GI[g.cat]||''} ${g.cat}</td><td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:'General'}</td><td class="mono" style="font-weight:700;color:var(--rd);">${eur(g.imp)}</td><td>${g.ded==='si'?'<span class="badge badge-g">✅ Sí</span>':'<span class="badge badge-r">❌ No</span>'}</td><td style="font-size:11px;color:var(--ink3);">${g.prov||'–'}${g._origenFactura?`<br><span class="badge badge-b" style="font-size:8px;">🧾 Factura ${g._num||''}</span>`:''}</td><td style="display:flex;gap:4px;flex-wrap:wrap;">${g.pdfData?`<button class="pdf-badge green" onclick="openPdf('${g.pdfData}','${g.pdfName||'factura.pdf'}')" style="max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">📄 ${g.pdfName?g.pdfName.slice(0,14):'Factura'}</button>`:''}${g._origenFactura
       ? `<button class="btn btn-secondary btn-xs" onclick="go(document.querySelector('.nav-item[data-s=\'compras\']'));setTimeout(()=>editCompra('${g.id}'),150);" title="Editar en Facturas">✏️ En Facturas</button>`
-      : `<button class="btn btn-danger btn-xs" onclick="D.gastos=D.gastos.filter(x=>x.id!='${g.id}');saveAndSync();rGastos();toast('Eliminado')">🗑</button>`}</td></tr>`;}).join('');
+      : `<button class="btn btn-ghost btn-xs" onclick="v2AbrirFicha('gasto','${g.id}')" title="Ficha fiscal">📋</button><button class="btn btn-danger btn-xs" onclick="D.gastos=D.gastos.filter(x=>x.id!='${g.id}');saveAndSync();rGastos();toast('Eliminado')">🗑</button>`}</td></tr>`;}).join('');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -4142,7 +4328,7 @@ function newCompra(){
   clearPdfZone('cp-pdf-zone','cp-pdf-data');
   $i('cp-doc-actual').innerHTML='';
   const sug=$i('cp-sugerencia'); if(sug) sug.style.display='none';
-  openM('m-compra');
+  v2FichaReset(); openM('m-compra');
 }
 
 
@@ -4177,7 +4363,7 @@ function editCompra(id){
       <button class="pdf-badge" onclick="borrarPdfCompra('${x.id}')">✕ Eliminar</button>
     </div>
     <div style="font-size:10px;color:var(--ink3);margin-top:6px;">Adjunta un archivo nuevo arriba para sustituirla.</div>` : '';
-  openM('m-compra');
+  v2FichaLoad(x); openM('m-compra');
 }
 
 function borrarPdfCompra(id){
@@ -4196,6 +4382,7 @@ function saveCompra(){
   const campos={con,emp,fecha:gi('cp-fecha'),imp,cat,ownerId:gi('cp-owner'),propId:gi('cp-prop'),
     hab:gi('cp-hab'),pago:$i('cp-pago').value,ded:$i('cp-ded').value,
     gar:gi('cp-gar'),notas:gi('cp-notas')};
+  Object.assign(campos, v2FichaRead()); campos.titular=campos.ownerId||''; campos.titularAuto=false;
   const pdfData=$i('cp-pdf-data')?.value||'', pdfName=$i('cp-pdf-name')?.value||'';
   const mesesATocar=new Set();
   if(campos.fecha) mesesATocar.add(campos.fecha.slice(0,7));
@@ -7251,6 +7438,7 @@ function amortDelMes(anyo,mes,props,compras,amPct){
 }
 
 function rFiscal(){
+  if(typeof rFiscalV2==='function'){ populateSels(); try{ rFiscalV2(); }catch(e){ console.error(e); $i('fi-v2').innerHTML='<div class="alert alert-r">Error en el motor fiscal: '+e.message+'</div>'; } return; }
   const anyo=$i('fy')?.value||String(new Date().getFullYear());
   const ownF=gi('fi-owner');
 
@@ -8803,7 +8991,7 @@ function aplicarWS(){
   const bs=$i('ws-switch2'); if(bs) bs.style.display='block';
   // Si es Personal, precargar el patrimonio inmobiliario de Gentaury
   if(esP && gToken){ cargarGentaury(); }
-  if(WS==='gentaury'){ repararTodasPropiedades(); autoGenerarPagosPendientes(); _mesTablero=new Date().toISOString().slice(0,7); try{ programarAvisosVisitas(); }catch(e){} }
+  if(WS==='gentaury'){ try{ v2Migrar(); }catch(e){ console.error('v2Migrar',e); } repararTodasPropiedades(); autoGenerarPagosPendientes(); _mesTablero=new Date().toISOString().slice(0,7); try{ programarAvisosVisitas(); }catch(e){} }
   // Activar la primera sección del espacio
   const primera = document.querySelector('.nav-item[data-ws="'+WS+'"]');
   if(primera) go(primera);
@@ -9060,7 +9248,7 @@ async function gFindOrCreateSheet() {
     method:'POST',
     body: JSON.stringify({
       properties:{title:SHEET_NAME()},
-      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios','Hipotecas','Plantillas','Visitas','CostesAdquisicion','Cuentas','Movimientos','Presupuestos','Suscripciones','Objetivos','Inversiones','Deudas','DocsPersonales','Libros'].map(t=>({properties:{title:t}}))
+      sheets:['Propiedades','Inquilinos','Pagos','Gastos','Contratos','Incidencias','Proveedores','Potenciales','Facturas','Agenda','FacturasCompra','Anuncios','Propietarios','Hipotecas','Plantillas','Visitas','Titularidad','CuentasTarjetas','Provisiones','CostesAdquisicion','Cuentas','Movimientos','Presupuestos','Suscripciones','Objetivos','Inversiones','Deudas','DocsPersonales','Libros'].map(t=>({properties:{title:t}}))
     })
   });
   try {
@@ -9109,6 +9297,9 @@ async function volcarSheets() {
     const sheets = [
       {sheet:'Propietarios', h:['ID','Nombre','Alias','DNI','Relacion','IRPF','Email','Tel','Notas'], rows:(D.propietarios||[]).map(o=>[o.id,o.nom,o.alias,o.dni,o.rel,o.irpf,o.email,o.tel,o.notas])},
       {sheet:'Hipotecas', h:['ID','Piso','Propietario','Banco','Tipo','CapitalInicial','Pendiente','Cuota','DiaCobro','TipoResultante','Vinculaciones','CosteVincAnual','FechaFin'], rows:(D.hipotecas||[]).map(h=>{const p=D.props.find(x=>x.id==h.propId);return [h.id,p?p.nom:'',ownerNom(h.ownerId||(p?p.ownerId:'')),h.banco,h.tipo,h.ini,h.pend,h.cuota,h.dia,tipoResultante(h).toFixed(2)+'%',vinculaciones(h).join(', '),costeVincAnual(h),h.fin];})},
+      {sheet:'Titularidad', h:['ID','Inmueble','Titular','Derecho','Desde','Hasta','%','ValorUsufructo%','Art24'], rows:(D.derechos||[]).map(d=>{const p=D.props.find(x=>x.id==d.propId);return [d.id,p?p.nom:'',ownerNom(d.ownerId),d.tipo,d.desde,d.hasta,d.pct,d.pctUsuf||'',d.gratuitoPariente?'SI':''];})},
+      {sheet:'CuentasTarjetas', h:['ID','Nombre','Tipo','Entidad','Num','Titular'], rows:(D.ctasBanc||[]).map(x=>[x.id,x.nom,x.tipo,x.banco,x.num,ownerNom(x.titularId)])},
+      {sheet:'Provisiones', h:['ID','Aporta','Gestiona','Fecha','Importe','Concepto'], rows:(D.provisiones||[]).map(x=>[x.id,ownerNom(x.aportante),ownerNom(x.gestor),x.fecha,x.imp,x.notas])},
       {sheet:'Visitas', h:['ID','Nombre','Telefono','Email','Fecha','Hora','Piso','Hab','Estado','Origen','Avisado','Notas'], rows:(D.visitas||[]).map(v=>{const p=D.props.find(x=>x.id==v.propId);return [v.id,v.nom,v.tel,v.email,v.fecha,v.hora,p?p.nom:'',v.hab,(VI_ESTADOS[v.est]||{}).et||v.est,v.origen,v.recordado,v.notas];})},
       {sheet:'Plantillas', h:['ID','Nombre','Tipo','Piso','Notas','TieneTexto','Documento'], rows:(D.plantillas||[]).map(p=>{const pr=D.props.find(x=>x.id==p.propId);return [p.id,p.nom,p.tipo,pr?pr.nom:'Todos',p.notas,p.texto?'SI':'NO',p.pdfName||''];})},
       {sheet:'CostesAdquisicion', h:['PisoID','Piso','Propietario','Concepto','Importe','Fecha','Notas','Documento'], rows:D.props.flatMap(p=>(p.costesAdq||[]).map(it=>[p.id,p.nom,ownerNom(p.ownerId),it.concepto,it.imp,it.fecha,it.notas,it.pdfName||'']))},
@@ -9150,7 +9341,7 @@ async function volcarSheets() {
 // ══════════════════════════════════════════════════════════════
 // SINCRONIZACIÓN AUTOMÁTICA CON FUSIÓN (anti pérdida de datos)
 // ══════════════════════════════════════════════════════════════
-const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','hipotecas','plantillas','visitas','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
+const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','hipotecas','plantillas','visitas','derechos','ctasBanc','provisiones','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
 
 let _snap = {};              // huella de cada registro para detectar cambios
 let _syncEnCurso = false;
@@ -9627,6 +9818,940 @@ async function forzarActualizacion(){
     setTimeout(() => window.location.reload(true), 600);
   } catch(e) { window.location.reload(true); }
 }
+
+
+// ══════════════════════════════════════════════════════════════
+// MOTOR FISCAL v2 · Rendimientos del capital inmobiliario (IRPF)
+// Fuentes: LIRPF arts. 14.1.a, 22, 23, 24 y 85 (DA 55ª); RIRPF arts. 13 y 14;
+// STS 25-02-2021; DGT V3146-18 y V1973-20; Manual práctico AEAT;
+// RDL 29/2026 (BOE 07/10/2026); Código Civil art. 474.
+// ══════════════════════════════════════════════════════════════
+const CATF={
+  A:'Coste de adquisición del inmueble',B:'Mejora (3%)',C:'Mobiliario y enseres (10%)',
+  D:'Reparación y conservación',E:'Gasto anual prorrateado',F:'Intereses del préstamo',
+  G:'Formalización del préstamo',H:'Suministro repercutido',I:'Servicios de terceros',
+  J:'No deducible',K:'Coste de adquisición del usufructo'
+};
+const CATF_DED={A:'amort3',B:'mejora',C:'amort10',D:'reparacion',E:'corriente',F:'corriente',G:'corriente',H:'corriente',I:'corriente',J:'no',K:'no'};
+const CON_H=['Luz','Agua','Gas','Internet','Comunidad','Otro suministro','Suministros','Wifi'];
+
+function v2bool(v,def){ return (v===undefined||v===null||v==='')?def:(v===true||v==='true'); }
+function v2cfg(){
+  const c=D.cfg||{};
+  return {
+    usufCriterio:c.usufCriterio||'dgt', usufSuelo:v2bool(c.usufSuelo,true), gModo:c.gModo||'factor',
+    mejoraUsuf:v2bool(c.mejoraUsuf,false), diaExig:parseInt(c.diaExig)||15, exigMesAnt:v2bool(c.exigMesAnt,true),
+    rdl29:v2bool(c.rdl29,true), irav:parseFloat(c.irav)||0,
+    escalaModo:c.escalaModo||'tramos',
+    escala:(Array.isArray(c.escalaImp)&&c.escalaImp.length)?c.escalaImp:[{hasta:100000,pct:1.1},{hasta:500000,pct:1.5},{hasta:1000000,pct:2},{hasta:1e15,pct:3}],
+    itpTipo:parseFloat(c.itpTipo)||8
+  };
+}
+function fxIso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fxDate(s){ return new Date(s+'T00:00:00'); }
+function fxNd(y){ return ((y%4===0&&y%100!==0)||y%400===0)?366:365; }
+function fxIdx(y,iso){ return Math.round((fxDate(iso)-new Date(y,0,1))/864e5); }
+function fxAdd(iso,n){ const d=fxDate(iso); d.setDate(d.getDate()+n); return fxIso(d); }
+function nombreC(id){ return id ? ownerNom(id) : '—'; }
+function nifC(id){ const o=(D.propietarios||[]).find(x=>x.id==id); return o?(o.dni||''):''; }
+
+// ── Titularidad por periodos ──
+function derechosProp(pid){ return (D.derechos||[]).filter(d=>d.propId==pid); }
+function titularidadDia(pid, iso){
+  const p=(D.props||[]).find(x=>x.id==pid);
+  const ds=derechosProp(pid).filter(d=>(!d.desde||d.desde<=iso)&&(!d.hasta||d.hasta>=iso));
+  let pleno=null, nuda=null, usuf=null;
+  ds.forEach(d=>{ if(d.tipo==='pleno')pleno=d; else if(d.tipo==='nuda')nuda=d; else if(d.tipo==='usufVit'||d.tipo==='usufTemp')usuf=d; });
+  if(!derechosProp(pid).length && p && p.ownerId && (!p.fcompra||p.fcompra<=iso)) pleno={ownerId:p.ownerId,tipo:'pleno',implicito:true};
+  return {pleno, nuda, usuf, disfrute: usuf?usuf.ownerId:(pleno?pleno.ownerId:null)};
+}
+
+// ── Ocupación: m² de habitación + parte proporcional de zonas comunes ──
+function pesosHabs(p){
+  const n=parseInt(p.habs)||0, cfg=p.habsConfig||{};
+  if(!n) return {pesos:[], metodo:'sin habitaciones'};
+  const arr=[]; let completo=true;
+  for(let i=1;i<=n;i++){ const m=parseFloat((cfg[i]||{}).m2)||0; arr.push(m); if(!m) completo=false; }
+  if(!completo) return {pesos:arr.map(()=>1/n), metodo:'reparto igual entre habitaciones (faltan m²)'};
+  const sumH=arr.reduce((a,b)=>a+b,0), com=parseFloat(p.m2c)||0, tot=sumH+com;
+  return {pesos:arr.map(m=>(m+com*(m/sumH))/tot), metodo:'m² de habitación + parte de zonas comunes'};
+}
+function habOcupada(p,hab,iso){
+  if((D.conts||[]).some(c=>c.pisoEntero&&c.propId==p.id&&c.ini&&c.ini<=iso&&(!c.fin||c.fin>=iso))) return true;
+  return (D.inqs||[]).some(i=>i.propId==p.id&&String(i.hab)===String(hab)&&i.ini&&i.ini<=iso&&(i.fin?i.fin>=iso:i.estado!=='PASADO'));
+}
+function ocupacionDia(p, iso, pesos){
+  if((D.conts||[]).some(c=>c.pisoEntero&&c.propId==p.id&&c.ini&&c.ini<=iso&&(!c.fin||c.fin>=iso))) return 1;
+  const oc=new Set();
+  (D.inqs||[]).forEach(i=>{ if(i.propId!=p.id||!i.ini) return; if(i.ini<=iso&&(i.fin?i.fin>=iso:i.estado!=='PASADO')) oc.add(parseInt(i.hab)); });
+  let f=0; oc.forEach(h=>{ if(h>=1&&h<=pesos.length) f+=pesos[h-1]; });
+  return Math.min(1,f);
+}
+let _cacheF={};
+function serieAnual(pid,y){
+  const k=pid+'|'+y; if(_cacheF[k]) return _cacheF[k];
+  const p=(D.props||[]).find(x=>x.id==pid); const nd=fxNd(y); const {pesos}=pesosHabs(p);
+  const fac=[],dis=[],ple=[],usu=[],nud=[],adq=[];
+  const d=new Date(y,0,1);
+  for(let i=0;i<nd;i++){
+    const iso=fxIso(d), t=titularidadDia(pid,iso), a=!p.fcompra||p.fcompra<=iso;
+    adq.push(a); fac.push(a?ocupacionDia(p,iso,pesos):0);
+    dis.push(t.disfrute); ple.push(t.pleno?t.pleno.ownerId:null); usu.push(t.usuf?t.usuf.ownerId:null); nud.push(t.nuda?t.nuda.ownerId:null);
+    d.setDate(d.getDate()+1);
+  }
+  return _cacheF[k]={fac,dis,ple,usu,nud,adq,nd};
+}
+
+// ── Normalización de todos los gastos ──
+function catFDe(x, src){
+  if(x.catF) return x.catF;
+  const t=((x.con||x.desc||x.concepto||'')+' '+(x.cat||'')+' '+(x.notas||'')).toLowerCase();
+  if(src==='adq'){ if(/tasaci|apertura|constituci[oó]n.*hipoteca|hipoteca/.test(t)) return 'G'; if(/reforma|mejora/.test(t)) return 'B'; return 'A'; }
+  if(src==='gasto' && x.cat==='Hipoteca') return x.ded==='si'?'F':'J';
+  const k = src==='gasto' ? (x.ded==='si'?'corriente':'no') : fiscalKey(x.ded);
+  if(k==='amort3') return /tasaci/.test(t)?'G':'A';
+  if(k==='mejora') return 'B'; if(k==='amort10') return 'C'; if(k==='reparacion') return 'D'; if(k==='no') return 'J';
+  if(/gestor|abogad|asesor/.test(t)) return 'I';
+  if(/inter[eé]s/.test(t)) return 'F';
+  return 'E';
+}
+function v2Items(){
+  const out=[], push=(src,ref,o)=>out.push(Object.assign({src,ref},o));
+  const fx=x=>({destNif:x.destNif||'',destNom:x.destNom||'',tipoDoc:x.tipoDoc||'',ctaId:x.ctaId||'',provId:x.provId||'',pIni:x.pIni||'',pFin:x.pFin||'',sit:x.situacion||''});
+  (D.compras||[]).forEach(x=>push('compra',x,Object.assign({id:x.id,fecha:x.fecha||'',imp:+x.imp||0,catF:catFDe(x,'compra'),propId:x.propId||'',hab:x.hab||'',titular:x.titular||x.ownerId||'',con:x.con||'',emp:x.emp||'',num:x.num||'',pdf:x.pdfData||'',pdfName:x.pdfName||''},fx(x))));
+  (D.gastos||[]).forEach(g=>push('gasto',g,Object.assign({id:g.id,fecha:g.fecha||'',imp:+g.imp||0,catF:catFDe(g,'gasto'),propId:g.propId||'',hab:g.hab||'',titular:g.titular||'',con:g.desc||'',emp:g.prov||'',num:'',pdf:g.pdfData||'',pdfName:g.pdfName||'',notas:g.notas||''},fx(g))));
+  (D.props||[]).forEach(p=>(p.costesAdq||[]).forEach(it=>push('adq',it,Object.assign({id:it.id,fecha:it.fecha||p.fcompra||'',imp:+it.imp||0,catF:catFDe(it,'adq'),propId:p.id,hab:'',titular:it.titular||'',con:it.concepto||'',emp:'',num:'',pdf:it.pdfData||'',pdfName:it.pdfName||''},fx(it)))));
+  return out;
+}
+function v2Periodo(it){
+  if(it.pIni&&it.pFin&&it.pFin>=it.pIni) return [it.pIni,it.pFin];
+  if(!it.fecha) return [null,null];
+  const y=it.fecha.slice(0,4);
+  if(/\bibi\b|basura|seguro|tasa municipal/i.test(it.con)) return [y+'-01-01',y+'-12-31'];
+  const m=+it.fecha.slice(5,7), nd=new Date(+y,m,0).getDate();
+  return [it.fecha.slice(0,7)+'-01', it.fecha.slice(0,7)+'-'+String(nd).padStart(2,'0')];
+}
+function v2Deudor(it){
+  const m=(it.notas||'').match(/\[cuota:([^:\]]+):/);
+  if(m){ const h=(D.hipotecas||[]).find(x=>x.id==m[1]); if(h) return h.deudorId||h.ownerId||((D.props||[]).find(p=>p.id==h.propId)||{}).ownerId||''; }
+  return '';
+}
+function saldoProvision(pv){
+  const usado=v2Items().filter(it=>it.provId==pv.id).reduce((s,it)=>s+it.imp,0);
+  return (parseFloat(pv.imp)||0)-usado;
+}
+function v2DestOK(it,c){
+  if(!it.destNif) return {ok:true};
+  const n=nifC(c).replace(/\s/g,'').toUpperCase(), d=it.destNif.replace(/\s/g,'').toUpperCase();
+  if(!n || n===d) return {ok:true};
+  if(it.provId){ const pv=(D.provisiones||[]).find(x=>x.id==it.provId); if(pv&&pv.aportante==c) return {ok:true}; }
+  return {ok:false, motivo:'Factura a nombre de otra persona sin provisión de fondos'};
+}
+
+// ── Bases de amortización ──
+function pctConstr(p){
+  const vct=parseFloat(p.vct)||0, vcc=parseFloat(p.vcc)||0, vcs=parseFloat(p.vcs)||0;
+  if(vct>0&&vcc>0) return {pct:vcc/vct, fuente:'catastro', ok:true};
+  if(vct>0&&vcs>0) return {pct:(vct-vcs)/vct, fuente:'catastro', ok:true};
+  if(parseFloat(p.pctConstruccion)>0) return {pct:parseFloat(p.pctConstruccion)/100, fuente:'% manual', ok:false};
+  if(parseFloat(p.vc)>0&&parseFloat(p.tasacion)>0) return {pct:Math.min(1,parseFloat(p.vc)/parseFloat(p.tasacion)), fuente:'proporción de la tasación', ok:false};
+  return {pct:0, fuente:'sin datos', ok:false};
+}
+function baseEdificio(p,items){
+  const adq=items.filter(it=>it.propId===p.id&&it.catF==='A').reduce((s,it)=>s+it.imp,0);
+  const coste=(parseFloat(p.precio)||0)+adq, vct=parseFloat(p.vct)||0, pc=pctConstr(p);
+  const mayor=Math.max(coste,vct);
+  return {coste, adq, vct, mayor, pct:pc.pct, fuente:pc.fuente, base:mayor*pc.pct};
+}
+function baseUsufructo(p,c,items,cfg){
+  const d=derechosProp(p.id).find(x=>(x.tipo==='usufVit'||x.tipo==='usufTemp')&&x.ownerId==c); if(!d) return {base:0};
+  const k=items.filter(it=>it.propId===p.id&&it.catF==='K'&&(!it.titular||it.titular===c)).reduce((s,it)=>s+it.imp,0);
+  let base = cfg.usufCriterio==='aeat' ? (parseFloat(d.valorDecl)||0)*(parseFloat(d.pctUsuf)||0)/100+k : k;
+  const pc=pctConstr(p); if(cfg.usufSuelo&&pc.pct>0) base*=pc.pct;
+  return {base, tipo:d.tipo, anyos:parseFloat(d.anyos)||0, gastosK:k, criterio:cfg.usufCriterio, pct:pc.pct, d};
+}
+function muebleDueno(it,iso){
+  const tr=((it.ref&&it.ref.transferencias)||[]).filter(t=>t.fecha<=iso).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  if(tr.length){ const t=tr[tr.length-1]; return {c:t.a, base:parseFloat(t.precio)||0, desde:t.fecha}; }
+  return {c:it.titular, base:it.imp, desde:it.fecha};
+}
+
+// ── Imputación de rentas (art. 85 LIRPF) ──
+function pctImput(y,p,c,sumVC,cfg){
+  const rev=parseInt(p.revCat)||0;
+  if(y<=2025) return (rev&&rev>=y-10)?1.1:2;
+  if(y===2026) return cfg.rdl29 ? ((rev&&rev>=2012)?1.1:2) : ((rev&&rev>=2016)?1.1:2);   // DA 55ª LIRPF (RDL 29/2026)
+  if(!cfg.rdl29) return (rev&&rev>=y-10)?1.1:2;                                       // art. 85 sin la reforma
+  const tot=sumVC[c]||0;                          // 2027+: escala sobre la suma de VC (RDL 29/2026)
+  if(cfg.escalaModo==='unico'){ const t=cfg.escala.find(e=>tot<=e.hasta)||cfg.escala[cfg.escala.length-1]; return t.pct; }
+  let resto=tot, prev=0, cuota=0;
+  for(const e of cfg.escala){ const tr=Math.min(resto,e.hasta-prev); if(tr<=0) break; cuota+=tr*e.pct/100; resto-=tr; prev=e.hasta; if(resto<=0) break; }
+  return tot>0 ? cuota/tot*100 : cfg.escala[0].pct;
+}
+
+// ── Reducción por arrendamiento de vivienda (art. 23.2 LIRPF) ──
+function edadEn(fnac,iso){ if(!fnac||!iso) return null; const a=fxDate(fnac), b=fxDate(iso); let e=b.getFullYear()-a.getFullYear(); if(b.getMonth()<a.getMonth()||(b.getMonth()===a.getMonth()&&b.getDate()<a.getDate())) e--; return e; }
+function pctReduccion(co,inq,p,cfg){
+  cfg=cfg||v2cfg();
+  if(!co) return {pct:0, motivo:'Sin contrato registrado'};
+  const tipo=co.tipoContrato||'';
+  if(!tipo) return {pct:0, motivo:'Tipo de contrato sin indicar'};
+  if(tipo==='temporal'&&!co.causa) return {pct:0, motivo:'Temporal sin causa: se considera habitual — corrige el contrato'};
+  if(['temporal','temporadaPre'].includes(tipo)) return {pct:0, motivo:'Arrendamiento temporal: la DGT no admite la reducción (V2810-19, V0444-24)'};
+  if(tipo==='usoDistinto') return {pct:0, motivo:'Uso distinto de vivienda'};
+  if(tipo==='esal') return {pct:70, motivo:'Alquiler a Administración o entidad sin ánimo de lucro'};
+  if(co.arrPJ) return {pct:0, motivo:'Arrendatario persona jurídica'};
+  const firma=co.firma||co.ini||'';
+  const e=edadEn(inq&&inq.fnac, firma), joven=e!==null&&e>=18&&e<=35, tens=!!(p&&p.zonaTens);
+  if(firma&&firma<'2023-05-26') return {pct:60, motivo:'Contrato anterior a la Ley 12/2023'};
+  if(firma&&(firma<'2026-12-01'||!cfg.rdl29)){
+    const ant=parseFloat(co.rentaAnt)||0, r=parseFloat(co.r)||0;
+    if(tens&&ant&&r&&r<ant*0.95) return {pct:90, motivo:'Ley 12/2023: zona tensionada y renta rebajada >5%'};
+    if(tens&&co.primer&&joven) return {pct:70, motivo:'Ley 12/2023: primer alquiler a joven 18-35 en zona tensionada'};
+    return {pct:50, motivo:cfg.rdl29?'Ley 12/2023 (régimen transitorio del RDL 29/2026)':'Ley 12/2023'};
+  }
+  if(co.prorrogaTacita) return co.rentaInfIndice ? {pct:80, motivo:'RDL 29/2026: prórroga tácita con renta dentro del índice'} : {pct:50, motivo:'RDL 29/2026: prórroga tácita sin renta dentro del índice'};
+  const r=parseFloat(co.r)||0, ant=parseFloat(co.rentaAnt)||0;
+  if(co.primer||!ant){
+    if(co.rentaInfIndice) return {pct:100, motivo:'RDL 29/2026: primer alquiler, renta inferior al índice'};
+    if(tens&&joven) return {pct:95, motivo:'RDL 29/2026: primer alquiler, zona tensionada, joven 18-35'};
+    if(tens) return {pct:90, motivo:'RDL 29/2026: primer alquiler, zona tensionada'};
+    if(joven) return {pct:85, motivo:'RDL 29/2026: primer alquiler, joven 18-35'};
+    return {pct:50, motivo:'RDL 29/2026: primer alquiler, resto de casos'+(co.primer?'':' (sin renta anterior registrada — revisar)')};
+  }
+  if(r<ant*0.95){
+    if(co.rentaInfIndice) return {pct:100, motivo:'RDL 29/2026: renta rebajada >5% e inferior al índice'};
+    if(tens&&joven) return {pct:95, motivo:'RDL 29/2026: renta rebajada, zona tensionada, joven'};
+    if(tens) return {pct:90, motivo:'RDL 29/2026: renta rebajada, zona tensionada'};
+    if(joven) return {pct:85, motivo:'RDL 29/2026: renta rebajada, joven 18-35'};
+    return {pct:70, motivo:'RDL 29/2026: renta rebajada >5%'};
+  }
+  if(r<=ant) return {pct:50, motivo:'RDL 29/2026: renta igual a la anterior'};
+  const inc=(r/ant-1)*100;
+  const pct=inc<=5?40:inc<=10?30:inc<=15?25:inc<=20?20:15;
+  return {pct, motivo:'RDL 29/2026: renta incrementada un '+inc.toFixed(1)+'%'};
+}
+
+// ── Ingresos por devengo ──
+function v2ExigIso(mes,cfg){ const [y,m]=mes.split('-').map(Number); return fxIso(cfg.exigMesAnt?new Date(y,m-2,cfg.diaExig):new Date(y,m-1,cfg.diaExig)); }
+
+// ══ CÁLCULO DE UN EJERCICIO ══
+function v2CalcAnyo(y,items,bolsa,cfg){
+  const R={}, nd=fxNd(y), props=D.props||[];
+  const P=(c,pid)=>{
+    if(!R[c]) R[c]={props:{},imput:{},art24:{},noDed:[]};
+    if(pid&&!R[c].props[pid]) R[c].props[pid]={ingAlq:0,ingH:0,E:0,F:0,G:0,D:0,I:0,H:0,dfg:0,dfgAplic:0,arrAplic:0,exceso:0,amEd:0,amMej:0,amMue:0,amUsuf:0,amUsufBruta:0,diasEq:0,baseEd:null,baseUsuf:null,det:[],reds:[],bolsaPend:[]};
+    return pid?R[c].props[pid]:R[c];
+  };
+  const noDed=(c,it,imp,motivo)=>{ if(imp>0.005) P(c||it.titular||'_').noDed.push({it,imp,motivo}); };
+
+  // 1. Ingresos: año por exigibilidad (art. 14.1.a LIRPF); titular por días disfrutados (art. 474 CC)
+  (D.pagos||[]).forEach(pg=>{
+    if(!pg.mes||/fianza/i.test(pg.con||'')) return;
+    if(v2ExigIso(pg.mes,cfg).slice(0,4)!==String(y)) return;
+    const inq=(D.inqs||[]).find(i=>i.id==pg.inqId); if(!inq||!inq.propId) return;
+    const p=props.find(x=>x.id==inq.propId); if(!p) return;
+    const imp=+pg.imp||0; if(!imp) return;
+    const [my,mm]=pg.mes.split('-').map(Number), dm=new Date(my,mm,0).getDate(), rep={};
+    for(let k=1;k<=dm;k++){ const h=titularidadDia(p.id,pg.mes+'-'+String(k).padStart(2,'0')).disfrute||p.ownerId||''; rep[h]=(rep[h]||0)+1; }
+    Object.entries(rep).forEach(([c,dd])=>{ if(!c) return; const r=P(c,p.id), v=imp*dd/dm; if(CON_H.includes(pg.con)) r.ingH+=v; else r.ingAlq+=v; });
+  });
+
+  // 2. Días equivalentes arrendados
+  props.forEach(p=>{ const s=serieAnual(p.id,y); for(let i=0;i<nd;i++){ if(s.dis[i]&&s.fac[i]>0) P(s.dis[i],p.id).diasEq+=s.fac[i]; } });
+
+  // 3. Gastos
+  items.forEach(it=>{
+    if(!it.propId||!it.imp) return;
+    const p=props.find(x=>x.id==it.propId); if(!p) return;
+    const k=it.catF; if(!['D','E','F','G','H','I'].includes(k)) return;
+    if(it.sit==='uso propio'){ if((it.fecha||'').startsWith(String(y))) noDed(it.titular,it,it.imp,'Uso propio'); return; }
+    if(k==='D'||k==='G'){
+      if(!(it.fecha||'').startsWith(String(y))) return;
+      const t=titularidadDia(p.id,it.fecha), c=t.disfrute, tit=it.titular||c;
+      if(!c||tit!==c){ noDed(tit,it,it.imp,'El titular del gasto no obtiene las rentas del inmueble en esa fecha'); return; }
+      const dc=v2DestOK(it,c); if(!dc.ok){ noDed(c,it,it.imp,dc.motivo); return; }
+      if(k==='G'&&cfg.gModo==='factor'){
+        const f=serieAnual(p.id,y).fac[fxIdx(y,it.fecha)]||0, ded=it.imp*f;
+        if(ded>0){ const r=P(c,p.id); r.G+=ded; r.dfg+=ded; r.det.push({it,cat:k,ded}); }
+        noDed(c,it,it.imp-ded,'Formalización del préstamo en periodo no arrendado (criterio configurable)');
+        return;
+      }
+      const r=P(c,p.id); r[k]+=it.imp; r.dfg+=it.imp; r.det.push({it,cat:k,ded:it.imp});
+      return;
+    }
+    const [pi,pf]=v2Periodo(it);
+    if(!pi){ return; }
+    const tot=Math.round((fxDate(pf)-fxDate(pi))/864e5)+1, porDia=it.imp/tot;
+    const acc={}, noacc={}; const d=fxDate(pi), fin=fxDate(pf);
+    while(d<=fin){
+      if(d.getFullYear()===y){
+        const iso=fxIso(d), s=serieAnual(p.id,y), ix=fxIdx(y,iso), c=s.dis[ix], tit=it.titular||c;
+        let f=(k==='H')?1:(it.hab?(habOcupada(p,it.hab,iso)?1:0):s.fac[ix]), m='';
+        if(!s.adq[ix]){ f=0; m='Inmueble aún no adquirido'; }
+        else if(!c||tit!==c){ f=0; m='El titular del gasto no obtiene rentas del inmueble ese día'; }
+        else if(k==='F'){ const deu=v2Deudor(it)||tit; if(deu!==c){ f=0; m='El deudor del préstamo no es quien obtiene las rentas'; } }
+        if(f>0){ const dc=v2DestOK(it,c); if(!dc.ok){ f=0; m=dc.motivo; } }
+        if(f<1&&!m) m='Periodo no arrendado (STS 25-02-2021)';
+        if(f>0) acc[c]=(acc[c]||0)+porDia*f;
+        if(f<1) noacc[m]=(noacc[m]||0)+porDia*(1-f);
+      }
+      d.setDate(d.getDate()+1);
+    }
+    Object.entries(acc).forEach(([c,v])=>{ const r=P(c,p.id); r[k]+=v; if(k==='F') r.dfg+=v; r.det.push({it,cat:k,ded:v}); });
+    Object.entries(noacc).forEach(([m,v])=>noDed(it.titular||Object.keys(acc)[0]||p.ownerId,it,v,m));
+  });
+
+  // 4. Límite (intereses + formalización + reparación ≤ ingresos íntegros) con arrastre de 4 años
+  Object.entries(R).forEach(([c,r])=>Object.entries(r.props).forEach(([pid,x])=>{
+    const key=c+'|'+pid;
+    let b=(bolsa[key]||[]).filter(e=>e.anyo>=y-4&&e.resto>0.005).sort((a,b2)=>a.anyo-b2.anyo);
+    let hueco=x.ingAlq+x.ingH;
+    b.forEach(e=>{ const u=Math.min(e.resto,hueco); e.resto-=u; hueco-=u; x.arrAplic+=u; });
+    const u=Math.min(x.dfg,hueco); x.dfgAplic=u; x.exceso=x.dfg-u;
+    if(x.exceso>0.005) b.push({anyo:y,resto:x.exceso,orig:x.exceso});
+    bolsa[key]=b.filter(e=>e.resto>0.005);
+    x.bolsaPend=bolsa[key].map(e=>({anyo:e.anyo,resto:e.resto,caduca:e.anyo+4}));
+  }));
+  Object.keys(bolsa).forEach(key=>{ bolsa[key]=(bolsa[key]||[]).filter(e=>e.anyo>=y-4&&e.resto>0.005); });
+
+  // 5. Amortizaciones
+  props.forEach(p=>{
+    const s=serieAnual(p.id,y), be=baseEdificio(p,items);
+    for(let i=0;i<nd;i++){
+      if(!s.adq[i]||!s.fac[i]) continue; const c=s.dis[i];
+      if(s.ple[i]&&s.ple[i]===c&&be.base>0){ const r=P(c,p.id); r.amEd+=be.base*0.03/nd*s.fac[i]; r.baseEd=be; }
+    }
+    items.filter(it=>it.propId===p.id&&it.catF==='B'&&it.fecha).forEach(it=>{
+      const i0=Math.max(0,fxIdx(y,it.fecha)); if(i0>=nd) return;
+      for(let i=i0;i<nd;i++){ if(!s.fac[i]) continue; const c=s.dis[i], tit=it.titular||s.ple[i];
+        if(tit!==c) continue; if(s.ple[i]!==c&&!cfg.mejoraUsuf) continue;
+        P(c,p.id).amMej+=it.imp*0.03/nd*s.fac[i]; }
+    });
+    items.filter(it=>it.propId===p.id&&it.catF==='C'&&it.fecha).forEach(it=>{
+      const i0=Math.max(0,fxIdx(y,it.fecha)); if(i0>=nd) return;
+      for(let i=i0;i<nd;i++){ if(!s.fac[i]) continue;
+        const iso=fxIso(new Date(y,0,1+i)), o=muebleDueno(it,iso);
+        if(!o.c||o.c!==s.dis[i]) continue;
+        if((fxDate(iso)-fxDate(o.desde))>10*365.25*864e5) continue;
+        P(o.c,p.id).amMue+=o.base*0.10/nd*s.fac[i]; }
+    });
+    for(let i=0;i<nd;i++){
+      if(!s.fac[i]) continue; const u=s.usu[i]; if(!u) continue;
+      const bu=baseUsufructo(p,u,items,cfg); if(!bu.base) continue;
+      const r=P(u,p.id); r.baseUsuf=bu;
+      r.amUsufBruta+=(bu.tipo==='usufTemp'&&bu.anyos>0?bu.base/bu.anyos:bu.base*0.03)/nd*s.fac[i];
+    }
+  });
+  Object.values(R).forEach(r=>Object.values(r.props).forEach(x=>{ x.amUsuf=Math.min(x.amUsufBruta, x.ingAlq+x.ingH); }));
+
+  // 6. Imputación de rentas y rendimiento mínimo del art. 24
+  const sumVC={};
+  props.forEach(p=>{ const s=serieAnual(p.id,y), cs=new Set(); for(let i=0;i<nd;i++) if(s.adq[i]&&s.dis[i]&&s.fac[i]<1) cs.add(s.dis[i]); cs.forEach(c=>sumVC[c]=(sumVC[c]||0)+(parseFloat(p.vct)||0)); });
+  props.forEach(p=>{
+    const s=serieAnual(p.id,y), vct=parseFloat(p.vct)||0;
+    const dus=derechosProp(p.id).filter(x=>(x.tipo==='usufVit'||x.tipo==='usufTemp')&&x.gratuitoPariente);
+    for(let i=0;i<nd;i++){
+      if(!s.adq[i]) continue; const c=s.dis[i];
+      if(c&&!p.noSusc){ const fr=1-s.fac[i];
+        if(fr>0){ const o=P(c); const e=o.imput[p.id]=o.imput[p.id]||{dias:0,importe:0,vct,pct:0,sinVC:!vct}; const pc=pctImput(y,p,c,sumVC,cfg); e.dias+=fr; e.pct=pc; e.importe+=vct*pc/100/nd*fr; } }
+      const n=s.nud[i];
+      if(n&&dus.length){ const iso=fxIso(new Date(y,0,1+i));
+        if(dus.some(x=>(!x.desde||x.desde<=iso)&&(!x.hasta||x.hasta>=iso))){
+          const o=P(n); const e=o.art24[p.id]=o.art24[p.id]||{dias:0,importe:0,vct,pct:0,sinVC:!vct}; const pc=pctImput(y,p,n,sumVC,cfg); e.dias+=1; e.pct=pc; e.importe+=vct*pc/100/nd; } }
+    }
+  });
+
+  // 7. Rendimiento neto y reducción por contrato
+  Object.entries(R).forEach(([c,r])=>Object.entries(r.props).forEach(([pid,x])=>{
+    x.ing=x.ingAlq+x.ingH;
+    x.gastosDed=x.E+x.I+x.H+x.dfgAplic+x.arrAplic;
+    x.amort=x.amEd+x.amMej+x.amMue+x.amUsuf;
+    x.neto=x.ing-x.gastosDed-x.amort; x.reduccion=0;
+    if(x.neto>0&&x.ing>0){
+      const p=props.find(z=>z.id==pid), porInq={};
+      (D.pagos||[]).forEach(pg=>{ if(!pg.mes||/fianza/i.test(pg.con||'')) return; if(v2ExigIso(pg.mes,cfg).slice(0,4)!==String(y)) return; const inq=(D.inqs||[]).find(i=>i.id==pg.inqId); if(!inq||inq.propId!=pid) return; porInq[inq.id]=(porInq[inq.id]||0)+(+pg.imp||0); });
+      const totI=Object.values(porInq).reduce((a,b)=>a+b,0)||1;
+      Object.entries(porInq).forEach(([iid,v])=>{
+        const inq=(D.inqs||[]).find(i=>i.id==iid);
+        const co=(D.conts||[]).filter(z=>z.inqId==iid).sort((a,b)=>(b.ini||'').localeCompare(a.ini||''))[0];
+        const pr=pctReduccion(co,inq,p,cfg), parte=x.neto*v/totI, red=parte*pr.pct/100;
+        x.reduccion+=red; x.reds.push({inq,co,pct:pr.pct,motivo:pr.motivo,parte,red});
+      });
+    }
+    x.netoReducido=x.neto-x.reduccion;
+  }));
+  return R;
+}
+
+// ══ CÁLCULO COMPLETO (con arrastre desde el primer ejercicio con datos) ══
+function v2Calc(target){
+  _cacheF={};
+  const cfg=v2cfg(), items=v2Items();
+  let y0=target;
+  (D.props||[]).forEach(p=>{ if(p.fcompra) y0=Math.min(y0,parseInt(p.fcompra.slice(0,4))); });
+  items.forEach(it=>{ if(it.fecha) y0=Math.min(y0,parseInt(it.fecha.slice(0,4))); });
+  y0=Math.max(y0,target-8);
+  const bolsa={}, acum={}; let R={};
+  for(let y=y0;y<=target;y++){
+    R=v2CalcAnyo(y,items,bolsa,cfg);
+    Object.entries(R).forEach(([c,r])=>Object.entries(r.props).forEach(([pid,x])=>{ const k=c+'|'+pid; acum[k]=(acum[k]||0)+x.amEd+x.amMej+x.amMue; }));
+  }
+  return {R,cfg,items,acum,bolsa,y:target};
+}
+
+// ══════════════════════════════════════════════════════════════
+// MOTOR FISCAL v2 · Interfaz
+// ══════════════════════════════════════════════════════════════
+function v2OptsOwners(sel,vacio){ return (vacio?'<option value="">'+vacio+'</option>':'')+(D.propietarios||[]).map(o=>`<option value="${o.id}" ${o.id==sel?'selected':''}>${o.alias||o.nom}</option>`).join(''); }
+function v2OptsProps(sel,vacio){ return (vacio?'<option value="">'+vacio+'</option>':'')+(D.props||[]).map(p=>`<option value="${p.id}" ${p.id==sel?'selected':''}>${p.nom}</option>`).join(''); }
+function v2OptsCtas(sel){ return '<option value="">—</option>'+(D.ctasBanc||[]).map(c=>`<option value="${c.id}" ${c.id==sel?'selected':''}>${c.nom}${c.num?' ·'+c.num:''} (${nombreC(c.titularId)})</option>`).join(''); }
+function v2OptsProvs(sel){ return '<option value="">—</option>'+(D.provisiones||[]).map(p=>`<option value="${p.id}" ${p.id==sel?'selected':''}>${fD(p.fecha)} · ${eur(p.imp)} de ${nombreC(p.aportante)}</option>`).join(''); }
+function v2FindRef(src,id){
+  if(src==='compra') return (D.compras||[]).find(x=>x.id==id);
+  if(src==='gasto') return (D.gastos||[]).find(x=>x.id==id);
+  for(const p of (D.props||[])){ const it=(p.costesAdq||[]).find(x=>x.id==id); if(it) return it; }
+  return null;
+}
+function v2SetCfg(k,v){ D.cfg=D.cfg||{}; D.cfg[k]=v; saveAndSync(); rFiscalV2(); }
+
+// ── Campos de ficha fiscal en el modal de Facturas ──
+function v2FichaReset(){ ['cpf-fpago','cpf-nifemi','cpf-destnom','cpf-destnif','cpf-base','cpf-iva','cpf-pini','cpf-pfin'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  if($i('cpf-catf')) $i('cpf-catf').value='E'; if($i('cpf-tipodoc')) $i('cpf-tipodoc').value='factura'; if($i('cpf-sit')) $i('cpf-sit').value='';
+  if($i('cpf-cta')) $i('cpf-cta').innerHTML=v2OptsCtas(''); if($i('cpf-prov')) $i('cpf-prov').innerHTML=v2OptsProvs(''); }
+function v2FichaLoad(x){ v2FichaReset(); if(!x) return;
+  $i('cpf-catf').value=x.catF||catFDe(x,'compra'); $i('cpf-fpago').value=x.fPago||''; $i('cpf-tipodoc').value=x.tipoDoc||'factura';
+  $i('cpf-nifemi').value=x.nifEmi||''; $i('cpf-destnom').value=x.destNom||''; $i('cpf-destnif').value=x.destNif||'';
+  $i('cpf-cta').innerHTML=v2OptsCtas(x.ctaId); $i('cpf-prov').innerHTML=v2OptsProvs(x.provId);
+  $i('cpf-base').value=x.base||''; $i('cpf-iva').value=x.iva||''; $i('cpf-pini').value=x.pIni||''; $i('cpf-pfin').value=x.pFin||''; $i('cpf-sit').value=x.situacion||''; }
+function v2FichaRead(){ if(!$i('cpf-catf')) return {};
+  const catF=$i('cpf-catf').value;
+  return {catF, catFAuto:false, ded:CATF_DED[catF], fPago:gi('cpf-fpago'), tipoDoc:$i('cpf-tipodoc').value, nifEmi:gi('cpf-nifemi'), destNom:gi('cpf-destnom'), destNif:gi('cpf-destnif'),
+    ctaId:gi('cpf-cta'), provId:gi('cpf-prov'), base:gn('cpf-base'), iva:gn('cpf-iva'), pIni:gi('cpf-pini'), pFin:gi('cpf-pfin'), situacion:$i('cpf-sit').value}; }
+
+// ── Ficha fiscal genérica (Gastos y costes de adquisición) ──
+function v2AbrirFicha(src,id){
+  const x=v2FindRef(src,id); if(!x){ toast('No encontrado',false); return; }
+  let propId=x.propId||''; if(src==='adq'){ const p=(D.props||[]).find(p=>(p.costesAdq||[]).includes(x)); propId=p?p.id:''; }
+  $i('fic-src').value=src; $i('fic-id').value=id;
+  $i('fic-cab').innerHTML=`<strong>${x.con||x.desc||x.concepto||'Gasto'}</strong> · ${eur(+x.imp||0,2)} · ${x.fecha?fD(x.fecha):''}`;
+  $i('fic-prop').innerHTML=v2OptsProps(propId,'— sin inmueble —'); $i('fic-prop').disabled=(src==='adq');
+  $i('fic-tit').innerHTML=v2OptsOwners(x.titular||x.ownerId||'','— elegir —');
+  $i('fic-catf').value=x.catF||catFDe(x,src); $i('fic-hab').value=x.hab||'';
+  $i('fic-fpago').value=x.fPago||''; $i('fic-tipodoc').value=x.tipoDoc||'factura'; $i('fic-nifemi').value=x.nifEmi||'';
+  $i('fic-destnom').value=x.destNom||''; $i('fic-destnif').value=x.destNif||''; $i('fic-cta').innerHTML=v2OptsCtas(x.ctaId);
+  $i('fic-base').value=x.base||''; $i('fic-iva').value=x.iva||''; $i('fic-pini').value=x.pIni||''; $i('fic-pfin').value=x.pFin||'';
+  $i('fic-prov').innerHTML=v2OptsProvs(x.provId); $i('fic-sit').value=x.situacion||'';
+  openM('m-ficha');
+}
+function v2GuardarFicha(){
+  const src=gi('fic-src'), x=v2FindRef(src,gi('fic-id')); if(!x) return;
+  const catF=$i('fic-catf').value;
+  Object.assign(x,{catF,catFAuto:false,titular:gi('fic-tit'),titularAuto:false,hab:gi('fic-hab'),fPago:gi('fic-fpago'),tipoDoc:$i('fic-tipodoc').value,nifEmi:gi('fic-nifemi'),destNom:gi('fic-destnom'),destNif:gi('fic-destnif'),ctaId:gi('fic-cta'),base:gn('fic-base'),iva:gn('fic-iva'),pIni:gi('fic-pini'),pFin:gi('fic-pfin'),provId:gi('fic-prov'),situacion:$i('fic-sit').value});
+  if(src!=='adq') x.propId=gi('fic-prop');
+  if(src==='compra'){ x.ded=CATF_DED[catF]; x.ownerId=x.titular; }
+  if(src==='gasto') x.ded=['J','K'].includes(catF)?'no':'si';
+  saveAndSync(); closeM('m-ficha'); toast('Ficha fiscal guardada');
+  const s=document.querySelector('.sec.on'); if(s){ const k=s.id.replace('sec-',''); if(RENDERS[k]) RENDERS[k](); }
+}
+function v2SetCat(src,id,v){ const x=v2FindRef(src,id); if(!x) return; x.catF=v; x.catFAuto=false; if(src==='compra') x.ded=CATF_DED[v]; if(src==='gasto') x.ded=['J','K'].includes(v)?'no':'si'; saveAndSync(); rFiscalV2(); }
+function v2SetTit(src,id,v){ const x=v2FindRef(src,id); if(!x) return; x.titular=v; x.titularAuto=false; if(src==='compra') x.ownerId=v; saveAndSync(); rFiscalV2(); }
+
+// ── Venta de mobiliario entre contribuyentes ──
+function v2VenderMueble(src,id){
+  const x=v2FindRef(src,id); if(!x) return;
+  const lista=(D.propietarios||[]).map((o,i)=>(i+1)+'. '+(o.alias||o.nom)).join('\n');
+  const n=prompt('¿A quién se vende "'+(x.con||'')+'"?\n\n'+lista+'\n\nEscribe el número:'); if(n===null) return;
+  const o=(D.propietarios||[])[parseInt(n)-1]; if(!o){ toast('Número no válido',false); return; }
+  const fecha=prompt('Fecha de la compraventa (AAAA-MM-DD):', fxIso(new Date())); if(!fecha) return;
+  const precio=parseFloat(prompt('Precio de venta (€):','')); if(!(precio>0)){ toast('Precio no válido',false); return; }
+  x.transferencias=(x.transferencias||[]).concat([{fecha,a:o.id,precio}]);
+  saveAndSync(); rFiscalV2(); toast('Venta registrada: desde '+fD(fecha)+' amortiza '+(o.alias||o.nom)+' sobre '+eur(precio));
+}
+
+// ── Titularidad ──
+function v2DescTipo(t){ return {pleno:'Pleno dominio',nuda:'Nuda propiedad',usufVit:'Usufructo vitalicio',usufTemp:'Usufructo temporal'}[t]||t; }
+function rTitularidad(){
+  const el=$i('tit-lista'); if(!el) return;
+  const hoy=fxIso(new Date());
+  if(!(D.props||[]).length){ el.innerHTML='<div class="empty"><p>Añade propiedades primero</p></div>'; return; }
+  el.innerHTML=(D.props||[]).map(p=>{
+    const ds=derechosProp(p.id).sort((a,b)=>(a.desde||'').localeCompare(b.desde||''));
+    const t=titularidadDia(p.id,hoy);
+    return `<div class="card mb">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;">🏢 ${p.nom}</div>
+        <div style="font-size:11px;color:var(--ink3);">${p.refCat?'Ref. '+p.refCat:'⚠️ sin referencia catastral'}</div></div>
+        <div style="text-align:right;font-size:11.5px;">Hoy cobra las rentas: <strong style="color:var(--gn);">${nombreC(t.disfrute)}</strong>${t.nuda?'<br><span style="color:var(--ink3);">Nuda propiedad: '+nombreC(t.nuda.ownerId)+'</span>':''}</div>
+      </div>
+      ${ds.length?`<div class="tbl-wrap"><table><thead><tr><th>Titular</th><th>Derecho</th><th>Desde</th><th>Hasta</th><th>%</th><th></th></tr></thead><tbody>
+        ${ds.map(d=>`<tr><td style="font-weight:600;">${nombreC(d.ownerId)}</td><td>${v2DescTipo(d.tipo)}${d.gratuitoPariente?' <span class="badge badge-y" style="font-size:8px;">art. 24</span>':''}${d.pctUsuf?' <span style="font-size:10px;color:var(--ink3);">('+d.pctUsuf+'% valor)</span>':''}</td>
+          <td class="mono">${d.desde?fD(d.desde):'—'}</td><td class="mono">${d.hasta?fD(d.hasta):'vigente'}</td><td class="mono">${d.pct||100}</td>
+          <td style="white-space:nowrap;"><button class="btn btn-secondary btn-xs" onclick="v2EditDerecho('${d.id}')">✏️</button> <button class="btn btn-danger btn-xs" onclick="v2BorrarDerecho('${d.id}')">🗑</button></td></tr>`).join('')}
+      </tbody></table></div>`:`<div style="font-size:12px;color:var(--ink3);">Sin periodos registrados: se considera pleno dominio de ${nombreC(p.ownerId)} desde ${p.fcompra?fD(p.fcompra):'la compra'}.</div>`}
+    </div>`;
+  }).join('');
+}
+function v2NuevoDerecho(){ $i('dr-id').value=''; $i('dr-prop').innerHTML=v2OptsProps(''); $i('dr-owner').innerHTML=v2OptsOwners(''); $i('dr-tipo').value='pleno'; $i('dr-pct').value=100; $i('dr-desde').value=''; $i('dr-hasta').value=''; openM('m-derecho'); }
+function v2EditDerecho(id){ const d=(D.derechos||[]).find(x=>x.id==id); if(!d) return; $i('dr-id').value=d.id; $i('dr-prop').innerHTML=v2OptsProps(d.propId); $i('dr-owner').innerHTML=v2OptsOwners(d.ownerId); $i('dr-tipo').value=d.tipo; $i('dr-pct').value=d.pct||100; $i('dr-desde').value=d.desde||''; $i('dr-hasta').value=d.hasta||''; openM('m-derecho'); }
+function v2GuardarDerecho(){
+  const o={propId:gi('dr-prop'),ownerId:gi('dr-owner'),tipo:$i('dr-tipo').value,pct:gn('dr-pct')||100,desde:gi('dr-desde'),hasta:gi('dr-hasta')};
+  if(!o.propId||!o.ownerId){ toast('Elige inmueble y titular',false); return; }
+  if(o.hasta&&o.desde&&o.hasta<o.desde){ toast('La fecha final es anterior a la inicial',false); return; }
+  const id=gi('dr-id'); if(id){ const d=D.derechos.find(x=>x.id==id); if(d) Object.assign(d,o); } else D.derechos.push(Object.assign({id:uid()},o));
+  saveAndSync(); closeM('m-derecho'); rTitularidad(); toast('Periodo guardado');
+}
+function v2BorrarDerecho(id){ if(!confirm('¿Eliminar este periodo de titularidad?')) return; D.derechos=D.derechos.filter(x=>x.id!=id); saveAndSync(); rTitularidad(); }
+
+function v2NuevoUsufructo(){
+  $i('us-prop').innerHTML=v2OptsProps(''); $i('us-nudo').innerHTML=v2OptsOwners(''); $i('us-usuf').innerHTML=v2OptsOwners('');
+  $i('us-fecha').value=fxIso(new Date()); $i('us-tipo').value='usufVit'; ['us-anyos','us-fnac','us-pct','us-valor','us-notas'].forEach(i=>$i(i).value='');
+  $i('us-grat').checked=true; v2UsufPrefill(); openM('m-usuf');
+}
+function v2UsufPrefill(){ const p=(D.props||[]).find(x=>x.id==gi('us-prop')); if(!p) return; const t=titularidadDia(p.id,gi('us-fecha')||fxIso(new Date())); $i('us-nudo').value=(t.pleno&&t.pleno.ownerId)||p.ownerId||''; if(!gi('us-valor')&&p.tasacion) $i('us-valor').value=p.tasacion; }
+function v2UsufPct(){
+  // Art. 26.a Ley 29/1987 (ISD): temporal 2% por año (máx. 70%); vitalicio 70% hasta 19 años, −1% por año, mínimo 10%
+  const info=$i('us-pct-info'); let pct=null, txt='';
+  if($i('us-tipo').value==='usufTemp'){ const a=gn('us-anyos'); if(a>0){ pct=Math.min(70,2*a); txt='2% × '+a+' años (máx. 70%)'; } }
+  else { const e=edadEn(gi('us-fnac'), gi('us-fecha')||fxIso(new Date())); if(e!==null){ pct=Math.max(10,Math.min(70,89-e)); txt='89 − '+e+' años = '+(89-e)+'% (límites 10%–70%)'; } }
+  if(pct!==null){ $i('us-pct').value=pct; info.textContent=txt+' · art. 26.a Ley del ISD'; } else info.textContent='';
+}
+function v2GuardarUsufructo(){
+  const pid=gi('us-prop'), f=gi('us-fecha'), nudo=gi('us-nudo'), us=gi('us-usuf'), tipo=$i('us-tipo').value;
+  if(!pid||!f||!nudo||!us){ toast('Completa inmueble, fecha, nudo propietario y usufructuario',false); return; }
+  if(nudo===us){ toast('El nudo propietario y el usufructuario no pueden ser la misma persona',false); return; }
+  const p=(D.props||[]).find(x=>x.id==pid), antes=fxAdd(f,-1);
+  if(derechosProp(pid).some(d=>(d.tipo==='usufVit'||d.tipo==='usufTemp')&&(!d.hasta||d.hasta>=f))){ toast('Ya hay un usufructo vigente en esa fecha',false); return; }
+  let pl=derechosProp(pid).find(d=>d.tipo==='pleno'&&d.ownerId==nudo&&(!d.desde||d.desde<=f)&&(!d.hasta||d.hasta>=f));
+  if(pl) pl.hasta=antes; else D.derechos.push({id:uid(),propId:pid,ownerId:nudo,tipo:'pleno',pct:100,desde:p.fcompra||'',hasta:antes,auto:true});
+  const anyos=gn('us-anyos'); let hasta='';
+  if(tipo==='usufTemp'&&anyos>0){ const d=fxDate(f); d.setFullYear(d.getFullYear()+anyos); d.setDate(d.getDate()-1); hasta=fxIso(d); }
+  D.derechos.push({id:uid(),propId:pid,ownerId:nudo,tipo:'nuda',pct:100,desde:f,hasta});
+  D.derechos.push({id:uid(),propId:pid,ownerId:us,tipo,pct:100,desde:f,hasta,anyos,pctUsuf:gn('us-pct'),valorDecl:gn('us-valor'),fnacUsuf:gi('us-fnac'),gratuitoPariente:$i('us-grat').checked,notas:gi('us-notas')});
+  p.usufructoId=us;
+  saveAndSync(); closeM('m-usuf'); rTitularidad();
+  toast('✓ Usufructo registrado desde el '+fD(f));
+}
+
+// ── Dividir inmueble ──
+function v2AbrirSplit(){ $i('sp-prop').innerHTML=v2OptsProps(''); ['sp-nom','sp-precio','sp-refcat','sp-vct','sp-vcc'].forEach(i=>$i(i).value=''); $i('sp-prev').innerHTML=''; openM('m-split'); }
+function v2SplitPrev(){ const p=(D.props||[]).find(x=>x.id==gi('sp-prop')), pr=gn('sp-precio'), el=$i('sp-prev'); if(!p||!pr){ el.innerHTML=''; return; }
+  const tot=parseFloat(p.precio)||0; if(!tot||pr>=tot){ el.innerHTML='<span style="color:var(--rd);">El precio de la parte debe ser menor que el del inmueble ('+eur(tot)+').</span>'; return; }
+  const r=pr/tot; el.innerHTML=`Reparto: <strong>${(100-r*100).toFixed(2)}%</strong> se queda en ${p.nom} (${eur(tot-pr)}) y <strong>${(r*100).toFixed(2)}%</strong> pasa a la nueva parte (${eur(pr)}). Los gastos de adquisición se repartirán en esa proporción.`; }
+function v2HacerSplit(){
+  const p=(D.props||[]).find(x=>x.id==gi('sp-prop')), nom=gi('sp-nom'), pr=gn('sp-precio');
+  if(!p||!nom||!pr){ toast('Completa inmueble, nombre y precio',false); return; }
+  const tot=parseFloat(p.precio)||0; if(!tot||pr>=tot){ toast('Precio de la parte no válido',false); return; }
+  const r=pr/tot, r2=v=>Math.round(v*100)/100;
+  const np={id:uid(),nom,ownerId:p.ownerId,dir:p.dir,ciu:p.ciu,cp:p.cp,ccaaManual:p.ccaaManual,habs:0,precio:pr,fcompra:p.fcompra,anyo:p.anyo,refCat:gi('sp-refcat'),vct:gn('sp-vct'),vcc:gn('sp-vcc'),docs:{},costesAdq:[]};
+  (p.costesAdq||[]).forEach(it=>{ const parte=r2((+it.imp||0)*r); np.costesAdq.push(Object.assign({},it,{id:uid(),imp:parte,concepto:(it.concepto||'')+' (parte '+(r*100).toFixed(2)+'%)'})); it.imp=r2((+it.imp||0)-parte); });
+  (D.compras||[]).filter(x=>x.propId==p.id&&catFDe(x,'compra')==='A').forEach(x=>{ const parte=r2((+x.imp||0)*r); D.compras.push(Object.assign({},x,{id:uid(),imp:parte,propId:np.id,con:(x.con||'')+' (parte '+(r*100).toFixed(2)+'%)'})); x.imp=r2((+x.imp||0)-parte); });
+  derechosProp(p.id).forEach(d=>D.derechos.push(Object.assign({},d,{id:uid(),propId:np.id})));
+  p.precio=r2(tot-pr); D.props.push(np);
+  saveAndSync(); closeM('m-split'); rTitularidad(); toast('✓ '+nom+' creado como inmueble independiente');
+}
+
+// ── Cuentas y tarjetas ──
+function v2NuevaCta(){ $i('cb-id').value=''; ['cb-nom','cb-banco','cb-num','cb-notas'].forEach(i=>$i(i).value=''); $i('cb-tipo').value='cuenta'; $i('cb-tit').innerHTML=v2OptsOwners('','— elegir —'); openM('m-ctab'); }
+function v2EditCta(id){ const c=(D.ctasBanc||[]).find(x=>x.id==id); if(!c) return; $i('cb-id').value=c.id; $i('cb-nom').value=c.nom||''; $i('cb-banco').value=c.banco||''; $i('cb-num').value=c.num||''; $i('cb-notas').value=c.notas||''; $i('cb-tipo').value=c.tipo||'cuenta'; $i('cb-tit').innerHTML=v2OptsOwners(c.titularId,'— elegir —'); openM('m-ctab'); }
+function v2GuardarCta(){ const o={nom:gi('cb-nom'),tipo:$i('cb-tipo').value,banco:gi('cb-banco'),num:gi('cb-num'),titularId:gi('cb-tit'),notas:gi('cb-notas')};
+  if(!o.nom||!o.titularId){ toast('Indica nombre y titular',false); return; }
+  const id=gi('cb-id'); if(id){ Object.assign(D.ctasBanc.find(x=>x.id==id),o); } else D.ctasBanc.push(Object.assign({id:uid()},o));
+  saveAndSync(); closeM('m-ctab'); rCtasBanc(); }
+function rCtasBanc(){
+  const el=$i('ctab-lista'); if(!el) return; const items=v2Items();
+  if(!(D.ctasBanc||[]).length){ el.innerHTML='<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">💳</div><p>Añade las cuentas y tarjetas desde las que se pagan los gastos</p></div>'; return; }
+  el.innerHTML=(D.ctasBanc||[]).map(c=>{
+    const its=items.filter(it=>it.ctaId==c.id), tot=its.reduce((s,it)=>s+it.imp,0);
+    const mal=its.filter(it=>it.titular&&c.titularId&&it.titular!==c.titularId&&!it.provId);
+    return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;">
+      <div><div style="font-size:14px;font-weight:700;">${c.tipo==='tarjeta'?'💳':'🏦'} ${c.nom}${c.num?' ·'+c.num:''}</div><div style="font-size:11px;color:var(--ink3);">${c.banco||''} · titular <strong>${nombreC(c.titularId)}</strong></div></div>
+      <div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="v2EditCta('${c.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="if(confirm('¿Eliminar?')){D.ctasBanc=D.ctasBanc.filter(x=>x.id!='${c.id}');saveAndSync();rCtasBanc();}">🗑</button></div></div>
+      <div style="font-size:12px;margin-top:8px;">${its.length} gasto(s) pagados · ${eur(tot)}</div>
+      ${mal.length?`<div class="alert alert-r" style="margin-top:8px;font-size:11px;">⚠️ ${mal.length} gasto(s) de otro titular pagados desde esta cuenta sin provisión de fondos.</div>`:''}</div>`;
+  }).join('');
+}
+
+// ── Provisiones de fondos ──
+function v2NuevaProv(){ $i('pv-id').value=''; $i('pv-apor').innerHTML=v2OptsOwners('','— elegir —'); $i('pv-gest').innerHTML=v2OptsOwners('','— elegir —'); $i('pv-cta').innerHTML=v2OptsCtas(''); $i('pv-fecha').value=fxIso(new Date()); $i('pv-imp').value=''; $i('pv-notas').value=''; openM('m-prov'); }
+function v2EditProv(id){ const p=(D.provisiones||[]).find(x=>x.id==id); if(!p) return; $i('pv-id').value=p.id; $i('pv-apor').innerHTML=v2OptsOwners(p.aportante,'— elegir —'); $i('pv-gest').innerHTML=v2OptsOwners(p.gestor,'— elegir —'); $i('pv-cta').innerHTML=v2OptsCtas(p.ctaId); $i('pv-fecha').value=p.fecha||''; $i('pv-imp').value=p.imp||''; $i('pv-notas').value=p.notas||''; openM('m-prov'); }
+function v2GuardarProv(){ const o={aportante:gi('pv-apor'),gestor:gi('pv-gest'),fecha:gi('pv-fecha'),imp:gn('pv-imp'),ctaId:gi('pv-cta'),notas:gi('pv-notas')};
+  if(!o.aportante||!o.fecha||!o.imp){ toast('Completa quién aporta, fecha e importe',false); return; }
+  const id=gi('pv-id'); if(id){ Object.assign(D.provisiones.find(x=>x.id==id),o); } else D.provisiones.push(Object.assign({id:uid()},o));
+  saveAndSync(); closeM('m-prov'); rProvisiones(); }
+function rProvisiones(){
+  const el=$i('prov-lista'); if(!el) return; const items=v2Items();
+  if(!(D.provisiones||[]).length){ el.innerHTML='<div class="empty"><div class="empty-icon">🔁</div><p>Sin provisiones de fondos registradas</p></div>'; return; }
+  el.innerHTML=(D.provisiones||[]).map(pv=>{
+    const its=items.filter(it=>it.provId==pv.id), usado=its.reduce((s,it)=>s+it.imp,0), saldo=(+pv.imp||0)-usado;
+    return `<div class="card mb"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <div><div style="font-size:14px;font-weight:700;">${nombreC(pv.aportante)} → ${pv.gestor?nombreC(pv.gestor):'gestor'}</div><div style="font-size:11px;color:var(--ink3);">${fD(pv.fecha)} · ${pv.notas||''}</div></div>
+      <div style="text-align:right;"><div class="mono" style="font-weight:700;">${eur(pv.imp,2)}</div><div style="font-size:11px;color:${Math.abs(saldo)<0.5?'var(--gn)':'var(--ye)'};">${Math.abs(saldo)<0.5?'✓ Justificada al euro':'Saldo sin justificar: '+eur(saldo,2)}</div></div></div>
+      ${its.length?`<div class="tbl-wrap" style="margin-top:8px;"><table><tbody>${its.map(it=>`<tr><td style="font-size:11px;">${fD(it.fecha)}</td><td style="font-size:11.5px;">${it.con}</td><td class="mono" style="text-align:right;">${eur(it.imp,2)}</td></tr>`).join('')}</tbody></table></div>`:''}
+      <div style="display:flex;gap:6px;margin-top:8px;"><button class="btn btn-secondary btn-xs" onclick="v2EditProv('${pv.id}')">✏️ Editar</button><button class="btn btn-danger btn-xs" onclick="if(confirm('¿Eliminar?')){D.provisiones=D.provisiones.filter(x=>x.id!='${pv.id}');saveAndSync();rProvisiones();}">🗑</button></div></div>`;
+  }).join('');
+}
+
+
+function v2ChequeoTemporal(co, excluirId){
+  const out=[]; if(!co||co.tipoContrato!=='temporal') return out;
+  const cfg=v2cfg(), inq=(D.inqs||[]).find(i=>i.id==co.inqId), nm=inq?((inq.nom||'')+' '+(inq.ap||'')).trim():'Contrato';
+  if(!co.causa) out.push({n:'error',t:nm+': contrato temporal sin causa expresa → se considera de vivienda habitual (art. 3 LAU, RDL 29/2026).'});
+  if(!co.vivHab) out.push({n:'aviso',t:nm+': indica la vivienda habitual de la que se desplaza el inquilino (acredita la temporalidad).'});
+  if(co.ini&&co.fin){
+    const dias=Math.round((fxDate(co.fin)-fxDate(co.ini))/864e5)+1;
+    const max=fxDate(co.ini); max.setFullYear(max.getFullYear()+1); max.setDate(max.getDate()-1);
+    if(dias<=31) out.push({n:'error',t:nm+': '+dias+' días. El temporal debe superar 31 días.'});
+    if(fxDate(co.fin)>max&&!co.causaSubsiste) out.push({n:'error',t:nm+': '+dias+' días. Más de 12 meses sin justificar → arrendamiento habitual desde el inicio.'});
+  } else out.push({n:'aviso',t:nm+': contrato temporal sin fecha de fin.'});
+  // Más de dos contratos consecutivos entre las mismas partes sobre la misma vivienda
+  const mismos=(D.conts||[]).filter(x=>x.id!==excluirId&&x.inqId==co.inqId&&x.propId==co.propId).concat([co]).filter(x=>x.ini).sort((a,b)=>a.ini.localeCompare(b.ini));
+  let cad=1, maxCad=1;
+  for(let i=1;i<mismos.length;i++){ const prevFin=mismos[i-1].fin; if(prevFin&&fxDate(mismos[i].ini)<=fxDate(fxAdd(prevFin,31))){ cad++; maxCad=Math.max(maxCad,cad); } else cad=1; }
+  if(maxCad>2) out.push({n:'error',t:nm+': '+maxCad+' contratos consecutivos en la misma vivienda → arrendamiento habitual desde el primero.'});
+  else if(maxCad===2) out.push({n:'aviso',t:nm+': ya hay 2 contratos consecutivos; un tercero convertiría la relación en habitual.'});
+  // Subida de renta entre contratos temporales sucesivos sobre la misma vivienda (límite IRAV)
+  const ant=(D.conts||[]).filter(x=>x.id!==excluirId&&x.id!==co.id&&x.tipoContrato==='temporal'&&x.propId==co.propId&&String(x.hab||'')===String(co.hab||'')&&x.ini&&co.ini&&x.ini<co.ini).sort((a,b)=>b.ini.localeCompare(a.ini))[0];
+  if(ant&&parseFloat(ant.r)>0&&parseFloat(co.r)>0){
+    const inc=(parseFloat(co.r)/parseFloat(ant.r)-1)*100;
+    if(!cfg.irav) { if(inc>0) out.push({n:'aviso',t:nm+': renta '+inc.toFixed(2)+'% superior al contrato temporal anterior de la misma vivienda. Introduce el IRAV vigente en Criterios para comprobar el límite.'}); }
+    else if(inc>cfg.irav+0.001) out.push({n:'error',t:nm+': la renta sube un '+inc.toFixed(2)+'% sobre el contrato temporal anterior; el límite es el IRAV ('+cfg.irav+'%).'});
+  }
+  return out;
+}
+
+// ── Validaciones ──
+function v2Validaciones(y,calc){
+  const v=[], add=(n,t)=>v.push({n,t}), cfg=calc.cfg;
+  if(!cfg.rdl29) add('aviso','Configurado como NO convalidado el RDL 29/2026: se aplican la reducción de la Ley 12/2023 y la imputación general del art. 85.');
+  (D.conts||[]).forEach(co=>v2ChequeoTemporal(co,null).forEach(x=>add(x.n,x.t)));
+  (D.props||[]).forEach(p=>{
+    if(!p.refCat) add('error',p.nom+': falta la referencia catastral.');
+    if(!(parseFloat(p.vct)>0)) add('error',p.nom+': falta el valor catastral total (recibo del IBI): no se puede calcular la imputación de rentas.');
+    const pc=pctConstr(p);
+    if(!pc.ok) add(pc.pct>0?'aviso':'error',p.nom+': % de construcción '+(pc.pct>0?'provisional ('+pc.fuente+', '+(pc.pct*100).toFixed(2)+'%)':'sin datos (no se amortiza)')+'. Criterio legal: VC construcción ÷ VC total.');
+    if(pc.pct>1) add('error',p.nom+': el % de construcción supera el 100%.');
+    if(!p.revCat) add('aviso',p.nom+': sin año de revisión catastral → se aplica el 2% de imputación (conservador).');
+    if(!p.fcompra) add('error',p.nom+': falta la fecha de escritura.');
+    if(/igual/.test(pesosHabs(p).metodo)&&(parseInt(p.habs)||0)>1) add('aviso',p.nom+': faltan m² de alguna habitación → reparto por número de habitaciones.');
+    if(p.usufructoId&&!derechosProp(p.id).some(d=>d.tipo==='usufVit'||d.tipo==='usufTemp')) add('error',p.nom+': tiene usufructuario marcado pero sin fecha de escritura. Regístralo en 📜 Titularidad.');
+    if(derechosProp(p.id).some(d=>(d.pct||100)<100)) add('aviso',p.nom+': hay copropiedad (<100%). El cálculo asigna el 100% a cada titular: revísalo con el gestor.');
+    if(parseFloat(p.rentaUnit)>0){ const sum=(D.inqs||[]).filter(i=>i.estado==='ACTIVO'&&i.propId==p.id).reduce((s,i)=>s+(+i.alq||0),0); if(sum>parseFloat(p.rentaUnit)) add('aviso',p.nom+': la suma de rentas de habitaciones ('+eur(sum)+') supera la renta de referencia de la vivienda completa ('+eur(p.rentaUnit)+'). Límite general del art. 3 del RDL 29/2026; en zonas tensionadas se añaden los límites del art. 17.6-8 LAU.'); }
+    const itp=calc.items.filter(it=>it.propId===p.id&&/\bitp\b|transmisiones patrimoniales/i.test(it.con));
+    if(itp.length&&parseFloat(p.precio)>0){ const s=itp.reduce((a,b)=>a+b.imp,0), esp=parseFloat(p.precio)*cfg.itpTipo/100; if(Math.abs(s-esp)>esp*0.01) add('aviso',p.nom+': ITP registrado '+eur(s)+' ≠ precio × '+cfg.itpTipo+'% ('+eur(esp)+'). Compruébalo en el modelo 600.'); }
+  });
+  calc.items.forEach(it=>{
+    const yy=parseInt((it.fecha||'').slice(0,4)); if(yy&&yy!==y&&!['A','B','C','K'].includes(it.catF)) return;
+    const nm='«'+(it.con||'gasto')+'» ('+eur(it.imp)+')';
+    if(!it.propId&&it.catF!=='J') add('error',nm+': sin inmueble asignado — no computa.');
+    if(it.tipoDoc==='ticket') add('aviso',nm+': ticket en lugar de factura completa.');
+    if(it.ref&&it.ref.catFAuto) add('aviso',nm+': clasificado automáticamente como '+it.catF+' — revísalo.');
+    if(it.ref&&it.ref.titularAuto) add('aviso',nm+': titular asignado automáticamente — revísalo.');
+    if(it.propId&&!it.titular&&it.catF!=='J') add('aviso',nm+': sin titular económico; se atribuye a quien cobra las rentas.');
+    if(['E','F','I'].includes(it.catF)&&!(it.pIni&&it.pFin)&&yy===y) add('aviso',nm+': sin periodo facturado; se estima.');
+    if(it.ctaId&&it.titular){ const ct=(D.ctasBanc||[]).find(x=>x.id==it.ctaId); if(ct&&ct.titularId&&ct.titularId!==it.titular&&!it.provId) add('error',nm+': pagado desde una cuenta de '+nombreC(ct.titularId)+' pero el titular es '+nombreC(it.titular)+'.'); }
+    if(it.propId&&it.fecha&&it.titular&&['D','E','F','G','I'].includes(it.catF)){ const t=titularidadDia(it.propId,it.fecha); if(t.nuda&&t.nuda.ownerId===it.titular) add('error',nm+': gasto de '+nombreC(it.titular)+' en periodo de nuda propiedad — no deducible.'); }
+  });
+  (D.provisiones||[]).forEach(pv=>{ const s=saldoProvision(pv); if(Math.abs(s)>0.5) add('aviso','Provisión de '+nombreC(pv.aportante)+' del '+fD(pv.fecha)+': '+(s>0?'saldo sin justificar ':'gastos por encima de lo aportado ')+eur(Math.abs(s),2)+'.'); });
+  (D.inqs||[]).filter(i=>i.estado==='ACTIVO').forEach(i=>{ const co=(D.conts||[]).filter(z=>z.inqId==i.id).sort((a,b)=>(b.ini||'').localeCompare(a.ini||''))[0];
+    if(!co) add('aviso',(i.nom||'')+' '+(i.ap||'')+': sin contrato registrado → sin reducción.');
+    else if(!co.tipoContrato) add('aviso',(i.nom||'')+': contrato sin tipo → sin reducción.');
+  });
+  const pend=(D.pagos||[]).filter(pg=>pg.estado!=='pagado'&&pg.mes&&v2ExigIso(pg.mes,cfg).slice(0,4)===String(y)).length;
+  if(pend) add('aviso',pend+' cobro(s) pendientes cuentan como ingreso (devengo, art. 14 LIRPF). Si alguno no es exigible, elimínalo.');
+  if((D.derechos||[]).some(d=>d.tipo==='usufVit'||d.tipo==='usufTemp')) add('aviso','Base de amortización del usufructo: criterio «'+(cfg.usufCriterio==='dgt'?'DGT V1973-20 (solo ISD y gastos pagados)':'Manual AEAT (valor a efectos del ISD)')+'». Hay criterios oficiales distintos: decídelo con el gestor.');
+  if(y>=2027) add('aviso','Imputación 2027+: los tramos de la escala (1,1/1,5/2/3%) están configurados con valores provisionales. Verifícalos en el art. 85 LIRPF redactado por el RDL 29/2026.');
+  return v;
+}
+
+// ══ PANEL FISCAL v2 ══
+function rFiscalV2(){
+  const box=$i('fi-v2'); if(!box) return;
+  const yS=$i('fy'), hoyY=new Date().getFullYear();
+  if(yS){ const v=yS.value; const ys=[]; for(let a=hoyY+1;a>=hoyY-4;a--) ys.push(a); yS.innerHTML=ys.map(a=>`<option ${String(a)===v||(!v&&a===hoyY)?'selected':''}>${a}</option>`).join(''); }
+  const y=parseInt(yS&&yS.value)||hoyY, own=gi('fi-owner');
+  const calc=v2Calc(y), R=calc.R, vals=v2Validaciones(y,calc);
+  const nE=vals.filter(v=>v.n==='error').length, nA=vals.length-nE;
+  const cs=(own?[own]:Object.keys(R)).filter(c=>c&&c!=='_'&&(D.propietarios||[]).some(o=>o.id==c));
+  const e2=n=>eur(n,2), fila=(k,v,col,neg)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--line);font-size:12px;"><span style="color:var(--ink2);">${k}</span><span class="mono" style="font-weight:600;${col?'color:'+col+';':''}white-space:nowrap;">${neg?'− ':''}${v}</span></div>`;
+  let html=`<div class="card mb" style="border-left:4px solid ${nE?'var(--rd)':'var(--gn)'};">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;cursor:pointer;" onclick="const e=$i('v2-vals');e.style.display=e.style.display==='none'?'block':'none';">
+      <div><div class="card-title" style="margin:0;">Motor fiscal v2 · Ejercicio ${y}</div><div style="font-size:11px;color:var(--ink3);">Cálculo día a día por titularidad, ocupación por m² y devengo</div></div>
+      <div style="display:flex;gap:8px;"><span class="badge ${nE?'badge-r':'badge-g'}">${nE} error(es)</span><span class="badge badge-y">${nA} aviso(s)</span><span style="font-size:11px;color:var(--ink3);">▼</span></div></div>
+    <div id="v2-vals" style="display:${nE?'block':'none'};margin-top:10px;max-height:320px;overflow:auto;">${vals.map(v=>`<div style="font-size:11.5px;padding:5px 0;border-bottom:1px solid var(--line);color:${v.n==='error'?'var(--rd)':'var(--ink2)'};">${v.n==='error'?'⛔':'⚠️'} ${v.t}</div>`).join('')}</div></div>`;
+
+  if(!cs.length) html+='<div class="empty"><div class="empty-icon">💶</div><p>Sin rendimientos ni imputaciones para este ejercicio. Revisa propietarios, titularidad e inmuebles.</p></div>';
+  cs.forEach(c=>{
+    const r=R[c]||{props:{},imput:{},art24:{},noDed:[]};
+    let totRend=0, totImp=0, totA24=0;
+    html+=`<div class="card mb"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;">👤 ${nombreC(c)}</div><div style="font-size:11px;color:var(--ink3);">${nifC(c)?'NIF '+nifC(c):'⚠️ sin NIF en Propietarios'}</div></div>`;
+    Object.entries(r.props).forEach(([pid,x])=>{
+      const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; totRend+=x.netoReducido;
+      html+=`<div style="background:var(--bg);border-radius:var(--r2);padding:14px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px;"><strong>🏢 ${p.nom}</strong><span style="font-size:11px;color:var(--ink3);">${x.diasEq.toFixed(1)} días equivalentes arrendados</span></div>
+        ${fila('Ingresos íntegros (alquiler)',e2(x.ingAlq),'var(--gn)')}
+        ${x.ingH?fila('Suministros repercutidos',e2(x.ingH),'var(--gn)'):''}
+        ${x.E?fila('Gastos anuales prorrateados (E)',e2(x.E),'var(--rd)',1):''}
+        ${x.I?fila('Servicios (I)',e2(x.I),'var(--rd)',1):''}
+        ${x.H?fila('Suministros repercutidos, gasto (H)',e2(x.H),'var(--rd)',1):''}
+        ${(x.dfg||x.arrAplic)?fila('Intereses + formalización + reparación: '+e2(x.dfg)+' del año · límite '+e2(x.ing),e2(x.dfgAplic+x.arrAplic),'var(--rd)',1):''}
+        ${x.exceso>0.005?fila('↪ Exceso a deducir en los 4 años siguientes',e2(x.exceso),'var(--ye)'):''}
+        ${x.amEd?fila('Amortización inmueble 3% · base '+e2(x.baseEd.base)+' ('+(x.baseEd.pct*100).toFixed(2)+'% construcción, '+x.baseEd.fuente+')',e2(x.amEd),'var(--rd)',1):''}
+        ${x.amMej?fila('Amortización mejoras 3%',e2(x.amMej),'var(--rd)',1):''}
+        ${x.amMue?fila('Amortización mobiliario 10%',e2(x.amMue),'var(--rd)',1):''}
+        ${x.amUsufBruta?fila('Amortización del usufructo · base '+e2(x.baseUsuf.base)+(x.amUsuf<x.amUsufBruta?' (limitada a los ingresos)':''),e2(x.amUsuf),'var(--rd)',1):''}
+        <div style="display:flex;justify-content:space-between;padding:7px 0;font-weight:700;"><span>Rendimiento neto</span><span class="mono" style="color:${x.neto>=0?'var(--gn)':'var(--rd)'};">${e2(x.neto)}</span></div>
+        ${x.reds.map(rd=>fila('Reducción '+rd.pct+'% · '+(rd.inq?(rd.inq.nom||''):'')+' · '+rd.motivo,e2(rd.red),'var(--bl)',1)).join('')}
+        ${x.reduccion?`<div style="display:flex;justify-content:space-between;padding:7px 0;font-weight:800;"><span>Rendimiento neto reducido</span><span class="mono">${e2(x.netoReducido)}</span></div>`:''}
+        ${(x.bolsaPend||[]).length?`<div style="font-size:10.5px;color:var(--ye);margin-top:4px;">Pendiente de deducir: ${x.bolsaPend.map(b=>e2(b.resto)+' de '+b.anyo+' (hasta '+b.caduca+')').join(' · ')}</div>`:''}
+      </div>`;
+    });
+    Object.keys(calc.bolsa).filter(k=>k.startsWith(c+'|')&&!r.props[k.split('|')[1]]&&calc.bolsa[k].length).forEach(k=>{
+      const p=(D.props||[]).find(z=>z.id==k.split('|')[1])||{nom:'?'};
+      html+=`<div style="font-size:11.5px;color:var(--ye);margin-bottom:8px;">↪ ${p.nom}: pendiente de deducir ${calc.bolsa[k].map(b=>e2(b.resto)+' de '+b.anyo+' (hasta '+(b.anyo+4)+')').join(' · ')}</div>`;
+    });
+    const im=Object.entries(r.imput), a24=Object.entries(r.art24);
+    if(im.length){ html+=`<div style="margin:6px 0 4px;font-size:12px;font-weight:700;">Imputación de rentas inmobiliarias (art. 85 LIRPF)</div>`;
+      im.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; totImp+=e.importe; html+=fila(p.nom+' · '+e.dias.toFixed(1)+' días no arrendados × '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'⚠️ sin VC':e2(e.vct)),e2(e.importe)); }); }
+    if(a24.length){ html+=`<div style="margin:10px 0 4px;font-size:12px;font-weight:700;">Rendimiento mínimo por constitución gratuita de usufructo (art. 24 LIRPF)</div>`;
+      a24.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; totA24+=e.importe; html+=fila(p.nom+' · '+e.dias+' días de nuda propiedad × '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'⚠️ sin VC':e2(e.vct)),e2(e.importe)); }); }
+    html+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+      <div class="kpi" style="--kc:var(--gn);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Rend. capital inmobiliario</div><div class="kpi-value" style="font-size:18px;">${e2(totRend)}</div></div>
+      <div class="kpi" style="--kc:var(--bl);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Imputación de rentas</div><div class="kpi-value" style="font-size:18px;">${e2(totImp)}</div></div>
+      ${totA24?`<div class="kpi" style="--kc:var(--ye);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Rend. mínimo art. 24</div><div class="kpi-value" style="font-size:18px;">${e2(totA24)}</div></div>`:''}
+    </div>
+    <div style="font-size:10.5px;color:var(--ink3);margin-top:8px;">No se muestra cuota estimada: el tipo efectivo depende del resto de rentas del contribuyente.</div>`;
+    if(r.noDed.length){ const tot=r.noDed.reduce((s,n)=>s+n.imp,0);
+      html+=`<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;">Gastos no deducibles: ${e2(tot)} (${r.noDed.length})</summary>
+        <div class="tbl-wrap" style="margin-top:6px;"><table><tbody>${r.noDed.map(n=>`<tr><td style="font-size:11px;">${n.it.con}</td><td style="font-size:10.5px;color:var(--ink3);">${n.motivo}</td><td class="mono" style="text-align:right;">${e2(n.imp)}</td></tr>`).join('')}</tbody></table></div></details>`; }
+    html+='</div>';
+  });
+
+  // Revisión de clasificación
+  const its=calc.items.filter(it=>(it.fecha||'').startsWith(String(y))||['A','B','C','K'].includes(it.catF));
+  const opC=v=>Object.keys(CATF).map(k=>`<option value="${k}" ${k===v?'selected':''}>${k} · ${CATF[k]}</option>`).join('');
+  html+=`<details class="card mb"><summary style="cursor:pointer;font-weight:700;">🗂 Revisión de clasificación y titular (${its.length} gastos)</summary>
+    <div class="tbl-wrap" style="margin-top:10px;"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Inmueble</th><th class="n">Importe</th><th>Categoría</th><th>Titular</th><th></th></tr></thead><tbody>
+    ${its.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).map(it=>{ const p=(D.props||[]).find(z=>z.id==it.propId);
+      return `<tr style="${(it.ref&&(it.ref.catFAuto||it.ref.titularAuto))?'background:rgba(245,158,11,.08);':''}"><td class="mono" style="font-size:10.5px;">${it.fecha?fD(it.fecha):'—'}</td><td style="font-size:11.5px;">${it.con}<div style="font-size:9.5px;color:var(--ink3);">${{compra:'Factura',gasto:'Gasto',adq:'Coste adquisición'}[it.src]}</div></td>
+      <td style="font-size:11px;">${p?p.nom:'<span style="color:var(--rd);">sin asignar</span>'}</td><td class="mono" style="text-align:right;">${e2(it.imp)}</td>
+      <td><select onchange="v2SetCat('${it.src}','${it.id}',this.value)" style="font-size:10.5px;padding:3px;max-width:190px;">${opC(it.catF)}</select></td>
+      <td><select onchange="v2SetTit('${it.src}','${it.id}',this.value)" style="font-size:10.5px;padding:3px;">${v2OptsOwners(it.titular,'—')}</select></td>
+      <td style="white-space:nowrap;"><button class="btn btn-ghost btn-xs" onclick="v2AbrirFicha('${it.src}','${it.id}')" title="Ficha fiscal">📋</button>${it.catF==='C'?` <button class="btn btn-ghost btn-xs" onclick="v2VenderMueble('${it.src}','${it.id}')" title="Vender a otro contribuyente">↔</button>`:''}</td></tr>`; }).join('')}
+    </tbody></table></div></details>`;
+
+  // Criterios configurables
+  const cfg=calc.cfg, sel=(k,opts,v)=>`<select onchange="v2SetCfg('${k}',this.value)" style="font-size:11.5px;padding:5px;">${opts.map(([a,b])=>`<option value="${a}" ${String(v)===String(a)?'selected':''}>${b}</option>`).join('')}</select>`;
+  html+=`<details class="card mb"><summary style="cursor:pointer;font-weight:700;">⚙️ Criterios configurables (pendientes de validar con el gestor)</summary>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px;font-size:11.5px;">
+      <div>Base del usufructo<br>${sel('usufCriterio',[['dgt','DGT V1973-20: ISD y gastos pagados'],['aeat','Manual AEAT: valor a efectos del ISD + gastos']],cfg.usufCriterio)}</div>
+      <div>Excluir suelo del usufructo<br>${sel('usufSuelo',[['true','Sí, × % construcción'],['false','No']],cfg.usufSuelo)}</div>
+      <div>Formalización de préstamos (G)<br>${sel('gModo',[['factor','Solo en periodos arrendados'],['limite','Al límite con arrastre 4 años']],cfg.gModo)}</div>
+      <div>Mejoras pagadas por el usufructuario<br>${sel('mejoraUsuf',[['false','No amortizan'],['true','Amortizan al 3%']],cfg.mejoraUsuf)}</div>
+      <div>Exigibilidad de la renta<br>Día <input type="number" value="${cfg.diaExig}" onchange="v2SetCfg('diaExig',this.value)" style="width:50px;font-size:11.5px;padding:4px;"> ${sel('exigMesAnt',[['true','del mes anterior'],['false','del propio mes']],cfg.exigMesAnt)}</div>
+      <div>Tipo ITP aplicado (%)<br><input type="number" step="0.1" value="${cfg.itpTipo}" onchange="v2SetCfg('itpTipo',this.value)" style="width:70px;font-size:11.5px;padding:4px;"></div>
+      <div>RDL 29/2026<br>${sel('rdl29',[['true','Convalidado (por defecto)'],['false','No convalidado: régimen anterior']],cfg.rdl29)}</div>
+      <div>IRAV vigente para temporales sucesivos (%)<br><input type="number" step="0.01" value="${cfg.irav||''}" placeholder="dato INE" onchange="v2SetCfg('irav',this.value)" style="width:90px;font-size:11.5px;padding:4px;"></div>
+      <div>Escala de imputación 2027+<br>${sel('escalaModo',[['tramos','Por tramos (tipo medio)'],['unico','Tipo único según total']],cfg.escalaModo)}</div>
+    </div></details>`;
+
+  html+=`<details class="card"><summary style="cursor:pointer;font-weight:700;">📚 Fuentes y criterios aplicados</summary><div style="font-size:11.5px;color:var(--ink2);line-height:1.8;margin-top:8px;">
+    · Imputación temporal por exigibilidad: art. 14.1.a LIRPF.<br>
+    · Gastos deducibles, límite de intereses y reparación con arrastre de 4 años: art. 23.1 LIRPF y art. 13 RIRPF.<br>
+    · Gastos solo por el periodo arrendado: STS 25-02-2021 y Manual práctico de Renta de la AEAT. Reparaciones previas: DGT V3146-18.<br>
+    · Amortización 3% sobre el mayor de coste o valor catastral sin suelo; usufructo 3% del coste satisfecho: art. 14 RIRPF. Coste del usufructo lucrativo: DGT V1973-20 / Manual AEAT.<br>
+    · Reducción por arrendamiento de vivienda: art. 23.2 LIRPF en la redacción del RDL 29/2026 (se asume convalidado). No aplicable a arrendamientos temporales o de temporada: DGT V2810-19 y V0444-24.<br>
+    · Arrendamiento temporal: art. 3 LAU en la redacción del RDL 29/2026 (causa acreditada, más de 31 días, máximo general 12 meses, no más de 2 contratos consecutivos, subida limitada al IRAV).<br>
+    · Imputación de rentas: art. 85 LIRPF; 1,1% en 2026 si la revisión catastral es desde 2012 (DA 55ª, RDL 29/2026).<br>
+    · Rendimiento mínimo del nudo propietario que constituye el usufructo gratis a favor de pariente: art. 24 LIRPF y cuadro de usufructo del Manual AEAT.<br>
+    · Reparto de rentas entre propietario y usufructuario por días: art. 474 del Código Civil.<br>
+    · Valor del usufructo: art. 26.a de la Ley 29/1987 del ISD.</div></details>`;
+  box.innerHTML=html;
+}
+
+// ══ INFORME v2 (texto, IA y PDF con justificantes) ══
+function v2DescDerecho(pid,c,y){
+  const ds=derechosProp(pid).filter(d=>d.ownerId==c&&(!d.desde||d.desde<=y+'-12-31')&&(!d.hasta||d.hasta>=y+'-01-01'));
+  if(!ds.length) return 'Pleno dominio (sin periodos registrados)';
+  return ds.map(d=>v2DescTipo(d.tipo)+' '+(d.desde&&d.desde>y+'-01-01'?'desde '+fD(d.desde):'desde 01/01')+(d.hasta&&d.hasta<y+'-12-31'?' hasta '+fD(d.hasta):'')).join('; ');
+}
+function v2Bloques(c,y,calc){
+  const B=[], r=calc.R[c]||{props:{},imput:{},art24:{},noDed:[]}, o=(D.propietarios||[]).find(x=>x.id==c)||{}, e2=n=>eur(n,2);
+  B.push({t:'h1',x:'Rendimientos del capital inmobiliario · IRPF '+y});
+  B.push({t:'kv',k:'Contribuyente',v:(o.nom||nombreC(c))+(o.dni?' · NIF '+o.dni:'')});
+  B.push({t:'p',x:'Informe orientativo generado por RentaControl (motor fiscal v2). No incluye cuota estimada: el tipo efectivo depende del resto de rentas. Revisar con asesor antes de presentar.'});
+  let tR=0,tI=0,tA=0;
+  Object.entries(r.props).forEach(([pid,x])=>{
+    const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; tR+=x.netoReducido;
+    B.push({t:'h2',x:'Inmueble: '+p.nom});
+    B.push({t:'kv',k:'Referencia catastral',v:p.refCat||'(falta)'});
+    B.push({t:'kv',k:'Situación',v:(p.dir||'')+(p.ciu?', '+p.ciu:'')});
+    B.push({t:'kv',k:'Derecho del contribuyente',v:v2DescDerecho(pid,c,y)});
+    B.push({t:'kv',k:'Días equivalentes arrendados',v:x.diasEq.toFixed(1)+' de '+fxNd(y)});
+    B.push({t:'kv',k:'Ingresos íntegros (alquiler)',v:e2(x.ingAlq)});
+    if(x.ingH) B.push({t:'kv',k:'Suministros repercutidos (ingreso)',v:e2(x.ingH)});
+    B.push({t:'sub',x:'Gastos deducibles'});
+    if(x.E) B.push({t:'kv',k:'Gastos anuales prorrateados por ocupación',v:e2(x.E)});
+    if(x.I) B.push({t:'kv',k:'Servicios de terceros',v:e2(x.I)});
+    if(x.H) B.push({t:'kv',k:'Suministros repercutidos (gasto)',v:e2(x.H)});
+    B.push({t:'kv',k:'Intereses, formalización y reparación del ejercicio',v:e2(x.dfg)});
+    B.push({t:'kv',k:'   Límite: ingresos íntegros',v:e2(x.ing)});
+    if(x.arrAplic) B.push({t:'kv',k:'   Aplicado de ejercicios anteriores',v:e2(x.arrAplic)});
+    B.push({t:'kv',k:'   Aplicado del ejercicio',v:e2(x.dfgAplic)});
+    if(x.exceso>0.005) B.push({t:'kv',k:'   Exceso a deducir en los 4 años siguientes',v:e2(x.exceso)});
+    B.push({t:'sub',x:'Amortizaciones'});
+    if(x.baseEd) B.push({t:'kv',k:'Inmueble 3% · base '+e2(x.baseEd.base)+' = mayor de coste ('+e2(x.baseEd.coste)+') y VC ('+e2(x.baseEd.vct)+') × '+(x.baseEd.pct*100).toFixed(2)+'% construcción ['+x.baseEd.fuente+']',v:e2(x.amEd)});
+    if(x.amMej) B.push({t:'kv',k:'Mejoras 3%',v:e2(x.amMej)});
+    if(x.amMue) B.push({t:'kv',k:'Mobiliario y enseres 10%',v:e2(x.amMue)});
+    if(x.amUsufBruta) B.push({t:'kv',k:'Derecho de usufructo · base '+e2(x.baseUsuf.base)+' (criterio '+(x.baseUsuf.criterio==='dgt'?'DGT V1973-20':'Manual AEAT')+')'+(x.amUsuf<x.amUsufBruta?' · limitada a ingresos':''),v:e2(x.amUsuf)});
+    if(!x.amEd&&!x.amMej&&!x.amMue&&!x.amUsuf) B.push({t:'kv',k:'Sin amortización en el ejercicio',v:e2(0)});
+    B.push({t:'tot',k:'Rendimiento neto',v:e2(x.neto)});
+    x.reds.forEach(rd=>B.push({t:'kv',k:'Reducción '+rd.pct+'% · '+(rd.inq?(rd.inq.nom||'')+' '+(rd.inq.ap||''):'')+' · '+rd.motivo,v:'− '+e2(rd.red)}));
+    B.push({t:'tot',k:'Rendimiento neto reducido',v:e2(x.netoReducido)});
+    if((x.bolsaPend||[]).length) B.push({t:'kv',k:'Pendiente de deducir en ejercicios futuros',v:x.bolsaPend.map(b=>e2(b.resto)+' de '+b.anyo+' (hasta '+b.caduca+')').join('; ')});
+    const ac=calc.acum[c+'|'+pid]; if(ac) B.push({t:'kv',k:'Amortización acumulada (minora el valor de adquisición en una venta)',v:e2(ac)});
+  });
+  Object.keys(calc.bolsa).filter(k=>k.startsWith(c+'|')&&!r.props[k.split('|')[1]]&&calc.bolsa[k].length).forEach(k=>{
+    const p=(D.props||[]).find(z=>z.id==k.split('|')[1])||{nom:'?'};
+    B.push({t:'kv',k:p.nom+': pendiente de deducir',v:calc.bolsa[k].map(b=>e2(b.resto)+' de '+b.anyo+' (hasta '+(b.anyo+4)+')').join('; ')});
+  });
+  const im=Object.entries(r.imput), a24=Object.entries(r.art24);
+  if(im.length){ B.push({t:'h2',x:'Imputación de rentas inmobiliarias (art. 85 LIRPF)'});
+    im.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; tI+=e.importe; B.push({t:'kv',k:p.nom+(p.refCat?' ('+p.refCat+')':'')+' · '+e.dias.toFixed(1)+' días no arrendados · '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'(FALTA)':e2(e.vct)),v:e2(e.importe)}); }); }
+  if(a24.length){ B.push({t:'h2',x:'Rendimiento mínimo por usufructo constituido a favor de pariente (art. 24 LIRPF)'});
+    B.push({t:'p',x:'Criterio del cuadro de usufructo del Manual AEAT: el propietario que constituye gratuitamente el usufructo declara un rendimiento igual a la imputación del art. 85 durante su duración.'});
+    a24.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; tA+=e.importe; B.push({t:'kv',k:p.nom+' · '+e.dias+' días · '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'(FALTA)':e2(e.vct)),v:e2(e.importe)}); }); }
+  B.push({t:'h2',x:'Resumen'});
+  B.push({t:'kv',k:'Rendimientos netos reducidos del capital inmobiliario',v:e2(tR)});
+  B.push({t:'kv',k:'Imputación de rentas inmobiliarias',v:e2(tI)});
+  if(tA) B.push({t:'kv',k:'Rendimiento mínimo art. 24',v:e2(tA)});
+  if(r.noDed.length){ B.push({t:'h2',x:'Gastos no deducibles y motivo'}); r.noDed.forEach(n=>B.push({t:'kv',k:(n.it.fecha?fD(n.it.fecha)+' · ':'')+n.it.con+' — '+n.motivo,v:e2(n.imp)})); }
+  const vals=v2Validaciones(y,calc); if(vals.length){ B.push({t:'h2',x:'Comprobaciones'}); vals.forEach(v=>B.push({t:'p',x:(v.n==='error'?'[ERROR] ':'[AVISO] ')+v.t})); }
+  B.push({t:'h2',x:'Fuentes'});
+  ['Art. 14.1.a LIRPF (imputación por exigibilidad)','Arts. 22, 23.1 y 23.2 LIRPF (redacción RDL 29/2026, BOE 07/10/2026, se asume convalidado)','Reducción no aplicable a temporales: DGT V2810-19 y V0444-24','Art. 3 LAU (redacción RDL 29/2026): régimen del arrendamiento temporal','Arts. 24 y 85 LIRPF; DA 55ª (1,1% en 2026)','Arts. 13 y 14 RIRPF (gastos y amortización)','STS 25-02-2021 y Manual práctico de Renta AEAT (gastos solo del periodo arrendado)','DGT V3146-18 (reparaciones previas) y V1973-20 (coste del usufructo lucrativo)','Art. 474 Código Civil (frutos civiles por días)','Art. 26.a Ley 29/1987 ISD (valor del usufructo)'].forEach(f=>B.push({t:'p',x:'· '+f}));
+  return B;
+}
+function v2Texto(B){ return B.map(b=>b.t==='h1'?'\n'+b.x.toUpperCase()+'\n'+'='.repeat(60):b.t==='h2'?'\n'+b.x+'\n'+'-'.repeat(40):b.t==='sub'?'  '+b.x+':':b.t==='tot'?'  >> '+b.k+': '+b.v:b.t==='kv'?'  '+b.k+': '+b.v:b.x).join('\n'); }
+function v2Contribs(y,calc){ const own=gi('fi-owner'); return (own?[own]:Object.keys(calc.R)).filter(c=>(D.propietarios||[]).some(o=>o.id==c)); }
+
+function informeFiscalIA(){
+  const y=parseInt(gi('fy'))||new Date().getFullYear(), calc=v2Calc(y);
+  const txt=v2Contribs(y,calc).map(c=>v2Texto(v2Bloques(c,y,calc))).join('\n\n');
+  copyT('Revisa este informe de rendimientos del capital inmobiliario (IRPF '+y+'). Comprueba criterios, límites y posibles errores:\n'+txt,'Informe copiado — pégalo en tu IA o envíalo al gestor');
+}
+function informeFiscalTXT(){
+  const y=parseInt(gi('fy'))||new Date().getFullYear(), calc=v2Calc(y);
+  v2Contribs(y,calc).forEach(c=>{ const t=v2Texto(v2Bloques(c,y,calc)); descargarBlob(new Blob([t],{type:'text/plain;charset=utf-8'}),'Renta_'+y+'_'+nombreC(c).replace(/[^a-z0-9]/gi,'_')+'.txt'); });
+}
+
+async function informeFiscalPDF(){
+  const y=parseInt(gi('fy'))||new Date().getFullYear(), calc=v2Calc(y), cs=v2Contribs(y,calc);
+  if(!cs.length){ toast('No hay datos fiscales para '+y,false); return; }
+  let lib; try{ toast('Preparando el PDF…'); lib=await cargarPdfLib(); }catch(e){ toast('No se pudo cargar el generador de PDF',false); return; }
+  const {PDFDocument,StandardFonts,rgb}=lib;
+  for(const c of cs){
+    const pdf=await PDFDocument.create(), font=await pdf.embedFont(StandardFonts.Helvetica), fontB=await pdf.embedFont(StandardFonts.HelveticaBold);
+    const W=595,H=842,M=42, AC=rgb(0.784,0.294,0.184), TX=rgb(0.1,0.09,0.08), GR=rgb(0.45,0.42,0.39);
+    let pg=pdf.addPage([W,H]), yy=H-M;
+    const nueva=()=>{ pg=pdf.addPage([W,H]); yy=H-M; };
+    const wrap=(s,f,size,maxW)=>{ const ws=limpiarTexto(String(s)).split(' '), out=[]; let l=''; ws.forEach(w=>{ const t=l?l+' '+w:w; if(f.widthOfTextAtSize(t,size)>maxW&&l){ out.push(l); l=w; } else l=t; }); if(l) out.push(l); return out; };
+    const linea=(s,f,size,col,x)=>{ if(yy<56) nueva(); pg.drawText(s,{x:x||M,y:yy,size,font:f,color:col||TX}); yy-=size+4; };
+    for(const b of v2Bloques(c,y,calc)){
+      if(b.t==='h1'){ pg.drawRectangle({x:0,y:H-74,width:W,height:74,color:AC}); pg.drawText(limpiarTexto(b.x),{x:M,y:H-44,size:16,font:fontB,color:rgb(1,1,1)}); pg.drawText('Generado el '+new Date().toLocaleDateString('es-ES')+' · RentaControl',{x:M,y:H-62,size:8,font,color:rgb(1,1,1)}); yy=H-96; continue; }
+      if(b.t==='h2'){ yy-=6; if(yy<90) nueva(); pg.drawRectangle({x:M,y:yy+12,width:W-2*M,height:1.2,color:AC}); wrap(b.x,fontB,11,W-2*M).forEach(l=>linea(l,fontB,11,AC)); yy-=2; continue; }
+      if(b.t==='sub'){ linea(limpiarTexto(b.x),fontB,9.5,TX); continue; }
+      if(b.t==='p'){ wrap(b.x,font,8.5,W-2*M).forEach(l=>linea(l,font,8.5,GR)); continue; }
+      const f=b.t==='tot'?fontB:font, sz=b.t==='tot'?10:9, v=limpiarTexto(b.v), vw=fontB.widthOfTextAtSize(v,sz);
+      const ls=wrap(b.k,f,sz,W-2*M-vw-14);
+      ls.forEach((l,i)=>{ if(yy<56) nueva(); pg.drawText(l,{x:M,y:yy,size:sz,font:f,color:b.t==='tot'?TX:GR}); if(i===0) pg.drawText(v,{x:W-M-vw,y:yy,size:sz,font:fontB,color:TX}); yy-=sz+4; });
+    }
+    // Justificantes: gastos del ejercicio del contribuyente y documentos de amortizables
+    const just=calc.items.filter(it=>it.pdf&&(it.titular===c||(!it.titular&&it.propId&&titularidadDia(it.propId,it.fecha||y+'-12-31').disfrute===c))&&(((it.fecha||'').startsWith(String(y)))||['A','B','C','K'].includes(it.catF)));
+    const conJ=just.length&&confirm(nombreC(c)+': hay '+just.length+' justificante(s). ¿Incluirlos dentro del PDF?');
+    let inc=0, fal=0;
+    if(conJ){
+      for(const j of just){
+        try{
+          let bytes=null, mime='';
+          if(j.pdf.startsWith('drive:')){
+            if(!gToken){ fal++; continue; }
+            let rs=await fetch('https://www.googleapis.com/drive/v3/files/'+j.pdf.slice(6)+'?alt=media',{headers:{'Authorization':'Bearer '+gToken}});
+            if(rs.status===401&&await renovarTokenAhora()) rs=await fetch('https://www.googleapis.com/drive/v3/files/'+j.pdf.slice(6)+'?alt=media',{headers:{'Authorization':'Bearer '+gToken}});
+            if(!rs.ok){ fal++; continue; }
+            bytes=new Uint8Array(await rs.arrayBuffer()); mime=rs.headers.get('content-type')||'';
+          } else if(j.pdf.startsWith('data:')){
+            mime=(j.pdf.match(/data:(.*?)[;,]/)||[])[1]||''; const bin=atob(j.pdf.split(',')[1]||''); bytes=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) bytes[k]=bin.charCodeAt(k);
+          } else { fal++; continue; }
+          const sep=pdf.addPage([W,H]);
+          sep.drawRectangle({x:0,y:H-40,width:W,height:40,color:AC});
+          sep.drawText('JUSTIFICANTE '+(inc+1)+' de '+just.length+' · Categoría '+j.catF+' ('+limpiarTexto(CATF[j.catF]||'')+')',{x:24,y:H-18,size:10,font:fontB,color:rgb(1,1,1)});
+          sep.drawText(limpiarTexto((j.fecha?fD(j.fecha)+' · ':'')+j.con+' · '+eur(j.imp,2)).slice(0,100),{x:24,y:H-33,size:8.5,font,color:rgb(1,1,1)});
+          const esPNG=bytes[0]===0x89&&bytes[1]===0x50, esJPG=bytes[0]===0xFF&&bytes[1]===0xD8;
+          if(esProbablePDF(bytes)){ const src=await PDFDocument.load(bytes,{ignoreEncryption:true,throwOnInvalidObject:false}); (await pdf.copyPages(src,src.getPageIndices())).forEach(p2=>pdf.addPage(p2)); }
+          else if(esPNG||esJPG||mime.startsWith('image/')){ const img=esPNG?await pdf.embedPng(bytes):await pdf.embedJpg(bytes); let {width:iw,height:ih}=img.scale(1); const rt=Math.min(535/iw,740/ih,1); iw*=rt; ih*=rt; sep.drawImage(img,{x:(W-iw)/2,y:(H-50-ih)/2,width:iw,height:ih}); }
+          else { fal++; continue; }
+          inc++;
+        }catch(e){ console.warn('Justificante no incluido',j.con,e); fal++; }
+      }
+    }
+    const out=await pdf.save();
+    descargarBlob(new Blob([out],{type:'application/pdf'}),'Renta_'+y+'_'+nombreC(c).replace(/[^a-z0-9]/gi,'_')+'.pdf');
+    toast('✓ '+nombreC(c)+': PDF'+(conJ?' con '+inc+' de '+just.length+' justificantes'+(fal?' ('+fal+' no disponibles)':''):''));
+  }
+}
+
+// ══ MIGRACIÓN AL MOTOR FISCAL v2 (se ejecuta una sola vez) ══
+function v2Migrar(){
+  D.cfg=D.cfg||{}; ['derechos','ctasBanc','provisiones'].forEach(k=>{ if(!D[k]) D[k]=[]; });
+  if(D.cfg.fiscalV2) return;
+  (D.props||[]).forEach(p=>{ if(p.ownerId&&!derechosProp(p.id).length) D.derechos.push({id:uid(),propId:p.id,ownerId:p.ownerId,tipo:'pleno',pct:100,desde:p.fcompra||'',hasta:'',auto:true}); });
+  const kw=t=>{
+    if(/tasaci/.test(t)) return 'G';
+    if(/\bitp\b|transmisiones patrimoniales|registro de la propiedad|comisi[oó]n inmobiliaria|intermediaci/.test(t)) return /hipoteca|pr[eé]stamo/.test(t)?'G':'A';
+    if(/notar|gestor[ií]a/.test(t)&&/compra|escritura|adquisici/.test(t)) return /hipoteca|pr[eé]stamo/.test(t)?'G':'A';
+    if(/\bmetro\b|broca|taladr|herramient/.test(t)) return 'J';
+    if(/programador|pegatina/.test(t)) return 'C';
+    if(/tornill|llaves?\b|cerradur|bomb[ií]n/.test(t)) return 'D';
+    if(/limpieza/.test(t)) return 'E';
+    return null;
+  };
+  const reclas=(x,src)=>{ if(x.catF) return; const t=((x.con||x.desc||x.concepto||'')+' '+(x.cat||'')+' '+(x.notas||'')).toLowerCase(); x.catF=kw(t)||catFDe(x,src); x.catFAuto=true; };
+  (D.compras||[]).forEach(x=>reclas(x,'compra')); (D.gastos||[]).forEach(x=>reclas(x,'gasto')); (D.props||[]).forEach(p=>(p.costesAdq||[]).forEach(x=>reclas(x,'adq')));
+  const asigna=(x,pid,f)=>{ if(x.titular||!pid) return; const t=titularidadDia(pid,f||fxIso(new Date())); const c=t.disfrute||(t.nuda&&t.nuda.ownerId); if(c){ x.titular=c; x.titularAuto=true; } };
+  (D.compras||[]).forEach(x=>{ if(x.ownerId&&!x.titular) x.titular=x.ownerId; else asigna(x,x.propId,x.fecha); });
+  (D.gastos||[]).forEach(x=>asigna(x,x.propId,x.fecha));
+  (D.props||[]).forEach(p=>(p.costesAdq||[]).forEach(x=>asigna(x,p.id,x.fecha||p.fcompra)));
+  D.cfg.fiscalV2=true; saveAndSync();
+  setTimeout(()=>toast('Motor fiscal actualizado: revisa la clasificación en Fiscal / IRPF'),1500);
+}
+
+// La titularidad fiscal sale de los periodos de derechos registrados
+function fiscalOwnerDe(p){ if(!p) return ''; const t=titularidadDia(p.id,fxIso(new Date())); return t.disfrute||p.ownerId||''; }
+
+// Carga de los campos nuevos de propiedad y contrato
+function v2PropLoad(p){
+  const s=(id,v)=>{ const e=$i(id); if(e) e.value=v||''; }, ch=(id,v)=>{ const e=$i(id); if(e) e.checked=!!v; };
+  s('pr-refcat',p.refCat); s('pr-revcat',p.revCat); s('pr-vct',p.vct); s('pr-vcs',p.vcs); s('pr-vcc',p.vcc);
+  s('pr-m2t',p.m2t); s('pr-m2c',p.m2c); s('pr-runit',p.rentaUnit); ch('pr-tens',p.zonaTens); ch('pr-nosusc',p.noSusc);
+}
+function v2PropRead(){ return {refCat:gi('pr-refcat'),revCat:gi('pr-revcat'),vct:gn('pr-vct'),vcs:gn('pr-vcs'),vcc:gn('pr-vcc'),m2t:gn('pr-m2t'),m2c:gn('pr-m2c'),rentaUnit:gn('pr-runit'),zonaTens:!!($i('pr-tens')&&$i('pr-tens').checked),noSusc:!!($i('pr-nosusc')&&$i('pr-nosusc').checked)}; }
+function v2ContReset(){ if($i('co-tipo')) $i('co-tipo').value='temporal'; ['co-firma','co-causa','co-rant','co-vivhab'].forEach(i=>{const e=$i(i); if(e) e.value='';}); ['co-primer','co-indice','co-pj','co-entero','co-tacita','co-subsiste'].forEach(i=>{const e=$i(i); if(e) e.checked=false;}); }
+function v2ContRead(){ const ch=i=>!!($i(i)&&$i(i).checked); return {tipoContrato:gi('co-tipo'),firma:gi('co-firma'),causa:gi('co-causa'),rentaAnt:gn('co-rant'),primer:ch('co-primer'),rentaInfIndice:ch('co-indice'),arrPJ:ch('co-pj'),pisoEntero:ch('co-entero'),prorrogaTacita:ch('co-tacita'),vivHab:gi('co-vivhab'),causaSubsiste:ch('co-subsiste')}; }
+
+
+// Fin de contrato temporal: más de 31 días y, como regla general, máximo 12 meses (art. 3 LAU, RDL 29/2026)
+function v2FinTemporal(ini,mmdd){
+  const d=fxDate(ini), max=fxDate(ini); max.setFullYear(max.getFullYear()+1); max.setDate(max.getDate()-1);
+  const min=fxDate(ini); min.setDate(min.getDate()+31);
+  let fin, nota;
+  if(mmdd==='12m'){ fin=max; nota='12 meses (máximo general)'; }
+  else { const [m,dd]=mmdd.split('-').map(Number); let y=d.getFullYear(), cand=new Date(y,m-1,dd); while(cand<min){ y++; cand=new Date(y,m-1,dd); }
+    if(cand>max){ fin=max; nota='el '+fD(fxIso(cand))+' superaría los 12 meses: ajustado al máximo legal'; } else { fin=cand; nota='dentro del máximo de 12 meses'; } }
+  return {iso:fxIso(fin), dias:Math.round((fin-d)/864e5)+1, nota};
+}
+function calcFinContrato(mmdd){ const ini=gi('co-ini'); if(!ini){ toast('Pon primero la fecha de inicio',false); return; } const r=v2FinTemporal(ini,mmdd); $i('co-fin').value=r.iso; $i('co-fin-info').innerHTML='✓ Hasta <strong>'+fD(r.iso)+'</strong> · '+r.dias+' días · '+r.nota; }
+function calcFinInq(mmdd){ const ini=gi('iq-ini'); if(!ini){ toast('Pon primero la fecha de inicio',false); return; } const r=v2FinTemporal(ini,mmdd); $i('iq-fin').value=r.iso; $i('iq-fin-info').innerHTML='✓ Hasta <strong>'+fD(r.iso)+'</strong> · '+r.dias+' días · '+r.nota; }
 
 </script>
 </body>
