@@ -11091,11 +11091,11 @@ const V2_KW=[
   [/colch[oó]n|somier|ikea|conforama|mueble|sof[aá]|armario|estanter/i,'Mobiliario','C'],
   [/lavadora|frigor[ií]fico|nevera|horno|microondas|vitrocer|inducci[oó]n|lavavajillas|electrodom|secadora|campana extractora|televisor|aire acondicionado|termo el[eé]ctrico/i,'Electrodomésticos','C'],
   [/c[aá]mara|\btapo\b|programador/i,'Equipamiento','C'],
+  [/\bmetro\b(?!\s*(?:lineal|cuadrado|c[uú]bico))|cinta m[eé]trica|flex[oó]metro|\bbrocas?\b|taladr|herramient|destornillador/i,'Herramientas','J'],
   [/pladur|instalaci[oó]n el[eé]ctrica nueva|ventanas? nuevas?|ampliaci[oó]n|reforma integral/i,'Mejora','B'],
   [/reparaci[oó]n|aver[ií]a|fontaner|electricista|pintura|alba[ñn]il|reforma|obra/i,'Reparación / reforma','D'],
   [/cerrajer|copia de llaves|bomb[ií]n|tornill|ferreter[ií]a|leroy merlin|bricomart|brico ?d[eé]p[oô]t/i,'Ferretería','D'],
   [/limpieza|detergente|lej[ií]a|fregona|bayeta/i,'Útiles de limpieza','E'],
-  [/\bmetro\b|broca|taladr|herramient|destornillador/i,'Herramientas','J']
 ];
 function v2SugerirCat(txt){
   txt=String(txt||'');
