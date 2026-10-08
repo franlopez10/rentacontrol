@@ -1606,8 +1606,10 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Valor catastral total (€)</label><input id="pr-vct" type="number" step="0.01"></div>
     <div class="fgrp"><label>Valor catastral del suelo (€)</label><input id="pr-vcs" type="number" step="0.01"></div>
     <div class="fgrp"><label>Valor catastral de la construcción (€)</label><input id="pr-vcc" type="number" step="0.01"></div>
-    <div class="fgrp"><label>m² útiles totales</label><input id="pr-m2t" type="number" step="0.5"></div>
-    <div class="fgrp"><label>m² de zonas comunes (cocina, salón, baños…)</label><input id="pr-m2c" type="number" step="0.5"></div>
+    <div class="fgrp"><label>m² útiles totales</label><input id="pr-m2t" type="number" step="0.5" oninput="v2RecalcM2C()"></div>
+    <div class="fgrp"><label>m² de zonas comunes (útiles − habitaciones)</label><input id="pr-m2c" type="number" step="0.5"><div id="pr-m2c-info" style="font-size:10px;color:var(--ink3);margin-top:3px;"></div></div>
+    <div class="fgrp"><label>Valor de referencia del Catastro a la fecha de compra (€)</label><input id="pr-vref" type="number" step="0.01" placeholder="base del ITP si supera al precio"></div>
+    <div class="fgrp"><label>Tipo de ITP aplicado (%)</label><input id="pr-itp" type="number" step="0.01" placeholder="auto: 8% hasta 24/07/2025 · 7,75% después"></div>
     <div class="fgrp"><label>Renta del contrato unitario de referencia (€/mes)</label><input id="pr-runit" type="number" placeholder="límite suma habitaciones"></div>
     <div class="fgrp"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="pr-tens" style="width:auto;"> En zona de mercado residencial tensionado</label></div>
     <div class="fgrp"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="pr-nosusc" style="width:auto;"> No susceptible de uso (sin imputación de rentas)</label></div>
@@ -1969,10 +1971,12 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     </div>
     <div class="fgrp"><label>Garantía hasta</label><input id="cp-gar" type="date"></div>
     <div class="fgrp fgf"><label>Notas</label><textarea id="cp-notas" rows="2" placeholder="Modelo, color, dónde está instalado, referencia..." oninput="sugerirClasifCompra()"></textarea></div>
+    <div class="fgrp fgf"><div id="cp-ocr"></div><div id="cp-fiscal-prev" style="margin-top:8px;"></div></div>
     <div class="fgrp fgf"><div class="form-section" style="margin-top:4px;">🧾 Ficha fiscal (motor v2)</div></div>
     <div class="fgrp fgf"><label>Categoría fiscal *</label><select id="cpf-catf"><option value="A">A · Coste de adquisición del inmueble</option><option value="B">B · Mejora (amortiza 3%)</option><option value="C">C · Mobiliario y enseres (10%)</option><option value="D">D · Reparación y conservación</option><option value="E">E · Gasto anual (IBI, comunidad, seguros, suministros)</option><option value="F">F · Intereses del préstamo</option><option value="G">G · Formalización del préstamo</option><option value="H">H · Suministro repercutido al inquilino</option><option value="I">I · Servicios (gestoría, abogado…)</option><option value="J">J · No deducible</option><option value="K">K · Coste de adquisición del usufructo</option></select></div>
     <div class="fgrp"><label>Fecha de pago</label><input id="cpf-fpago" type="date"></div>
     <div class="fgrp"><label>Tipo de documento</label><select id="cpf-tipodoc"><option value="factura">Factura completa</option><option value="ticket">Ticket / simplificada</option><option value="recibo">Recibo bancario</option></select></div>
+    <div class="fgrp"><label>Nº de factura del proveedor</label><input id="cpf-numprov"></div>
     <div class="fgrp"><label>NIF del emisor</label><input id="cpf-nifemi"></div>
     <div class="fgrp"><label>Destinatario de la factura</label><input id="cpf-destnom" placeholder="Nombre que figura en la factura"></div>
     <div class="fgrp"><label>NIF del destinatario</label><input id="cpf-destnif"></div>
@@ -1985,7 +1989,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Situación</label><select id="cpf-sit"><option value="">Automática</option><option value="uso propio">Uso propio (no deducible)</option></select></div>
     <div class="fgrp fgf"><label>Adjuntar factura (PDF o foto)</label>
       <div class="pdf-upload-zone" id="cp-pdf-zone" onclick="document.getElementById('cp-pdf').click()">
-        <input type="file" id="cp-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('cp-pdf','cp-pdf-zone','cp-pdf-data')">
+        <input type="file" id="cp-pdf" accept=".pdf,image/*" style="display:none;" onchange="v2LeerFacturaAuto(this.files[0]);handlePdfUpload('cp-pdf','cp-pdf-zone','cp-pdf-data')">
         <input type="hidden" id="cp-pdf-data"><input type="hidden" id="cp-pdf-name">
         <span class="pdf-upload-label">📎 Adjuntar factura en PDF o foto</span>
       </div>
@@ -2551,6 +2555,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp fgf"><label>Categoría fiscal *</label><select id="fic-catf"><option value="A">A · Coste de adquisición del inmueble</option><option value="B">B · Mejora (amortiza 3%)</option><option value="C">C · Mobiliario y enseres (10%)</option><option value="D">D · Reparación y conservación</option><option value="E">E · Gasto anual (IBI, comunidad, seguros, suministros)</option><option value="F">F · Intereses del préstamo</option><option value="G">G · Formalización del préstamo</option><option value="H">H · Suministro repercutido al inquilino</option><option value="I">I · Servicios (gestoría, abogado…)</option><option value="J">J · No deducible</option><option value="K">K · Coste de adquisición del usufructo</option></select></div>
     <div class="fgrp"><label>Fecha de pago</label><input id="fic-fpago" type="date"></div>
     <div class="fgrp"><label>Tipo de documento</label><select id="fic-tipodoc"><option value="factura">Factura completa</option><option value="ticket">Ticket / simplificada</option><option value="recibo">Recibo bancario</option></select></div>
+    <div class="fgrp"><label>Nº de factura del proveedor</label><input id="fic-numprov"></div>
     <div class="fgrp"><label>NIF del emisor</label><input id="fic-nifemi"></div>
     <div class="fgrp"><label>Destinatario</label><input id="fic-destnom"></div>
     <div class="fgrp"><label>NIF del destinatario</label><input id="fic-destnif"></div>
@@ -2832,7 +2837,7 @@ function go(el){
   if(RENDERS[s])RENDERS[s]();
 }
 
-function populateSels(){
+function populateSelsBase(){
   const pO='<option value="">Sin asignar</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join('');
   const iO='<option value="">— Seleccionar —</option>'+D.inqs.map(i=>`<option value="${i.id}">${i.nom} ${i.ap} (${i.estado})</option>`).join('');
   ['iq-p','ga-p','in-p','ag-p','fac-prop','fq-prop','cp-prop','an-prop','co-prop','hp-prop','pl2-prop','rp-prop','vi-prop'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=pO;e.value=v;}});
@@ -3270,7 +3275,7 @@ function rHabs(){
 
     return `<div class="card mb">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
-        <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${p.nom}</div><div style="font-size:11px;color:var(--ink3);">${p.dir||''}</div></div>
+        <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${p.nom}</div><div style="font-size:11px;color:var(--ink3);">${p.dir||''}</div>${v2TxtM2(p)}</div>
         <div style="text-align:right;">
           <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gn);">${renta}€/mes</div>
           <div style="font-size:10px;color:var(--ink3);">${libre} hab. libre${libre!==1?'s':''}${rentaPot>0?` · potencial ${eur(rentaPot)}`:''}</div>
@@ -3293,6 +3298,7 @@ function editHabCfg(propId, num, campo, valor){
   else if(campo==='precio'){ cfg.precio=parseFloat(valor)||0; }
   else if(campo==='m2'){ cfg.m2=parseFloat(valor)||0; }
   p.habsConfig[num]=cfg;
+  v2SyncM2C(p);
   saveAndSync();
   rHabs();
   toast(campo==='tipo' ? `Hab. ${num}: ${valor}` : campo==='m2' ? `Hab. ${num}: ${cfg.m2} m²` : `Hab. ${num}: ${cfg.precio}€/mes`);
@@ -4387,6 +4393,12 @@ function saveCompra(){
     hab:gi('cp-hab'),pago:$i('cp-pago').value,ded:$i('cp-ded').value,
     gar:gi('cp-gar'),notas:gi('cp-notas')};
   Object.assign(campos, v2FichaRead()); campos.titular=campos.ownerId||''; campos.titularAuto=false;
+  if(campos.propId==='__todos'){
+    if(!CAT_REPARTIBLES.includes(campos.catF)){ toast('«Todos» es solo para reparaciones, gastos anuales o servicios comunes. Los muebles, mejoras y gastos de compra se asignan a su piso.',false); return; }
+    if(!campos.titular){ toast('Indica el titular: el reparto se hace entre sus inmuebles',false); return; }
+    campos.propId=''; campos.repartoTodos=true; campos.repartoAuto=false; campos.hab='';
+  } else campos.repartoTodos=false;
+  campos.leidaAuto=window._v2LeidaAuto===true;
   const pdfData=$i('cp-pdf-data')?.value||'', pdfName=$i('cp-pdf-name')?.value||'';
   const mesesATocar=new Set();
   if(campos.fecha) mesesATocar.add(campos.fecha.slice(0,7));
@@ -4446,6 +4458,7 @@ function siguienteNumFactura(fecha){
 }
 
 function rCompras(){
+  try{ window._v2Est=v2EstadoFacturas(); }catch(e){ console.error('estado facturas',e); window._v2Est={}; }
   const compras = D.compras||[];
   const anyos=[...new Set(compras.map(x=>(x.fecha||'').slice(0,4)).filter(Boolean))].sort().reverse();
 
@@ -4559,11 +4572,11 @@ function rCompras(){
     const garOk=x.gar&&x.gar>=hoy;
     filas.push(`<tr>
       <td class="mono" style="font-size:11px;white-space:nowrap;">${x.fecha?fD(x.fecha):'–'}</td>
-      <td><div style="font-size:12px;font-weight:600;">${x.con}</div>${x.num?`<div class="mono" style="font-size:10px;color:var(--acc);font-weight:600;">${x.num}</div>`:''}${x._origenGasto?`<div><span class="badge badge-b" style="font-size:8px;">📉 Desde Gastos</span></div>`:''}${x.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${x.notas}</div>`:''}</td>
+      <td><div style="font-size:12px;font-weight:600;">${x.con}</div>${x.num?`<div class="mono" style="font-size:10px;color:var(--acc);font-weight:600;">${x.num}</div>`:''}${x._origenGasto?`<div><span class="badge badge-b" style="font-size:8px;">📉 Desde Gastos</span></div>`:''}${x.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${x.notas}</div>`:''}${v2HtmlFilaEstado(x._origenGasto?'gasto':'compra',x.id)}</td>
       <td style="font-size:12px;">${x.emp}</td>
       <td style="font-size:11px;white-space:nowrap;">${CP_ICONS[x.cat]||''} ${x.cat}</td>
       <td style="font-size:11px;"><span class="badge badge-p">${ownerNom(ownerDe(x))}</span></td>
-      <td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:'Varios / general'}${x.hab?`<br>Hab. ${x.hab}`:''}</td>
+      <td style="font-size:11px;color:var(--ink3);">${pr?pr.nom:(x.repartoTodos||x.repartoAuto?'<span style="color:var(--bl);">↔ Todos</span>':(Array.isArray(x.repartoProps)&&x.repartoProps.length?'<span style="color:var(--bl);">↔ Varios</span>':'<span style="color:var(--rd);">Sin asignar</span>'))}${x.hab?`<br>Hab. ${x.hab}`:''}</td>
       <td class="mono" style="font-weight:700;color:var(--acc);white-space:nowrap;">${eur(x.imp,2)}</td>
       <td style="font-size:10px;">${x.gar?(garOk?`<span class="badge badge-g">${fD(x.gar)}</span>`:`<span class="badge badge-r">Caducada</span>`):'–'}</td>
       <td>${fiscalBadge(x.ded)}</td>
@@ -4923,6 +4936,7 @@ function guardarConfigHabs(){
     if(s) nuevaCfg[i]={tipo:s.value, plazas: s.value==='doble'?2:1, precio: pr?(parseFloat(pr.value)||0):0, m2: m2?(parseFloat(m2.value)||0):0};
   }
   p.habsConfig=nuevaCfg;
+  v2SyncM2C(p);
   saveAndSync(); closeM('m-confighabs'); actualizarResumenHabs(p);
   toast('Habitaciones configuradas');
 }
@@ -8995,7 +9009,7 @@ function aplicarWS(){
   const bs=$i('ws-switch2'); if(bs) bs.style.display='block';
   // Si es Personal, precargar el patrimonio inmobiliario de Gentaury
   if(esP && gToken){ cargarGentaury(); }
-  if(WS==='gentaury'){ try{ v2Migrar(); }catch(e){ console.error('v2Migrar',e); } repararTodasPropiedades(); autoGenerarPagosPendientes(); _mesTablero=new Date().toISOString().slice(0,7); try{ programarAvisosVisitas(); }catch(e){} }
+  if(WS==='gentaury'){ try{ v2Migrar(); }catch(e){ console.error('v2Migrar',e); } try{ v2MigrarTodos(); }catch(e){ console.error('v2MigrarTodos',e); } repararTodasPropiedades(); autoGenerarPagosPendientes(); _mesTablero=new Date().toISOString().slice(0,7); try{ programarAvisosVisitas(); }catch(e){} }
   // Activar la primera sección del espacio
   const primera = document.querySelector('.nav-item[data-ws="'+WS+'"]');
   if(primera) go(primera);
@@ -9878,7 +9892,7 @@ function pesosHabs(p){
   const arr=[]; let completo=true;
   for(let i=1;i<=n;i++){ const m=parseFloat((cfg[i]||{}).m2)||0; arr.push(m); if(!m) completo=false; }
   if(!completo) return {pesos:arr.map(()=>1/n), metodo:'reparto igual entre habitaciones (faltan m²)'};
-  const sumH=arr.reduce((a,b)=>a+b,0), com=parseFloat(p.m2c)||0, tot=sumH+com;
+  const sumH=arr.reduce((a,b)=>a+b,0), mc=v2M2Comunes(p), com=mc.auto?Math.max(0,mc.valor):(parseFloat(p.m2c)||0), tot=sumH+com;
   return {pesos:arr.map(m=>(m+com*(m/sumH))/tot), metodo:'m² de habitación + parte de zonas comunes'};
 }
 function habOcupada(p,hab,iso){
@@ -9953,7 +9967,7 @@ function v2Items(){
   const base=v2ItemsBase(), cfg=v2cfg(), out=[];
   base.forEach(it=>{
     const ref=it.ref||{}, explicit=Array.isArray(ref.repartoProps)&&ref.repartoProps.length>0;
-    if(!it.imp||(!explicit&&(it.propId||!CAT_REPARTIBLES.includes(it.catF)))){ out.push(it); return; }
+    if(!it.imp||(!explicit&&(it.propId||!CAT_REPARTIBLES.includes(it.catF)||!(ref.repartoTodos||ref.repartoAuto)))){ out.push(it); return; }
     const modo=ref.repartoModo||cfg.repartoModo;
     if(explicit){
       const props=(D.props||[]).filter(p=>ref.repartoProps.includes(p.id));
@@ -10243,19 +10257,23 @@ function v2CalcAnyo(y,items,bolsa,cfg){
 }
 
 // ══ CÁLCULO COMPLETO (con arrastre desde el primer ejercicio con datos) ══
-function v2Calc(target){
+function v2Calc(target,colectar){
   _cacheF={};
   const cfg=v2cfg(), items=v2Items();
   let y0=target;
   (D.props||[]).forEach(p=>{ if(p.fcompra) y0=Math.min(y0,parseInt(p.fcompra.slice(0,4))); });
   items.forEach(it=>{ if(it.fecha) y0=Math.min(y0,parseInt(it.fecha.slice(0,4))); });
   y0=Math.max(y0,target-8);
-  const bolsa={}, acum={}; let R={};
+  const bolsa={}, acum={}, porItem={}; let R={};
   for(let y=y0;y<=target;y++){
     R=v2CalcAnyo(y,items,bolsa,cfg);
+    if(colectar) Object.entries(R).forEach(([c,r])=>{
+      Object.entries(r.props).forEach(([pid,x])=>x.det.forEach(d=>{ const k=d.it.src+'|'+d.it.id, e=porItem[k]=porItem[k]||{ded:0,no:{},pids:{},bolsa:false}; e.ded+=d.ded; e.pids[pid]=1; if(x.exceso>0.005&&['D','F','G'].includes(d.cat)) e.bolsa=true; }));
+      r.noDed.forEach(n=>{ const k=n.it.src+'|'+n.it.id, e=porItem[k]=porItem[k]||{ded:0,no:{},pids:{},bolsa:false}; e.no[n.motivo]=(e.no[n.motivo]||0)+n.imp; });
+    });
     Object.entries(R).forEach(([c,r])=>Object.entries(r.props).forEach(([pid,x])=>{ const k=c+'|'+pid; acum[k]=(acum[k]||0)+x.amEd+x.amMej+x.amMue; }));
   }
-  return {R,cfg,items,acum,bolsa,y:target};
+  return {R,cfg,items,acum,bolsa,porItem,y:target};
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -10274,10 +10292,10 @@ function v2FindRef(src,id){
 function v2SetCfg(k,v){ D.cfg=D.cfg||{}; D.cfg[k]=v; saveAndSync(); rFiscalV2(); }
 
 // ── Campos de ficha fiscal en el modal de Facturas ──
-function v2FichaReset(){ ['cpf-fpago','cpf-nifemi','cpf-destnom','cpf-destnif','cpf-base','cpf-iva','cpf-pini','cpf-pfin'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+function v2FichaResetBase(){ ['cpf-fpago','cpf-nifemi','cpf-destnom','cpf-destnif','cpf-base','cpf-iva','cpf-pini','cpf-pfin'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   if($i('cpf-catf')) $i('cpf-catf').value='E'; if($i('cpf-tipodoc')) $i('cpf-tipodoc').value='factura'; if($i('cpf-sit')) $i('cpf-sit').value='';
   if($i('cpf-cta')) $i('cpf-cta').innerHTML=v2OptsCtas(''); if($i('cpf-prov')) $i('cpf-prov').innerHTML=v2OptsProvs(''); }
-function v2FichaLoad(x){ v2FichaReset(); if(!x) return;
+function v2FichaLoadBase(x){ v2FichaResetBase(); if(!x) return;
   $i('cpf-catf').value=x.catF||catFDe(x,'compra'); $i('cpf-fpago').value=x.fPago||''; $i('cpf-tipodoc').value=x.tipoDoc||'factura';
   $i('cpf-nifemi').value=x.nifEmi||''; $i('cpf-destnom').value=x.destNom||''; $i('cpf-destnif').value=x.destNif||'';
   $i('cpf-cta').innerHTML=v2OptsCtas(x.ctaId); $i('cpf-prov').innerHTML=v2OptsProvs(x.provId);
@@ -10285,7 +10303,7 @@ function v2FichaLoad(x){ v2FichaReset(); if(!x) return;
 function v2FichaRead(){ if(!$i('cpf-catf')) return {};
   const catF=$i('cpf-catf').value;
   return {catF, catFAuto:false, ded:CATF_DED[catF], fPago:gi('cpf-fpago'), tipoDoc:$i('cpf-tipodoc').value, nifEmi:gi('cpf-nifemi'), destNom:gi('cpf-destnom'), destNif:gi('cpf-destnif'),
-    ctaId:gi('cpf-cta'), provId:gi('cpf-prov'), base:gn('cpf-base'), iva:gn('cpf-iva'), pIni:gi('cpf-pini'), pFin:gi('cpf-pfin'), situacion:$i('cpf-sit').value}; }
+    ctaId:gi('cpf-cta'), provId:gi('cpf-prov'), numProv:gi('cpf-numprov'), base:gn('cpf-base'), iva:gn('cpf-iva'), pIni:gi('cpf-pini'), pFin:gi('cpf-pfin'), situacion:$i('cpf-sit').value}; }
 
 // ── Ficha fiscal genérica (Gastos y costes de adquisición) ──
 function v2AbrirFicha(src,id){
@@ -10293,7 +10311,8 @@ function v2AbrirFicha(src,id){
   let propId=x.propId||''; if(src==='adq'){ const p=(D.props||[]).find(p=>(p.costesAdq||[]).includes(x)); propId=p?p.id:''; }
   $i('fic-src').value=src; $i('fic-id').value=id;
   $i('fic-cab').innerHTML=`<strong>${x.con||x.desc||x.concepto||'Gasto'}</strong> · ${eur(+x.imp||0,2)} · ${x.fecha?fD(x.fecha):''}`;
-  $i('fic-prop').innerHTML=v2OptsProps(propId,'— sin inmueble (reparto automático si es D, E o I) —')+(src==='adq'?'':'<option value="__varios">↔ Varios inmuebles concretos…</option>'); $i('fic-prop').disabled=(src==='adq');
+  $i('fic-prop').innerHTML=v2OptsProps(propId,'— sin inmueble —')+(src==='adq'?'':'<option value="__todos">↔ Todos (gasto común, se reparte)</option><option value="__varios">↔ Varios inmuebles concretos…</option>');
+  if(src!=='adq'&&!propId&&(x.repartoTodos||x.repartoAuto)) $i('fic-prop').value='__todos'; $i('fic-prop').disabled=(src==='adq');
   const rp=Array.isArray(x.repartoProps)?x.repartoProps:[];
   $i('fic-varios-lista').innerHTML=(D.props||[]).map(p=>`<label style="display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;font-size:12px;"><input type="checkbox" class="fic-vp" value="${p.id}" ${rp.includes(p.id)?'checked':''} style="width:auto;"> ${p.nom}</label>`).join('');
   $i('fic-varios-modo').value=x.repartoModo||v2cfg().repartoModo;
@@ -10301,7 +10320,7 @@ function v2AbrirFicha(src,id){
   v2FicVarios();
   $i('fic-tit').innerHTML=v2OptsOwners(x.titular||x.ownerId||'','— elegir —');
   $i('fic-catf').value=x.catF||catFDe(x,src); $i('fic-hab').value=x.hab||'';
-  $i('fic-fpago').value=x.fPago||''; $i('fic-tipodoc').value=x.tipoDoc||'factura'; $i('fic-nifemi').value=x.nifEmi||'';
+  $i('fic-fpago').value=x.fPago||''; $i('fic-numprov').value=x.numProv||''; $i('fic-tipodoc').value=x.tipoDoc||'factura'; $i('fic-nifemi').value=x.nifEmi||'';
   $i('fic-destnom').value=x.destNom||''; $i('fic-destnif').value=x.destNif||''; $i('fic-cta').innerHTML=v2OptsCtas(x.ctaId);
   $i('fic-base').value=x.base||''; $i('fic-iva').value=x.iva||''; $i('fic-pini').value=x.pIni||''; $i('fic-pfin').value=x.pFin||'';
   $i('fic-prov').innerHTML=v2OptsProvs(x.provId); $i('fic-sit').value=x.situacion||'';
@@ -10311,13 +10330,16 @@ function v2FicVarios(){ const e=$i('fic-varios'); if(e) e.style.display=gi('fic-
 function v2GuardarFicha(){
   const src=gi('fic-src'), x=v2FindRef(src,gi('fic-id')); if(!x) return;
   const catF=$i('fic-catf').value;
-  Object.assign(x,{catF,catFAuto:false,titular:gi('fic-tit'),titularAuto:false,hab:gi('fic-hab'),fPago:gi('fic-fpago'),tipoDoc:$i('fic-tipodoc').value,nifEmi:gi('fic-nifemi'),destNom:gi('fic-destnom'),destNif:gi('fic-destnif'),ctaId:gi('fic-cta'),base:gn('fic-base'),iva:gn('fic-iva'),pIni:gi('fic-pini'),pFin:gi('fic-pfin'),provId:gi('fic-prov'),situacion:$i('fic-sit').value});
+  Object.assign(x,{catF,catFAuto:false,titular:gi('fic-tit'),titularAuto:false,hab:gi('fic-hab'),fPago:gi('fic-fpago'),numProv:gi('fic-numprov'),tipoDoc:$i('fic-tipodoc').value,nifEmi:gi('fic-nifemi'),destNom:gi('fic-destnom'),destNif:gi('fic-destnif'),ctaId:gi('fic-cta'),base:gn('fic-base'),iva:gn('fic-iva'),pIni:gi('fic-pini'),pFin:gi('fic-pfin'),provId:gi('fic-prov'),situacion:$i('fic-sit').value});
   if(src!=='adq'){
     if(gi('fic-prop')==='__varios'){
       const sel=[...document.querySelectorAll('.fic-vp:checked')].map(e=>e.value);
       if(sel.length<2){ toast('Marca al menos dos inmuebles para repartir',false); return; }
       x.propId=''; x.repartoProps=sel; x.repartoModo=$i('fic-varios-modo').value;
-    } else { x.propId=gi('fic-prop'); delete x.repartoProps; delete x.repartoModo; }
+    } else if(gi('fic-prop')==='__todos'){
+      if(!CAT_REPARTIBLES.includes($i('fic-catf').value)){ toast('«Todos» es solo para reparaciones, gastos anuales o servicios comunes',false); return; }
+      x.propId=''; x.repartoTodos=true; x.repartoAuto=false; delete x.repartoProps; delete x.repartoModo;
+    } else { x.propId=gi('fic-prop'); x.repartoTodos=false; x.repartoAuto=false; delete x.repartoProps; delete x.repartoModo; }
   }
   if(src==='compra'){ x.ded=CATF_DED[catF]; x.ownerId=x.titular; }
   if(src==='gasto') x.ded=['J','K'].includes(catF)?'no':'si';
@@ -10555,7 +10577,7 @@ function rFiscalV2(){
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;cursor:pointer;" onclick="const e=$i('v2-vals');e.style.display=e.style.display==='none'?'block':'none';">
       <div><div class="card-title" style="margin:0;">Motor fiscal v2 · Ejercicio ${y}</div><div style="font-size:11px;color:var(--ink3);">Cálculo día a día por titularidad, ocupación por m² y devengo</div></div>
       <div style="display:flex;gap:8px;"><span class="badge ${nE?'badge-r':'badge-g'}">${nE} error(es)</span><span class="badge badge-y">${nA} aviso(s)</span><span style="font-size:11px;color:var(--ink3);">▼</span></div></div>
-    <div id="v2-vals" style="display:${nE?'block':'none'};margin-top:10px;max-height:320px;overflow:auto;">${vals.map(v=>`<div style="font-size:11.5px;padding:5px 0;border-bottom:1px solid var(--line);color:${v.n==='error'?'var(--rd)':'var(--ink2)'};">${v.n==='error'?'⛔':'⚠️'} ${v.t}</div>`).join('')}</div></div>`;
+    <div id="v2-vals" style="display:${nE?'block':'none'};margin-top:10px;max-height:320px;overflow:auto;">${vals.map(v=>`<div style="font-size:11.5px;padding:5px 0;border-bottom:1px solid var(--line);color:${v.n==='error'?'var(--rd)':'var(--ink2)'};display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><span>${v.n==='error'?'⛔':'⚠️'} ${v.t}</span>${v.k?`<button class="btn btn-ghost btn-xs" style="flex-shrink:0;" onclick="event.stopPropagation();v2Comprobar('${v.tipo}','${v.src||''}','${v.id}','${v.k}',${v.n==='error'})">✓ Comprobado</button>`:''}</div>`).join('')}</div></div>`;
 
   if(!cs.length) html+='<div class="empty"><div class="empty-icon">💶</div><p>Sin rendimientos ni imputaciones para este ejercicio. Revisa propietarios, titularidad e inmuebles.</p></div>';
   cs.forEach(c=>{
@@ -10612,7 +10634,7 @@ function rFiscalV2(){
     <div class="tbl-wrap" style="margin-top:10px;"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Inmueble</th><th class="n">Importe</th><th>Categoría</th><th>Titular</th><th></th></tr></thead><tbody>
     ${its.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).map(it=>{ const p=(D.props||[]).find(z=>z.id==it.propId);
       return `<tr style="${(it.ref&&(it.ref.catFAuto||it.ref.titularAuto))?'background:rgba(245,158,11,.08);':''}"><td class="mono" style="font-size:10.5px;">${it.fecha?fD(it.fecha):'—'}</td><td style="font-size:11.5px;">${it.con}<div style="font-size:9.5px;color:var(--ink3);">${{compra:'Factura',gasto:'Gasto',adq:'Coste adquisición'}[it.src]}</div></td>
-      <td style="font-size:11px;">${it.virt?'<span style="color:var(--bl);">↔ reparto '+(it.reparto.auto?'automático':'entre '+it.reparto.n)+' · '+(REPARTO_TXT[it.reparto.modo]||'')+'</span>':(p?p.nom:'<span style="color:var(--rd);">sin asignar</span>')}</td><td class="mono" style="text-align:right;">${e2(it.virt?it.origImp:it.imp)}</td>
+      <td style="font-size:11px;">${it.virt?'<span style="color:var(--bl);">↔ '+(it.reparto.auto?'Todos':'reparto entre '+it.reparto.n)+' · '+(REPARTO_TXT[it.reparto.modo]||'')+'</span>':(p?p.nom:'<span style="color:var(--rd);">sin asignar</span>')}</td><td class="mono" style="text-align:right;">${e2(it.virt?it.origImp:it.imp)}</td>
       <td><select onchange="v2SetCat('${it.src}','${it.id}',this.value)" style="font-size:10.5px;padding:3px;max-width:190px;">${opC(it.catF)}</select></td>
       <td><select onchange="v2SetTit('${it.src}','${it.id}',this.value)" style="font-size:10.5px;padding:3px;">${v2OptsOwners(it.titular,'—')}</select></td>
       <td style="white-space:nowrap;"><button class="btn btn-ghost btn-xs" onclick="v2AbrirFicha('${it.src}','${it.id}')" title="Ficha fiscal">📋</button>${it.catF==='C'?` <button class="btn btn-ghost btn-xs" onclick="v2VenderMueble('${it.src}','${it.id}')" title="Vender a otro contribuyente">↔</button>`:''}</td></tr>`; }).join('')}
@@ -10627,7 +10649,7 @@ function rFiscalV2(){
       <div>Formalización de préstamos (G)<br>${sel('gModo',[['factor','Solo en periodos arrendados'],['limite','Al límite con arrastre 4 años']],cfg.gModo)}</div>
       <div>Mejoras pagadas por el usufructuario<br>${sel('mejoraUsuf',[['false','No amortizan'],['true','Amortizan al 3%']],cfg.mejoraUsuf)}</div>
       <div>Exigibilidad de la renta<br>Día <input type="number" value="${cfg.diaExig}" onchange="v2SetCfg('diaExig',this.value)" style="width:50px;font-size:11.5px;padding:4px;"> ${sel('exigMesAnt',[['true','del mes anterior'],['false','del propio mes']],cfg.exigMesAnt)}</div>
-      <div>Tipo ITP aplicado (%)<br><input type="number" step="0.1" value="${cfg.itpTipo}" onchange="v2SetCfg('itpTipo',this.value)" style="width:70px;font-size:11.5px;padding:4px;"></div>
+
       <div>Reparto de gastos comunes<br>${sel('repartoModo',[['iguales','Partes iguales'],['m2','m² útiles'],['vc','Valor catastral'],['habs','Nº de habitaciones']],cfg.repartoModo)}</div>
       <div>Inmuebles entre los que se reparte<br>${sel('repartoAmbito',[['disfrute','Los que generan rentas al titular'],['todos','También los de nuda propiedad (más conservador)']],cfg.repartoAmbito)}</div>
       <div>RDL 29/2026<br>${sel('rdl29',[['true','Convalidado (por defecto)'],['false','No convalidado: régimen anterior']],cfg.rdl29)}</div>
@@ -10817,9 +10839,9 @@ function fiscalOwnerDe(p){ if(!p) return ''; const t=titularidadDia(p.id,fxIso(n
 function v2PropLoad(p){
   const s=(id,v)=>{ const e=$i(id); if(e) e.value=v||''; }, ch=(id,v)=>{ const e=$i(id); if(e) e.checked=!!v; };
   s('pr-refcat',p.refCat); s('pr-revcat',p.revCat); s('pr-vct',p.vct); s('pr-vcs',p.vcs); s('pr-vcc',p.vcc);
-  s('pr-m2t',p.m2t); s('pr-m2c',p.m2c); s('pr-runit',p.rentaUnit); ch('pr-tens',p.zonaTens); ch('pr-nosusc',p.noSusc);
+  s('pr-m2t',p.m2t); s('pr-m2c',p.m2c); s('pr-vref',p.vRef); s('pr-itp',p.itpTipo); setTimeout(v2RecalcM2C,0); s('pr-runit',p.rentaUnit); ch('pr-tens',p.zonaTens); ch('pr-nosusc',p.noSusc);
 }
-function v2PropRead(){ return {refCat:gi('pr-refcat'),revCat:gi('pr-revcat'),vct:gn('pr-vct'),vcs:gn('pr-vcs'),vcc:gn('pr-vcc'),m2t:gn('pr-m2t'),m2c:gn('pr-m2c'),rentaUnit:gn('pr-runit'),zonaTens:!!($i('pr-tens')&&$i('pr-tens').checked),noSusc:!!($i('pr-nosusc')&&$i('pr-nosusc').checked)}; }
+function v2PropRead(){ return {refCat:gi('pr-refcat'),revCat:gi('pr-revcat'),vct:gn('pr-vct'),vcs:gn('pr-vcs'),vcc:gn('pr-vcc'),m2t:gn('pr-m2t'),m2c:v2M2CForm(),vRef:gn('pr-vref'),itpTipo:gn('pr-itp'),rentaUnit:gn('pr-runit'),zonaTens:!!($i('pr-tens')&&$i('pr-tens').checked),noSusc:!!($i('pr-nosusc')&&$i('pr-nosusc').checked)}; }
 function v2ContReset(){ if($i('co-tipo')) $i('co-tipo').value='temporal'; ['co-firma','co-causa','co-rant','co-vivhab'].forEach(i=>{const e=$i(i); if(e) e.value='';}); ['co-primer','co-indice','co-pj','co-entero','co-tacita','co-subsiste'].forEach(i=>{const e=$i(i); if(e) e.checked=false;}); }
 function v2ContRead(){ const ch=i=>!!($i(i)&&$i(i).checked); return {tipoContrato:gi('co-tipo'),firma:gi('co-firma'),causa:gi('co-causa'),rentaAnt:gn('co-rant'),primer:ch('co-primer'),rentaInfIndice:ch('co-indice'),arrPJ:ch('co-pj'),pisoEntero:ch('co-entero'),prorrogaTacita:ch('co-tacita'),vivHab:gi('co-vivhab'),causaSubsiste:ch('co-subsiste')}; }
 
@@ -10836,6 +10858,410 @@ function v2FinTemporal(ini,mmdd){
 }
 function calcFinContrato(mmdd){ const ini=gi('co-ini'); if(!ini){ toast('Pon primero la fecha de inicio',false); return; } const r=v2FinTemporal(ini,mmdd); $i('co-fin').value=r.iso; $i('co-fin-info').innerHTML='✓ Hasta <strong>'+fD(r.iso)+'</strong> · '+r.dias+' días · '+r.nota; }
 function calcFinInq(mmdd){ const ini=gi('iq-ini'); if(!ini){ toast('Pon primero la fecha de inicio',false); return; } const r=v2FinTemporal(ini,mmdd); $i('iq-fin').value=r.iso; $i('iq-fin-info').innerHTML='✓ Hasta <strong>'+fD(r.iso)+'</strong> · '+r.dias+' días · '+r.nota; }
+
+
+// ══════════════════════════════════════════════════════════════
+// v3 · Automatización de facturas, avisos comprobables, m² comunes, ITP
+// ══════════════════════════════════════════════════════════════
+
+// ── ITP Región de Murcia: 8% hasta el 24/07/2025, 7,75% desde el 25/07/2025 (Ley 3/2025).
+//    Base: el mayor entre precio escriturado y valor de referencia del Catastro.
+function v2ItpTipo(p){ const t=parseFloat(p.itpTipo); if(t>0) return t; return (p.fcompra&&p.fcompra<'2025-07-25')?8:7.75; }
+
+// ── m² de zonas comunes = m² útiles del piso − Σ m² de habitaciones ──
+function v2M2Comunes(p){
+  const n=parseInt(p.habs)||0, cf=p.habsConfig||{}; let s=0, ok=n>0;
+  for(let i=1;i<=n;i++){ const m=parseFloat((cf[i]||{}).m2)||0; if(!m) ok=false; s+=m; }
+  s=Math.round(s*100)/100; const t=parseFloat(p.m2t)||0;
+  if(!ok||!t) return {auto:false,sumH:s,t};
+  const v=Math.round((t-s)*100)/100; return {auto:true,valor:v,sumH:s,t,neg:v<0};
+}
+function v2SyncM2C(p){ const mc=v2M2Comunes(p); if(mc.auto) p.m2c=Math.max(0,mc.valor); }
+function v2TxtM2(p){
+  const mc=v2M2Comunes(p);
+  if(mc.auto) return `<div style="font-size:10.5px;color:${mc.neg?'var(--rd)':'var(--ink3)'};margin-top:2px;">${mc.neg?'⚠️ Las habitaciones ('+mc.sumH+' m²) superan los m² útiles del piso ('+mc.t+' m²)':'Zonas comunes: <strong>'+Math.max(0,mc.valor)+' m²</strong> ('+mc.t+' útiles − '+mc.sumH+' de habitaciones)'}</div>`;
+  return `<div style="font-size:10.5px;color:var(--ink3);margin-top:2px;">Zonas comunes: indica los m² útiles del piso (Propiedades) y los de cada habitación para calcularlas</div>`;
+}
+function v2PropForm(){ const p=(D.props||[]).find(x=>x.id==gi('pr-edit-id'))||{}; return Object.assign({},p,{m2t:gn('pr-m2t'),habs:gn('pr-h')||p.habs}); }
+function v2RecalcM2C(){
+  const e=$i('pr-m2c'), inf=$i('pr-m2c-info'); if(!e) return; const mc=v2M2Comunes(v2PropForm());
+  if(mc.auto){ e.value=Math.max(0,mc.valor); e.readOnly=true; e.style.background='var(--bg)';
+    if(inf) inf.innerHTML=mc.neg?'<span style="color:var(--rd);">⚠️ Las habitaciones suman más que los m² útiles</span>':'Calculado: '+mc.t+' útiles − '+mc.sumH+' de habitaciones'; }
+  else { e.readOnly=false; e.style.background=''; if(inf) inf.textContent='Se calcula solo al indicar los m² útiles y los de cada habitación (en Habitaciones).'; }
+}
+function v2M2CForm(){ const mc=v2M2Comunes(v2PropForm()); return mc.auto?Math.max(0,mc.valor):gn('pr-m2c'); }
+
+// ── Avisos comprobables ──
+function v2Visto(o,k){ return !!o&&Array.isArray(o.vistos)&&o.vistos.includes(k); }
+function v2Comprobar(tipo,src,id,k,esError){
+  if(esError&&!confirm('Esto oculta el error, pero no cambia el cálculo: si el dato es incorrecto, el gasto se seguirá tratando igual. ¿Lo has comprobado y es correcto así?')) return;
+  const o=tipo==='prop'?(D.props||[]).find(p=>p.id==id):v2FindRef(src,id); if(!o) return;
+  if(k==='catAuto') o.catFAuto=false;
+  else if(k==='titAuto') o.titularAuto=false;
+  else if(k==='repartoAuto'){ o.repartoAuto=false; o.repartoTodos=true; }
+  else if(k==='ocr') o.leidaAuto=false;
+  else o.vistos=[...new Set((o.vistos||[]).concat([k]))];
+  saveAndSync(); toast('✓ Marcado como comprobado');
+  const s=document.querySelector('.sec.on'); if(s){ const r=RENDERS[s.id.replace('sec-','')]; if(r) r(); }
+}
+
+// ── Avisos de cada factura ──
+function v2IssuesItems(calc){
+  const map={}, add=(it,n,k,t)=>{ const key=it.src+'|'+it.id, m=map[key]=map[key]||{it,lst:[]}; if(!m.lst.some(x=>x.k===k)) m.lst.push({n,k,t}); };
+  calc.items.forEach(it=>{
+    const ref=it.ref||{};
+    if(it.virt&&it.reparto){
+      if(it.reparto.sinInmuebles) add(it,'error','sinInmFecha',nombreC(it.titular)+' no cobraba rentas de ningún inmueble del '+fD(it.reparto.ini)+' al '+fD(it.reparto.fin)+': esa parte no computa');
+      else { if(it.reparto.auto&&ref.repartoAuto) add(it,'aviso','repartoAuto','Repartido entre todos los inmuebles de '+nombreC(it.titular)+': confirma que es un gasto común y no de un piso concreto');
+             if(it.reparto.fallback) add(it,'aviso','repartoFallback','Faltan datos para repartir por '+(REPARTO_TXT[it.reparto.modo]||it.reparto.modo)+': se ha repartido en partes iguales'); }
+    }
+    if(!it.propId&&!it.virt&&it.catF!=='J') add(it,'error','sinInmueble',CAT_REPARTIBLES.includes(it.catF)?(it.titular?'Sin inmueble: elige el piso o «Todos» si es un gasto común':'Sin inmueble ni titular'):'Esta categoría pertenece siempre a un inmueble concreto: asígnalo');
+    if(it.tipoDoc==='ticket') add(it,'aviso','ticket','Ticket en lugar de factura completa a nombre del titular');
+    if(ref.catFAuto) add(it,'aviso','catAuto','Categoría «'+(CATF[it.catF]||it.catF)+'» asignada automáticamente');
+    if(ref.titularAuto) add(it,'aviso','titAuto','Titular asignado automáticamente ('+nombreC(it.titular)+')');
+    if(ref.leidaAuto) add(it,'aviso','ocr','Datos leídos automáticamente de la factura: revisa importe, fecha y categoría');
+    if((it.propId||it.virt)&&!it.titular&&it.catF!=='J') add(it,'aviso','sinTitular','Sin titular económico: se atribuye a quien cobra las rentas');
+    if(['E','F','I'].includes(it.catF)&&!(ref.pIni&&ref.pFin)) add(it,'aviso','sinPeriodo','Sin periodo facturado: se estima '+(/\bibi\b|basura|seguro|tasa municipal/i.test(it.con)?'el año natural':'el mes de la fecha'));
+    if(it.ctaId&&it.titular){ const ct=(D.ctasBanc||[]).find(x=>x.id==it.ctaId); if(ct&&ct.titularId&&ct.titularId!==it.titular&&!it.provId) add(it,'error','cuenta','Pagado desde una cuenta de '+nombreC(ct.titularId)+' pero el titular es '+nombreC(it.titular)+' (sin provisión de fondos)'); }
+    if(it.propId&&it.fecha&&it.titular&&['D','E','F','G','I'].includes(it.catF)){ const t=titularidadDia(it.propId,it.fecha); if(t.nuda&&t.nuda.ownerId===it.titular) add(it,'error','nuda','Gasto de '+nombreC(it.titular)+' en un periodo de nuda propiedad: no deducible'); }
+  });
+  Object.values(map).forEach(m=>{ m.lst=m.lst.filter(x=>!v2Visto(m.it.ref||{},x.k)); });
+  return map;
+}
+
+// ── Validaciones globales (sustituye a la versión anterior) ──
+function v2Validaciones(y,calc){
+  const v=[], cfg=calc.cfg, add=(n,t,o)=>v.push(Object.assign({n,t},o||{}));
+  const addP=(p,n,k,t)=>{ if(!v2Visto(p,k)) add(n,p.nom+': '+t,{tipo:'prop',id:p.id,k}); };
+  if(!cfg.rdl29) add('aviso','Configurado como NO convalidado el RDL 29/2026: se aplican la reducción de la Ley 12/2023 y la imputación general del art. 85.');
+  (D.conts||[]).forEach(co=>v2ChequeoTemporal(co,null).forEach(x=>add(x.n,x.t)));
+  (D.props||[]).forEach(p=>{
+    if(!p.refCat) addP(p,'error','refCat','falta la referencia catastral.');
+    if(!(parseFloat(p.vct)>0)) addP(p,'error','vct','falta el valor catastral total (recibo del IBI): no se puede calcular la imputación de rentas.');
+    const pc=pctConstr(p);
+    if(!pc.ok) addP(p,pc.pct>0?'aviso':'error','pct','% de construcción '+(pc.pct>0?'provisional ('+pc.fuente+', '+(pc.pct*100).toFixed(2)+'%)':'sin datos (no se amortiza)')+'. Criterio legal: VC construcción ÷ VC total.');
+    if(pc.pct>1) addP(p,'error','pct100','el % de construcción supera el 100%.');
+    if(!p.revCat) addP(p,'aviso','revCat','sin año de revisión catastral → se aplica el 2% de imputación (conservador).');
+    if(!p.fcompra) addP(p,'error','fcompra','falta la fecha de escritura.');
+    const mc=v2M2Comunes(p);
+    if(mc.auto&&mc.neg) addP(p,'error','m2neg','los m² de las habitaciones ('+mc.sumH+') superan los m² útiles del piso ('+mc.t+').');
+    else if(/igual/.test(pesosHabs(p).metodo)&&(parseInt(p.habs)||0)>1) addP(p,'aviso','m2','faltan m² de alguna habitación → reparto por número de habitaciones.');
+    if(p.usufructoId&&!derechosProp(p.id).some(d=>d.tipo==='usufVit'||d.tipo==='usufTemp')) addP(p,'error','usuf','tiene usufructuario marcado pero sin fecha de escritura. Regístralo en 📜 Titularidad.');
+    if(derechosProp(p.id).some(d=>(d.pct||100)<100)) addP(p,'aviso','copro','hay copropiedad (<100%). El cálculo asigna el 100% a cada titular: revísalo con el gestor.');
+    if(parseFloat(p.rentaUnit)>0){ const sum=(D.inqs||[]).filter(i=>i.estado==='ACTIVO'&&i.propId==p.id).reduce((s,i)=>s+(+i.alq||0),0); if(sum>parseFloat(p.rentaUnit)) addP(p,'aviso','rentaUnit','la suma de rentas de habitaciones ('+eur(sum)+') supera la renta de referencia de la vivienda completa ('+eur(p.rentaUnit)+'). Límite general del art. 3 del RDL 29/2026.'); }
+    const itp=calc.items.filter(it=>it.propId===p.id&&/\bitp\b|transmisiones patrimoniales|modelo 600/i.test(it.con));
+    const precio=parseFloat(p.precio)||0;
+    if(itp.length&&precio>0){
+      const pag=itp.reduce((a,b)=>a+b.imp,0), tipo=v2ItpTipo(p), vref=parseFloat(p.vRef)||0, base=Math.max(precio,vref), esp=base*tipo/100;
+      if(Math.abs(pag-esp)>Math.max(1,esp*0.005)){
+        if(!vref&&pag>esp) addP(p,'aviso','itp','ITP pagado '+eur(pag,2)+' mayor que precio × '+tipo+'% ('+eur(esp,2)+'). Puede deberse a que el valor de referencia del Catastro superaba al precio: introdúcelo en la propiedad para verificarlo.');
+        else addP(p,'aviso','itp','ITP pagado '+eur(pag,2)+' ≠ '+eur(base,2)+' × '+tipo+'% = '+eur(esp,2)+'. Compruébalo con el modelo 600.');
+      }
+    }
+  });
+  Object.values(v2IssuesItems(calc)).forEach(m=>{
+    const it=m.it, yy=parseInt((it.fecha||'').slice(0,4)); if(yy&&yy!==y&&!['A','B','C','K'].includes(it.catF)) return;
+    const nm='«'+(it.con||'gasto')+'» ('+eur(it.virt?it.origImp:it.imp)+')';
+    m.lst.forEach(x=>add(x.n,nm+': '+x.t,{tipo:'item',src:it.src,id:it.id,k:x.k}));
+  });
+  (D.provisiones||[]).forEach(pv=>{ const s=saldoProvision(pv); if(Math.abs(s)>0.5) add('aviso','Provisión de '+nombreC(pv.aportante)+' del '+fD(pv.fecha)+': '+(s>0?'saldo sin justificar ':'gastos por encima de lo aportado ')+eur(Math.abs(s),2)+'.'); });
+  (D.inqs||[]).filter(i=>i.estado==='ACTIVO').forEach(i=>{ const co=(D.conts||[]).filter(z=>z.inqId==i.id).sort((a,b)=>(b.ini||'').localeCompare(a.ini||''))[0];
+    if(!co) add('aviso',(i.nom||'')+' '+(i.ap||'')+': sin contrato registrado → sin reducción.'); else if(!co.tipoContrato) add('aviso',(i.nom||'')+': contrato sin tipo.'); });
+  const pend=(D.pagos||[]).filter(pg=>pg.estado!=='pagado'&&pg.mes&&v2ExigIso(pg.mes,cfg).slice(0,4)===String(y)).length;
+  if(pend) add('aviso',pend+' cobro(s) pendientes cuentan como ingreso (devengo, art. 14 LIRPF). Si alguno no es exigible, elimínalo.');
+  if((D.derechos||[]).some(d=>d.tipo==='usufVit'||d.tipo==='usufTemp')) add('aviso','Base de amortización del usufructo: criterio «'+(cfg.usufCriterio==='dgt'?'DGT V1973-20 (solo ISD y gastos pagados)':'Manual AEAT (valor a efectos del ISD)')+'». Hay criterios oficiales distintos: decídelo con el gestor.');
+  if(y>=2027) add('aviso','Imputación 2027+: los tramos de la escala (1,1/1,5/2/3%) son provisionales. Verifícalos en el art. 85 LIRPF redactado por el RDL 29/2026.');
+  const u=new Set(); return v.filter(x=>{ const k=x.n+x.t; if(u.has(k)) return false; u.add(k); return true; });
+}
+
+// ── Estado fiscal automático de cada factura ──
+function v2OcupTxt(pid,calc){ let de=0; Object.values(calc.R).forEach(r=>{ const x=r.props&&r.props[pid]; if(x) de+=x.diasEq||0; });
+  return de>0?('alquilado '+de.toFixed(0)+' días equivalentes en '+calc.y):('sin alquilar en '+calc.y+': amortiza 0 € por ahora y la base se conserva'); }
+function v2EstadoItem(it,calc){
+  const k=it.src+'|'+it.id, imp=it.virt?it.origImp:it.imp, pi=(calc.porItem||{})[k]||{ded:0,no:{}}, mot=Object.entries(pi.no).sort((a,b)=>b[1]-a[1]);
+  const C=(c,t,d)=>({c,t,d});
+  if(it.catF==='J') return C('gris','No deducible','');
+  if(!it.propId&&!it.virt) return C('rojo','No computa','sin inmueble asignado');
+  if(['A','B','C','K'].includes(it.catF)){
+    const pids=[...new Set(calc.items.filter(x=>x.src===it.src&&x.id===it.id&&x.propId).map(x=>x.propId))];
+    const t={A:'Amortizable · coste de compra',B:'Amortizable 3% · mejora',C:'Amortizable 10% · mobiliario',K:'Amortizable · coste del usufructo'}[it.catF];
+    const d={A:'se suma al coste y amortiza el 3% de la parte de construcción solo los días alquilados',B:'amortiza el 3% solo los días alquilados',C:'amortiza el 10% solo los días alquilados',K:'amortiza el usufructo solo los días alquilados, con el límite de los ingresos'}[it.catF];
+    return C('azul',t,d+' — '+pids.map(pid=>v2OcupTxt(pid,calc)).join(' · '));
+  }
+  const ded=pi.ded;
+  if(it.catF==='D'){
+    if(ded>0.005) return C(pi.bolsa?'naranja':'verde','Reparación: '+eur(ded,2)+' computan',pi.bolsa?'deducible aunque el piso esté vacío; si los ingresos del año no lo cubren, se deduce en los 4 años siguientes':'deducible dentro del límite de ingresos del inmueble');
+    return C('rojo','No deducible',mot.length?mot[0][0]:'');
+  }
+  if(ded>=imp-0.01) return C('verde','Deducible '+eur(ded,2),it.catF==='H'?'suministro repercutido: también computa como ingreso':'');
+  if(ded>0.005) return C('naranja','Deducible '+eur(ded,2)+' de '+eur(imp,2),mot.map(m=>m[0]+' ('+eur(m[1],2)+')').join(' · '));
+  return C('rojo','No deducible ahora',mot.length?mot[0][0]:'sin días arrendados en el periodo');
+}
+function v2EstadoFacturas(){
+  let tY=new Date().getFullYear();
+  v2ItemsBase().forEach(it=>{ const yy=parseInt((it.fecha||'').slice(0,4)); if(yy>tY&&yy<=tY+2) tY=yy; });
+  const calc=v2Calc(tY,true), iss=v2IssuesItems(calc), out={};
+  v2Unicos(calc.items).forEach(it=>{ const k=it.src+'|'+it.id; out[k]={estado:v2EstadoItem(it,calc),issues:(iss[k]||{lst:[]}).lst}; });
+  return out;
+}
+const V2_COL={verde:'var(--gn)',naranja:'var(--ye)',rojo:'var(--rd)',azul:'var(--bl)',gris:'var(--ink3)'};
+function v2HtmlFilaEstado(src,id){
+  const e=(window._v2Est||{})[src+'|'+id]; if(!e) return '';
+  const col=V2_COL[e.estado.c]||'var(--ink3)';
+  return `<div style="margin-top:5px;font-size:10.5px;line-height:1.45;">
+    <div><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};margin-right:4px;"></span><strong style="color:${col};">${e.estado.t}</strong>${e.estado.d?` <span style="color:var(--ink3);">· ${e.estado.d}</span>`:''}</div>
+    ${e.issues.map(is=>`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:3px;color:${is.n==='error'?'var(--rd)':'var(--ye)'};">${is.n==='error'?'⛔':'⚠️'} ${is.t}
+      <button class="btn btn-ghost btn-xs" style="padding:1px 7px;font-size:9.5px;" onclick="v2Comprobar('item','${src}','${id}','${is.k}',${is.n==='error'})">✓ Comprobado</button>
+      <button class="btn btn-ghost btn-xs" style="padding:1px 7px;font-size:9.5px;" onclick="v2AbrirFicha('${src}','${id}')">Corregir</button></div>`).join('')}
+  </div>`;
+}
+function v2HtmlEstadoCaja(e){
+  const col=V2_COL[e.estado.c]||'var(--ink3)';
+  return `<div style="border:1.5px solid ${col};border-radius:var(--r2);padding:10px 12px;font-size:11.5px;line-height:1.5;">
+    <div style="font-weight:700;color:${col};">Resultado fiscal: ${e.estado.t}</div>${e.estado.d?`<div style="color:var(--ink2);">${e.estado.d}</div>`:''}
+    ${e.issues.map(is=>`<div style="color:${is.n==='error'?'var(--rd)':'var(--ye)'};margin-top:3px;">${is.n==='error'?'⛔':'⚠️'} ${is.t}</div>`).join('')}
+    <div style="font-size:10px;color:var(--ink3);margin-top:5px;">Calculado al momento según la ocupación real del piso en el periodo, la titularidad en esa fecha y la categoría del gasto.</div></div>`;
+}
+
+// ── Vista previa fiscal mientras se rellena la factura ──
+let _v2PrevT=null;
+function v2DraftCompra(){
+  const imp=gn('cp-imp'), fecha=gi('cp-fecha'); if(!imp||!fecha) return null;
+  const prop=gi('cp-prop'), catF=$i('cpf-catf')?$i('cpf-catf').value:'E';
+  const d={id:'__draft',con:gi('cp-con')||'Factura',emp:gi('cp-emp'),fecha,imp,catF,ded:CATF_DED[catF],ownerId:gi('cp-owner'),titular:gi('cp-owner'),
+    propId:prop==='__todos'?'':prop,hab:gi('cp-hab'),pIni:gi('cpf-pini'),pFin:gi('cpf-pfin'),destNif:gi('cpf-destnif'),provId:gi('cpf-prov'),
+    ctaId:gi('cpf-cta'),tipoDoc:$i('cpf-tipodoc')?$i('cpf-tipodoc').value:'factura',situacion:$i('cpf-sit')?$i('cpf-sit').value:''};
+  if(prop==='__todos') d.repartoTodos=true;
+  return d;
+}
+function v2PreviewFactura(){
+  clearTimeout(_v2PrevT);
+  _v2PrevT=setTimeout(()=>{
+    const box=$i('cp-fiscal-prev'); if(!box) return;
+    const dr=v2DraftCompra(); if(!dr){ box.innerHTML='<div style="font-size:11px;color:var(--ink3);">Introduce fecha e importe para ver si es deducible.</div>'; return; }
+    const orig=D.compras, ed=gi('cp-edit-id');
+    try{ D.compras=(orig||[]).filter(x=>x.id!==ed).concat([dr]); const e=v2EstadoFacturas()['compra|__draft']; box.innerHTML=e?v2HtmlEstadoCaja(e):''; }
+    catch(err){ console.warn(err); box.innerHTML=''; }
+    finally{ D.compras=orig; }
+  },350);
+}
+function v2PrepPropTodos(){ const s=$i('cp-prop'); if(s&&!s.querySelector('option[value="__todos"]')) s.insertAdjacentHTML('beforeend','<option value="__todos">↔ Todos (gasto común: se reparte entre los inmuebles del titular)</option>'); }
+function v2MarcasUsuario(proteger){ document.querySelectorAll('#m-compra input,#m-compra select,#m-compra textarea').forEach(e=>{ if(proteger&&String(e.value||'').trim()!=='') e.dataset.v2user='1'; else delete e.dataset.v2user; }); }
+function v2FichaReset(){ v2FichaResetBase(); v2PrepPropTodos(); v2MarcasUsuario(false); const n=$i('cpf-numprov'); if(n) n.value='';
+  window._v2LeidaAuto=false; window._v2CatManual=false; window._v2OwnerAuto=true;
+  const o=$i('cp-ocr'); if(o) o.innerHTML=''; setTimeout(v2PreviewFactura,50); }
+function v2FichaLoad(x){ v2FichaLoadBase(x); v2PrepPropTodos(); setTimeout(()=>v2MarcasUsuario(true),0);
+  if(x&&!x.propId&&(x.repartoTodos||x.repartoAuto)) $i('cp-prop').value='__todos';
+  const n=$i('cpf-numprov'); if(n) n.value=(x&&x.numProv)||'';
+  window._v2LeidaAuto=false; window._v2CatManual=true; window._v2OwnerAuto=false;
+  const o=$i('cp-ocr'); if(o) o.innerHTML=''; setTimeout(v2PreviewFactura,50); }
+function v2OnFormFactura(e){
+  const t=e.target; if(!t||!t.closest||!t.closest('#m-compra')) return;
+  if(t.dataset) t.dataset.v2user='1';
+  if(t.id==='cpf-catf') window._v2CatManual=true;
+  if(t.id==='cp-owner') window._v2OwnerAuto=false;
+  if((t.id==='cp-con'||t.id==='cp-emp')&&!window._v2CatManual){ const s=v2SugerirCat(gi('cp-con')+' '+gi('cp-emp')); if(s&&$i('cpf-catf')) $i('cpf-catf').value=s.cat; }
+  if((t.id==='cp-prop'||t.id==='cp-fecha')&&window._v2OwnerAuto!==false){
+    const p=gi('cp-prop'); if(p&&p!=='__todos'){ const tt=titularidadDia(p,gi('cp-fecha')||fxIso(new Date())); if(tt.disfrute) setTimeout(()=>{ $i('cp-owner').value=tt.disfrute; v2PreviewFactura(); },0); } }
+  v2PreviewFactura();
+}
+document.addEventListener('input',v2OnFormFactura,true);
+document.addEventListener('change',v2OnFormFactura,true);
+
+// ── Clasificación por palabras clave (sugerencia, siempre revisable) ──
+const V2_KW=[
+  [/tasaci[oó]n/i,'Tasación','G'],
+  [/(notar[ií]a|notario)[\s\S]{0,200}(hipoteca|pr[eé]stamo)|(hipoteca|pr[eé]stamo)[\s\S]{0,200}(notar[ií]a|notario)/i,'Notaría del préstamo','G'],
+  [/registro de la propiedad[\s\S]{0,200}(hipoteca|pr[eé]stamo)/i,'Registro del préstamo','G'],
+  [/modelo 600|transmisiones patrimoniales|\bitp\b/i,'ITP','A'],
+  [/notar[ií]a|notario/i,'Notaría','A'],
+  [/registro de la propiedad/i,'Registro de la Propiedad','A'],
+  [/intermediaci[oó]n inmobiliaria|comisi[oó]n (?:de )?(?:venta|inmobiliaria|intermediaci)|honorarios de (?:venta|intermediaci)|agencia inmobiliaria/i,'Comisión inmobiliaria','A'],
+  [/impuesto sobre (?:los )?bienes inmuebles|\bi\.?b\.?i\.?\b/i,'IBI','E'],
+  [/basura|residuos s[oó]lidos/i,'Tasa de basuras','E'],
+  [/comunidad de propietarios|cuota (?:de )?comunidad/i,'Comunidad de propietarios','E'],
+  [/electricidad|energ[ií]a (?:el[eé]ctrica|activa)|t[eé]rmino de potencia|iberdrola|endesa|naturgy|holaluz|octopus energy|totalenergies/i,'Luz','E'],
+  [/suministro de agua|agua potable|aguas de |emuasa|hidrogea|aquona|canon de saneamiento/i,'Agua','E'],
+  [/gas natural|butano/i,'Gas','E'],
+  [/fibra|internet|banda ancha|telefon[ií]a|movistar|vodafone|orange|\bdigi\b|jazztel|lowi|m[aá]sm[oó]vil|pepephone|simyo|yoigo/i,'Fibra / internet','E'],
+  [/seguro (?:de )?vida|vida riesgo/i,'Seguro de vida','J'],
+  [/seguro|p[oó]liza|aseguradora|mapfre|allianz|\baxa\b|generali|mutua|santa ?luc[ií]a|caser|zurich|catalana occidente|ocaso|reale/i,'Seguro de hogar','E'],
+  [/gestor[ií]a|asesor[ií]a|abogad|honorarios profesionales/i,'Gestoría / asesoría','I'],
+  [/idealista|fotocasa|habitaclia|milanuncios|pisos\.com/i,'Anuncio','I'],
+  [/colch[oó]n|somier|ikea|conforama|mueble|sof[aá]|armario|estanter/i,'Mobiliario','C'],
+  [/lavadora|frigor[ií]fico|nevera|horno|microondas|vitrocer|inducci[oó]n|lavavajillas|electrodom|secadora|campana extractora|televisor|aire acondicionado|termo el[eé]ctrico/i,'Electrodomésticos','C'],
+  [/c[aá]mara|\btapo\b|programador/i,'Equipamiento','C'],
+  [/pladur|instalaci[oó]n el[eé]ctrica nueva|ventanas? nuevas?|ampliaci[oó]n|reforma integral/i,'Mejora','B'],
+  [/reparaci[oó]n|aver[ií]a|fontaner|electricista|pintura|alba[ñn]il|reforma|obra/i,'Reparación / reforma','D'],
+  [/cerrajer|copia de llaves|bomb[ií]n|tornill|ferreter[ií]a|leroy merlin|bricomart|brico ?d[eé]p[oô]t/i,'Ferretería','D'],
+  [/limpieza|detergente|lej[ií]a|fregona|bayeta/i,'Útiles de limpieza','E'],
+  [/\bmetro\b|broca|taladr|herramient|destornillador/i,'Herramientas','J']
+];
+function v2SugerirCat(txt){
+  txt=String(txt||'');
+  for(const [re,con,cat] of V2_KW) if(re.test(txt)){
+    let nota='';
+    if(cat==='D'&&/reforma|obra/i.test(txt)) nota='Si incluye mejoras (pladur, instalación nueva, ventanas…), sepáralas en otra línea con categoría B.';
+      if(cat==='B') nota='Si una parte es reparación, sepárala en otra línea con categoría D.';
+    if(/seguro/i.test(txt)&&/vida/i.test(txt)&&/hogar|continente|contenido/i.test(txt)) nota='La póliza parece incluir hogar y vida: divídela en dos líneas (hogar E, vida J).';
+    return {cat,con,nota};
+  }
+  return null;
+}
+
+// ── Lectura automática de facturas (OCR de Google Drive, sin claves externas) ──
+async function v2OCR(file){
+  if(!gToken) throw new Error('conecta Google Drive');
+  const tipo=file.type||(/\.pdf$/i.test(file.name||'')?'application/pdf':'');
+  if(!/^(application\/pdf|image\/(jpeg|png|gif|bmp))$/.test(tipo)) throw new Error('formato no admitido para lectura ('+(tipo||'desconocido')+'); usa PDF, JPG o PNG');
+  const meta={name:'rc_lectura_temporal_'+Date.now(),mimeType:'application/vnd.google-apps.document'}; if(gFolderId) meta.parents=[gFolderId];
+  const b='rcocr'+Date.now();
+  const body=new Blob(['--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+b+'\r\nContent-Type: '+tipo+'\r\n\r\n',file,'\r\n--'+b+'--']);
+  const r=await gUpload('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&ocrLanguage=es&fields=id',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body});
+  if(!r.ok) throw new Error('Google Drive no pudo procesar el archivo ('+r.status+')');
+  const id=(await r.json()).id;
+  try{ const t=await gUpload('https://www.googleapis.com/drive/v3/files/'+id+'/export?mimeType=text/plain',{method:'GET'});
+    if(!t.ok) throw new Error('no se pudo extraer el texto ('+t.status+')'); return (await t.text()).replace(/^\uFEFF/,''); }
+  finally{ try{ await gUpload('https://www.googleapis.com/drive/v3/files/'+id,{method:'DELETE'}); }catch(e){} }
+}
+function v2Num(s){
+  s=String(s).replace(/\s/g,'').replace(/€|EUR/gi,'');
+  if(/,\d{1,2}$/.test(s)) s=s.replace(/\./g,'').replace(',','.');
+  else if(/\.\d{3}(\.|$)/.test(s)&&!/\.\d{1,2}$/.test(s)) s=s.replace(/\./g,'');
+  else s=s.replace(/,/g,'');
+  const n=parseFloat(s); return isFinite(n)?n:null;
+}
+const V2_MESES={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+function v2Fechas(t){
+  const out=[]; let m;
+  const re=/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/g;
+  while((m=re.exec(t))){ let d=+m[1],mo=+m[2],y=+m[3]; if(y<100) y+=2000; if(mo>=1&&mo<=12&&d>=1&&d<=31&&y>=2000&&y<=2100) out.push({iso:y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'),pos:m.index}); }
+  const re2=/\b(\d{1,2})\s+de\s+([a-záéíóú]+)\s+(?:de\s+|del\s+)?(\d{4})\b/gi;
+  while((m=re2.exec(t))){ const mo=V2_MESES[m[2].toLowerCase()]; if(mo) out.push({iso:m[3]+'-'+String(mo).padStart(2,'0')+'-'+String(+m[1]).padStart(2,'0'),pos:m.index}); }
+  return out.sort((a,b)=>a.pos-b.pos);
+}
+function v2NifValido(s){
+  s=String(s).toUpperCase().replace(/[\s.\-]/g,''); const L='TRWAGMYFPDXBNJZSQVHLCKE';
+  if(/^\d{8}[A-Z]$/.test(s)) return L[parseInt(s.slice(0,8),10)%23]===s[8];
+  if(/^[XYZ]\d{7}[A-Z]$/.test(s)) return L[parseInt('XYZ'.indexOf(s[0])+s.slice(1,8),10)%23]===s[8];
+  if(/^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(s)){
+    let a=0,b=0; for(let i=0;i<7;i++){ const x=+s[1+i]; if(i%2===0){ const y=x*2; b+=Math.floor(y/10)+y%10; } else a+=x; }
+    const cd=(10-((a+b)%10))%10; return s[8]===String(cd)||s[8]==='JABCDEFGHI'[cd];
+  }
+  return false;
+}
+function v2SinAcentos(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function v2Limpia(s){ return String(s||'').replace(/\s{2,}/g,' ').replace(/^(raz[oó]n social|emisor|proveedor|empresa)\s*[:\-]\s*/i,'').replace(/[:\-–|,]+$/,'').trim().slice(0,60); }
+function v2DetectaInmueble(t){
+  const T=v2SinAcentos(t).toUpperCase(), Tsp=T.replace(/\s/g,''), hits=[];
+  (D.props||[]).forEach(p=>{
+    if(p.refCat&&Tsp.includes(String(p.refCat).toUpperCase().replace(/[\s\/]/g,''))){ hits.push(p.id); return; }
+    const dir=v2SinAcentos(p.dir||'').toUpperCase(); if(!dir) return;
+    const calle=dir.split(',')[0];
+    const pal=calle.replace(/[.ºª\/]/g,' ').split(/\s+/).filter(w=>w.length>=4&&!/^(CALLE|AVDA|AVENIDA|PLAZA|CAMINO|CARRETERA|PASEO|PISO|PUERTA|BAJO|ESCALERA|BLOQUE|PLANTA)$/.test(w)).sort((a,b)=>b.length-a.length);
+    const num=(calle.match(/\b(\d{1,4})\b/)||[])[1];
+    if(pal.length&&T.includes(pal[0])&&(!num||new RegExp('\\b'+num+'\\b').test(T))) hits.push(p.id);
+  });
+  const u=[...new Set(hits)]; return u.length===1?u[0]:'';
+}
+function v2ParseFactura(texto){
+  const t=String(texto||'').replace(/\r/g,'').replace(/[ \t\u00a0]+/g,' ');
+  const lin=t.split('\n').map(s=>s.trim()).filter(Boolean), r={conf:{}}, norm=s=>String(s||'').toUpperCase().replace(/[\s.\-]/g,'');
+  // NIF / CIF / NIE con dígito de control válido
+  const cand=[], reN=/\b([A-HJ-NP-SUVW][\s.\-]?\d{7}[\s.\-]?[0-9A-J]|\d{8}[\s.\-]?[A-Z]|[XYZ][\s.\-]?\d{7}[\s.\-]?[A-Z])\b/gi; let m;
+  while((m=reN.exec(t))){ const n=norm(m[1]); if(v2NifValido(n)&&!cand.some(x=>x.n===n)) cand.push({n,pos:m.index}); }
+  const props=D.propietarios||[], dest=cand.find(x=>props.some(o=>norm(o.dni)===x.n));
+  if(dest){ const o=props.find(o=>norm(o.dni)===dest.n); r.destNif=dest.n; r.destNom=o.nom; r.titular=o.id; r.titularDeFactura=true; }
+  const emi=cand.find(x=>!dest||x.n!==dest.n);
+  if(emi){ r.nifEmi=emi.n;
+    const li=lin.findIndex(l=>norm(l).includes(emi.n));
+    if(li>=0){ let nm=lin[li]; const ix=norm(nm).indexOf(emi.n); nm=nm.replace(/\b(N\.?I\.?F\.?|C\.?I\.?F\.?)\s*[:.]?/gi,'');
+      nm=nm.split(/[A-Z]?[\s.\-]?\d{7,8}[\s.\-]?[0-9A-Z]/i)[0]; if(v2Limpia(nm).length<3&&li>0) nm=lin[li-1]; r.emisor=v2Limpia(nm); } }
+  if(!r.emisor||r.emisor.length<3){ const f=lin.slice(0,6).find(l=>/[a-záéíóúñ]{3}/i.test(l)&&!/factura|fecha|p[aá]gina|cliente|n[ºo°]/i.test(l)); if(f) r.emisor=v2Limpia(f); }
+  // Fecha de la factura y periodo facturado
+  const fs=v2Fechas(t), lab=/fecha\s*(?:de\s*)?(?:la\s*)?(?:factura|emisi[oó]n|expedici[oó]n)?\s*[:\-]?/ig; let fecha=null;
+  while(!fecha&&(m=lab.exec(t))){ const f2=fs.find(f=>f.pos>=m.index&&f.pos-m.index<45); if(f2) fecha=f2.iso; }
+  r.fecha=fecha||(fs[0]&&fs[0].iso)||''; r.conf.fecha=fecha?'alta':(r.fecha?'media':'baja');
+  const DT='(\\d{1,2}[\\/.\\-]\\d{1,2}[\\/.\\-]\\d{2,4}|\\d{1,2}\\s+de\\s+[a-záéíóú]+\\s+(?:de\\s+)?\\d{4})';
+  const mp=t.match(new RegExp('(?:per[ií]odo[^\\n\\d]{0,40}|desde\\s+(?:el\\s+)?|del\\s+)'+DT+'\\s*(?:a|al|hasta(?:\\s+el)?|-|–)\\s*'+DT,'i'));
+  if(mp){ const a=v2Fechas(mp[1])[0], b2=v2Fechas(mp[2])[0]; if(a&&b2&&a.iso<=b2.iso){ r.pIni=a.iso; r.pFin=b2.iso; } }
+  // Importes
+  const amt=s=>{ const out=[], re=/(-?\d{1,3}(?:[.\s]\d{3})*,\d{2}|-?\d+,\d{2}|-?\d{1,3}(?:,\d{3})*\.\d{2}|-?\d+\.\d{2})(?!\s*%)(?![\d.\/\-]\d)(?!\d)/g; let k;
+    while((k=re.exec(s))){ const prev=s[k.index-1]; if(prev&&/[\d\/]/.test(prev)) continue; const v=v2Num(k[1]); if(v!==null) out.push(v); } return out; };
+  const buscar=(re,ex)=>{ for(let i=0;i<lin.length;i++){ if(re.test(lin[i])&&!(ex&&ex.test(lin[i]))){ let a=amt(lin[i]); if(!a.length&&lin[i+1]) a=amt(lin[i+1]); if(a.length) return a[a.length-1]; } } return null; };
+  let total=buscar(/total\s*(?:factura|a\s*pagar|importe|€|eur|:)|importe\s*total|total\s*$/i,/sub\s*total|base|total\s*iva/i);
+  if(total===null) total=buscar(/\btotal\b/i,/sub\s*total|base imponible|total\s*iva/i);
+  const base=buscar(/base\s*imponible|importe\s*neto|subtotal/i);
+  let iva=buscar(/\bi\.?v\.?a\.?\b|impuesto\s*sobre\s*el\s*valor/i,/base|total\s*factura|incluido/i);
+  if(iva!==null&&base!==null&&iva>base) iva=null;
+  if(total===null&&base!==null&&iva!==null) total=Math.round((base+iva)*100)/100;
+  r.total=total; r.base=base; r.iva=iva;
+  r.cuadra=(total!==null&&base!==null&&iva!==null)?Math.abs(base+iva-total)<=0.02:null;
+  r.conf.importes=r.cuadra?'alta':(total!==null?'media':'baja');
+  const mn=t.match(/(?:n[ºo°.]\s*(?:de\s*)?factura|factura\s*n[ºo°.]?|n[uú]mero\s*(?:de\s*)?factura|n[uú]m\.\s*factura)\s*[:#]?\s*([A-Z0-9][A-Z0-9\-\/.]{2,30})/i);
+  if(mn) r.num=mn[1].replace(/[.]$/,'');
+  const s=v2SugerirCat(t);
+  if(s){ r.catF=s.cat; r.con=s.con+(r.emisor?' · '+r.emisor:''); r.nota=s.nota; } else r.con=r.emisor?('Factura '+r.emisor):'';
+  if(r.pIni) r.con+=' ('+fD(r.pIni)+' – '+fD(r.pFin)+')';
+  r.propId=v2DetectaInmueble(t);
+  if(!r.titular&&r.propId){ const tt=titularidadDia(r.propId,r.fecha||fxIso(new Date())); if(tt.disfrute) r.titular=tt.disfrute; }
+  return r;
+}
+function v2CajaOCR(tipo,msg){ const col=tipo==='aviso'?'var(--ye)':tipo==='ok'?'var(--gn)':'var(--bl)'; return `<div style="border:1.5px solid ${col};border-radius:var(--r2);padding:9px 12px;font-size:11.5px;color:var(--ink2);line-height:1.5;">${msg}</div>`; }
+function v2RellenarFactura(f){
+  const hechos=[], set=(id,v,et)=>{ const e=$i(id); if(!e||v===undefined||v===null||v==='') return; if(String(e.value||'').trim()!==''&&e.dataset.v2user==='1') return; e.value=v; if(et) hechos.push(et); };
+  set('cp-con',f.con,'concepto'); set('cp-emp',f.emisor,'emisor'); set('cp-fecha',f.fecha,'fecha');
+  if(f.total!=null) set('cp-imp',f.total.toFixed(2),'importe');
+  set('cpf-nifemi',f.nifEmi,'NIF emisor'); set('cpf-numprov',f.num,'nº de factura'); set('cpf-destnom',f.destNom,'destinatario'); set('cpf-destnif',f.destNif);
+  if(f.base!=null) set('cpf-base',f.base.toFixed(2),'base'); if(f.iva!=null) set('cpf-iva',f.iva.toFixed(2),'IVA');
+  set('cpf-pini',f.pIni,'periodo'); set('cpf-pfin',f.pFin);
+  if(f.catF&&!window._v2CatManual&&$i('cpf-catf')){ $i('cpf-catf').value=f.catF; hechos.push('categoría'); }
+  if(f.propId&&(!gi('cp-prop')||$i('cp-prop').dataset.v2user!=='1')){ $i('cp-prop').value=f.propId; hechos.push('inmueble'); }
+  if(f.titular&&(!gi('cp-owner')||window._v2OwnerAuto)){ $i('cp-owner').value=f.titular; window._v2OwnerAuto=!f.titularDeFactura; hechos.push('titular'); }
+  return hechos;
+}
+function v2ResumenOCR(f,hechos){
+  const ok=x=>x?'✓':'—', pr=(D.props||[]).find(p=>p.id==f.propId);
+  const filas=[
+    ['Emisor',(f.emisor||'—')+(f.nifEmi?' · NIF '+f.nifEmi+' ✓':' · NIF no encontrado')],
+    ['Fecha',f.fecha?fD(f.fecha)+(f.conf.fecha==='alta'?'':' (revisar)'):'—'],
+    ['Periodo',f.pIni?fD(f.pIni)+' – '+fD(f.pFin):'—'],
+    ['Importes','Base '+(f.base!=null?eur(f.base,2):'—')+' · IVA '+(f.iva!=null?eur(f.iva,2):'—')+' · Total '+(f.total!=null?eur(f.total,2):'—')],
+    ['Destinatario',f.destNif?(f.destNom+' · '+f.destNif+' ✓'):'no figura ningún NIF de Propietarios'],
+    ['Categoría',f.catF?(f.catF+' · '+CATF[f.catF]):'— (elígela tú)'],
+    ['Inmueble',pr?pr.nom:'— (no se ha identificado)']];
+  return `<div style="border:1.5px solid var(--bl);border-radius:var(--r2);padding:10px 12px;font-size:11.5px;line-height:1.55;">
+    <div style="font-weight:700;color:var(--bl);margin-bottom:4px;">🔍 Factura leída automáticamente${hechos.length?' · rellenado: '+hechos.join(', '):''}</div>
+    ${filas.map(([a,b])=>`<div><span style="color:var(--ink3);">${a}:</span> ${b}</div>`).join('')}
+    ${f.cuadra===false?'<div style="color:var(--rd);margin-top:4px;">⛔ Base + IVA no coincide con el total: revisa los importes.</div>':''}
+    ${f.cuadra===true?'<div style="color:var(--gn);margin-top:4px;">✓ Base + IVA = total.</div>':''}
+    ${f.nota?`<div style="color:var(--ye);margin-top:4px;">⚠️ ${f.nota}</div>`:''}
+    <div style="color:var(--ink3);margin-top:5px;font-size:10.5px;">Solo se han rellenado los campos vacíos. Revisa los datos antes de guardar: la factura quedará marcada como «leída automáticamente» hasta que la compruebes.</div></div>`;
+}
+async function v2LeerFacturaAuto(file){
+  const box=$i('cp-ocr'); if(!box||!file) return;
+  if(/heic|heif/i.test((file.type||'')+(file.name||''))){ box.innerHTML=v2CajaOCR('aviso','Las fotos HEIC del iPhone no se pueden leer. Haz la foto en JPG (Ajustes → Cámara → Formatos → Más compatible) o adjunta el PDF.'); return; }
+  if(!gToken){ box.innerHTML=v2CajaOCR('aviso','Conecta Google Drive para que la app lea la factura automáticamente.'); return; }
+  box.innerHTML=v2CajaOCR('info','🔍 Leyendo la factura…');
+  try{ const txt=await v2OCR(file), f=v2ParseFactura(txt), h=v2RellenarFactura(f); window._v2LeidaAuto=true; box.innerHTML=v2ResumenOCR(f,h); v2PreviewFactura(); }
+  catch(e){ console.warn(e); box.innerHTML=v2CajaOCR('aviso','No se ha podido leer automáticamente ('+e.message+'). Rellena los campos a mano.'); }
+}
+
+// ── Migración: los gastos comunes ya existentes pasan a «Todos» (pendientes de confirmar) ──
+function v2MigrarTodos(){
+  D.cfg=D.cfg||{}; if(D.cfg.migTodos) return;
+  const f=(x,src)=>{ if(x.propId||(Array.isArray(x.repartoProps)&&x.repartoProps.length)) return; const cat=x.catF||catFDe(x,src); if(CAT_REPARTIBLES.includes(cat)&&(x.titular||x.ownerId)) x.repartoAuto=true; };
+  (D.compras||[]).forEach(x=>f(x,'compra')); (D.gastos||[]).forEach(x=>f(x,'gasto'));
+  D.cfg.migTodos=true; saveAndSync();
+}
+
+
+// Reconstrucción de desplegables conservando la opción «Todos» en Facturas
+function populateSels(){
+  const e=$i('cp-prop'), prev=e?e.value:'';
+  populateSelsBase();
+  if($i('cp-prop')){ v2PrepPropTodos(); if(prev==='__todos') $i('cp-prop').value='__todos'; }
+}
 
 </script>
 </body>
