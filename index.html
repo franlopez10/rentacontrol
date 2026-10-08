@@ -1949,7 +1949,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <input id="cp-cat-otros" placeholder="Escribe la categoría…" style="display:none;margin-top:6px;border-color:var(--acc);">
     </div>
     <div class="fgrp"><label>Propietario *</label><select id="cp-owner"></select></div>
-    <div class="fgrp"><label>Propiedad</label><select id="cp-prop" onchange="autoOwnerFactura()"></select></div>
+    <div class="fgrp"><label>Propiedad</label><select id="cp-prop" onchange="autoOwnerFactura()"></select><div style="font-size:10px;color:var(--ink3);margin-top:3px;line-height:1.4;">Si es un gasto común a varios pisos, déjalo vacío: se reparte automáticamente (reparación, gasto anual o servicio).</div></div>
     <div class="fgrp"><label>Habitación nº (opcional)</label><input id="cp-hab" type="number" placeholder="3"></div>
     <div class="fgrp"><label>Nº de factura <span style="color:var(--ink3);font-weight:400;">(automático, se recalcula solo)</span></label><input id="cp-num" placeholder="1/08.26" disabled style="background:var(--bg);color:var(--ink3);cursor:not-allowed;"></div>
     <div class="fgrp"><label>Forma de pago</label>
@@ -2541,7 +2541,11 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div id="fic-cab" style="font-size:12px;color:var(--ink2);margin-bottom:12px;"></div>
   <input type="hidden" id="fic-src"><input type="hidden" id="fic-id">
   <div class="fg">
-    <div class="fgrp"><label>Inmueble *</label><select id="fic-prop"></select></div>
+    <div class="fgrp"><label>Inmueble *</label><select id="fic-prop" onchange="v2FicVarios()"></select></div>
+    <div class="fgrp fgf" id="fic-varios" style="display:none;background:var(--bg);border-radius:var(--r2);padding:10px 12px;">
+      <label>Repartir entre estos inmuebles</label><div id="fic-varios-lista" style="display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 8px;"></div>
+      <label>Criterio</label><select id="fic-varios-modo"><option value="iguales">Partes iguales</option><option value="m2">m² útiles</option><option value="vc">Valor catastral</option><option value="habs">Nº de habitaciones</option></select>
+    </div>
     <div class="fgrp"><label>Habitación (solo si el gasto es de una)</label><input id="fic-hab" type="number"></div>
     <div class="fgrp"><label>Titular económico *</label><select id="fic-tit"></select></div>
     <div class="fgrp fgf"><label>Categoría fiscal *</label><select id="fic-catf"><option value="A">A · Coste de adquisición del inmueble</option><option value="B">B · Mejora (amortiza 3%)</option><option value="C">C · Mobiliario y enseres (10%)</option><option value="D">D · Reparación y conservación</option><option value="E">E · Gasto anual (IBI, comunidad, seguros, suministros)</option><option value="F">F · Intereses del préstamo</option><option value="G">G · Formalización del préstamo</option><option value="H">H · Suministro repercutido al inquilino</option><option value="I">I · Servicios (gestoría, abogado…)</option><option value="J">J · No deducible</option><option value="K">K · Coste de adquisición del usufructo</option></select></div>
@@ -9842,6 +9846,7 @@ function v2cfg(){
     usufCriterio:c.usufCriterio||'dgt', usufSuelo:v2bool(c.usufSuelo,true), gModo:c.gModo||'factor',
     mejoraUsuf:v2bool(c.mejoraUsuf,false), diaExig:parseInt(c.diaExig)||15, exigMesAnt:v2bool(c.exigMesAnt,true),
     rdl29:v2bool(c.rdl29,true), irav:parseFloat(c.irav)||0,
+    repartoModo:c.repartoModo||'iguales', repartoAmbito:c.repartoAmbito||'disfrute',
     escalaModo:c.escalaModo||'tramos',
     escala:(Array.isArray(c.escalaImp)&&c.escalaImp.length)?c.escalaImp:[{hasta:100000,pct:1.1},{hasta:500000,pct:1.5},{hasta:1000000,pct:2},{hasta:1e15,pct:3}],
     itpTipo:parseFloat(c.itpTipo)||8
@@ -9915,7 +9920,7 @@ function catFDe(x, src){
   if(/inter[eé]s/.test(t)) return 'F';
   return 'E';
 }
-function v2Items(){
+function v2ItemsBase(){
   const out=[], push=(src,ref,o)=>out.push(Object.assign({src,ref},o));
   const fx=x=>({destNif:x.destNif||'',destNom:x.destNom||'',tipoDoc:x.tipoDoc||'',ctaId:x.ctaId||'',provId:x.provId||'',pIni:x.pIni||'',pFin:x.pFin||'',sit:x.situacion||''});
   (D.compras||[]).forEach(x=>push('compra',x,Object.assign({id:x.id,fecha:x.fecha||'',imp:+x.imp||0,catF:catFDe(x,'compra'),propId:x.propId||'',hab:x.hab||'',titular:x.titular||x.ownerId||'',con:x.con||'',emp:x.emp||'',num:x.num||'',pdf:x.pdfData||'',pdfName:x.pdfName||''},fx(x))));
@@ -9923,6 +9928,59 @@ function v2Items(){
   (D.props||[]).forEach(p=>(p.costesAdq||[]).forEach(it=>push('adq',it,Object.assign({id:it.id,fecha:it.fecha||p.fcompra||'',imp:+it.imp||0,catF:catFDe(it,'adq'),propId:p.id,hab:'',titular:it.titular||'',con:it.concepto||'',emp:'',num:'',pdf:it.pdfData||'',pdfName:it.pdfName||''},fx(it)))));
   return out;
 }
+
+// ══ REPARTO DE GASTOS COMUNES ENTRE VARIOS INMUEBLES ══
+// Gastos generales no individualizables: prorrateo con criterio razonable (DGT V3203/2020).
+// Automático solo para D, E e I; el resto pertenece siempre a un inmueble concreto.
+const CAT_REPARTIBLES=['D','E','I'];
+const REPARTO_TXT={iguales:'partes iguales',m2:'m² útiles',vc:'valor catastral',habs:'nº de habitaciones'};
+function v2PesoProp(p,modo){
+  if(modo==='vc') return parseFloat(p.vct)||0;
+  if(modo==='habs') return parseInt(p.habs)||0;
+  if(modo==='m2'){ if(parseFloat(p.m2t)>0) return parseFloat(p.m2t); const cf=p.habsConfig||{}; let s=0; for(let i=1;i<=(parseInt(p.habs)||0);i++){ const m=parseFloat((cf[i]||{}).m2)||0; if(!m) return 0; s+=m; } return s?s+(parseFloat(p.m2c)||0):0; }
+  return 1;
+}
+function v2Pesos(props,modo){
+  let w=props.map(p=>v2PesoProp(p,modo)), fallback=false;
+  if(modo!=='iguales'&&w.some(x=>!(x>0))){ w=props.map(()=>1); fallback=true; }
+  const s=w.reduce((a,b)=>a+b,0)||1;
+  return {w:w.map(x=>x/s), fallback};
+}
+function v2PropsDisfrute(c,iso,ambito){
+  return (D.props||[]).filter(p=>{ if(p.fcompra&&p.fcompra>iso) return false; const t=titularidadDia(p.id,iso); return t.disfrute===c||(ambito==='todos'&&t.nuda&&t.nuda.ownerId===c); });
+}
+function v2Items(){
+  const base=v2ItemsBase(), cfg=v2cfg(), out=[];
+  base.forEach(it=>{
+    const ref=it.ref||{}, explicit=Array.isArray(ref.repartoProps)&&ref.repartoProps.length>0;
+    if(!it.imp||(!explicit&&(it.propId||!CAT_REPARTIBLES.includes(it.catF)))){ out.push(it); return; }
+    const modo=ref.repartoModo||cfg.repartoModo;
+    if(explicit){
+      const props=(D.props||[]).filter(p=>ref.repartoProps.includes(p.id));
+      if(!props.length){ out.push(it); return; }
+      const {w,fallback}=v2Pesos(props,modo);
+      props.forEach((p,i)=>out.push(Object.assign({},it,{propId:p.id,imp:it.imp*w[i],virt:true,origImp:it.imp,reparto:{n:props.length,modo,fallback,auto:false,pct:w[i]*100}})));
+      return;
+    }
+    if(!it.titular){ out.push(it); return; }
+    const per=it.catF==='D'?[it.fecha,it.fecha]:v2Periodo(it);
+    if(!per[0]){ out.push(it); return; }
+    const d=fxDate(per[0]), fin=fxDate(per[1]), tot=Math.round((fin-d)/864e5)+1, segs=[]; let cur=null;
+    while(d<=fin){ const iso=fxIso(d), ps=v2PropsDisfrute(it.titular,iso,cfg.repartoAmbito), key=ps.map(p=>p.id).join(',');
+      if(cur&&cur.key===key){ cur.fin=iso; cur.dias++; } else { cur={key,props:ps,ini:iso,fin:iso,dias:1}; segs.push(cur); }
+      d.setDate(d.getDate()+1); }
+    segs.forEach(sg=>{
+      const parte=it.imp*sg.dias/tot, per2=it.catF==='D'?{}:{pIni:sg.ini,pFin:sg.fin};
+      if(!sg.props.length){ out.push(Object.assign({},it,per2,{imp:parte,virt:true,origImp:it.imp,reparto:{n:0,auto:true,sinInmuebles:true,ini:sg.ini,fin:sg.fin}})); return; }
+      const {w,fallback}=v2Pesos(sg.props,modo);
+      sg.props.forEach((p,i)=>out.push(Object.assign({},it,per2,{propId:p.id,imp:parte*w[i],virt:true,origImp:it.imp,reparto:{n:sg.props.length,modo,fallback,auto:true,pct:w[i]*100}})));
+    });
+  });
+  return out;
+}
+function v2Unicos(items){ const v=new Set(); return items.filter(it=>{ const k=it.src+'|'+it.id; if(v.has(k)) return false; v.add(k); return true; }); }
+function v2EtqItem(it){ if(!it.virt||!it.reparto) return it.con; const p=(D.props||[]).find(z=>z.id==it.propId); return it.con+(p?' [reparto '+it.reparto.pct.toFixed(1)+'% '+p.nom+']':' [sin inmueble en esa fecha]'); }
+
 function v2Periodo(it){
   if(it.pIni&&it.pFin&&it.pFin>=it.pIni) return [it.pIni,it.pFin];
   if(!it.fecha) return [null,null];
@@ -10235,7 +10293,12 @@ function v2AbrirFicha(src,id){
   let propId=x.propId||''; if(src==='adq'){ const p=(D.props||[]).find(p=>(p.costesAdq||[]).includes(x)); propId=p?p.id:''; }
   $i('fic-src').value=src; $i('fic-id').value=id;
   $i('fic-cab').innerHTML=`<strong>${x.con||x.desc||x.concepto||'Gasto'}</strong> · ${eur(+x.imp||0,2)} · ${x.fecha?fD(x.fecha):''}`;
-  $i('fic-prop').innerHTML=v2OptsProps(propId,'— sin inmueble —'); $i('fic-prop').disabled=(src==='adq');
+  $i('fic-prop').innerHTML=v2OptsProps(propId,'— sin inmueble (reparto automático si es D, E o I) —')+(src==='adq'?'':'<option value="__varios">↔ Varios inmuebles concretos…</option>'); $i('fic-prop').disabled=(src==='adq');
+  const rp=Array.isArray(x.repartoProps)?x.repartoProps:[];
+  $i('fic-varios-lista').innerHTML=(D.props||[]).map(p=>`<label style="display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;font-size:12px;"><input type="checkbox" class="fic-vp" value="${p.id}" ${rp.includes(p.id)?'checked':''} style="width:auto;"> ${p.nom}</label>`).join('');
+  $i('fic-varios-modo').value=x.repartoModo||v2cfg().repartoModo;
+  if(rp.length&&src!=='adq') $i('fic-prop').value='__varios';
+  v2FicVarios();
   $i('fic-tit').innerHTML=v2OptsOwners(x.titular||x.ownerId||'','— elegir —');
   $i('fic-catf').value=x.catF||catFDe(x,src); $i('fic-hab').value=x.hab||'';
   $i('fic-fpago').value=x.fPago||''; $i('fic-tipodoc').value=x.tipoDoc||'factura'; $i('fic-nifemi').value=x.nifEmi||'';
@@ -10244,11 +10307,18 @@ function v2AbrirFicha(src,id){
   $i('fic-prov').innerHTML=v2OptsProvs(x.provId); $i('fic-sit').value=x.situacion||'';
   openM('m-ficha');
 }
+function v2FicVarios(){ const e=$i('fic-varios'); if(e) e.style.display=gi('fic-prop')==='__varios'?'block':'none'; }
 function v2GuardarFicha(){
   const src=gi('fic-src'), x=v2FindRef(src,gi('fic-id')); if(!x) return;
   const catF=$i('fic-catf').value;
   Object.assign(x,{catF,catFAuto:false,titular:gi('fic-tit'),titularAuto:false,hab:gi('fic-hab'),fPago:gi('fic-fpago'),tipoDoc:$i('fic-tipodoc').value,nifEmi:gi('fic-nifemi'),destNom:gi('fic-destnom'),destNif:gi('fic-destnif'),ctaId:gi('fic-cta'),base:gn('fic-base'),iva:gn('fic-iva'),pIni:gi('fic-pini'),pFin:gi('fic-pfin'),provId:gi('fic-prov'),situacion:$i('fic-sit').value});
-  if(src!=='adq') x.propId=gi('fic-prop');
+  if(src!=='adq'){
+    if(gi('fic-prop')==='__varios'){
+      const sel=[...document.querySelectorAll('.fic-vp:checked')].map(e=>e.value);
+      if(sel.length<2){ toast('Marca al menos dos inmuebles para repartir',false); return; }
+      x.propId=''; x.repartoProps=sel; x.repartoModo=$i('fic-varios-modo').value;
+    } else { x.propId=gi('fic-prop'); delete x.repartoProps; delete x.repartoModo; }
+  }
   if(src==='compra'){ x.ded=CATF_DED[catF]; x.ownerId=x.titular; }
   if(src==='gasto') x.ded=['J','K'].includes(catF)?'no':'si';
   saveAndSync(); closeM('m-ficha'); toast('Ficha fiscal guardada');
@@ -10440,10 +10510,17 @@ function v2Validaciones(y,calc){
     const itp=calc.items.filter(it=>it.propId===p.id&&/\bitp\b|transmisiones patrimoniales/i.test(it.con));
     if(itp.length&&parseFloat(p.precio)>0){ const s=itp.reduce((a,b)=>a+b.imp,0), esp=parseFloat(p.precio)*cfg.itpTipo/100; if(Math.abs(s-esp)>esp*0.01) add('aviso',p.nom+': ITP registrado '+eur(s)+' ≠ precio × '+cfg.itpTipo+'% ('+eur(esp)+'). Compruébalo en el modelo 600.'); }
   });
+  const vistos=new Set();
   calc.items.forEach(it=>{
     const yy=parseInt((it.fecha||'').slice(0,4)); if(yy&&yy!==y&&!['A','B','C','K'].includes(it.catF)) return;
-    const nm='«'+(it.con||'gasto')+'» ('+eur(it.imp)+')';
-    if(!it.propId&&it.catF!=='J') add('error',nm+': sin inmueble asignado — no computa.');
+    const k=it.src+'|'+it.id; if(it.virt&&vistos.has(k)&&!(it.reparto&&it.reparto.sinInmuebles)) return; vistos.add(k);
+    const nm='«'+(it.con||'gasto')+'» ('+eur(it.virt?it.origImp:it.imp)+')';
+    if(it.virt&&it.reparto){
+      if(it.reparto.sinInmuebles) add('error',nm+': '+nombreC(it.titular)+' no cobraba rentas de ningún inmueble entre el '+fD(it.reparto.ini)+' y el '+fD(it.reparto.fin)+' — esa parte no computa.');
+      else { if(it.reparto.auto) add('aviso',nm+': gasto común repartido automáticamente por '+(REPARTO_TXT[it.reparto.modo]||it.reparto.modo)+' entre los inmuebles de '+nombreC(it.titular)+'. Confirma que no es de un piso concreto.');
+        if(it.reparto.fallback) add('aviso',nm+': faltan datos para repartir por '+(REPARTO_TXT[it.reparto.modo]||it.reparto.modo)+'; se ha repartido en partes iguales.'); }
+    }
+    if(!it.propId&&!it.virt&&it.catF!=='J') add('error',nm+': sin inmueble asignado'+(CAT_REPARTIBLES.includes(it.catF)?(it.titular?'':' y sin titular — indica el titular para poder repartirlo'):' — esta categoría pertenece siempre a un inmueble concreto: asígnalo')+'.');
     if(it.tipoDoc==='ticket') add('aviso',nm+': ticket en lugar de factura completa.');
     if(it.ref&&it.ref.catFAuto) add('aviso',nm+': clasificado automáticamente como '+it.catF+' — revísalo.');
     if(it.ref&&it.ref.titularAuto) add('aviso',nm+': titular asignado automáticamente — revísalo.');
@@ -10461,7 +10538,7 @@ function v2Validaciones(y,calc){
   if(pend) add('aviso',pend+' cobro(s) pendientes cuentan como ingreso (devengo, art. 14 LIRPF). Si alguno no es exigible, elimínalo.');
   if((D.derechos||[]).some(d=>d.tipo==='usufVit'||d.tipo==='usufTemp')) add('aviso','Base de amortización del usufructo: criterio «'+(cfg.usufCriterio==='dgt'?'DGT V1973-20 (solo ISD y gastos pagados)':'Manual AEAT (valor a efectos del ISD)')+'». Hay criterios oficiales distintos: decídelo con el gestor.');
   if(y>=2027) add('aviso','Imputación 2027+: los tramos de la escala (1,1/1,5/2/3%) están configurados con valores provisionales. Verifícalos en el art. 85 LIRPF redactado por el RDL 29/2026.');
-  return v;
+  const u=new Set(); return v.filter(x=>{ const k=x.n+x.t; if(u.has(k)) return false; u.add(k); return true; });
 }
 
 // ══ PANEL FISCAL v2 ══
@@ -10524,18 +10601,18 @@ function rFiscalV2(){
     <div style="font-size:10.5px;color:var(--ink3);margin-top:8px;">No se muestra cuota estimada: el tipo efectivo depende del resto de rentas del contribuyente.</div>`;
     if(r.noDed.length){ const tot=r.noDed.reduce((s,n)=>s+n.imp,0);
       html+=`<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;">Gastos no deducibles: ${e2(tot)} (${r.noDed.length})</summary>
-        <div class="tbl-wrap" style="margin-top:6px;"><table><tbody>${r.noDed.map(n=>`<tr><td style="font-size:11px;">${n.it.con}</td><td style="font-size:10.5px;color:var(--ink3);">${n.motivo}</td><td class="mono" style="text-align:right;">${e2(n.imp)}</td></tr>`).join('')}</tbody></table></div></details>`; }
+        <div class="tbl-wrap" style="margin-top:6px;"><table><tbody>${r.noDed.map(n=>`<tr><td style="font-size:11px;">${v2EtqItem(n.it)}</td><td style="font-size:10.5px;color:var(--ink3);">${n.motivo}</td><td class="mono" style="text-align:right;">${e2(n.imp)}</td></tr>`).join('')}</tbody></table></div></details>`; }
     html+='</div>';
   });
 
   // Revisión de clasificación
-  const its=calc.items.filter(it=>(it.fecha||'').startsWith(String(y))||['A','B','C','K'].includes(it.catF));
+  const its=v2Unicos(calc.items.filter(it=>(it.fecha||'').startsWith(String(y))||['A','B','C','K'].includes(it.catF)));
   const opC=v=>Object.keys(CATF).map(k=>`<option value="${k}" ${k===v?'selected':''}>${k} · ${CATF[k]}</option>`).join('');
   html+=`<details class="card mb"><summary style="cursor:pointer;font-weight:700;">🗂 Revisión de clasificación y titular (${its.length} gastos)</summary>
     <div class="tbl-wrap" style="margin-top:10px;"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Inmueble</th><th class="n">Importe</th><th>Categoría</th><th>Titular</th><th></th></tr></thead><tbody>
     ${its.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).map(it=>{ const p=(D.props||[]).find(z=>z.id==it.propId);
       return `<tr style="${(it.ref&&(it.ref.catFAuto||it.ref.titularAuto))?'background:rgba(245,158,11,.08);':''}"><td class="mono" style="font-size:10.5px;">${it.fecha?fD(it.fecha):'—'}</td><td style="font-size:11.5px;">${it.con}<div style="font-size:9.5px;color:var(--ink3);">${{compra:'Factura',gasto:'Gasto',adq:'Coste adquisición'}[it.src]}</div></td>
-      <td style="font-size:11px;">${p?p.nom:'<span style="color:var(--rd);">sin asignar</span>'}</td><td class="mono" style="text-align:right;">${e2(it.imp)}</td>
+      <td style="font-size:11px;">${it.virt?'<span style="color:var(--bl);">↔ reparto '+(it.reparto.auto?'automático':'entre '+it.reparto.n)+' · '+(REPARTO_TXT[it.reparto.modo]||'')+'</span>':(p?p.nom:'<span style="color:var(--rd);">sin asignar</span>')}</td><td class="mono" style="text-align:right;">${e2(it.virt?it.origImp:it.imp)}</td>
       <td><select onchange="v2SetCat('${it.src}','${it.id}',this.value)" style="font-size:10.5px;padding:3px;max-width:190px;">${opC(it.catF)}</select></td>
       <td><select onchange="v2SetTit('${it.src}','${it.id}',this.value)" style="font-size:10.5px;padding:3px;">${v2OptsOwners(it.titular,'—')}</select></td>
       <td style="white-space:nowrap;"><button class="btn btn-ghost btn-xs" onclick="v2AbrirFicha('${it.src}','${it.id}')" title="Ficha fiscal">📋</button>${it.catF==='C'?` <button class="btn btn-ghost btn-xs" onclick="v2VenderMueble('${it.src}','${it.id}')" title="Vender a otro contribuyente">↔</button>`:''}</td></tr>`; }).join('')}
@@ -10551,6 +10628,8 @@ function rFiscalV2(){
       <div>Mejoras pagadas por el usufructuario<br>${sel('mejoraUsuf',[['false','No amortizan'],['true','Amortizan al 3%']],cfg.mejoraUsuf)}</div>
       <div>Exigibilidad de la renta<br>Día <input type="number" value="${cfg.diaExig}" onchange="v2SetCfg('diaExig',this.value)" style="width:50px;font-size:11.5px;padding:4px;"> ${sel('exigMesAnt',[['true','del mes anterior'],['false','del propio mes']],cfg.exigMesAnt)}</div>
       <div>Tipo ITP aplicado (%)<br><input type="number" step="0.1" value="${cfg.itpTipo}" onchange="v2SetCfg('itpTipo',this.value)" style="width:70px;font-size:11.5px;padding:4px;"></div>
+      <div>Reparto de gastos comunes<br>${sel('repartoModo',[['iguales','Partes iguales'],['m2','m² útiles'],['vc','Valor catastral'],['habs','Nº de habitaciones']],cfg.repartoModo)}</div>
+      <div>Inmuebles entre los que se reparte<br>${sel('repartoAmbito',[['disfrute','Los que generan rentas al titular'],['todos','También los de nuda propiedad (más conservador)']],cfg.repartoAmbito)}</div>
       <div>RDL 29/2026<br>${sel('rdl29',[['true','Convalidado (por defecto)'],['false','No convalidado: régimen anterior']],cfg.rdl29)}</div>
       <div>IRAV vigente para temporales sucesivos (%)<br><input type="number" step="0.01" value="${cfg.irav||''}" placeholder="dato INE" onchange="v2SetCfg('irav',this.value)" style="width:90px;font-size:11.5px;padding:4px;"></div>
       <div>Escala de imputación 2027+<br>${sel('escalaModo',[['tramos','Por tramos (tipo medio)'],['unico','Tipo único según total']],cfg.escalaModo)}</div>
@@ -10566,6 +10645,7 @@ function rFiscalV2(){
     · Imputación de rentas: art. 85 LIRPF; 1,1% en 2026 si la revisión catastral es desde 2012 (DA 55ª, RDL 29/2026).<br>
     · Rendimiento mínimo del nudo propietario que constituye el usufructo gratis a favor de pariente: art. 24 LIRPF y cuadro de usufructo del Manual AEAT.<br>
     · Reparto de rentas entre propietario y usufructuario por días: art. 474 del Código Civil.<br>
+    · Gastos comunes a varios inmuebles: prorrateo con criterio razonable de los gastos no individualizables (DGT V3203/2020); zonas comunes por superficie y tiempo arrendado (STS 25-02-2021; TSJ Cataluña).<br>
     · Valor del usufructo: art. 26.a de la Ley 29/1987 del ISD.</div></details>`;
   box.innerHTML=html;
 }
@@ -10622,11 +10702,15 @@ function v2Bloques(c,y,calc){
   if(a24.length){ B.push({t:'h2',x:'Rendimiento mínimo por usufructo constituido a favor de pariente (art. 24 LIRPF)'});
     B.push({t:'p',x:'Criterio del cuadro de usufructo del Manual AEAT: el propietario que constituye gratuitamente el usufructo declara un rendimiento igual a la imputación del art. 85 durante su duración.'});
     a24.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; tA+=e.importe; B.push({t:'kv',k:p.nom+' · '+e.dias+' días · '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'(FALTA)':e2(e.vct)),v:e2(e.importe)}); }); }
+  const rps=v2Unicos(calc.items.filter(it=>it.virt&&it.reparto&&it.titular===c&&(it.fecha||'').startsWith(String(y))));
+  if(rps.length){ B.push({t:'h2',x:'Gastos comunes repartidos entre inmuebles'});
+    B.push({t:'p',x:'Gastos generales no individualizables prorrateados con criterio razonable (DGT V3203/2020) entre los inmuebles de los que el contribuyente obtiene rentas en cada fecha, incluidos los no arrendados; la parte de cada inmueble se deduce después según su ocupación.'});
+    rps.forEach(it=>B.push({t:'kv',k:(it.fecha?fD(it.fecha)+' · ':'')+it.con+' · '+(REPARTO_TXT[it.reparto.modo]||it.reparto.modo)+(it.reparto.auto?' (automático)':' (inmuebles elegidos)'),v:e2(it.origImp)})); }
   B.push({t:'h2',x:'Resumen'});
   B.push({t:'kv',k:'Rendimientos netos reducidos del capital inmobiliario',v:e2(tR)});
   B.push({t:'kv',k:'Imputación de rentas inmobiliarias',v:e2(tI)});
   if(tA) B.push({t:'kv',k:'Rendimiento mínimo art. 24',v:e2(tA)});
-  if(r.noDed.length){ B.push({t:'h2',x:'Gastos no deducibles y motivo'}); r.noDed.forEach(n=>B.push({t:'kv',k:(n.it.fecha?fD(n.it.fecha)+' · ':'')+n.it.con+' — '+n.motivo,v:e2(n.imp)})); }
+  if(r.noDed.length){ B.push({t:'h2',x:'Gastos no deducibles y motivo'}); r.noDed.forEach(n=>B.push({t:'kv',k:(n.it.fecha?fD(n.it.fecha)+' · ':'')+v2EtqItem(n.it)+' — '+n.motivo,v:e2(n.imp)})); }
   const vals=v2Validaciones(y,calc); if(vals.length){ B.push({t:'h2',x:'Comprobaciones'}); vals.forEach(v=>B.push({t:'p',x:(v.n==='error'?'[ERROR] ':'[AVISO] ')+v.t})); }
   B.push({t:'h2',x:'Fuentes'});
   ['Art. 14.1.a LIRPF (imputación por exigibilidad)','Arts. 22, 23.1 y 23.2 LIRPF (redacción RDL 29/2026, BOE 07/10/2026, se asume convalidado)','Reducción no aplicable a temporales: DGT V2810-19 y V0444-24','Art. 3 LAU (redacción RDL 29/2026): régimen del arrendamiento temporal','Arts. 24 y 85 LIRPF; DA 55ª (1,1% en 2026)','Arts. 13 y 14 RIRPF (gastos y amortización)','STS 25-02-2021 y Manual práctico de Renta AEAT (gastos solo del periodo arrendado)','DGT V3146-18 (reparaciones previas) y V1973-20 (coste del usufructo lucrativo)','Art. 474 Código Civil (frutos civiles por días)','Art. 26.a Ley 29/1987 ISD (valor del usufructo)'].forEach(f=>B.push({t:'p',x:'· '+f}));
@@ -10667,7 +10751,7 @@ async function informeFiscalPDF(){
       ls.forEach((l,i)=>{ if(yy<56) nueva(); pg.drawText(l,{x:M,y:yy,size:sz,font:f,color:b.t==='tot'?TX:GR}); if(i===0) pg.drawText(v,{x:W-M-vw,y:yy,size:sz,font:fontB,color:TX}); yy-=sz+4; });
     }
     // Justificantes: gastos del ejercicio del contribuyente y documentos de amortizables
-    const just=calc.items.filter(it=>it.pdf&&(it.titular===c||(!it.titular&&it.propId&&titularidadDia(it.propId,it.fecha||y+'-12-31').disfrute===c))&&(((it.fecha||'').startsWith(String(y)))||['A','B','C','K'].includes(it.catF)));
+    const just=v2Unicos(calc.items).filter(it=>it.pdf&&(it.titular===c||(!it.titular&&it.propId&&titularidadDia(it.propId,it.fecha||y+'-12-31').disfrute===c))&&(((it.fecha||'').startsWith(String(y)))||['A','B','C','K'].includes(it.catF)));
     const conJ=just.length&&confirm(nombreC(c)+': hay '+just.length+' justificante(s). ¿Incluirlos dentro del PDF?');
     let inc=0, fal=0;
     if(conJ){
