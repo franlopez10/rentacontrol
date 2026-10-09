@@ -1302,6 +1302,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <button class="btn btn-secondary" onclick="v2NuevoDerecho()">+ Periodo manual</button>
       <button class="btn btn-primary" onclick="v2NuevoUsufructo()">📜 Registrar usufructo</button>
     </div></div>
+  <div id="tit-poderes" class="mb"></div>
   <div id="tit-lista"></div>
 </section>
 <section class="sec" data-ws="gentaury" id="sec-ctasbanc">
@@ -2509,11 +2510,14 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 <div class="modal-overlay" id="m-usuf"><div class="modal modal-lg">
   <h2>📜 Registrar usufructo</h2>
-  <div style="font-size:11.5px;color:var(--ink3);line-height:1.6;margin-bottom:14px;">Desde la fecha de firma, las rentas, los gastos y la imputación de rentas pasan al usufructuario. El nudo propietario deja de amortizar el inmueble.</div>
+  <div style="font-size:11.5px;color:var(--ink3);line-height:1.6;margin-bottom:14px;">Desde la fecha de firma, las rentas, los gastos y la imputación de rentas corresponden al usufructuario.<br>
+    · <strong>El propietario dona el usufructo:</strong> nudo propietario = quien era el dueño; usufructuario = quien lo recibe.<br>
+    · <strong>El propietario se reserva el usufructo y dona la nuda propiedad:</strong> nudo propietario = quien la recibe; usufructuario = quien era el dueño (sigue cobrando las rentas).<br>
+    El % se calcula con la edad del <strong>usufructuario</strong> (89 − edad, art. 26.a Ley del ISD).</div>
   <div class="fg">
     <div class="fgrp"><label>Inmueble *</label><select id="us-prop" onchange="v2UsufPrefill()"></select></div>
     <div class="fgrp"><label>Fecha de firma de la escritura *</label><input id="us-fecha" type="date"></div>
-    <div class="fgrp"><label>Nudo propietario (quien lo constituye) *</label><select id="us-nudo"></select></div>
+    <div class="fgrp"><label>Nudo propietario *</label><select id="us-nudo"></select></div>
     <div class="fgrp"><label>Usufructuario *</label><select id="us-usuf"></select></div>
     <div class="fgrp"><label>Tipo</label><select id="us-tipo" onchange="v2UsufPct()"><option value="usufVit">Vitalicio</option><option value="usufTemp">Temporal</option></select></div>
     <div class="fgrp"><label>Duración (años, si es temporal)</label><input id="us-anyos" type="number" oninput="v2UsufPct()"></div>
@@ -2523,7 +2527,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Valor de referencia del Catastro a la fecha de la escritura (€)</label><input id="us-vref" type="number" step="0.01" oninput="v2UsufCalc()" placeholder="Sede del Catastro"></div>
     <div class="fgrp"><label>Valor del USUFRUCTO en la autoliquidación del Impuesto de Donaciones (€)</label><input id="us-valisd" type="number" step="0.01" oninput="v2UsufCalc()" placeholder="cuando la tengas"></div>
     <div class="fgrp fgf"><div id="us-calc" style="font-size:11.5px;line-height:1.55;"></div></div>
-    <div class="fgrp" style="display:flex;align-items:center;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="us-grat" style="width:auto;" checked> Constituido gratis a favor de pariente (art. 24 LIRPF)</label></div>
+    <div class="fgrp" style="display:flex;align-items:center;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="us-grat" style="width:auto;" checked> Usufructo donado gratis a un pariente (art. 24 LIRPF; no marcar si el propietario se lo reserva)</label></div>
     <div class="fgrp fgf"><label>Notas</label><input id="us-notas" placeholder="Notaría, protocolo…"></div>
   </div>
   <div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:var(--r2);font-size:11px;color:var(--ink2);line-height:1.6;">Después registra en Facturas, con categoría <strong>K</strong> y a nombre del usufructuario, el Impuesto de Donaciones, la notaría, el registro y la plusvalía de esta escritura.</div>
@@ -2622,6 +2626,36 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-split')">Cancelar</button><button class="btn btn-primary" onclick="v2HacerSplit()">Dividir</button></div>
 </div></div>
 
+
+<div class="modal-overlay" id="m-poder"><div class="modal">
+  <h2>📄 Poder de representación</h2><input type="hidden" id="po-id">
+  <div style="font-size:11.5px;color:var(--ink3);line-height:1.6;margin-bottom:12px;">Un poder no transmite la propiedad ni las rentas: el apoderado actúa en nombre y por cuenta del poderdante, que sigue declarando todo en su IRPF.</div>
+  <div class="fg">
+    <div class="fgrp"><label>Poderdante (propietario) *</label><select id="po-de"></select></div>
+    <div class="fgrp"><label>Apoderado *</label><select id="po-a"></select></div>
+    <div class="fgrp"><label>Notario</label><input id="po-notario" placeholder="Manuel Gancedo Torrego"></div>
+    <div class="fgrp"><label>Residencia del notario</label><input id="po-resid" placeholder="Mutxamel"></div>
+    <div class="fgrp"><label>Nº de protocolo</label><input id="po-prot" placeholder="1497"></div>
+    <div class="fgrp"><label>Fecha de otorgamiento *</label><input id="po-fecha" type="date"></div>
+    <div class="fgrp fgf"><label>Facultades</label>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;">
+        <label style="display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" class="po-fac" value="administrar" style="width:auto;"> Administrar inmuebles</label>
+        <label style="display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" class="po-fac" value="arrendamientos" style="width:auto;"> Contratos de arrendamiento</label>
+        <label style="display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" class="po-fac" value="cobrar" style="width:auto;"> Cobrar rentas</label>
+        <label style="display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" class="po-fac" value="desahucios" style="width:auto;"> Desahucios y pleitos</label>
+        <label style="display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" class="po-fac" value="bancos" style="width:auto;"> Operar cuentas bancarias</label>
+        <label style="display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" class="po-fac" value="disposicion" style="width:auto;"> Vender o hipotecar</label>
+      </div></div>
+    <div class="fgrp fgf"><label>Copia del poder (PDF)</label>
+      <div class="pdf-upload-zone" id="po-pdf-zone" onclick="document.getElementById('po-pdf').click()">
+        <input type="file" id="po-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('po-pdf','po-pdf-zone','po-pdf-data')">
+        <input type="hidden" id="po-pdf-data"><input type="hidden" id="po-pdf-name">
+        <span class="pdf-upload-label">📎 Adjuntar copia del poder</span>
+      </div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-poder')">Cancelar</button><button class="btn btn-primary" onclick="v2GuardarPoder()">Guardar</button></div>
+</div></div>
+
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -2634,13 +2668,13 @@ const WS_CFG = {
 };
 let KEY = WS_CFG[WS] ? WS_CFG[WS].key : 'rc5';
 let D=(()=>{try{return JSON.parse(localStorage.getItem(KEY))||def();}catch{return def();}})();
-function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],hipotecas:[],plantillas:[],visitas:[],derechos:[],ctasBanc:[],provisiones:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
+function def(){return{props:[],inqs:[],pagos:[],gastos:[],conts:[],incs:[],provs:[],agenda:[],pots:[],facturas:[],compras:[],anuncios:[],propietarios:[],hipotecas:[],plantillas:[],visitas:[],derechos:[],ctasBanc:[],provisiones:[],poderes:[],cuentas:[],movs:[],presup:[],subs:[],metas:[],invers:[],deudas:[],docs:[],libros:[],cfg:{nom:'',irpf:24,amorti:3,vacancia:5}};}
 if(!D.compras)D.compras=[];
 if(!D.propietarios)D.propietarios=[];
 if(!D.hipotecas)D.hipotecas=[];
 if(!D.plantillas)D.plantillas=[];
 if(!D.visitas)D.visitas=[];
-['derechos','ctasBanc','provisiones'].forEach(k=>{if(!D[k])D[k]=[];});
+['derechos','ctasBanc','provisiones','poderes'].forEach(k=>{if(!D[k])D[k]=[];});
 ['cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'].forEach(k=>{if(!D[k])D[k]=[];});
 if(!D.anuncios)D.anuncios=[];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(D));
@@ -2809,6 +2843,7 @@ const PDF_PLACEHOLDERS = {
   'hp-esc-zone':'📎 Adjuntar escritura',
   'hp-cuadro-zone':'📎 Adjuntar cuadro de amortización',
   'cu-pdf-zone':'📎 Adjuntar justificante bancario',
+  'po-pdf-zone':'📎 Adjuntar copia del poder',
   'pl2-pdf-zone':'📎 Adjuntar plantilla en PDF',
   'co-fotos-zone':'📷 Fotos del ESTADO DE ENTRADA',
   'co-fotos-sal-zone':'📷 Fotos del ESTADO DE SALIDA'
@@ -5212,9 +5247,9 @@ function waVisita(id){
   const p=D.props.find(x=>x.id==v.propId);
   const dir=p?((p.dir||'')+(p.ciu?', '+p.ciu:'')):'';
   const txt=`Hola ${v.nom}, te recuerdo que hoy a las ${v.hora} tenemos la visita a la habitación`+
-    (p?` del piso de ${p.nom}`:'')+(dir?`\\n📍 ${dir}`:'')+
-    `\\n\\n¿Me confirmas que puedes venir? ¡Gracias!`;
-  const tel=(v.tel||'').replace(/\\D/g,'');
+    (p?` del piso de ${p.nom}`:'')+(dir?`\n📍 ${dir}`:'')+
+    `\n\n¿Me confirmas que puedes venir? ¡Gracias!`;
+  const tel=(v.tel||'').replace(/\D/g,'');
   const url='https://wa.me/'+(tel.length===9?'34'+tel:tel)+'?text='+encodeURIComponent(txt);
   window.open(url,'_blank');
   // Marcar como avisado
@@ -5239,7 +5274,7 @@ function visitaAInquilino(id){
   const cfg=p&&v.hab?((p.habsConfig||{})[v.hab]||{}):{};
   if(cfg.precio) $i('iq-alq').value=cfg.precio;
   if(cfg.tipo==='doble') $i('iq-personas').value='2';
-  $i('iq-not').value=(v.notas?v.notas+'\\n':'')+'Procede de visita del '+(v.fecha?fD(v.fecha):'');
+  $i('iq-not').value=(v.notas?v.notas+'\n':'')+'Procede de visita del '+(v.fecha?fD(v.fecha):'');
   openM('m-inq');
 }
 
@@ -5464,24 +5499,27 @@ function usarPlantillaCon(id){
   const p=(D.plantillas||[]).find(x=>x.id==id); if(!p||!p.texto)return;
   const activos=D.inqs.filter(i=>i.estado==='ACTIVO');
   if(!activos.length){ toast('No hay inquilinos activos', false); return; }
-  const lista=activos.map((i,n)=>`${n+1}. ${i.nom} ${i.ap}`).join('\\n');
-  const sel=prompt('¿Para qué inquilino?\\n\\n'+lista+'\\n\\nEscribe el número:');
+  const lista=activos.map((i,n)=>`${n+1}. ${i.nom} ${i.ap}`).join('\n');
+  const sel=prompt('¿Para qué inquilino?\n\n'+lista+'\n\nEscribe el número:');
   if(sel===null)return;
   const idx=parseInt(sel)-1;
   const inq=activos[idx];
   if(!inq){ toast('Número no válido', false); return; }
   const pr=D.props.find(x=>x.id==inq.propId);
   let txt=p.texto
-    .replace(/\\{nombre\\}/gi, inq.nom+' '+(inq.ap||''))
-    .replace(/\\{piso\\}/gi, pr?pr.nom:'')
-    .replace(/\\{direccion\\}/gi, pr?((pr.dir||'')+(pr.ciu?', '+pr.ciu:'')):'')
-    .replace(/\\{habitacion\\}/gi, inq.hab||'')
-    .replace(/\\{renta\\}/gi, (inq.alq||0)+' €')
-    .replace(/\\{fianza\\}/gi, (inq.fia||0)+' €')
-    .replace(/\\{email\\}/gi, inq.email||'')
-    .replace(/\\{telefono\\}/gi, inq.tel||inq.wa||'')
-    .replace(/\\{dni\\}/gi, inq.dni||'')
-    .replace(/\\{fecha\\}/gi, new Date().toLocaleDateString('es-ES'));
+    .replace(/\{nombre\}/gi, inq.nom+' '+(inq.ap||''))
+    .replace(/\{piso\}/gi, pr?pr.nom:'')
+    .replace(/\{direccion\}/gi, pr?((pr.dir||'')+(pr.ciu?', '+pr.ciu:'')):'')
+    .replace(/\{habitacion\}/gi, inq.hab||'')
+    .replace(/\{renta\}/gi, (inq.alq||0)+' €')
+    .replace(/\{fianza\}/gi, (inq.fia||0)+' €')
+    .replace(/\{email\}/gi, inq.email||'')
+    .replace(/\{telefono\}/gi, inq.tel||inq.wa||'')
+    .replace(/\{dni\}/gi, inq.dni||'')
+    .replace(/\{fecha\}/gi, new Date().toLocaleDateString('es-ES'));
+  const arr=v2Arrendador(pr);
+  txt=txt.replace(/\{arrendador\}/gi, arr.nom).replace(/\{arrendador_nif\}/gi, arr.nif)
+    .replace(/\{representante\}/gi, arr.rep).replace(/\{representacion\}/gi, arr.clausula);
   copyT(txt, '✓ Plantilla rellenada para '+inq.nom+' y copiada');
 }
 
@@ -5531,7 +5569,7 @@ function rPlantillas(){
       ${p.texto?`<div style="font-size:11px;color:var(--ink2);margin-top:8px;line-height:1.5;max-height:60px;overflow:hidden;white-space:pre-wrap;background:var(--card);border-radius:6px;padding:8px;">${p.texto}</div>`:''}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
         ${p.texto?`<button class="btn btn-primary btn-sm" onclick="copiarPlantilla('${p.id}')">📋 Copiar</button>`:''}
-        ${p.texto&&/\\{/.test(p.texto)?`<button class="btn btn-success btn-sm" onclick="usarPlantillaCon('${p.id}')">✨ Rellenar</button>`:''}
+        ${p.texto&&/\{/.test(p.texto)?`<button class="btn btn-success btn-sm" onclick="usarPlantillaCon('${p.id}')">✨ Rellenar</button>`:''}
         ${p.pdfData?`<button class="btn btn-secondary btn-sm" onclick="openPdf('${p.pdfData}','${p.pdfName||p.nom}')">📄 Abrir</button>`:''}
       </div>
     </div>`;
@@ -9370,7 +9408,7 @@ async function volcarSheets() {
 // ══════════════════════════════════════════════════════════════
 // SINCRONIZACIÓN AUTOMÁTICA CON FUSIÓN (anti pérdida de datos)
 // ══════════════════════════════════════════════════════════════
-const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','hipotecas','plantillas','visitas','derechos','ctasBanc','provisiones','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
+const COLS = ['props','inqs','pagos','gastos','conts','incs','provs','agenda','pots','facturas','compras','anuncios','propietarios','hipotecas','plantillas','visitas','derechos','ctasBanc','provisiones','poderes','cuentas','movs','presup','subs','metas','invers','deudas','docs','libros'];
 
 let _snap = {};              // huella de cada registro para detectar cambios
 let _syncEnCurso = false;
@@ -10038,7 +10076,8 @@ function v2DestOK(it,c){
   const n=nifC(c).replace(/\s/g,'').toUpperCase(), d=it.destNif.replace(/\s/g,'').toUpperCase();
   if(!n || n===d) return {ok:true};
   if(it.provId){ const pv=(D.provisiones||[]).find(x=>x.id==it.provId); if(pv&&pv.aportante==c) return {ok:true}; }
-  return {ok:false, motivo:'Factura a nombre de otra persona sin provisión de fondos'};
+  const pod=(D.poderes||[]).find(x=>x.poderdante==c&&x.apoderado&&nifC(x.apoderado).replace(/\s/g,'').toUpperCase()===d);
+  return {ok:false, motivo:pod?'Factura a nombre del apoderado: el poder no la convierte en gasto de la propietaria; pide la factura a su nombre o vincúlala a una provisión de fondos':'Factura a nombre de otra persona sin provisión de fondos'};
 }
 
 // ── Bases de amortización ──
@@ -10058,6 +10097,7 @@ function baseEdificio(p,items){
 }
 function baseUsufructo(p,c,items,cfg){
   const d=derechosProp(p.id).find(x=>(x.tipo==='usufVit'||x.tipo==='usufTemp')&&x.ownerId==c); if(!d) return {base:0};
+  if(d.modo==='reserva') return {base:0, tipo:d.tipo, anyos:0, gastosK:0, criterio:'reserva', pct:0, d, reserva:true};
   const k=items.filter(it=>it.propId===p.id&&it.catF==='K'&&(!it.titular||it.titular===c)).reduce((s,it)=>s+it.imp,0);
   const vi=v2ValorUsufISD(d);
   let base = cfg.usufCriterio==='aeat' ? vi.valor+k : k;
@@ -10072,6 +10112,7 @@ function muebleDueno(it,iso){
 
 // ── Imputación de rentas (art. 85 LIRPF) ──
 function pctImput(y,p,c,sumVC,cfg){
+  if(!(parseFloat(p.vct)>0)) return 1.1;   // sin valor catastral: 1,1% sobre el 50% del valor del Patrimonio (art. 85.1)
   const rev=parseInt(p.revCat)||0;
   if(y<=2025) return (rev&&rev>=y-10)?1.1:2;
   if(y===2026) return cfg.rdl29 ? ((rev&&rev>=2012)?1.1:2) : ((rev&&rev>=2016)?1.1:2);   // DA 55ª LIRPF (RDL 29/2026)
@@ -10245,18 +10286,18 @@ function v2CalcAnyo(y,items,bolsa,cfg){
 
   // 6. Imputación de rentas y rendimiento mínimo del art. 24
   const sumVC={};
-  props.forEach(p=>{ const s=serieAnual(p.id,y), cs=new Set(); for(let i=0;i<nd;i++) if(s.adq[i]&&s.dis[i]&&s.fac[i]<1) cs.add(s.dis[i]); cs.forEach(c=>sumVC[c]=(sumVC[c]||0)+(parseFloat(p.vct)||0)); });
+  props.forEach(p=>{ const s=serieAnual(p.id,y), cs=new Set(); for(let i=0;i<nd;i++) if(s.adq[i]&&s.dis[i]&&s.fac[i]<1) cs.add(s.dis[i]); cs.forEach(c=>sumVC[c]=(sumVC[c]||0)+v2BaseImput(p).base); });
   props.forEach(p=>{
-    const s=serieAnual(p.id,y), vct=parseFloat(p.vct)||0;
+    const s=serieAnual(p.id,y), bi=v2BaseImput(p), vct=bi.base;
     const dus=derechosProp(p.id).filter(x=>(x.tipo==='usufVit'||x.tipo==='usufTemp')&&x.gratuitoPariente);
     for(let i=0;i<nd;i++){
       if(!s.adq[i]) continue; const c=s.dis[i];
       if(c&&!p.noSusc){ const fr=1-s.fac[i];
-        if(fr>0){ const o=P(c); const e=o.imput[p.id]=o.imput[p.id]||{dias:0,importe:0,vct,pct:0,sinVC:!vct}; const pc=pctImput(y,p,c,sumVC,cfg); e.dias+=fr; e.pct=pc; e.importe+=vct*pc/100/nd*fr; } }
+        if(fr>0){ const o=P(c); const e=o.imput[p.id]=o.imput[p.id]||{dias:0,importe:0,vct,pct:0,sinVC:bi.sinVC,fuente:bi.fuente}; const pc=pctImput(y,p,c,sumVC,cfg); e.dias+=fr; e.pct=pc; e.importe+=vct*pc/100/nd*fr; } }
       const n=s.nud[i];
       if(n&&dus.length){ const iso=fxIso(new Date(y,0,1+i));
         if(dus.some(x=>(!x.desde||x.desde<=iso)&&(!x.hasta||x.hasta>=iso))){
-          const o=P(n); const e=o.art24[p.id]=o.art24[p.id]||{dias:0,importe:0,vct,pct:0,sinVC:!vct}; const pc=pctImput(y,p,n,sumVC,cfg); e.dias+=1; e.pct=pc; e.importe+=vct*pc/100/nd; } }
+          const o=P(n); const e=o.art24[p.id]=o.art24[p.id]||{dias:0,importe:0,vct,pct:0,sinVC:bi.sinVC,fuente:bi.fuente}; const pc=pctImput(y,p,n,sumVC,cfg); e.dias+=1; e.pct=pc; e.importe+=vct*pc/100/nd; } }
     }
   });
 
@@ -10390,6 +10431,7 @@ function v2VenderMueble(src,id){
 // ── Titularidad ──
 function v2DescTipo(t){ return {pleno:'Pleno dominio',nuda:'Nuda propiedad',usufVit:'Usufructo vitalicio',usufTemp:'Usufructo temporal'}[t]||t; }
 function rTitularidad(){
+  v2PintarPoderes();
   const el=$i('tit-lista'); if(!el) return;
   const hoy=fxIso(new Date());
   if(!(D.props||[]).length){ el.innerHTML='<div class="empty"><p>Añade propiedades primero</p></div>'; return; }
@@ -10405,9 +10447,9 @@ function rTitularidad(){
       ${v2ConflictosDerechos(p).map(t=>`<div class="alert alert-r" style="font-size:11.5px;">⛔ Periodos incompatibles: ${t}. Edita o borra el que sobre.</div>`).join('')}
       ${(()=>{ const h=v2HuecoDerechos(p); return h?`<div class="alert alert-r" style="font-size:11.5px;">⛔ Del ${fD(h.ini)} al ${fD(h.fin)} nadie figura con derecho a las rentas.</div>`:''; })()}
       ${ds.length?`<div class="tbl-wrap"><table><thead><tr><th>Titular</th><th>Derecho</th><th>Desde</th><th>Hasta</th><th>%</th><th></th></tr></thead><tbody>
-        ${ds.map(d=>`<tr><td style="font-weight:600;">${nombreC(d.ownerId)}</td><td>${v2DescTipo(d.tipo)}${d.gratuitoPariente?' <span class="badge badge-y" style="font-size:8px;">art. 24</span>':''}${d.pctUsuf?' <span style="font-size:10px;color:var(--ink3);">('+d.pctUsuf+'% valor)</span>':''}${(d.tipo==='usufVit'||d.tipo==='usufTemp')?'<div style="font-size:10px;color:var(--ink3);margin-top:2px;">'+v2TxtValorUsuf(d)+'</div>':''}</td>
+        ${ds.map(d=>`<tr><td style="font-weight:600;">${nombreC(d.ownerId)}</td><td>${v2DescTipo(d.tipo)}${d.gratuitoPariente?' <span class="badge badge-y" style="font-size:8px;">art. 24</span>':''}${d.modo==='reserva'?' <span class="badge badge-b" style="font-size:8px;">reservado</span>':''}${d.pctUsuf?' <span style="font-size:10px;color:var(--ink3);">('+d.pctUsuf+'% valor)</span>':''}${(d.tipo==='usufVit'||d.tipo==='usufTemp')?'<div style="font-size:10px;color:var(--ink3);margin-top:2px;">'+v2TxtValorUsuf(d)+'</div>':''}</td>
           <td class="mono">${d.desde?fD(d.desde):'—'}</td><td class="mono">${d.hasta?fD(d.hasta):'vigente'}</td><td class="mono">${d.pct||100}</td>
-          <td style="white-space:nowrap;">${(d.tipo==='usufVit'||d.tipo==='usufTemp')?`<button class="btn btn-ghost btn-xs" onclick="v2CambiarFechaUsufructo('${d.id}')" title="Mueve a la vez usufructo, nuda propiedad y fin del pleno dominio">📅 Fecha de firma</button> `:''}<button class="btn btn-secondary btn-xs" onclick="v2EditDerecho('${d.id}')">✏️</button> <button class="btn btn-danger btn-xs" onclick="v2BorrarDerecho('${d.id}')">🗑</button></td></tr>`).join('')}
+          <td style="white-space:nowrap;">${(d.tipo==='usufVit'||d.tipo==='usufTemp')?`<button class="btn btn-ghost btn-xs" onclick="v2CambiarFechaUsufructo('${d.id}')" title="Mueve a la vez usufructo, nuda propiedad y fin del pleno dominio">📅 Fecha de firma</button> <button class="btn btn-ghost btn-xs" onclick="v2DeshacerUsufructo('${d.id}')" title="Si no se llegó a firmar: devuelve el pleno dominio">↩️ Deshacer</button> `:''}<button class="btn btn-secondary btn-xs" onclick="v2EditDerecho('${d.id}')">✏️</button> <button class="btn btn-danger btn-xs" onclick="v2BorrarDerecho('${d.id}')">🗑</button></td></tr>`).join('')}
       </tbody></table></div>`:`<div style="font-size:12px;color:var(--ink3);">Sin periodos registrados: se considera pleno dominio de ${nombreC(p.ownerId)} desde ${p.fcompra?fD(p.fcompra):'la compra'}.</div>`}
     </div>`;
   }).join('');
@@ -10446,17 +10488,21 @@ function v2GuardarUsufructo(){
   if(nudo===us){ toast('El nudo propietario y el usufructuario no pueden ser la misma persona',false); return; }
   const p=(D.props||[]).find(x=>x.id==pid), antes=fxAdd(f,-1);
   if(derechosProp(pid).some(d=>(d.tipo==='usufVit'||d.tipo==='usufTemp')&&(!d.hasta||d.hasta>=f))){ toast('Ya hay un usufructo vigente en esa fecha',false); return; }
-  const ajenos=derechosProp(pid).filter(d=>d.tipo==='pleno'&&d.ownerId!=nudo&&(!d.desde||d.desde<=f)&&(!d.hasta||d.hasta>=f));
-  if(ajenos.length){ toast('En esa fecha el pleno dominio figura a nombre de '+nombreC(ajenos[0].ownerId)+', no de '+nombreC(nudo)+'. Corrige primero la titularidad del inmueble.',false); return; }
-  let pl=derechosProp(pid).find(d=>d.tipo==='pleno'&&d.ownerId==nudo&&(!d.desde||d.desde<=f)&&(!d.hasta||d.hasta>=f));
-  if(pl) pl.hasta=antes; else D.derechos.push({id:uid(),propId:pid,ownerId:nudo,tipo:'pleno',pct:100,desde:p.fcompra||'',hasta:antes,auto:true});
+  // Quién tenía el pleno dominio: el nudo propietario (dona el usufructo) o el usufructuario (se lo reserva y dona la nuda propiedad)
+  const plenos=derechosProp(pid).filter(d=>d.tipo==='pleno'&&(!d.desde||d.desde<=f)&&(!d.hasta||d.hasta>=f));
+  const dePleno=plenos.length?plenos[0].ownerId:p.ownerId;
+  const modo=dePleno==nudo?'constitucion':(dePleno==us?'reserva':null);
+  if(!modo){ toast('En esa fecha el pleno dominio figura a nombre de '+nombreC(dePleno)+', que no es ni el nudo propietario ni el usufructuario. Corrige primero la titularidad.',false); return; }
+  if(plenos.length) plenos.forEach(d=>{ d.hasta=antes; });
+  else D.derechos.push({id:uid(),propId:pid,ownerId:dePleno,tipo:'pleno',pct:100,desde:p.fcompra||'',hasta:antes,auto:true});
+  if(modo==='reserva'&&$i('us-grat').checked){ $i('us-grat').checked=false; }
   const anyos=gn('us-anyos'); let hasta='';
   if(tipo==='usufTemp'&&anyos>0){ const d=fxDate(f); d.setFullYear(d.getFullYear()+anyos); d.setDate(d.getDate()-1); hasta=fxIso(d); }
   D.derechos.push({id:uid(),propId:pid,ownerId:nudo,tipo:'nuda',pct:100,desde:f,hasta});
-  D.derechos.push({id:uid(),propId:pid,ownerId:us,tipo,pct:100,desde:f,hasta,anyos,pctUsuf:gn('us-pct'),valorDecl:gn('us-valor'),vRefEsc:gn('us-vref'),valorISD:gn('us-valisd'),fnacUsuf:gi('us-fnac'),gratuitoPariente:$i('us-grat').checked,notas:gi('us-notas')});
+  D.derechos.push({id:uid(),propId:pid,ownerId:us,tipo,pct:100,desde:f,hasta,anyos,pctUsuf:gn('us-pct'),valorDecl:gn('us-valor'),vRefEsc:gn('us-vref'),valorISD:gn('us-valisd'),fnacUsuf:gi('us-fnac'),gratuitoPariente:$i('us-grat').checked,modo,notas:gi('us-notas')});
   p.usufructoId=us;
   saveAndSync(); closeM('m-usuf'); rTitularidad();
-  toast('✓ Usufructo registrado desde el '+fD(f));
+  toast('✓ '+(modo==='reserva'?'Reserva de usufructo de '+nombreC(us)+' y nuda propiedad de '+nombreC(nudo):'Usufructo de '+nombreC(us)+' (constituido por '+nombreC(nudo)+')')+' desde el '+fD(f));
 }
 
 // ── Dividir inmueble ──
@@ -10646,9 +10692,12 @@ function rFiscalV2(){
     });
     const im=Object.entries(r.imput), a24=Object.entries(r.art24);
     if(im.length){ html+=`<div style="margin:6px 0 4px;font-size:12px;font-weight:700;">Imputación de rentas inmobiliarias (art. 85 LIRPF)</div>`;
-      im.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; totImp+=e.importe; html+=fila(p.nom+' · '+e.dias.toFixed(1)+' días no arrendados × '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'⚠️ sin VC':e2(e.vct)),e2(e.importe)); }); }
+      im.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; totImp+=e.importe; html+=fila(p.nom+' · '+e.dias.toFixed(1)+' días no arrendados × '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'⚠️ sin VC → '+e.fuente+' '+e2(e.vct):e2(e.vct)),e2(e.importe)); }); }
+    const sinImp=(D.props||[]).filter(p=>v2TieneDerecho(p,c,y)&&!r.imput[p.id]);
+    if(sinImp.length){ if(!im.length) html+=`<div style="margin:6px 0 4px;font-size:12px;font-weight:700;">Imputación de rentas inmobiliarias (art. 85 LIRPF)</div>`;
+      sinImp.forEach(p=>{ html+=`<div style="font-size:11.5px;color:var(--ink3);padding:4px 0;border-bottom:1px solid var(--line);">${p.nom}: sin imputación — ${v2TxtDiagImput(p,y,c)}</div>`; }); }
     if(a24.length){ html+=`<div style="margin:10px 0 4px;font-size:12px;font-weight:700;">Rendimiento mínimo por constitución gratuita de usufructo (art. 24 LIRPF)</div>`;
-      a24.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; totA24+=e.importe; html+=fila(p.nom+' · '+e.dias+' días de nuda propiedad × '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'⚠️ sin VC':e2(e.vct)),e2(e.importe)); }); }
+      a24.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; totA24+=e.importe; html+=fila(p.nom+' · '+e.dias+' días de nuda propiedad × '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'⚠️ sin VC → '+e.fuente+' '+e2(e.vct):e2(e.vct)),e2(e.importe)); }); }
     html+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
       <div class="kpi" style="--kc:var(--gn);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Rend. capital inmobiliario</div><div class="kpi-value" style="font-size:18px;">${e2(totRend)}</div></div>
       <div class="kpi" style="--kc:var(--bl);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Imputación de rentas</div><div class="kpi-value" style="font-size:18px;">${e2(totImp)}</div></div>
@@ -10674,6 +10723,7 @@ function rFiscalV2(){
       <td style="white-space:nowrap;"><button class="btn btn-ghost btn-xs" onclick="v2AbrirFicha('${it.src}','${it.id}')" title="Ficha fiscal">📋</button>${it.catF==='C'?` <button class="btn btn-ghost btn-xs" onclick="v2VenderMueble('${it.src}','${it.id}')" title="Vender a otro contribuyente">↔</button>`:''}</td></tr>`; }).join('')}
     </tbody></table></div></details>`;
 
+  html+=v2HtmlDiagImput(y);
   html+=v2HtmlCostes(calc);
   // Criterios configurables
   const cfg=calc.cfg, sel=(k,opts,v)=>`<select onchange="v2SetCfg('${k}',this.value)" style="font-size:11.5px;padding:5px;">${opts.map(([a,b])=>`<option value="${a}" ${String(v)===String(a)?'selected':''}>${b}</option>`).join('')}</select>`;
@@ -10717,6 +10767,7 @@ function v2Bloques(c,y,calc){
   const B=[], r=calc.R[c]||{props:{},imput:{},art24:{},noDed:[]}, o=(D.propietarios||[]).find(x=>x.id==c)||{}, e2=n=>eur(n,2);
   B.push({t:'h1',x:'Rendimientos del capital inmobiliario · IRPF '+y});
   B.push({t:'kv',k:'Contribuyente',v:(o.nom||nombreC(c))+(o.dni?' · NIF '+o.dni:'')});
+  (D.poderes||[]).filter(x=>x.poderdante==c).forEach(x=>B.push({t:'kv',k:'Representante (poder especial)',v:nombreC(x.apoderado)+(x.fecha?' · otorgado el '+fD(x.fecha):'')+(x.notario?' ante '+x.notario:'')+(x.protocolo?' · protocolo '+x.protocolo:'')}));
   B.push({t:'p',x:'Informe orientativo generado por RentaControl (motor fiscal v2). No incluye cuota estimada: el tipo efectivo depende del resto de rentas. Revisar con asesor antes de presentar.'});
   let tR=0,tI=0,tA=0;
   Object.entries(r.props).forEach(([pid,x])=>{
@@ -10755,10 +10806,10 @@ function v2Bloques(c,y,calc){
   });
   const im=Object.entries(r.imput), a24=Object.entries(r.art24);
   if(im.length){ B.push({t:'h2',x:'Imputación de rentas inmobiliarias (art. 85 LIRPF)'});
-    im.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; tI+=e.importe; B.push({t:'kv',k:p.nom+(p.refCat?' ('+p.refCat+')':'')+' · '+e.dias.toFixed(1)+' días no arrendados · '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'(FALTA)':e2(e.vct)),v:e2(e.importe)}); }); }
+    im.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; tI+=e.importe; B.push({t:'kv',k:p.nom+(p.refCat?' ('+p.refCat+')':'')+' · '+e.dias.toFixed(1)+' días no arrendados · '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'(sin VC: '+e.fuente+' '+e2(e.vct)+')':e2(e.vct)),v:e2(e.importe)}); }); }
   if(a24.length){ B.push({t:'h2',x:'Rendimiento mínimo por usufructo constituido a favor de pariente (art. 24 LIRPF)'});
     B.push({t:'p',x:'Criterio del cuadro de usufructo del Manual AEAT: el propietario que constituye gratuitamente el usufructo declara un rendimiento igual a la imputación del art. 85 durante su duración.'});
-    a24.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; tA+=e.importe; B.push({t:'kv',k:p.nom+' · '+e.dias+' días · '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'(FALTA)':e2(e.vct)),v:e2(e.importe)}); }); }
+    a24.forEach(([pid,e])=>{ const p=(D.props||[]).find(z=>z.id==pid)||{nom:'?'}; tA+=e.importe; B.push({t:'kv',k:p.nom+' · '+e.dias+' días · '+e.pct.toFixed(2)+'% s/ VC '+(e.sinVC?'(sin VC: '+e.fuente+' '+e2(e.vct)+')':e2(e.vct)),v:e2(e.importe)}); }); }
   v2BloquesCostes(c,calc).forEach(b=>B.push(b));
   const rps=v2Unicos(calc.items.filter(it=>it.virt&&it.reparto&&it.titular===c&&(it.fecha||'').startsWith(String(y))));
   if(rps.length){ B.push({t:'h2',x:'Gastos comunes repartidos entre inmuebles'});
@@ -10975,7 +11026,7 @@ function v2Validaciones(y,calc){
   (D.conts||[]).forEach(co=>v2ChequeoTemporal(co,null).forEach(x=>add(x.n,x.t)));
   (D.props||[]).forEach(p=>{
     if(!p.refCat) addP(p,'error','refCat','falta la referencia catastral.');
-    if(!(parseFloat(p.vct)>0)) addP(p,'error','vct','falta el valor catastral total (recibo del IBI): no se puede calcular la imputación de rentas.');
+    if(!(parseFloat(p.vct)>0)) addP(p,'error','vct','falta el valor catastral total (recibo del IBI). Si el Catastro aún no se lo ha asignado o notificado, la imputación se calcula al 1,1% sobre el 50% del valor a efectos del Patrimonio (art. 85.1 LIRPF); si lo tiene, introdúcelo.');
     const pc=pctConstr(p);
     if(!pc.ok) addP(p,pc.pct>0?'aviso':'error','pct','% de construcción '+(pc.pct>0?'provisional ('+pc.fuente+', '+(pc.pct*100).toFixed(2)+'%)':'sin datos (no se amortiza)')+'. Criterio legal: VC construcción ÷ VC total.');
     if(pc.pct>1) addP(p,'error','pct100','el % de construcción supera el 100%.');
@@ -10991,6 +11042,8 @@ function v2Validaciones(y,calc){
     if(p.usufructoId&&!derechosProp(p.id).some(d=>d.tipo==='usufVit'||d.tipo==='usufTemp')) addP(p,'error','usuf','tiene usufructuario marcado pero sin fecha de escritura. Regístralo en 📜 Titularidad.');
     derechosProp(p.id).filter(d=>d.tipo==='usufVit'||d.tipo==='usufTemp').forEach(d=>{
       if(!(parseFloat(d.pctUsuf)>0)) addP(p,'error','usufPct','falta el % del usufructo (art. 26 de la Ley del ISD).');
+      if(d.fnacUsuf&&d.desde&&parseFloat(d.pctUsuf)>0&&d.tipo==='usufVit'){ const e=edadEn(d.fnacUsuf,d.desde), esp=Math.max(10,Math.min(70,89-e)); if(Math.abs(esp-parseFloat(d.pctUsuf))>0.01) addP(p,'error','usufEdad','el usufructo figura al '+d.pctUsuf+'%, pero con '+e+' años del usufructuario debe ser el '+esp+'% (89 − edad, art. 26.a Ley del ISD).'); }
+      if(d.modo==='reserva') addP(p,'aviso','usufReserva','usufructo reservado por '+nombreC(d.ownerId)+': sigue cobrando las rentas. La app no amortiza el inmueble desde la donación de la nuda propiedad (criterio prudente); confirma con el gestor cómo amortiza la usufructuaria y la ganancia patrimonial de la donación.');
       if(!(parseFloat(d.vRefEsc)>0)&&!(parseFloat(d.valorISD)>0)) addP(p,'aviso','usufVref','falta el valor de referencia del Catastro a la fecha de la escritura: el Impuesto de Donaciones usa el mayor entre ese valor y el declarado (art. 9 LISD).');
       const vi=v2ValorUsufISD(d); if(parseFloat(d.valorISD)>0&&vi.est>0&&Math.abs(vi.valor-vi.est)>vi.est*0.01) addP(p,'aviso','usufDif','el valor del usufructo de la autoliquidación ('+eur(vi.valor,2)+') no coincide con el mayor entre declarado y referencia × '+d.pctUsuf+'% ('+eur(vi.est,2)+'). Compruébalo.');
     });
@@ -11387,7 +11440,7 @@ function v2CambiarFechaUsufructo(id){
   const p=(D.props||[]).find(x=>x.id==u.propId);
   if(p&&p.fcompra&&nueva<=p.fcompra){ toast('La fecha debe ser posterior a la compra ('+fD(p.fcompra)+')',false); return; }
   const nuda=(D.derechos||[]).find(d=>d.propId==u.propId&&d.tipo==='nuda'&&d.desde===old);
-  const pleno=nuda?(D.derechos||[]).find(d=>d.propId==u.propId&&d.tipo==='pleno'&&d.ownerId==nuda.ownerId&&d.hasta===fxAdd(old,-1)):null;
+  const pleno=(D.derechos||[]).find(d=>d.propId==u.propId&&d.tipo==='pleno'&&d.hasta===fxAdd(old,-1));
   u.desde=nueva; if(u.tipo==='usufTemp'&&u.anyos>0){ const h=fxDate(nueva); h.setFullYear(h.getFullYear()+parseFloat(u.anyos)); h.setDate(h.getDate()-1); u.hasta=fxIso(h); }
   if(nuda){ nuda.desde=nueva; if(u.tipo==='usufTemp') nuda.hasta=u.hasta; }
   if(pleno) pleno.hasta=fxAdd(nueva,-1);
@@ -11478,6 +11531,129 @@ function v2BloquesCostes(c,calc){
     out.push({t:'kv',k:'Coste para una futura venta (precio + gastos + mejoras − amortizaciones)',v:e2(x.valorFiscal)});
   });
   return out;
+}
+
+
+// ══ Poderes de representación ══
+// El poder no transmite la propiedad ni las rentas: el poderdante sigue siendo el contribuyente (art. 11.3 LIRPF).
+const PO_FAC={administrar:'Administrar inmuebles',arrendamientos:'Contratos de arrendamiento',cobrar:'Cobrar rentas',desahucios:'Desahucios y pleitos',bancos:'Operar cuentas bancarias',disposicion:'Vender o hipotecar'};
+function v2PintarPoderes(){
+  const el=$i('tit-poderes'); if(!el) return; const ps=D.poderes||[];
+  el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div class="card-title" style="margin:0;">📄 Poderes de representación</div><button class="btn btn-secondary btn-sm" onclick="v2NuevoPoder()">+ Registrar poder</button></div>
+    ${ps.length?ps.map(p=>`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px;font-size:12px;line-height:1.6;">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><div><strong>${nombreC(p.poderdante)}</strong> → apoderado <strong>${nombreC(p.apoderado)}</strong></div>
+      <div style="display:flex;gap:4px;">${p.pdfData?`<button class="pdf-badge green" onclick="openPdf('${p.pdfData}','${p.pdfName||'poder.pdf'}')">📄 Ver</button>`:''}<button class="btn btn-secondary btn-xs" onclick="v2EditPoder('${p.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="if(confirm('¿Eliminar este poder?')){D.poderes=D.poderes.filter(x=>x.id!='${p.id}');saveAndSync();rTitularidad();}">🗑</button></div></div>
+      <div style="color:var(--ink3);">${p.fecha?fD(p.fecha):'sin fecha'}${p.notario?' · Notario '+p.notario:''}${p.residencia?' ('+p.residencia+')':''}${p.protocolo?' · protocolo nº '+p.protocolo:''}</div>
+      <div style="color:var(--ink2);">Facultades: ${(p.facultades||[]).map(f=>PO_FAC[f]||f).join(' · ')||'—'}</div>
+      ${!(p.facultades||[]).includes('bancos')?'<div style="color:var(--ye);font-size:11px;">⚠️ No incluye operar cuentas bancarias: las rentas deben ingresarse en una cuenta de '+nombreC(p.poderdante)+'.</div>':''}
+    </div>`).join(''):'<div style="font-size:11.5px;color:var(--ink3);margin-top:6px;">Sin poderes registrados.</div>'}</div>`;
+}
+function v2NuevoPoder(){ $i('po-id').value=''; $i('po-de').innerHTML=v2OptsOwners('','— elegir —'); $i('po-a').innerHTML=v2OptsOwners('','— elegir —');
+  ['po-notario','po-resid','po-prot'].forEach(i=>$i(i).value=''); $i('po-fecha').value=fxIso(new Date());
+  document.querySelectorAll('.po-fac').forEach(x=>x.checked=false); clearPdfZone('po-pdf-zone','po-pdf-data'); openM('m-poder'); }
+function v2EditPoder(id){ const p=(D.poderes||[]).find(x=>x.id==id); if(!p) return; $i('po-id').value=p.id;
+  $i('po-de').innerHTML=v2OptsOwners(p.poderdante,'— elegir —'); $i('po-a').innerHTML=v2OptsOwners(p.apoderado,'— elegir —');
+  $i('po-notario').value=p.notario||''; $i('po-resid').value=p.residencia||''; $i('po-prot').value=p.protocolo||''; $i('po-fecha').value=p.fecha||'';
+  document.querySelectorAll('.po-fac').forEach(x=>x.checked=(p.facultades||[]).includes(x.value)); clearPdfZone('po-pdf-zone','po-pdf-data'); openM('m-poder'); }
+function v2GuardarPoder(){
+  const o={poderdante:gi('po-de'),apoderado:gi('po-a'),notario:gi('po-notario'),residencia:gi('po-resid'),protocolo:gi('po-prot'),fecha:gi('po-fecha'),facultades:[...document.querySelectorAll('.po-fac:checked')].map(x=>x.value)};
+  if(!o.poderdante||!o.apoderado||!o.fecha){ toast('Indica poderdante, apoderado y fecha',false); return; }
+  if(o.poderdante===o.apoderado){ toast('El poderdante y el apoderado no pueden ser la misma persona',false); return; }
+  const pdf=gi('po-pdf-data'); if(pdf){ o.pdfData=pdf; o.pdfName=gi('po-pdf-name'); }
+  const id=gi('po-id'); if(id) Object.assign(D.poderes.find(x=>x.id==id),o); else D.poderes.push(Object.assign({id:uid()},o));
+  saveAndSync(); closeM('m-poder'); rTitularidad(); toast('Poder guardado');
+}
+// Arrendador de un piso (quien cobra las rentas hoy) y su representación, para contratos y plantillas
+function v2Arrendador(p){
+  if(!p) return {nom:'',nif:'',rep:'',clausula:''};
+  const c=titularidadDia(p.id,fxIso(new Date())).disfrute||p.ownerId, o=(D.propietarios||[]).find(x=>x.id==c)||{};
+  const pod=(D.poderes||[]).filter(x=>x.poderdante==c).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''))[0];
+  const ap=pod?(D.propietarios||[]).find(x=>x.id==pod.apoderado)||{}:null;
+  const clausula=pod?('representada por D./Dª '+(ap.nom||'')+(ap.dni?', con NIF '+ap.dni:'')+', en virtud de poder especial otorgado ante el Notario D. '+(pod.notario||'…')+(pod.residencia?', con residencia en '+pod.residencia:'')+(pod.fecha?', el '+new Date(pod.fecha+'T00:00:00').toLocaleDateString('es-ES')+',':'')+(pod.protocolo?' con el número '+pod.protocolo+' de su protocolo':'')):'';
+  return {nom:o.nom||'',nif:o.dni||'',rep:ap?(ap.nom||''):'',clausula};
+}
+// Deshacer un usufructo registrado que no llegó a firmarse
+function v2DeshacerUsufructo(id){
+  const u=(D.derechos||[]).find(d=>d.id==id); if(!u) return;
+  const p=(D.props||[]).find(x=>x.id==u.propId);
+  const nuda=(D.derechos||[]).find(d=>d.propId==u.propId&&d.tipo==='nuda'&&d.desde===u.desde);
+  const pleno=(D.derechos||[]).find(d=>d.propId==u.propId&&d.tipo==='pleno'&&d.hasta===fxAdd(u.desde,-1));
+  if(!confirm('Se eliminará el usufructo de '+nombreC(u.ownerId)+' sobre '+(p?p.nom:'el inmueble')+(nuda?' y la nuda propiedad de '+nombreC(nuda.ownerId):'')+(pleno?', y '+nombreC(pleno.ownerId)+' volverá a tener el pleno dominio sin fecha de fin':'')+'. ¿Continuar?')) return;
+  D.derechos=D.derechos.filter(d=>d!==u&&d!==nuda);
+  if(pleno) pleno.hasta='';
+  if(p&&p.usufructoId==u.ownerId) p.usufructoId='';
+  saveAndSync(); rTitularidad(); toast('✓ Usufructo eliminado: '+(p?p.nom:'el inmueble')+' vuelve a pleno dominio');
+}
+
+
+// ══ Imputación de rentas: base y comprobación por inmueble ══
+// Art. 85.1 LIRPF: base = valor catastral; si a 31 de diciembre no lo tiene o no está notificado,
+// el 50% del valor a efectos del Impuesto sobre el Patrimonio, al 1,1%. Prorrateo por días y por la parte no arrendada.
+function v2BaseImput(p){
+  const vct=parseFloat(p.vct)||0;
+  if(vct>0) return {base:vct, sinVC:false, fuente:'valor catastral'};
+  const pr=parseFloat(p.precio)||0, vr=parseFloat(p.vRef)||0, m=Math.max(pr,vr);
+  return {base:m*0.5, sinVC:true, fuente:'50% de '+(vr>pr?'valor de referencia':'precio de compra')};
+}
+function v2TieneDerecho(p,c,y){
+  const ini=y+'-01-01', fin=y+'-12-31', ds=derechosProp(p.id);
+  if(!ds.length) return p.ownerId==c && (!p.fcompra||p.fcompra<=fin);
+  return ds.some(d=>d.ownerId==c&&d.tipo!=='nuda'&&(!d.desde||d.desde<=fin)&&(!d.hasta||d.hasta>=ini));
+}
+function v2DiagImput(p,y){
+  const s=serieAnual(p.id,y), nd=s.nd; let antes=0, sinTit=0; const por={};
+  for(let i=0;i<nd;i++){
+    if(!s.adq[i]){ antes++; continue; }
+    const c=s.dis[i]; if(!c){ sinTit++; continue; }
+    const o=por[c]=por[c]||{dias:0,llenos:0,libres:0}; o.dias++; if(s.fac[i]>=1) o.llenos++; o.libres+=1-s.fac[i];
+  }
+  const ini=y+'-01-01', fin=y+'-12-31';
+  const ent=(D.conts||[]).filter(k=>k.pisoEntero&&k.propId==p.id&&k.ini&&k.ini<=fin&&(!k.fin||k.fin>=ini));
+  const inq=(D.inqs||[]).filter(i=>i.propId==p.id&&i.ini&&i.ini<=fin&&(i.fin?i.fin>=ini:i.estado!=='PASADO'));
+  return {nd,antes,sinTit,por,ent,inq};
+}
+function v2TxtOcupantes(dg){
+  const out=[];
+  dg.ent.forEach(k=>{ const q=(D.inqs||[]).find(i=>i.id==k.inqId); out.push('contrato de vivienda completa'+(q?' de '+q.nom+' '+(q.ap||''):'')+' desde el '+fD(k.ini)+(k.fin?' hasta el '+fD(k.fin):' <strong>sin fecha de fin</strong>')); });
+  dg.inq.forEach(i=>out.push((i.nom||'')+' '+(i.ap||'')+' (hab. '+(i.hab||'?')+') desde el '+fD(i.ini)+(i.fin?' hasta el '+fD(i.fin):' <strong>sin fecha de salida</strong>')));
+  return out.join('; ');
+}
+function v2TxtDiagImput(p,y,c){
+  if(p.noSusc) return 'el inmueble está marcado como «no susceptible de uso». Solo procede si está en construcción o no puede usarse por razones urbanísticas (art. 85 LIRPF) y tienes el justificante; si no, desmárcalo en Propiedades.';
+  const dg=v2DiagImput(p,y);
+  if(dg.antes>=dg.nd) return 'en '+y+' todavía no era vuestro'+(p.fcompra?' (fecha de compra: '+fD(p.fcompra)+')':'')+'.';
+  const o=dg.por[c];
+  if(!o){
+    const otros=Object.keys(dg.por).map(nombreC);
+    return (otros.length?'esos días las rentas figuran a nombre de '+otros.join(' y ')+'. ':'')+(dg.sinTit?dg.sinTit+' días sin nadie con derecho a las rentas. ':'')+'Revisa los periodos en 📜 Titularidad.';
+  }
+  if(o.libres<0.01){
+    const occ=v2TxtOcupantes(dg);
+    return 'figura alquilado al 100% los '+o.dias+' días en que te corresponde'+(dg.antes?' (desde la compra, el '+fD(p.fcompra)+')':'')+'. Ocupación registrada: '+(occ||'—')+'. Si algún inquilino ya no está, pon su fecha de salida; si no hay contrato de vivienda completa, desmarca esa casilla en el contrato.';
+  }
+  return o.libres.toFixed(1)+' días equivalentes sin alquilar.';
+}
+function v2HtmlDiagImput(y){
+  const props=D.props||[]; if(!props.length) return '';
+  let h=`<details class="card mb"><summary style="cursor:pointer;font-weight:700;">🔎 Imputación de rentas: comprobación por inmueble (${y})</summary>
+    <div style="font-size:11px;color:var(--ink3);margin:8px 0 4px;line-height:1.6;">Se imputa renta al titular de las rentas por cada día que el inmueble es suyo y no está alquilado, en proporción a la parte no alquilada (art. 85 LIRPF). No imputa si está alquilado todo el tiempo, si no era vuestro o si no puede usarse por razones urbanísticas.</div>`;
+  props.forEach(p=>{
+    const dg=v2DiagImput(p,y), filas=[];
+    if(p.noSusc) filas.push('<span style="color:var(--ye);">Marcado como no susceptible de uso: no imputa.</span>');
+    if(dg.antes) filas.push(dg.antes>=dg.nd?'No era vuestro en '+y+'.':dg.antes+' días antes de la compra ('+fD(p.fcompra)+').');
+    if(dg.sinTit) filas.push('<span style="color:var(--rd);">'+dg.sinTit+' días sin nadie con derecho a las rentas.</span>');
+    Object.entries(dg.por).forEach(([c,o])=>filas.push('<strong>'+nombreC(c)+'</strong>: '+o.dias+' días como titular de las rentas · '+o.llenos+' alquilado al 100% · <strong>'+o.libres.toFixed(1)+'</strong> días equivalentes sin alquilar'+(p.noSusc?'':(o.libres>=0.01?' → imputa':' → no imputa'))));
+    const occ=v2TxtOcupantes(dg);
+    const bi=v2BaseImput(p);
+    h+=`<div style="background:var(--bg);border-radius:var(--r2);padding:10px 12px;margin-top:8px;font-size:11.5px;line-height:1.6;">
+      <div style="font-weight:700;">${p.nom}</div>
+      ${filas.map(f=>'<div>'+f+'</div>').join('')}
+      <div style="color:var(--ink3);">Base: ${bi.sinVC?'<span style="color:var(--ye);">sin valor catastral → '+bi.fuente+' = '+eur(bi.base,2)+'</span>':'valor catastral '+eur(bi.base,2)}${p.revCat?' · revisión '+p.revCat:''}</div>
+      <div style="color:var(--ink3);">Ocupación registrada en ${y}: ${occ||'ninguna'}</div>
+    </div>`;
+  });
+  return h+'</details>';
 }
 
 </script>
