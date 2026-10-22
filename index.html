@@ -1607,8 +1607,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <input type="hidden" id="pr-edit-id">
   <div class="fg">
     <div class="fgrp fgf"><label>Nombre *</label><input id="pr-n" placeholder="Ej: Piso Gran Vía 1"></div>
-    <div class="fgrp"><label>Propietario (nudo propietario)</label><select id="pr-owner"></select></div>
-    <div class="fgrp"><label>Usufructuario (regístralo con fecha en 📜 Titularidad)</label><select id="pr-usufructo"></select></div>
+    <div class="fgrp"><label>Propietario (si hay usufructo: quien tiene la nuda propiedad)</label><select id="pr-owner"></select></div>
+    <div class="fgrp"><label>Usufructuario (cobra las rentas y se deduce los gastos desde la escritura)</label><select id="pr-usufructo"></select></div>
     <div class="fgrp fgf" style="font-size:10.5px;color:var(--ink3);">Si asignas un usufructuario, los ingresos y la fiscalidad de este piso computan a su nombre. Al quitarlo, vuelven al propietario.</div>
     <div class="fgrp fgf"><label>Dirección</label><input id="pr-d" placeholder="Calle, número, piso, puerta"></div>
     <div class="fgrp"><label>Ciudad</label><input id="pr-c" placeholder="Alicante"></div>
@@ -2020,7 +2020,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <select id="cp-cat" onchange="toggleCatOtros()"><option>Mobiliario</option><option>Electrodomésticos</option><option>Colchones y textil</option><option>Menaje</option><option>Reforma y obra</option><option>Decoración</option><option>Herramientas</option><option>Suministros</option><option>Notaría y registro</option><option>Gestoría y asesoría</option><option>Comisión inmobiliaria</option><option>Impuestos compra (ITP/AJD)</option><option>Otros</option></select>
       <input id="cp-cat-otros" placeholder="Escribe la categoría…" style="display:none;margin-top:6px;border-color:var(--acc);">
     </div>
-    <div class="fgrp"><label>Propietario *</label><select id="cp-owner"></select></div>
+    <div class="fgrp"><label>Titular: quien cobra las rentas y se deduce el gasto *</label><select id="cp-owner"></select><div id="cp-owner-info"></div></div>
     <div class="fgrp"><label>Propiedad</label><select id="cp-prop" onchange="autoOwnerFactura()"></select><div style="font-size:10px;color:var(--ink3);margin-top:3px;line-height:1.4;">Si es un gasto común a varios pisos, déjalo vacío: se reparte automáticamente (reparación, gasto anual o servicio).</div></div>
     <div class="fgrp"><label>Habitación nº (opcional)</label><input id="cp-hab" type="number" placeholder="3"></div>
     <div class="fgrp"><label>Nº de factura <span style="color:var(--ink3);font-weight:400;">(automático, se recalcula solo)</span></label><input id="cp-num" placeholder="1/08.26" disabled style="background:var(--bg);color:var(--ink3);cursor:not-allowed;"></div>
@@ -3265,6 +3265,7 @@ function borrarDocProp(pid,dkey){
 
 function saveProp(){
   const nom=gi('pr-n'); if(!nom){toast('Introduce el nombre',false);return;}
+  if(gi('pr-usufructo')&&gi('pr-usufructo')===gi('pr-owner')){ toast('El propietario (nuda propiedad) y el usufructuario no pueden ser la misma persona: en «Propietario» pon a quien tiene la nuda propiedad',false); return; }
   const editId=gi('pr-edit-id');
   const nuevosDocs={};
   DOC_KEYS.forEach(d=>{
@@ -3279,12 +3280,15 @@ function saveProp(){
   if(editId){
     const p=D.props.find(x=>x.id==editId);
     if(p){ Object.assign(p,campos); p.docs=Object.assign({},p.docs||{},nuevosDocs); }
+    window._v4PropGuardada=editId;
     toast('Propiedad actualizada');
   } else {
-    D.props.push(Object.assign({id:uid(),docs:nuevosDocs},campos));
+    const np=Object.assign({id:uid(),docs:nuevosDocs},campos);
+    D.props.push(np); window._v4PropGuardada=np.id;
     toast('Propiedad añadida');
   }
   saveAndSync(); closeM('m-prop'); rProps(); rHabs();
+  try{ v4TrasGuardarProp(window._v4PropGuardada); }catch(e){ console.warn(e); }
   $i('pr-edit-id').value='';
   ['pr-n','pr-d','pr-c','pr-cp','pr-h','pr-p','pr-com','pr-gc','pr-tasacion','pr-fecha-tasacion','pr-mercado','pr-pctc','pr-fc','pr-hip','pr-cap','pr-vc'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   DOC_KEYS.forEach(d=>clearPdfZone('pr-'+d+'-zone','pr-'+d+'-data'));
@@ -3314,7 +3318,7 @@ function rProps(){
         <div>
           <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">${p.nom}</div>
           <div style="font-size:11px;color:var(--ink3);margin-top:2px;">${p.dir||''}${p.ciu?', '+p.ciu:''}</div>
-          ${p.ownerId?`<div style="margin-top:5px;"><span class="badge badge-p">👑 ${ownerNom(p.ownerId)}</span></div>`:''}
+          ${v4BadgesTitular(p)}
         </div>
         <div style="display:flex;gap:5px;align-items:center;">
           ${incC?`<span class="badge badge-r">${incC} inc.</span>`:''}
@@ -4287,9 +4291,12 @@ function ownerDe(obj){
   return '';
 }
 function autoOwnerFactura(){
-  const pid=gi('cp-prop'); if(!pid) return;
-  const p=D.props.find(x=>x.id==pid);
-  if(p&&p.ownerId) $i('cp-owner').value=p.ownerId;
+  const pid=gi('cp-prop'); if(!pid||pid==='__todos') return;
+  const p=D.props.find(x=>x.id==pid); if(!p) return;
+  // Quien cobra las rentas en la fecha de la factura: el usufructuario desde la escritura; antes, el dueño
+  const t=titularidadDia(pid,gi('cp-fecha')||fxIso(new Date()));
+  const c=t.disfrute||p.ownerId; if(c&&window._v2OwnerAuto!==false) $i('cp-owner').value=c;
+  setTimeout(()=>{ try{ v4InfoTitularFactura(); }catch(e){} },40);
 }
 
 function newPropietario(){
@@ -4337,8 +4344,12 @@ function rPropietarios(){
   }
   g.innerHTML=lista.map(o=>{
     const props=D.props.filter(p=>p.ownerId==o.id);
-    const habs=props.reduce((s,p)=>s+(p.habs||0),0);
-    const inqs=D.inqs.filter(i=>i.estado==='ACTIVO'&&props.some(p=>p.id==i.propId));
+    // Rentas y habitaciones: de los pisos cuyas rentas cobra hoy (los suyos y los que tiene en usufructo)
+    const cobra=D.props.filter(p=>fiscalOwnerDe(p)==o.id);
+    const todos=props.concat(cobra.filter(p=>!props.includes(p)));
+    const etq=p=>{ const t=titularidadDia(p.id,fxIso(new Date())); if(t.usuf&&t.usuf.ownerId==o.id) return p.nom+' · usufructo'; if(t.usuf&&t.nuda&&t.nuda.ownerId==o.id) return p.nom+' · nuda propiedad'; return p.nom; };
+    const habs=cobra.reduce((s,p)=>s+(parseInt(p.habs)||0),0);
+    const inqs=D.inqs.filter(i=>i.estado==='ACTIVO'&&cobra.some(p=>p.id==i.propId));
     const renta=inqs.reduce((s,i)=>s+parseFloat(i.alq||0),0);
     const facts=(D.compras||[]).filter(x=>ownerDe(x)==o.id);
     const totalFact=facts.reduce((s,x)=>s+parseFloat(x.imp||0),0);
@@ -4363,14 +4374,14 @@ function rPropietarios(){
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;">
-        <div><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--acc);">${props.length}</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-top:2px;">Pisos</div></div>
+        <div><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--acc);">${todos.length}</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-top:2px;">Pisos</div></div>
         <div><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--bl);">${habs}</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-top:2px;">Habs</div></div>
         <div><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--gn);">${renta}€</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-top:2px;">Renta/mes</div></div>
         <div><div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--pu);">${facts.length}</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-top:2px;">Facturas</div></div>
       </div>
-      ${props.length?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);">
+      ${todos.length?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);">
         <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:6px;">Sus propiedades</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;">${props.map(p=>`<span class="badge badge-b">${p.nom}</span>`).join('')}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">${todos.map(p=>`<span class="badge ${/usufructo$/.test(etq(p))?'badge-g':'badge-b'}">${etq(p)}</span>`).join('')}</div>
       </div>`:''}
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:8.5px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.6px;">Patrimonio bruto</div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;">${eur(valor)}</div><div style="font-size:8px;color:var(--ink3);">${valor!=valorOriginal?`actualizado por IPC (orig. ${eur(valorOriginal)})`:'según tasación/mercado'}</div></div>
@@ -4516,6 +4527,7 @@ function saveCompra(){
     hab:gi('cp-hab'),pago:$i('cp-pago').value,ded:$i('cp-ded').value,
     gar:gi('cp-gar'),notas:gi('cp-notas')};
   Object.assign(campos, v2FichaRead()); campos.titular=campos.ownerId||''; campos.titularAuto=false;
+  try{ const chk=v4ChequeoTitularGasto(campos.propId,campos.fecha,campos.titular,campos.destNif); if(chk&&chk.nivel==='error'&&!confirm(chk.txt+'\n\n¿Guardar la factura igualmente?')) return; }catch(e){ console.warn(e); }
   if(campos.propId==='__todos'){
     if(!CAT_REPARTIBLES.includes(campos.catF)){ toast('«Todos» es solo para reparaciones, gastos anuales o servicios comunes. Los muebles, mejoras y gastos de compra se asignan a su piso.',false); return; }
     if(!campos.titular){ toast('Indica el titular: el reparto se hace entre sus inmuebles',false); return; }
@@ -7595,7 +7607,7 @@ function rFiscal(){
   $i('fi-owner-tabs').innerHTML = owners.length ? `
     <div class="periodo-fila"><span class="periodo-lbl">Dueño</span><div style="display:flex;gap:6px;flex-wrap:wrap;">
       <button class="pill ${!ownF?'on':''}" onclick="setFiOwner('')">Todos<span class="pill-sub">conjunto</span></button>
-      ${owners.map(o=>`<button class="pill ${ownF==o.id?'on':''}" onclick="setFiOwner('${o.id}')">${o.alias||o.nom}<span class="pill-sub">${D.props.filter(p=>p.ownerId==o.id).length} pisos</span></button>`).join('')}
+      ${owners.map(o=>`<button class="pill ${ownF==o.id?'on':''}" onclick="setFiOwner('${o.id}')">${o.alias||o.nom}<span class="pill-sub">${D.props.filter(p=>fiscalOwnerDe(p)==o.id).length} pisos</span></button>`).join('')}
     </div></div>` : '<div style="font-size:11.5px;color:var(--ink3);">Añade propietarios en la sección 👑 Propietarios para ver la fiscalidad separada por persona.</div>';
 
   // ── Conjuntos filtrados por propietario ──
@@ -10585,6 +10597,7 @@ function v2GuardarUsufructo(){
   D.derechos.push({id:uid(),propId:pid,ownerId:us,tipo,pct:100,desde:f,hasta,anyos,pctUsuf:gn('us-pct'),valorDecl:gn('us-valor'),vRefEsc:gn('us-vref'),valorISD:gn('us-valisd'),valorEsc:gn('us-valesc'),fnacUsuf:gi('us-fnac'),gratuitoPariente:$i('us-grat').checked,modo,notas:gi('us-notas')});
   p.usufructoId=us;
   saveAndSync(); closeM('m-usuf'); rTitularidad();
+  try{ v4AvisoCorreccion(v4CorregirTitularesUsufructo(pid)); const a=document.querySelector('.nav-item.on'); if(a&&a.dataset.s==='props') rProps(); if($i('m-compra')&&$i('m-compra').classList.contains('open')){ autoOwnerFactura(); v4InfoTitularFactura(); } }catch(e){ console.warn(e); }
   toast('✓ '+(modo==='reserva'?'Reserva de usufructo de '+nombreC(us)+' y nuda propiedad de '+nombreC(nudo):'Usufructo de '+nombreC(us)+' (constituido por '+nombreC(nudo)+')')+' desde el '+fD(f));
 }
 
@@ -11236,10 +11249,10 @@ function v2PreviewFactura(){
 }
 function v2PrepPropTodos(){ const s=$i('cp-prop'); if(s&&!s.querySelector('option[value="__todos"]')) s.insertAdjacentHTML('beforeend','<option value="__todos">↔ Todos (gasto común: se reparte entre los inmuebles del titular)</option>'); }
 function v2MarcasUsuario(proteger){ document.querySelectorAll('#m-compra input,#m-compra select,#m-compra textarea').forEach(e=>{ if(proteger&&String(e.value||'').trim()!=='') e.dataset.v2user='1'; else delete e.dataset.v2user; }); }
-function v2FichaReset(){ v2FichaResetBase(); v2PrepPropTodos(); v2MarcasUsuario(false); const n=$i('cpf-numprov'); if(n) n.value='';
+function v2FichaReset(){ setTimeout(()=>{ try{ v4InfoTitularFactura(); }catch(e){} },120); v2FichaResetBase(); v2PrepPropTodos(); v2MarcasUsuario(false); const n=$i('cpf-numprov'); if(n) n.value='';
   window._v2LeidaAuto=false; window._v2CatManual=false; window._v2OwnerAuto=true;
   const o=$i('cp-ocr'); if(o) o.innerHTML=''; setTimeout(v2PreviewFactura,50); }
-function v2FichaLoad(x){ v2FichaLoadBase(x); v2PrepPropTodos(); setTimeout(()=>v2MarcasUsuario(true),0);
+function v2FichaLoad(x){ setTimeout(()=>{ try{ v4InfoTitularFactura(); }catch(e){} },120); v2FichaLoadBase(x); v2PrepPropTodos(); setTimeout(()=>v2MarcasUsuario(true),0);
   if(x&&!x.propId&&(x.repartoTodos||x.repartoAuto)) $i('cp-prop').value='__todos';
   const n=$i('cpf-numprov'); if(n) n.value=(x&&x.numProv)||'';
   window._v2LeidaAuto=false; window._v2CatManual=true; window._v2OwnerAuto=false;
@@ -12802,7 +12815,7 @@ function v4Migrar(){
   (D.conts||[]).forEach(co=>{ if(v4EsTemporal(co)&&v4F(co)){ const antes=JSON.stringify(v4InqsCo(co).map(i=>[i.estado,i.ini,i.fin,i.alq])); v4SincronizarInqs(co); if(JSON.stringify(v4InqsCo(co).map(i=>[i.estado,i.ini,i.fin,i.alq]))!==antes) cambio=true; } });
   if(cambio) saveAndSync();
 }
-function v4Arranque(){ try{ v4Migrar(); }catch(e){ console.warn('v4Migrar',e); } try{ v4PintarBadge(); }catch(e){}
+function v4Arranque(){ try{ v4Migrar(); }catch(e){ console.warn('v4Migrar',e); } try{ v4AvisoCorreccion(v4CorregirTitularesUsufructo()); }catch(e){ console.warn('Titulares usufructo',e); } try{ v4PintarBadge(); }catch(e){}
   try{ if(location.hash==='#avisos'){ history.replaceState(null,'',location.pathname+location.search); setTimeout(()=>{ try{ v4IrA('avisos'); }catch(e){} },300); } }catch(e){} if(WS==='gentaury'||!WS){ setTimeout(()=>{ try{ if(document.body.classList.contains('ws-personal')) return; if(typeof currentUser!=='undefined'&&!currentUser) return; v4VentanaAvisos(false); }catch(e){ console.warn(e); } },1800); } }
 setInterval(()=>{ try{ v4PintarBadge(); v4Notificar(false); }catch(e){} },30*60*1000);
 
@@ -13096,6 +13109,102 @@ function v4HtmlDetalleRoce(props){
        +'Ingresos '+v4E2(e.ing.total)+' € (rentas '+v4E2(e.ing.renta)+' € + suministros cobrados '+v4E2(e.ing.suministros)+' €) − gastos '+v4E2(e.gastos.mes)+' € ('+v4E2(e.gastos.total)+' € en '+(Math.round(w.meses*10)/10).toLocaleString('es-ES')+' meses desde el '+v4F2(w.ini)+(e.gastos.det.length?': '+e.gastos.det.slice(0,4).map(d=>v4Esc(d.con)+' '+v4E2(d.parte)+' €').join(', ')+(e.gastos.det.length>4?'…':''):'')+') − cuotas '+v4E2(e.cuota)+' € = <strong>EBITDA '+v4E2(e.mes)+' €/mes</strong><br>'
        +'Dinero propio: precio '+v4E2(k.precio)+' € + gastos e inversiones '+v4E2(k.capex)+' € − préstamos '+v4E2(k.prestamo)+' € = <strong>'+v4E2(k.total)+' €</strong> · ROCE <strong>'+v4Pct(roce)+'</strong></div>'; }).join('')
    +'</details>';
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// v4.2 · Usufructo: quien cobra las rentas y se deduce los gastos (titularidad por fechas)
+// Desde la escritura, el usufructuario cobra las rentas y se deduce los gastos del piso;
+// la nuda propietaria no cobra nada de ese piso y no puede deducirse sus gastos.
+// ══════════════════════════════════════════════════════════════════════════════
+function v4EsUsuf(d){ return d&&(d.tipo==='usufVit'||d.tipo==='usufTemp'); }
+// Usufructuario marcado en la ficha del piso pero sin la fecha de la escritura registrada
+function v4FaltaFechaUsuf(p){ return !!(p&&p.usufructoId&&!derechosProp(p.id).some(d=>v4EsUsuf(d)&&d.ownerId==p.usufructoId)); }
+function v4NifNorm(s){ return String(s||'').replace(/[\s.\-]/g,'').toUpperCase().replace(/^ES(?=[0-9XYZKLM])/,''); }
+// Etiquetas del piso: quién cobra y deduce hoy, y quién tiene la nuda propiedad
+function v4BadgesTitular(p){
+  try{
+    const hoy=v4Hoy(), t=titularidadDia(p.id,hoy);
+    if(v4FaltaFechaUsuf(p)) return '<div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap;"><span class="badge badge-p">👑 '+v4Esc(ownerNom(p.ownerId))+'</span><button class="badge badge-r" style="cursor:pointer;border:none;font-family:inherit;white-space:normal;text-align:left;line-height:1.35;max-width:100%;" onclick="event.stopPropagation();v4RegistrarUsufructo(\''+p.id+'\')">⚠️ Falta la fecha del usufructo de '+v4Esc(ownerNom(p.usufructoId))+': hasta registrarla, todo se atribuye a '+v4Esc(ownerNom(t.disfrute||p.ownerId))+'. Registrar</button></div>';
+    if(t.usuf) return '<div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap;"><span class="badge badge-g" style="white-space:normal;" title="Desde el '+v4F2(t.usuf.desde)+'">🔑 Usufructo: '+v4Esc(ownerNom(t.usuf.ownerId))+' · cobra y deduce</span>'+(t.nuda?'<span class="badge badge-p">👑 Nuda propiedad: '+v4Esc(ownerNom(t.nuda.ownerId))+'</span>':'')+'</div>';
+    const fut=derechosProp(p.id).filter(d=>v4EsUsuf(d)&&d.desde>hoy).sort((a,b)=>a.desde.localeCompare(b.desde))[0];
+    const quien=t.disfrute||p.ownerId;
+    if(!quien&&!fut) return '';
+    return '<div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap;">'+(quien?'<span class="badge badge-p">👑 '+v4Esc(ownerNom(quien))+'</span>':'')+(fut?'<span class="badge badge-y">🔑 Usufructo de '+v4Esc(ownerNom(fut.ownerId))+' desde el '+v4F2(fut.desde)+'</span>':'')+'</div>';
+  }catch(e){ console.warn(e); return p.ownerId?'<div style="margin-top:5px;"><span class="badge badge-p">👑 '+v4Esc(ownerNom(p.ownerId))+'</span></div>':''; }
+}
+// Abre «Registrar usufructo» con el piso, la nuda propietaria y el usufructuario ya puestos; falta la fecha
+function v4RegistrarUsufructo(pid){
+  const p=(D.props||[]).find(x=>x.id==pid); if(!p) return;
+  v2NuevoUsufructo();
+  $i('us-prop').value=pid; $i('us-fecha').value='';
+  v2UsufPrefill();
+  if(p.usufructoId&&p.usufructoId!==gi('us-nudo')) $i('us-usuf').value=p.usufructoId;
+  let av=$i('us-v4-aviso');
+  if(!av){ av=document.createElement('div'); av.id='us-v4-aviso'; const h=document.querySelector('#m-usuf h2'); if(h) h.insertAdjacentElement('afterend',av); }
+  av.innerHTML='<div class="alert alert-y" style="font-size:11.5px;line-height:1.55;margin-bottom:10px;">📌 Pon la <strong>fecha de firma de la escritura</strong> del usufructo de '+v4Esc(p.nom)+'. Desde ese día '+v4Esc(nombreC(p.usufructoId||gi('us-usuf')))+' cobra las rentas y se deduce los gastos; hasta el día anterior, todo sigue siendo de '+v4Esc(nombreC(gi('us-nudo')))+' (pleno dominio).</div>';
+  setTimeout(()=>{ try{ $i('us-fecha').focus(); }catch(e){} },100);
+}
+// Tras guardar un piso: si tiene usufructuario sin fecha, pedirla
+function v4TrasGuardarProp(pid){
+  const p=(D.props||[]).find(x=>x.id==pid); if(!p) return;
+  if(v4FaltaFechaUsuf(p)){ toast('Indica la fecha de la escritura del usufructo para que las rentas y las facturas se atribuyan a '+nombreC(p.usufructoId)); setTimeout(()=>v4RegistrarUsufructo(pid),350); }
+}
+
+// ── Facturas: titular según la fecha (el usufructuario desde la escritura) ──
+function v4ChequeoTitularGasto(pid,fecha,titular,destNif){
+  if(!pid||pid==='__todos') return null;
+  const p=(D.props||[]).find(x=>x.id==pid); if(!p) return null;
+  const f=fecha||v4Hoy(), t=titularidadDia(pid,f);
+  if(v4FaltaFechaUsuf(p)) return {nivel:'aviso', fix:true, txt:'⚠️ '+p.nom+' tiene como usufructuario a '+nombreC(p.usufructoId)+', pero falta la fecha de la escritura: hasta registrarla, la app atribuye las rentas y los gastos a '+nombreC(t.disfrute||p.ownerId)+'.'};
+  if(!t.disfrute) return null;
+  const nifD=v4NifNorm(nifC(t.disfrute)), dn=v4NifNorm(destNif);
+  if(titular&&titular!==t.disfrute){
+    if(t.nuda&&t.nuda.ownerId===titular) return {nivel:'error', txt:'⛔ El '+v4F2(f)+' '+nombreC(titular)+' solo tiene la nuda propiedad de '+p.nom+': no cobra sus rentas y no puede deducirse este gasto. Ponlo a nombre de '+nombreC(t.disfrute)+' (usufructuario) y pide la factura a su nombre'+(nifD?' y NIF ('+nifD+')':'')+'.'};
+    return {nivel:'aviso', txt:'⚠️ El '+v4F2(f)+' quien cobra las rentas de '+p.nom+' es '+nombreC(t.disfrute)+', no '+nombreC(titular)+'.'};
+  }
+  if(dn&&nifD&&dn!==nifD) return {nivel:'aviso', txt:'⚠️ La factura está a nombre de otro NIF ('+dn+'): para deducirla, '+nombreC(t.disfrute)+' necesita la factura a su nombre y NIF ('+nifD+').'};
+  if(t.usuf) return {nivel:'ok', txt:'🔑 Usufructo de '+nombreC(t.usuf.ownerId)+' desde el '+v4F2(t.usuf.desde)+': cobra las rentas y se deduce los gastos. La factura debe ir a su nombre'+(nifD?' y NIF ('+nifD+')':'')+'.'};
+  return null;
+}
+function v4InfoTitularFactura(){
+  const box=$i('cp-owner-info'); if(!box) return;
+  const r=v4ChequeoTitularGasto(gi('cp-prop'),gi('cp-fecha'),gi('cp-owner'),gi('cpf-destnif'));
+  if(!r){ box.innerHTML=''; return; }
+  const col=r.nivel==='error'?'var(--rd)':r.nivel==='aviso'?'var(--ye)':'var(--gn)';
+  box.innerHTML='<div style="font-size:10.5px;line-height:1.45;margin-top:4px;color:'+col+';">'+v4Esc(r.txt)+(r.fix?' <a href="#" style="color:var(--acc);" onclick="event.preventDefault();v4RegistrarUsufructo(\''+gi('cp-prop')+'\')">Registrar la fecha</a>':'')+'</div>';
+}
+document.addEventListener('change',e=>{ if(e.target&&e.target.closest&&e.target.closest('#m-compra')) setTimeout(v4InfoTitularFactura,30); },true);
+document.addEventListener('input',e=>{ if(e.target&&e.target.closest&&e.target.closest('#m-compra')&&['cpf-destnif','cp-fecha'].includes(e.target.id)) setTimeout(v4InfoTitularFactura,30); },true);
+
+// ── Corrige facturas y gastos de pisos en usufructo que quedaron a nombre de la nuda propietaria ──
+// Solo los del periodo de usufructo y si la factura no está a nombre de ella ni se pagó desde su cuenta.
+// Los intereses y cuotas del préstamo no se tocan (van con quien es deudor del préstamo).
+const V4_NO_REASIGNAR=['A','F','G','K'];
+function v4CorregirTitularesUsufructo(pidFiltro){
+  const res={cambiados:[], suyos:[]};
+  const revisar=(x,src,pid,fecha)=>{
+    if(!pid||!fecha||(pidFiltro&&pid!=pidFiltro)) return;
+    let cat=''; try{ cat=x.catF||catFDe(x,src); }catch(e){}
+    if(V4_NO_REASIGNAR.includes(cat)||x.cat==='Hipoteca'||/\[cuota:/.test(x.notas||'')) return;
+    const t=titularidadDia(pid,fecha); if(!t.usuf||!t.nuda) return;
+    const tit=x.titular||x.ownerId||''; if(!tit||tit!==t.nuda.ownerId||t.usuf.ownerId===tit) return;
+    const dn=v4NifNorm(x.destNif), nNuda=v4NifNorm(nifC(t.nuda.ownerId));
+    const cta=x.ctaId&&(D.ctasBanc||[]).find(c=>c.id==x.ctaId);
+    const nom=(x.con||x.desc||'Gasto')+' ('+v4F2(fecha)+', '+v4E2(x.imp)+' €)';
+    if((dn&&nNuda&&dn===nNuda)||(cta&&cta.titularId===t.nuda.ownerId)){ res.suyos.push({src,id:x.id,nom,motivo:dn&&dn===nNuda?'factura a nombre de '+nombreC(t.nuda.ownerId):'pagada desde la cuenta de '+nombreC(t.nuda.ownerId)}); return; }
+    x.titular=t.usuf.ownerId; x.titularAuto=true; if(src==='compra') x.ownerId=t.usuf.ownerId;
+    res.cambiados.push({src,id:x.id,nom,a:t.usuf.ownerId});
+  };
+  (D.compras||[]).forEach(x=>revisar(x,'compra',x.propId,x.fecha));
+  (D.gastos||[]).forEach(x=>revisar(x,'gasto',x.propId,x.fecha));
+  if(res.cambiados.length){ try{ saveAndSync(); }catch(e){} }
+  return res;
+}
+function v4AvisoCorreccion(res){
+  if(!res) return;
+  if(res.cambiados.length) toast('✓ '+res.cambiados.length+' factura'+(res.cambiados.length>1?'s':'')+' de pisos en usufructo pasada'+(res.cambiados.length>1?'s':'')+' a '+nombreC(res.cambiados[0].a)+' (desde la fecha de la escritura)');
+  if(res.suyos.length) setTimeout(()=>toast('⚠️ '+res.suyos.length+' factura'+(res.suyos.length>1?'s':'')+' del periodo de usufructo a nombre o pagadas por la nuda propietaria: pide que se emitan a nombre del usufructuario (lo verás en Fiscal)',false),2500);
 }
 
 </script>
