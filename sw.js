@@ -1,4 +1,4 @@
-const CACHE = 'gentaury-v20';
+const CACHE = 'gentaury-v21';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -45,5 +45,22 @@ self.addEventListener('fetch', e => {
         return res;
       })
     )
+  );
+});
+
+// Al tocar una notificación de avisos: abre la app (o la trae al frente) en la sección de avisos
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || self.registration.scope;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if (c.url.startsWith(self.registration.scope) && 'focus' in c) {
+          c.postMessage({ tipo: 'abrir-avisos' });
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(url.split('#')[0] + '#avisos');
+    })
   );
 });
