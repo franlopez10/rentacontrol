@@ -784,6 +784,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="nav-item" data-ws="gentaury" data-s="agenda" onclick="go(this)">
       <span class="nav-icon">📅</span> Agenda
     </div>
+    <div class="nav-item" data-ws="gentaury" data-s="avisos" onclick="go(this)">
+      <span class="nav-icon">🔔</span> Avisos <span id="av-badge" style="display:none;margin-left:auto;background:var(--rd);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-family:'DM Mono',monospace;"></span>
+    </div>
   </div>
 
   <div class="nav-group" data-ws="gentaury">
@@ -929,6 +932,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div id="content">
 <!-- ═══════════════ DASHBOARD ═══════════════ -->
 <section class="sec on" data-ws="gentaury" id="sec-dash">
+  <div id="dash-avisos"></div>
   <div id="d-alerts" style="margin-bottom:14px;"></div>
   <div class="kpi-strip" id="d-kpis"></div>
   <div class="card mb" id="d-cartera"></div>
@@ -944,6 +948,25 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="card"><div class="card-title">🔧 Incidencias abiertas</div><div id="d-incs"></div></div>
     <div class="card"><div class="card-title">📄 Contratos por vencer</div><div id="d-conts"></div></div>
     <div class="card"><div class="card-title">📅 Agenda hoy</div><div id="d-agenda"></div></div>
+  </div>
+</section>
+
+<!-- ═══════════════ AVISOS ═══════════════ -->
+<section class="sec" data-ws="gentaury" id="sec-avisos">
+  <div class="ph"><div><div class="ph-title">🔔 Avisos de contratos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Fechas y plazos de cada contrato de habitación (contrato v20261021-3). Marca cada aviso como hecho cuando lo hagas.</div></div>
+    <div class="ph-acts"><button class="btn btn-secondary btn-sm" onclick="v4VentanaAvisos(true)">Ver resumen de hoy</button></div>
+  </div>
+  <div class="fb">
+    <select id="av-prop" onchange="rAvisos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:170px;outline:none;"></select>
+    <select id="av-tipo" onchange="rAvisos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos los tipos</option><option value="obl">Obligatorios y urgentes</option><option value="urg">Solo urgentes</option></select>
+    <div id="av-notif" style="font-size:11.5px;color:var(--ink3);"></div>
+  </div>
+  <div id="av-list"></div>
+  <div class="card" style="font-size:11.5px;color:var(--ink3);line-height:1.6;">
+    <div class="card-title">Días hábiles</div>
+    Para los plazos en días hábiles (respuesta a averías, art. 21 bis LAU) no se cuentan sábados, domingos ni festivos. Ya están incluidos los nacionales y regionales de la Región de Murcia de 2026 y 2027 y los locales de Alcantarilla y Molina de Segura. Añade aquí otros festivos locales (por ejemplo, los de Murcia para Javalí Viejo), separados por comas (dd/mm/aaaa):
+    <input id="av-fest" placeholder="07/04/2026, 14/09/2026" style="width:100%;margin-top:6px;padding:7px 10px;border:1px solid var(--line2);border-radius:var(--r2);background:var(--card);color:var(--ink);font-size:12px;">
   </div>
 </section>
 
@@ -992,7 +1015,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fi"><span class="fi-icon">🔍</span><input id="aq" placeholder="Buscar..." oninput="rActivos()"></div>
     <select id="ap2" onchange="rActivos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink);min-width:160px;outline:none;"></select>
   </div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Inquilino</th><th>Piso / Hab.</th><th>Alquiler</th><th>Fianza</th><th>Contrato</th><th>Vto.</th><th>⭐</th><th></th></tr></thead><tbody id="act-tb"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Inquilino</th><th>Piso / Hab.</th><th>Alquiler</th><th>Fianza</th><th>Contrato</th><th>Vto.</th><th>⭐</th><th>Siguiente paso</th><th></th></tr></thead><tbody id="act-tb"></tbody></table></div></div>
 </section>
 
 <!-- ═══════════════ PASADOS ═══════════════ -->
@@ -1846,30 +1869,59 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 </div></div>
 
 <!-- CONTRATO -->
-<div class="modal-overlay" id="m-co"><div class="modal">
-  <h2>📄 Nuevo Contrato</h2>
+<div class="modal-overlay" id="m-co"><div class="modal modal-lg">
+  <h2>📄 Nuevo contrato</h2>
+  <input type="hidden" id="co-edit-id">
   <div class="fg">
-    <div class="fgrp fgf"><label>Inquilino *</label><select id="co-i" onchange="autoPisoContrato()"></select></div>
+    <div class="fgrp"><label>Arrendatario 1 *</label><select id="co-i" onchange="autoPisoContrato()"></select></div>
+    <div class="fgrp"><label>Arrendatario 2 (habitación doble)</label><select id="co-i2"></select></div>
     <div class="fgrp"><label>Piso</label><select id="co-prop"></select></div>
     <div class="fgrp"><label>Habitación nº</label><input id="co-hab" type="number" placeholder="3"></div>
-    <div class="fgrp"><label>Fecha de inicio *</label><input id="co-ini" type="date" onchange="sugerirFinContrato()"></div>
-    <div class="fgrp"><label>Fecha de fin</label><input id="co-fin" type="date"></div>
+    <div class="fgrp"><label>Fecha de firma (F) *</label><input id="co-ini" type="date"></div>
+    <div class="fgrp"><label>Fin del contrato (E) *</label><input id="co-fin" type="date"></div>
+    <div class="fgrp"><label>Fin de la causa (C) del arrendatario 1 *</label><input id="co-cfin1" type="date"></div>
+    <div class="fgrp"><label>Fin de la causa (C) del arrendatario 2</label><input id="co-cfin2" type="date"></div>
     <div class="fgrp fgf">
-      <label>Fin del contrato temporal (más de 31 días · máximo 12 meses)</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinContrato('02-28')">📅 Hasta 28 de febrero</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinContrato('09-30')">📅 Hasta 30 de septiembre</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="calcFinContrato('12m')">📅 12 meses</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="v4FinIgualCausa()">📅 E = fin de la causa</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="v4Fin12m()">📅 E = 12 meses desde la firma</button>
       </div>
-      <div id="co-fin-info" style="font-size:10.5px;color:var(--ink3);margin-top:6px;"></div>
+      <div id="co-fin-info" style="font-size:10.5px;color:var(--ink3);margin-top:6px;">Más de 31 días, como máximo F + 12 meses y nunca después del fin de la causa (cláusula «Duración máxima del contrato»).</div>
     </div>
     <div class="fgrp"><label>Renta mensual (€)</label><input id="co-r" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Fianza entregada (€)</label><input id="co-f" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Garantía adicional (€)</label><input id="co-g" type="number" placeholder="0"></div>
     <div class="fgrp"><label>Tipo de contrato *</label><select id="co-tipo"><option value="temporal">Temporal (art. 3 LAU · causa acreditada)</option><option value="habitual">Vivienda habitual (LAU)</option><option value="temporadaPre">Temporada firmado antes del 08/10/2026</option><option value="usoDistinto">Uso distinto de vivienda</option><option value="esal">Social / Administración o entidad sin ánimo de lucro</option></select></div>
-    <div class="fgrp"><label>Fecha de firma</label><input id="co-firma" type="date"></div>
+    <div class="fgrp" style="display:none;"><label>Fecha de firma</label><input id="co-firma" type="date"></div>
     <div class="fgrp fgf"><label>Causa de temporalidad (obligatoria en temporal)</label><input id="co-causa" placeholder="Desplazamiento por prácticas en Hospital X hasta junio"></div>
-    <div class="fgrp fgf"><label>Vivienda habitual del inquilino de la que se desplaza</label><input id="co-vivhab" placeholder="C/ Mayor 3, Albacete"></div>
+    <div class="fgrp fgf"><label>Domicilio habitual del arrendatario (del que se desplaza) *</label><input id="co-vivhab" placeholder="C/ Mayor 3, Albacete"></div>
+    <div class="fgrp"><label>Contacto de emergencia del arrendatario 1</label><input id="co-emerg1" placeholder="Nombre y teléfono"></div>
+    <div class="fgrp"><label>Contacto de emergencia del arrendatario 2</label><input id="co-emerg2" placeholder="Nombre y teléfono"></div>
+    <div class="fgrp fgf"><div class="form-section" style="margin-top:4px;">Cobro</div><div id="co-titular" style="font-size:11px;color:var(--ink3);"></div></div>
+    <div class="fgrp"><label>Cuenta del titular que cobra</label><select id="co-cta"></select></div>
+    <div class="fgrp"><label>Bizum del titular</label><input id="co-bizum" placeholder="6XX XXX XXX"></div>
+    <div class="fgrp"><label>Retención a la salida, por persona (€)</label><input id="co-ret" type="number" step="0.01" value="100"></div>
+    <div class="fgrp"><label>Importe anual de internet del piso (€)</label><input id="co-inet" type="number" step="0.01" placeholder="Tarifa anual, art. 20.1 LAU"></div>
+    <div class="fgrp" style="display:flex;flex-direction:column;gap:6px;justify-content:center;">
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-wifi1" style="width:auto;"> El arrendatario 1 solicita el wifi</label>
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-wifi2" style="width:auto;"> El arrendatario 2 solicita el wifi</label>
+    </div>
+    <div class="fgrp"><label>Contratos temporales anteriores seguidos con esta persona en este piso</label><select id="co-prev"><option value="0">0 · normal</option><option value="1">1 · sin prórroga ni anexo posible</option><option value="2">2 o más · no se puede firmar como temporal</option></select></div>
+    <div class="fgrp" style="display:flex;align-items:center;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-itp" style="width:auto;"> Justificante del ITP (modelo 600) recibido</label></div>
+    <div class="fgrp"><label>Fecha del justificante del ITP</label><input id="co-itpf" type="date"></div>
+    <div class="fgrp fgf"><div class="form-section" style="margin-top:4px;">Anexo I · justificantes de la causa y del domicilio habitual (obligatorio)</div>
+      <div class="pdf-upload-zone" id="co-anx-zone" onclick="document.getElementById('co-anx').click()">
+        <input type="file" id="co-anx" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('co-anx','co-anx-zone','co-anx-data')">
+        <input type="hidden" id="co-anx-data"><input type="hidden" id="co-anx-name">
+        <span class="pdf-upload-label">📎 Adjuntar el Anexo I firmado con sus justificantes</span>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;">
+        <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-anx-c1" style="width:auto;"> Causa del arrendatario 1</label>
+        <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-anx-d1" style="width:auto;"> Domicilio habitual del arrendatario 1</label>
+        <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-anx-c2" style="width:auto;"> Causa del arrendatario 2</label>
+        <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-anx-d2" style="width:auto;"> Domicilio habitual del arrendatario 2</label>
+      </div>
+    </div>
     <div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-subsiste" style="width:auto;"> La causa subsiste más allá de 12 meses y está justificada</label></div>
     <div class="fgrp"><label>Renta del contrato anterior de la vivienda (€)</label><input id="co-rant" type="number"></div>
     <div class="fgrp" style="display:flex;flex-direction:column;gap:6px;justify-content:center;">
@@ -1905,6 +1957,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       </div>
     </div>
   </div>
+  <div id="co-val" style="margin-top:12px;"></div>
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-co')">Cancelar</button><button class="btn btn-primary" onclick="addCont()">Guardar</button></div>
 </div></div>
 
@@ -1917,7 +1970,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Habitación nº</label><input id="in-h" type="number" placeholder="2"></div>
     <div class="fgrp"><label>Prioridad</label><select id="in-pri"><option value="alta">🔴 Alta — Urgente</option><option value="media" selected>🟡 Media</option><option value="baja">🟢 Baja</option></select></div>
     <div class="fgrp"><label>Estado</label><select id="in-est"><option value="abierta">Abierta</option><option value="proceso">En proceso</option><option value="resuelta">Resuelta</option></select></div>
-    <div class="fgrp"><label>Fecha</label><input id="in-f" type="date"></div>
+    <div class="fgrp"><label>Fecha del aviso del inquilino (V)</label><input id="in-f" type="date"></div>
     <div class="fgrp"><label>Coste (€)</label><input id="in-co" type="number" placeholder="0"></div>
     <div class="fgrp fgf"><label>Proveedor / técnico</label><input id="in-pv" placeholder="Fontanero García — 600 111 222"></div>
     <div class="fgrp fgf"><label>Notas</label><textarea id="in-n" rows="2"></textarea></div>
@@ -2674,6 +2727,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('m-poder')">Cancelar</button><button class="btn btn-primary" onclick="v2GuardarPoder()">Guardar</button></div>
 </div></div>
 
+<div class="modal-overlay" id="m-v4"><div class="modal modal-lg" id="m-v4-c"></div></div>
+<div class="modal-overlay" id="m-v4tpl"><div class="modal modal-lg" id="m-v4tpl-c"></div></div>
+<div class="modal-overlay" id="m-v4av"><div class="modal modal-lg" id="m-v4av-c"></div></div>
 <div id="toast"></div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -2916,7 +2972,7 @@ function populateSelsBase(){
   const oF='<option value="">Todos los propietarios</option>'+(D.propietarios||[]).map(o=>`<option value="${o.id}">${o.alias||o.nom}</option>`).join('');
   ['cp-owner-f','fi-owner','hp-owner-f'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=oF;e.value=v;}});
   ['pa-i','co-i'].forEach(id=>{const e=$i(id);if(e){const v=e.value;e.innerHTML=iO;e.value=v;}});
-  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f','pl2-prop-f','cal-prop','vi-prop-f'].forEach(id=>{
+  ['ap2','pp2','gpf','hpf','hf','cp-prop-f','an-prop-f','co-prop-f','hp-prop-f','pl2-prop-f','cal-prop','vi-prop-f','av-prop'].forEach(id=>{
     const e=$i(id);
     if(e){ const v=e.value; e.innerHTML='<option value="">Todos los pisos</option>'+D.props.map(p=>`<option value="${p.id}">${p.nom}</option>`).join(''); e.value=v; }
   });
@@ -3300,14 +3356,14 @@ function rHabs(){
   pan.innerHTML=props.map(p=>{
     const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado!=='PASADO');
     const renta=iqs.filter(i=>i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0);
-    const libre=p.habs-iqs.filter(i=>i.estado==='ACTIVO').length;
+    const libre=Math.max(0,(parseInt(p.habs)||0)-new Set(iqs.filter(i=>i.estado==='ACTIVO').map(i=>String(i.hab))).size);
     const cfgAll=p.habsConfig||{};
     // Renta potencial: precio configurado de cada habitación
     const rentaPot=Array.from({length:p.habs},(_,n)=>parseFloat((cfgAll[n+1]||{}).precio)||0).reduce((a,b)=>a+b,0);
 
     const cards=Array.from({length:p.habs},(_,n)=>{
       const num=n+1;
-      const inq=iqs.find(i=>parseInt(i.hab)==num);
+      const inq=iqs.find(i=>parseInt(i.hab)==num), inq2=iqs.filter(i=>parseInt(i.hab)==num)[1];
       const cfg=cfgAll[num]||{tipo:'individual',plazas:1,precio:0};
       const est=inq?(inq.estado==='RESERVADO'?'res':'occ'):'free';
       const col=est==='occ'?'var(--gn)':est==='res'?'var(--ye)':'var(--rd)';
@@ -3319,7 +3375,7 @@ function rHabs(){
           <span class="room-num" style="color:${col};font-size:15px;">H${num}</span>
           <span style="font-size:8.5px;font-family:'DM Mono',monospace;color:${col};text-transform:uppercase;letter-spacing:.6px;">${label}</span>
         </div>
-        <div class="room-name" style="font-size:12px;${inq?'cursor:pointer;':''}" ${inq?`onclick="openPerfil('${inq.id}')"`:''}>${inq?inq.nom+' '+(inq.ap||''):'Disponible'}</div>
+        <div class="room-name" style="font-size:12px;${inq?'cursor:pointer;':''}" ${inq?`onclick="openPerfil('${inq.id}')"`:''}>${inq?inq.nom+' '+(inq.ap||'')+(inq2?' y '+inq2.nom+' '+(inq2.ap||''):''):'Disponible'}</div>
         ${inq?`<div style="font-size:10px;color:var(--ink3);margin-top:2px;">Desde ${fD(inq.ini)} · ${inq.alq||0}€/mes</div>`:''}
         <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;">
           <div class="hab-tipo" role="group" aria-label="Tipo de habitación">
@@ -3333,7 +3389,8 @@ function rHabs(){
         </div>
         ${(cfg.m2>0&&precioCfg>0)?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">${v2NumEs(cfg.m2)} m² · ${v2NumEs(precioCfg/cfg.m2,1)} €/m²</div>`:(cfg.m2>0?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">${v2NumEs(cfg.m2)} m²</div>`:'')}
         ${(!inq&&precioCfg>0)?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">Precio de oferta: <strong style="color:var(--ink2);">${precioCfg}€</strong></div>`:''}
-        ${(inq&&precioCfg>0&&Math.abs(precioCfg-(parseFloat(inq.alq)||0))>0.5)?`<div style="font-size:9.5px;color:var(--ye);margin-top:5px;">⚠ Cobra ${inq.alq}€, configurado ${precioCfg}€</div>`:''}
+        ${(inq&&precioCfg>0&&Math.abs(precioCfg-(parseFloat(inq.alq)||0))>0.5)?`<div style="font-size:9.5px;color:var(--ye);margin-top:5px;">⚠ Cobra ${parseFloat(inq.alq)||0}€, configurado ${precioCfg}€</div>`:''}
+        ${v4HtmlPasoHab(p.id,num)}
       </div>`;
     }).join('');
 
@@ -3469,6 +3526,7 @@ function iqRow(i,showState=false){
     <td style="font-size:10px;color:var(--ink3);">${fD(i.ini)} – ${i.fin?fD(i.fin):'∞'}</td>
     <td>${dS}</td>
     <td style="font-size:12px;">${st}</td>
+    <td style="min-width:190px;max-width:300px;">${v4HtmlPasoInq(i)}</td>
     <td style="display:flex;gap:4px;">
       <button class="btn btn-ghost btn-xs" onclick="openPerfil('${i.id}')">👤</button>
       <button class="btn btn-danger btn-xs" onclick="delInq('${i.id}')">🗑</button>
@@ -3479,7 +3537,7 @@ function iqRow(i,showState=false){
 function rActivos(){
   const tb=$i('act-tb'),q=gi('aq').toLowerCase(),propF=gi('ap2');
   const list=D.inqs.filter(i=>i.estado!=='PASADO'&&(!propF||i.propId==propF)&&(!q||`${i.nom} ${i.ap} ${i.email}`.toLowerCase().includes(q)));
-  if(!list.length){tb.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-icon">🟢</div><p>Sin inquilinos activos</p></div></td></tr>`;return;}
+  if(!list.length){tb.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-icon">🟢</div><p>Sin inquilinos activos</p></div></td></tr>`;return;}
   tb.innerHTML=list.map(i=>iqRow(i)).join('');
 }
 
@@ -4359,7 +4417,7 @@ const CP_ICONS={'Mobiliario':'🪑','Electrodomésticos':'🔌','Colchones y tex
 // ── Tratamiento fiscal ────────────────────────────────────────
 const FISCAL = {
   corriente:{et:'Deducible',ico:'✅',col:'g',ayuda:'Gasto corriente del alquiler: suministros, IBI, comunidad, seguros. Se resta entero este año.'},
-  reparacion:{et:'Reparación',ico:'🔧',col:'g',ayuda:'Reparaciones y sustituciones (cambiar caldera vieja, arreglar fontanería, sustituir electrodoméstico estropeado). Deducible directo, pero con límite: junto a los intereses de hipoteca no puede superar los ingresos del año. El exceso se deduce en los 4 años siguientes.'},
+  reparacion:{et:'Reparación',ico:'🔧',col:'g',ayuda:'Reparación y conservación (arreglar la fontanería o un electrodoméstico, pintar, sustituir elementos como la caldera o la instalación de calefacción: art. 13.a RIRPF). Comprar un electrodoméstico o un mueble nuevo para sustituir otro no es reparación: va en «Amortiz. 10%». Deducible directo, pero con límite: junto a los intereses de hipoteca no puede superar los ingresos del año. El exceso se deduce en los 4 años siguientes.'},
   mejora:{et:'Mejora',ico:'🏗️',col:'y',ayuda:'Mejoras que aumentan valor o vida útil (reforma integral, ampliación, cambiar ventanas por otras mejores). NO se deduce como gasto: se amortiza al 3% anual junto al inmueble.'},
   amort10:{et:'Amortiz. 10%',ico:'🪑',col:'b',ayuda:'Muebles y electrodomésticos nuevos (camas, armarios, nevera, lavadora). Se amortizan al 10% anual.'},
   amort3:{et:'Amortiz. 3%',ico:'🏠',col:'p',ayuda:'Comisión inmobiliaria, notaría, registro, gestoría, ITP. Suma al valor de compra: se amortiza al 3% anual.'},
@@ -5239,10 +5297,14 @@ function saveVisita(){
     propId:gi('vi-prop'),hab:gi('vi-hab'),est:$i('vi-est').value,origen:$i('vi-origen').value,
     aviso:gi('vi-aviso'),recordado:$i('vi-recordado').value,notas:gi('vi-notas')};
   const id=gi('vi-edit-id');
-  if(id){ const v=D.visitas.find(x=>x.id==id); if(v)Object.assign(v,campos); toast('Visita actualizada'); }
+  try{ const chk=v4ValidarVisita(Object.assign({id:id||''},campos));
+    if(chk.err.length){ alert('⛔ No se puede guardar la visita:\n\n• '+chk.err.join('\n• ')); return; }
+    if(chk.av.length&&!confirm('⚠️ '+chk.av.join('\n⚠️ ')+'\n\n¿Guardar la visita?')) return; }catch(e){ console.warn('Validar visita',e); }
+  if(id){ const v=D.visitas.find(x=>x.id==id); if(v){ if(v.fecha!==fecha||v.hora!==hora){ v.avisoHab=''; v.avisoCom=''; } Object.assign(v,campos); } toast('Visita actualizada'); }
   else { D.visitas.push(Object.assign({id:uid(),creada:new Date().toISOString()},campos)); toast('Visita agendada'); }
   saveAndSync(); closeM('m-visita'); rVisitas();
   programarAvisosVisitas();
+  try{ v4RefrescarAvisos(); }catch(e){}
 }
 function delVisita(id){
   if(!confirm('¿Eliminar esta visita?')) return;
@@ -8662,8 +8724,9 @@ function rCartera(){
 
   // Totales de la cartera
   let patBruto=0, patNeto=0, factBruta=0, factNeta=0, dineroTotal=0, deudaTotal=0;
-  let habsTotales=0, habsOcupadas=0;
+  let habsTotales=0, habsOcupadas=0, ebitdaMes=0, ingMes=0, gasMes=0, cuoMes=0;
   props.forEach(p=>{
+    const eb=v4EbitdaPiso(p); ebitdaMes+=eb.mes; ingMes+=eb.ing.total; gasMes+=eb.gastos.mes; cuoMes+=eb.cuota;
     habsTotales += parseInt(p.habs)||0;
     // Habitaciones distintas ocupadas por inquilinos activos de este piso
     const ocupadas=new Set(D.inqs.filter(i=>i.estado==='ACTIVO'&&i.propId==p.id&&i.hab).map(i=>String(i.hab)));
@@ -8675,8 +8738,8 @@ function rCartera(){
     factBruta+=facturacionBrutaPiso(p); factNeta+=facturacionNetaPiso(p);
     dineroTotal+=dineroPropio(p);
   });
-  // ROCE global de la cartera = flujo neto anual / dinero propio total
-  const roceGlobal = dineroTotal>0 ? (factNeta/dineroTotal*100) : null;
+  // ROCE de la cartera = EBITDA anual (ingresos − todos los gastos − cuotas) / todo el dinero propio
+  const roceGlobal = dineroTotal>0 ? (ebitdaMes*12/dineroTotal*100) : null;
   const pctOcupacion = habsTotales>0 ? Math.round(habsOcupadas/habsTotales*100) : 0;
   const habsLibres = habsTotales-habsOcupadas;
   const rentBrutaGlobal = patBruto>0 ? (factBruta/patBruto*100) : null;
@@ -8707,9 +8770,9 @@ function rCartera(){
         <div class="cb-val" style="color:#fff;">${roceGlobal.toFixed(1)}%</div>
         <div class="cb-sub" style="color:rgba(255,255,255,.75);">${rentBrutaGlobal!==null?'Rent. bruta '+rentBrutaGlobal.toFixed(1)+'%':''}</div></div>`:''}
       <div class="cartera-box">
-        <div class="cb-lbl">% Ocupación</div>
-        <div class="cb-val" style="color:${pctOcupacion>=90?'var(--gn)':pctOcupacion>=70?'var(--ye)':'var(--rd)'};">${pctOcupacion}%</div>
-        <div class="cb-sub">${habsOcupadas} de ${habsTotales} habitaciones</div></div>
+        <div class="cb-lbl">EBITDA mensual</div>
+        <div class="cb-val" style="color:${ebitdaMes>=0?'var(--gn)':'var(--rd)'};">${eur(ebitdaMes)}<span class="cb-u">/mes</span></div>
+        <div class="cb-sub" style="white-space:normal;line-height:1.35;">${eur(ingMes)} ingresos − ${eur(gasMes)} gastos − ${eur(cuoMes)} cuotas</div></div>
       <div class="cartera-box">
         <div class="cb-lbl">% Financiación (LTV)</div>
         <div class="cb-val" style="color:${patBruto>0&&(deudaTotal/patBruto)>0.7?'var(--rd)':'var(--ye)'};">${patBruto>0?(deudaTotal/patBruto*100).toFixed(1):'0'}%</div>
@@ -8752,13 +8815,13 @@ function rCartera(){
     </div>
 
     <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:18px 0 8px;">Desglose por inmueble</div>
-    <div class="tbl-wrap"><table><thead><tr><th>Inmueble</th><th class="n">Ocupación</th><th class="n">Valor</th><th class="n">Deuda</th><th class="n">Neto</th><th class="n">Fact. bruta/año</th><th class="n">Fact. neta/año</th><th class="n">Dinero propio</th><th class="n">ROCE</th></tr></thead><tbody>
+    <div class="tbl-wrap"><table><thead><tr><th>Inmueble</th><th class="n">Ocupación</th><th class="n">Valor</th><th class="n">Deuda</th><th class="n">Neto</th><th class="n">Fact. bruta/año</th><th class="n">Fact. neta/año</th><th class="n">Dinero propio</th><th class="n">EBITDA/mes</th><th class="n">ROCE</th></tr></thead><tbody>
     ${props.map(p=>{
       const va=valorActualizadoPiso(p);
       const valor=va.valor||parseFloat(p.tasacion||p.mercado||p.precio||0);
       const deuda=hipotecaPendiente(p);
       const fb=facturacionBrutaPiso(p), fn=facturacionNetaPiso(p);
-      const dp=dineroPropio(p), roce=roceDe(p);
+      const dp=dineroPropio(p), roce=roceDe(p), ebM=v4EbitdaPiso(p).mes;
       const ocuP=new Set(D.inqs.filter(i=>i.estado==='ACTIVO'&&i.propId==p.id&&i.hab).map(i=>String(i.hab))).size;
       const totP=parseInt(p.habs)||0;
       const pctP=totP>0?Math.round(ocuP/totP*100):0;
@@ -8771,10 +8834,11 @@ function rCartera(){
         <td class="n mono">${eur(fb)}</td>
         <td class="n mono" style="color:${fn>=0?'var(--gn)':'var(--rd)'};">${eur(fn)}</td>
         <td class="n mono">${eur(dp)}</td>
+        <td class="n mono" style="color:${ebM>=0?'var(--gn)':'var(--rd)'};">${eur(ebM)}</td>
         <td class="n mono" style="font-weight:700;color:${roce!==null&&roce>=0?'var(--gn)':'var(--rd)'};">${roce!==null?roce.toFixed(1)+'%':'–'}</td>
       </tr>`;
     }).join('')}
-    </tbody></table></div>`;
+    </tbody></table></div>${v4HtmlDetalleRoce(props)}`;
 }
 
 function rDash(){
@@ -11723,6 +11787,1315 @@ function v2HtmlDiagImput(y){
     </div>`;
   });
   return h+'</details>';
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// v4 · CONTRATOS TEMPORALES DE HABITACIÓN (contrato v20261021-3): fechas, avisos,
+// pagos mensuales, reparto de suministros y bloqueos
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Festivos para contar días hábiles (BORM: calendario laboral de la Región de Murcia) ──
+const V4_FEST_REGION={
+  2026:['2026-01-01','2026-01-06','2026-03-19','2026-04-02','2026-04-03','2026-05-01','2026-06-09','2026-08-15','2026-10-12','2026-12-07','2026-12-08','2026-12-25'],
+  2027:['2027-01-01','2027-01-06','2027-03-19','2027-03-25','2027-03-26','2027-05-01','2027-06-09','2027-10-12','2027-11-01','2027-12-06','2027-12-08','2027-12-25']
+};
+const V4_FEST_LOCAL={
+  alcantarilla:['2026-05-29','2026-09-15','2027-05-14','2027-09-14'],
+  molina:['2026-01-22','2026-09-21','2027-01-22','2027-09-20']
+};
+const V4_SUM_TOPE=['Luz','Agua','Gas'];          // tope de 1.200 €/persona/año
+const V4_SUMINISTROS=['Luz','Agua','Gas','Internet'];
+const V4_CAMBIO_TXT={prorroga:'Prórroga',cambio_hab:'Anexo de cambio de habitación',incorporacion:'Anexo de incorporación de arrendatario',salida_arr:'Anexo de salida de arrendatario',combinado:'Anexo combinado (cambio de habitación + incorporación)'};
+const V4_MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+// ── Fechas (siempre en hora local, formato AAAA-MM-DD) ──
+function v4AddM(iso,n){ const [y,m,d]=iso.split('-').map(Number); const t=new Date(y,m-1+n,1); const last=new Date(t.getFullYear(),t.getMonth()+1,0).getDate(); t.setDate(Math.min(d,last)); return fxIso(t); }
+function v4Diff(a,b){ return Math.round((fxDate(b)-fxDate(a))/864e5); }
+function v4FinMes(iso){ const d=fxDate(iso.length===7?iso+'-01':iso); return fxIso(new Date(d.getFullYear(),d.getMonth()+1,0)); }
+function v4DiasMes(mes){ const [y,m]=mes.split('-').map(Number); return new Date(y,m,0).getDate(); }
+function v4MesSig(mes,n){ const [y,m]=mes.split('-').map(Number); const d=new Date(y,m-1+(n===undefined?1:n),1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function v4Hoy(){ return fxIso(new Date()); }
+function v4Ahora(){ return new Date(); }
+function v4F2(iso){ if(!iso) return '—'; const [y,m,d]=iso.slice(0,10).split('-'); return d+'/'+m+'/'+y; }
+function v4FL(iso){ if(!iso) return '—'; const d=fxDate(iso.slice(0,10)); return d.getDate()+' de '+V4_MESES[d.getMonth()]+' de '+d.getFullYear(); }
+function v4DM(iso){ const [y,m,d]=iso.split('-'); return d+'/'+m; }
+function v4MesNom(mes){ const [y,m]=mes.split('-').map(Number); return V4_MESES[m-1]; }
+function v4E2(n){ return (Math.round((+n||0)*100)/100).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function v4Esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function v4DT(s){ if(!s) return null; const t=String(s); return t.length<=10?new Date(t+'T00:00:00'):new Date(t); }
+function v4HM(d){ return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function v4LocalDT(d){ return fxIso(d)+'T'+v4HM(d); }
+
+// ── Días hábiles: sin sábados, domingos ni festivos (nacionales, regionales y locales del municipio) ──
+function v4Muni(p){ const t=v2SinAcentos(((p&&((p.ciu||'')+' '+(p.dir||'')+' '+(p.nom||'')))||'')).toLowerCase(); if(/alcantarilla/.test(t)) return 'alcantarilla'; if(/molina/.test(t)) return 'molina'; return ''; }
+function v4Festivos(propId){
+  const p=(D.props||[]).find(x=>x.id==propId), s=new Set();
+  Object.values(V4_FEST_REGION).forEach(a=>a.forEach(f=>s.add(f)));
+  const mu=v4Muni(p); if(mu) (V4_FEST_LOCAL[mu]||[]).forEach(f=>s.add(f));
+  String((D.cfg||{}).festivosExtra||'').split(/[\s,;]+/).forEach(x=>{ const m=x.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(m) s.add(m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0')); else if(/^\d{4}-\d{2}-\d{2}$/.test(x)) s.add(x); });
+  return s;
+}
+function v4EsHabil(iso,fest){ const w=fxDate(iso).getDay(); return w!==0&&w!==6&&!fest.has(iso); }
+function v4AddHabiles(iso,n,propId){ const f=v4Festivos(propId); let d=iso,c=0,g=0; while(c<n&&g<400){ d=fxAdd(d,1); if(v4EsHabil(d,f)) c++; g++; } return d; }
+
+// ── Datos derivados de cada contrato ──
+function v4F(co){ return (co&&(co.firma||co.ini))||''; }
+function v4Prorroga(co){ return (co.cambios||[]).find(x=>x.tipo==='prorroga'); }
+function v4E(co){ const p=v4Prorroga(co); return (p&&p.nuevaFin)||co.fin||''; }
+function v4C(co){ const cs=[co.cFin1,(co.inqId2?co.cFin2:'')].filter(Boolean).sort(); return cs[0]||''; }
+function v4Inq(id){ return (D.inqs||[]).find(i=>i.id==id); }
+function v4InqsCo(co){ return [co.inqId,co.inqId2].filter(Boolean).map(v4Inq).filter(Boolean); }
+function v4Nombres(co){ const n=v4InqsCo(co).map(i=>(i.nom||'').trim()).filter(Boolean); return n.length>1?n.join(' y '):(n[0]||'inquilino'); }
+function v4NombresCompletos(co){ return v4InqsCo(co).map(i=>((i.nom||'')+' '+(i.ap||'')).trim()).join(' y ')||'—'; }
+function v4Prop(co){ return (D.props||[]).find(p=>p.id==co.propId); }
+function v4Hab(co){ return co.hab||(v4Inq(co.inqId)||{}).hab||'?'; }
+function v4Lugar(co){ const p=v4Prop(co); return 'Hab. '+v4Hab(co)+' · '+(p?p.nom:'piso sin asignar'); }
+function v4NumPersonas(co,iso){ return v4PersonasCo(co).filter(x=>!iso||(x.desde<=iso&&x.hasta>=iso)).length||1; }
+function v4EsTemporal(co){ return !co.tipoContrato||co.tipoContrato==='temporal'; }
+
+// Salida anticipada: válida si S ≥ A + 10 días y S ≥ F + 1 mes (si no, se cobra hasta la primera fecha válida)
+function v4SalidaValida(co){
+  const s=co.salida; if(!s||!s.S) return null;
+  const F=v4F(co), E=v4E(co), m1=F?v4AddM(F,1):s.S, a10=s.A?fxAdd(s.A,10):s.S;
+  let v=s.S; const motivos=[];
+  if(a10>v){ v=a10; motivos.push('el aviso debe darse con al menos 10 días (aviso el '+v4F2(s.A)+')'); }
+  if(m1>v){ v=m1; motivos.push('no se puede salir antes de 1 mes desde la firma ('+v4F2(m1)+')'); }
+  if(E&&v>E) v=E;
+  return {A:s.A, S:s.S, valida:v, ok:v===s.S, motivos, anticipada:!!(E&&s.S<E)};
+}
+// Último día que se cobra renta y suministros
+function v4FinCobro(co){
+  let f=v4E(co); if(!f) return '';
+  const sv=v4SalidaValida(co); if(sv&&sv.valida<f) f=sv.valida;
+  if(co.causaExt&&co.causaExt.R){ const r=fxAdd(co.causaExt.R,30); if(r<f) f=r; }
+  if(co.resolucion&&co.resolucion.R){ const r=fxAdd(co.resolucion.R,7); if(r<f) f=r; }
+  return f;
+}
+// Personas del contrato con sus periodos (para personas-día)
+function v4PersonasCo(co){
+  const F=v4F(co), fin=v4FinCobro(co), out=[]; if(!F||!fin) return out;
+  if(co.inqId) out.push({inqId:co.inqId,n:1,desde:co.desde1||F,hasta:(co.hasta1&&co.hasta1<fin)?co.hasta1:fin});
+  if(co.inqId2) out.push({inqId:co.inqId2,n:2,desde:(co.desde2&&co.desde2>F)?co.desde2:F,hasta:(co.hasta2&&co.hasta2<fin)?co.hasta2:fin});
+  return out.filter(x=>x.desde<=x.hasta);
+}
+// Wifi de una persona en un día (solicitado en el contrato o cambiado después por escrito)
+function v4WifiEn(co,n,iso){
+  let w=n===2?!!co.wifi2:!!co.wifi1;
+  (co.wifiCambios||[]).filter(c=>+c.p===n&&c.fecha<=iso).sort((a,b)=>a.fecha.localeCompare(b.fecha)).forEach(c=>{ w=!!c.wifi; });
+  return w;
+}
+// Renta aplicable un día (con el cambio de renta de un anexo, si lo hay)
+function v4RentaDia(co,iso){
+  const a=(co.cambios||[]).find(x=>x.tipo!=='prorroga'&&parseFloat(x.nuevaRenta)>0&&x.fecha&&x.fecha<=iso);
+  return a?parseFloat(a.nuevaRenta):(parseFloat(co.r)||0);
+}
+// Renta de un mes: renta ÷ días del mes × días alquilados
+function v4RentaMes(co,mes){
+  const F=v4F(co), fin=v4FinCobro(co); if(!F||!fin) return 0;
+  const d1=mes+'-01', dN=v4FinMes(d1), a=F>d1?F:d1, b=fin<dN?fin:dN; if(a>b) return 0;
+  const dm=v4DiasMes(mes); let s=0;
+  for(let d=a; d<=b; d=fxAdd(d,1)) s+=v4RentaDia(co,d)/dm;
+  return Math.round(s*100)/100;
+}
+// Vencimiento del pago de la renta del mes M: último día del mes anterior.
+// La renta del mes de la firma se paga al firmar. Si se firma el último día de un mes, el primer pago vence el día 5.
+function v4Venc(co,mes){
+  const F=v4F(co); if(!F) return null; const mF=F.slice(0,7);
+  if(mes<mF) return null; if(mes===mF) return F;
+  const prev=v4FinMes(v4MesSig(mes,-1));
+  if(prev===F) return mes+'-05';
+  return prev;
+}
+function v4MesesCobro(co){ const F=v4F(co), fin=v4FinCobro(co), out=[]; if(!F||!fin) return out; let m=F.slice(0,7), g=0; while(m<=fin.slice(0,7)&&g<40){ if(v4RentaMes(co,m)>0) out.push(m); m=v4MesSig(m); g++; } return out; }
+
+// Contrato de cada inquilino (el más reciente en que figure)
+function v4CoDeInq(inqId,mes){
+  const cs=(D.conts||[]).filter(c=>c.inqId==inqId||c.inqId2==inqId);
+  if(!cs.length) return null;
+  if(mes){ const en=cs.filter(c=>{ const F=v4F(c), f=v4FinCobro(c)||v4E(c); return F&&F.slice(0,7)<=mes&&(!f||f.slice(0,7)>=mes); }); if(en.length) return en.sort((a,b)=>v4F(b).localeCompare(v4F(a)))[0]; }
+  return cs.sort((a,b)=>v4F(b).localeCompare(v4F(a)))[0];
+}
+// El pago de la habitación se carga al arrendatario 1 (en una doble, responden los dos solidariamente)
+function v4PagadorInq(co){ return co.inqId; }
+
+// ── Titular que cobra y cuenta ──
+function v4TitularCobro(co){ const F=v4F(co)||v4Hoy(); if(!co.propId) return null; const t=titularidadDia(co.propId,F); return t.disfrute||null; }
+function v4Cuenta(co){ const cs=D.ctasBanc||[]; if(co.ctaId) return cs.find(c=>c.id==co.ctaId)||null; const t=v4TitularCobro(co); return cs.find(c=>c.titularId===t&&c.tipo!=='tarjeta')||null; }
+
+// ── Contratos temporales seguidos y novaciones (art. 9 bis.2 LAU) ──
+// Seguido: empieza dentro de los 31 días siguientes al último día cobrado del anterior.
+function v4MismasPersonas(a,b){ const x=[a.inqId,a.inqId2].filter(Boolean), y=[b.inqId,b.inqId2].filter(Boolean); return x.some(i=>y.includes(i)); }
+function v4Anteriores(co){
+  const F=v4F(co); if(!F) return [];
+  const prev=(D.conts||[]).filter(x=>x.id!==co.id&&v4EsTemporal(x)&&x.propId==co.propId&&v4MismasPersonas(x,co)&&v4F(x)&&v4F(x)<F)
+    .sort((a,b)=>v4F(b).localeCompare(v4F(a)));
+  const cadena=[]; let ref=F;
+  for(const p of prev){ const fin=v4FinCobro(p)||v4E(p); if(fin&&v4Diff(fin,ref)<=31){ cadena.push(p); ref=v4F(p); } else break; }
+  return cadena;
+}
+// Novaciones previas = contratos temporales anteriores seguidos + prórrogas o anexos que tuvieron
+function v4NovacionesPrevias(co){
+  const cad=v4Anteriores(co); let n=cad.length; cad.forEach(c=>{ n+=(c.cambios||[]).length; });
+  const manual=parseInt(co.prevSeguidos)||0;
+  return {n:Math.max(n,manual), auto:n, manual, cadena:cad};
+}
+// ¿Admite este contrato una prórroga o un anexo?
+function v4PuedeCambio(co){
+  if((co.cambios||[]).length) return {ok:false, t:'Este contrato ya tiene '+(V4_CAMBIO_TXT[co.cambios[0].tipo]||'un cambio').toLowerCase()+': no admite otra prórroga ni otro anexo (art. 9 bis.2 LAU).'};
+  const nv=v4NovacionesPrevias(co);
+  if(nv.n>=1) return {ok:false, t:'Hay un contrato temporal anterior seguido con esta persona en este piso: este contrato no admite prórroga ni anexo (art. 9 bis.2 LAU).'};
+  return {ok:true, t:'Admite como máximo un cambio: una prórroga o un anexo.'};
+}
+// ¿Se puede firmar otro temporal seguido con esta persona en este piso?
+function v4PuedeSeguido(co){
+  const total=v4NovacionesPrevias(co).n+(co.cambios||[]).length;
+  if(total>=1) return {ok:false, t:'No se puede firmar con esta persona otro contrato temporal seguido en este piso'+((co.cambios||[]).length?' (este contrato ya tuvo '+((co.cambios[0].tipo==='prorroga')?'prórroga':'anexo')+')':' (ya sería el tercero seguido)')+'.'};
+  return {ok:true, t:'Se podría firmar, como máximo, un contrato temporal seguido más con esta persona en este piso (sin prórroga ni anexo).'};
+}
+
+// ── Validaciones al dar de alta un contrato (bloquean el guardado) ──
+function v4ValidarContrato(co){
+  const err=[], av=[], add=(t)=>err.push(t), warn=(t)=>av.push(t);
+  if(!v4EsTemporal(co)) return {err, av, ok:true};
+  const F=v4F(co), E=v4E(co), C=v4C(co);
+  if(!co.inqId) add('Falta el arrendatario.');
+  if(!co.propId) add('Falta el piso.');
+  if(!co.hab) add('Falta el número de habitación.');
+  if(!F) add('Falta la fecha de firma (F).');
+  if(!E) add('Falta la fecha de fin del contrato (E).');
+  if(!(parseFloat(co.r)>0)) add('Falta la renta mensual.');
+  if(!co.cFin1) add('Falta la fecha de fin prevista de la causa (C) del arrendatario 1.');
+  if(co.inqId2&&!co.cFin2) add('Falta la fecha de fin prevista de la causa (C) del arrendatario 2.');
+  if(co.inqId2&&co.inqId2==co.inqId) add('El arrendatario 2 no puede ser el mismo que el arrendatario 1.');
+  if(!co.causa) add('Falta la causa de la temporalidad (art. 3 LAU).');
+  if(!co.vivHab) add('Falta el domicilio habitual del arrendatario (Anexo I).');
+  if(F&&E){
+    if(!(v4Diff(F,E)>31)) add('E − F = '+v4Diff(F,E)+' días: el contrato temporal debe durar más de 31 días (art. 9 bis.1 LAU).');
+    const max=v4AddM(F,12); if(E>max) add('El fin ('+v4F2(E)+') es posterior a F + 12 meses ('+v4F2(max)+'): regla general del art. 9 bis.1 LAU.');
+  }
+  if(E&&C&&E>C) add('El fin del contrato ('+v4F2(E)+') es posterior al fin de la causa'+(co.inqId2?' que acaba antes':'')+' ('+v4F2(C)+'): cláusula «Duración máxima del contrato».');
+  const nv=v4NovacionesPrevias(co);
+  if(nv.n>=2) add('Ya hay '+nv.n+' contratos o cambios temporales seguidos con esta persona en este piso: no se puede firmar como temporal (art. 9 bis.2 LAU).');
+  else if(nv.n===1) warn('Hay 1 contrato temporal anterior seguido con esta persona en este piso: este contrato no admitirá prórroga ni anexo.');
+  if(!co.anexoIData) add('Falta adjuntar el Anexo I con el justificante de la causa y del domicilio habitual (art. 7.2 LAU: la prueba es del arrendador).');
+  if(!co.anexoICausa1||!co.anexoIDom1) add('Marca que el Anexo I incluye el justificante de la causa y el del domicilio habitual del arrendatario 1.');
+  if(co.inqId2&&(!co.anexoICausa2||!co.anexoIDom2)) add('Marca que el Anexo I incluye el justificante de la causa y el del domicilio habitual del arrendatario 2.');
+  // Renta en contratos siguientes del mismo piso (misma habitación): solo puede subir el IRAV (art. 17.8 LAU)
+  const ant=(D.conts||[]).filter(x=>x.id!==co.id&&v4EsTemporal(x)&&x.propId==co.propId&&String(x.hab||'')===String(co.hab||'')&&v4F(x)&&F&&v4F(x)<F&&parseFloat(x.r)>0).sort((a,b)=>v4F(b).localeCompare(v4F(a)))[0];
+  if(ant&&parseFloat(co.r)>0){
+    const irav=parseFloat((D.cfg||{}).irav)||0, max=Math.round(parseFloat(ant.r)*(1+irav/100)*100)/100;
+    if(parseFloat(co.r)>max+0.004) add(irav?('La renta ('+v4E2(co.r)+' €) supera la del contrato anterior de esta habitación ('+v4E2(ant.r)+' €) más el IRAV ('+irav+' %): máximo '+v4E2(max)+' € (art. 17.8 LAU).'):('La renta ('+v4E2(co.r)+' €) es mayor que la del contrato anterior de esta habitación ('+v4E2(ant.r)+' €). Solo puede subir lo que marque el IRAV (art. 17.8 LAU): indica el IRAV vigente en Fiscal → ⚙️ Criterios.'));
+  }
+  // Habitación que exista en el piso y que no esté alquilada a otra persona en esas fechas
+  const prH=(D.props||[]).find(p=>p.id==co.propId), nH=parseInt(prH&&prH.habs)||0;
+  if(prH&&co.hab&&nH>0){ const h=parseInt(co.hab); if(!(String(h)===String(co.hab).trim()&&h>=1&&h<=nH)) add('La habitación «'+co.hab+'» no existe en '+prH.nom+' (tiene '+nH+' habitaciones: de la 1 a la '+nH+').'); }
+  if(F&&E&&co.propId&&co.hab){ const finN=v4FinCobro(co)||E;
+    (D.conts||[]).filter(x=>x.id!==co.id&&x.propId==co.propId&&String(x.hab||'')===String(co.hab)&&v4F(x)).forEach(x=>{
+      const Fx=v4F(x), fx=v4FinCobro(x)||v4E(x), Lx=x.llaves&&x.llaves.L;
+      if(!fx){ warn('El contrato de '+v4Nombres(x)+' en esta habitación (desde el '+v4F2(Fx)+') no tiene fecha de fin: comprueba que haya terminado.'); return; }
+      const Ex=(Lx&&Lx>fx)?Lx:fx;
+      if(F<Ex&&Fx<finN) add('Se solapa con el contrato de '+v4Nombres(x)+' en esta habitación ('+v4F2(Fx)+' → '+v4F2(Ex)+'). En una doble, los dos arrendatarios van en el mismo contrato.');
+      else if(F===Ex||Fx===finN) warn('El contrato de '+v4Nombres(x)+' en esta habitación y este empiezan y terminan el mismo día ('+v4F2(F===Ex?F:Fx)+'): ese día se cobraría a los dos.');
+    }); }
+  if(co.inqId2&&prH&&co.hab){ const cf=(prH.habsConfig||{})[co.hab]; if(!cf||cf.tipo!=='doble') warn('La habitación '+co.hab+' está configurada como individual: al guardar se marcará como doble.'); }
+  // Avisos (no bloquean)
+  const ps=v4InqsCo(co);
+  ps.forEach((i,k)=>{ const falta=[]; if(!i.dni) falta.push('documento'); if(!i.email) falta.push('email'); if(!(i.tel||i.wa)) falta.push('teléfono'); if(falta.length) warn('Arrendatario '+(k+1)+' ('+(i.nom||'')+'): faltan '+falta.join(', ')+' en su ficha.'); });
+  if(!co.emerg1) warn('Falta el contacto de emergencia del arrendatario 1.');
+  if(co.inqId2&&!co.emerg2) warn('Falta el contacto de emergencia del arrendatario 2.');
+  if(!(parseFloat(co.f)>0)) warn('No consta la fianza.');
+  if(parseFloat(co.g)>(parseFloat(co.r)||0)+0.01) warn('La garantía adicional supera 1 mensualidad: el contrato v20261021-3 la limita a 1 mes (art. 36.5 LAU).');
+  if(!v4Cuenta(co)&&!co.bizum) warn('Indica la cuenta o el Bizum del titular que cobra.');
+  const cta=v4Cuenta(co), tit=v4TitularCobro(co); if(cta&&tit&&cta.titularId&&cta.titularId!==tit) warn('La cuenta elegida es de '+nombreC(cta.titularId)+', pero quien cobra las rentas de este piso es '+nombreC(tit)+'.');
+  if((co.wifi1||co.wifi2)&&!(parseFloat(co.internetAnual)>0)) warn('Hay wifi solicitado pero falta el importe anual de internet del piso (art. 20.1 LAU).');
+  return {err, av, ok:!err.length};
+}
+
+// ══ Reparto de suministros por personas-día (contrato v20261021-3) ══
+// · Personas-día: días de la factura en que cada habitación está alquilada, contando el primero y el último
+//   (en una doble, días por persona). Días con el piso entero vacío: el arrendador cuenta como 1 persona.
+// · Internet: solo entre quienes tienen el wifi solicitado; días sin nadie con wifi → arrendador.
+//   Tope: importe anual del piso prorrateado por días; el exceso lo paga el arrendador.
+// · Luz, agua y gas: máximo 1.200 € al año por persona, prorrateados por días de contrato; el exceso, arrendador.
+// · La suma de lo que paga cada habitación más la parte del arrendador da exactamente el importe (al céntimo).
+function v4EsInternet(con){ return /internet|wifi|fibra/i.test(con||''); }
+function v4TipoSum(con){ if(v4EsInternet(con)) return 'Internet'; if(/luz|electric/i.test(con||'')) return 'Luz'; if(/agua/i.test(con||'')) return 'Agua'; if(/gas/i.test(con||'')) return 'Gas'; return con||'Suministro'; }
+function v4PersonasPiso(propId){
+  const out=[], conInq=new Set();
+  (D.conts||[]).forEach(co=>{ [co.inqId,co.inqId2].filter(Boolean).forEach(i=>conInq.add(i)); });
+  (D.conts||[]).filter(c=>c.propId==propId).forEach(co=>{
+    v4PersonasCo(co).forEach(p=>{ out.push({co, inqId:p.inqId, n:p.n, hab:String(v4Hab(co)), desde:p.desde, hasta:p.hasta, peso:1}); });
+  });
+  // Inquilinos antiguos sin ningún contrato registrado en la app
+  (D.inqs||[]).filter(i=>i.propId==propId&&i.ini&&!conInq.has(i.id)&&!(i.estado==='PASADO'&&!i.fin)).forEach(i=>{
+    out.push({co:null, inqId:i.id, n:1, hab:String(i.hab||'?'), desde:i.ini, hasta:i.fin||'2099-12-31', peso:parseInt(i.personas)||1, legado:true});
+  });
+  return out;
+}
+function v4InternetAnual(propId,ini,fin){
+  const vals=(D.conts||[]).filter(c=>c.propId==propId&&parseFloat(c.internetAnual)>0&&v4F(c)<=fin&&(v4FinCobro(c)||'9999')>=ini).map(c=>parseFloat(c.internetAnual));
+  const p=(D.props||[]).find(x=>x.id==propId);
+  if(!vals.length) return {anual:parseFloat(p&&p.internetAnual)||0, distintos:false};
+  return {anual:Math.min(...vals), distintos:new Set(vals).size>1};
+}
+// Ya cobrado por persona y contrato en luz, agua y gas (para el tope de 1.200 €)
+function v4CobradoTope(coId,n,excluir){
+  let s=0;
+  (D.pagos||[]).forEach(p=>{ if(!p.rep||p.rep.coId!==coId||!V4_SUM_TOPE.includes(p.rep.tipo)) return; if(excluir&&p.rep.facKey===excluir) return; (p.rep.personas||[]).forEach(x=>{ if(+x.n===+n) s+=+x.importe||0; }); });
+  return Math.round(s*100)/100;
+}
+function v4Reparto(propId,con,ini,fin,importe){
+  if(!propId||!ini||!fin||!(importe>0)||fin<ini) return null;
+  const tipo=v4TipoSum(con), inet=tipo==='Internet', dias=v4Diff(ini,fin)+1, prop=(D.props||[]).find(p=>p.id==propId);
+  const pers=v4PersonasPiso(propId).map(x=>Object.assign({},x,{pd:0}));
+  let landPD=0;
+  for(let d=ini; d<=fin; d=fxAdd(d,1)){
+    let pres=pers.filter(x=>x.desde<=d&&x.hasta>=d);
+    if(inet) pres=pres.filter(x=>x.co?v4WifiEn(x.co,x.n,d):true);
+    if(!pres.length) landPD++; else pres.forEach(x=>{ x.pd+=x.peso; });
+  }
+  const totalPD=pers.reduce((s,x)=>s+x.pd,0)+landPD;
+  let base=importe, exInet=0, ia=null;
+  if(inet){ ia=v4InternetAnual(propId,ini,fin); if(ia.anual>0){ const cap=Math.round(ia.anual*dias/365*100)/100; if(importe>cap){ base=cap; exInet=Math.round((importe-cap)*100)/100; } } }
+  const activos=pers.filter(x=>x.pd>0);
+  activos.forEach(x=>{ x.exacto=totalPD>0?base*x.pd/totalPD:0; x.tope=null; });
+  let exTope=0;
+  if(V4_SUM_TOPE.includes(tipo)){
+    activos.forEach(x=>{ if(!x.co) return; const pp=v4PersonasCo(x.co).find(y=>y.n===x.n); if(!pp) return;
+      const diasC=v4Diff(pp.desde,pp.hasta)+1, cap=1200*diasC/365, ya=v4CobradoTope(x.co.id,x.n,null), libre=Math.max(0,cap-ya);
+      x.tope={cap:Math.round(cap*100)/100, ya, libre:Math.round(libre*100)/100};
+      if(x.exacto>libre){ exTope+=x.exacto-libre; x.exacto=libre; x.topado=true; } });
+  }
+  activos.forEach(x=>{ x.importe=Math.round(x.exacto*100)/100; });
+  // Por habitación (todas las del piso, también las de 0 personas-día). La habitación paga junta (doble: solidaria).
+  const nh=parseInt(prop&&prop.habs)||0, habs=[];
+  const habSet=new Set(); for(let i=1;i<=nh;i++) habSet.add(String(i)); activos.forEach(x=>habSet.add(String(x.hab)));
+  [...habSet].sort((a,b)=>(parseInt(a)||99)-(parseInt(b)||99)).forEach(h=>{
+    const ps=activos.filter(x=>String(x.hab)===h), pd=pers.filter(x=>String(x.hab)===h).reduce((s,x)=>s+x.pd,0);
+    const exacto=ps.reduce((s,x)=>s+x.exacto,0), topado=ps.some(x=>x.topado);
+    habs.push({hab:h, pd, exacto, topado, personas:ps.map(x=>({n:x.n,inqId:x.inqId,pd:x.pd,importe:x.importe,coId:x.co?x.co.id:null,tope:x.tope,topado:!!x.topado})), co:(ps.find(x=>x.co)||{}).co||null, legado:ps.some(x=>x.legado)});
+  });
+  // Redondeo al céntimo: cada habitación, al céntimo más próximo de su fórmula (con tope, nunca por encima).
+  // El arrendador asume la diferencia de redondeo; si la suma de las habitaciones pasara de la factura,
+  // se quita 1 céntimo a la habitación cuyo redondeo hacia arriba fue menor, para no cobrar de más.
+  const objetivo=Math.round(importe*100);
+  habs.forEach(h=>{ const c=h.exacto*100; h.c=h.topado?Math.floor(c+1e-7):Math.round(c+1e-9); h.f=c-Math.floor(c+1e-7); h.ajuste=0; });
+  let land=objetivo-habs.reduce((s,h)=>s+h.c,0);
+  while(land<0){ const cand=habs.filter(h=>h.c>0&&h.c>Math.floor(h.exacto*100+1e-7)).sort((a,b)=>a.f-b.f)[0]||habs.filter(h=>h.c>0).sort((a,b)=>a.f-b.f)[0]; if(!cand) break; cand.c--; cand.ajuste--; land++; }
+  habs.forEach(h=>{ h.importe=h.c/100; delete h.c; delete h.f; });
+  const landlord={pd:landPD, importe:land/100, exInet, exTope:Math.round(exTope*100)/100};
+  const suma=Math.round((habs.reduce((s,h)=>s+h.importe,0)+landlord.importe)*100)/100;
+  const linPD=(inet?'Personas-día con wifi: ':'Personas-día: ')+habs.map(h=>h.pd+' (hab. '+h.hab+')').join(' + ')+(landPD?' + '+landPD+' ('+(inet?'días sin nadie con wifi':'días con el piso vacío')+', a cargo del arrendador)':'')+' = '+totalPD;
+  return {tipo, con, ini, fin, dias, importe:Math.round(importe*100)/100, base:Math.round(base*100)/100, totalPD, habs, landlord, suma, cuadra:Math.abs(suma-importe)<0.005, linPD, internetAnual:ia, propId};
+}
+// Línea del email mensual para una habitación (plantilla 1)
+function v4LineaSuministro(rep,hab){
+  const h=(rep.habsPD||[]).find(x=>String(x.hab)===String(hab));
+  const nom={Luz:'Electricidad',Agua:'Agua',Gas:'Gas',Internet:'Internet (solo quienes tienen solicitado el wifi)'}[rep.tipo]||rep.tipo;
+  let t='- '+nom+'. Factura de '+v4E2(rep.importe)+' euros, del '+v4DM(rep.ini)+' al '+v4DM(rep.fin)+' ('+rep.dias+' días). '+rep.linPD+'.';
+  if(rep.exInet>0) t+=' Según el contrato, el internet repartido no puede superar el importe anual del piso prorrateado ('+v4E2(rep.base)+' euros); el exceso de '+v4E2(rep.exInet)+' euros lo paga el arrendador.';
+  t+=' Corresponde a la habitación '+hab+': ('+v4E2(rep.base)+' / '+rep.totalPD+') x '+(h?h.pd:0)+' = '+v4E2(rep.importeHab)+' euros.';
+  if(rep.ajuste) t+=' (Se resta '+Math.abs(rep.ajuste)+' céntimo'+(Math.abs(rep.ajuste)>1?'s':'')+' de redondeo para que la suma de todas las habitaciones no supere la factura.)';
+  if(rep.topado) t+=' (Aplicado el tope de 1.200 euros al año por persona del contrato.)';
+  return t;
+}
+
+// ══ Motor de avisos ══
+// Cada aviso: k (clave única en el contrato), fecha (día en que toca), desde (desde cuándo se muestra),
+// caduca (avisos informativos: dejan de mostrarse), tipo (Obligatorio, Recomendado…), tpl (plantillas), auto (hecho por los datos)
+function v4Ciclo(co,mes){ co.ciclos=co.ciclos||{}; return co.ciclos[mes]||{}; }
+function v4PagoAlquiler(co,mes){ return (D.pagos||[]).find(p=>p.inqId==v4PagadorInq(co)&&p.mes===mes&&p.con==='Alquiler'); }
+// Fecha en que el inquilino ordenó el pago del mes (lo que cuenta es la orden, no la llegada)
+function v4OrdenPago(co,mes){ const c=v4Ciclo(co,mes); if(c.orden) return c.orden; const p=v4PagoAlquiler(co,mes); if(p&&p.estado==='pagado') return p.fechaOrden||p.fecha||'pagado'; return ''; }
+function v4Pagado(co,mes){ return !!v4OrdenPago(co,mes); }
+function v4OrdenEnPlazo(co,mes){ const o=v4OrdenPago(co,mes), V=v4Venc(co,mes); if(!o||!V) return false; if(o==='pagado') return true; return o.slice(0,10)<=V; }
+
+function v4AlertasContrato(co,hoy){
+  const out=[], F=v4F(co), E=v4E(co); if(!F||!E||!v4EsTemporal(co)) return out;
+  hoy=hoy||v4Hoy(); const legado=v4EsLegado(co), Lx=co.llaves&&co.llaves.L;
+  // Contratos antiguos (anteriores a los avisos): nada de lo que ya pasó hace tiempo
+  if(legado&&!Lx&&E<fxAdd(hoy,-45)) return out;
+  if(legado&&Lx&&Lx<fxAdd(hoy,-60)) return out;
+  const viejoF=legado&&F<fxAdd(hoy,-45);
+  const H=co.hechos||{}, lugar=v4Lugar(co), nom=v4Nombres(co), L=co.llaves&&co.llaves.L, fin=v4FinCobro(co);
+  const A=(k,fecha,titulo,det,o)=>{ o=o||{}; out.push(Object.assign({k, coId:co.id, fecha, desde:o.desde||fecha, titulo, det, tpl:o.tpl||[], tipo:o.tipo||'Recomendado', nivel:o.nivel||'normal', caduca:o.caduca||'', auto:!!o.auto, hecho:!!(o.auto||H[k]), hechoEl:H[k]||'', lugar, nom, propId:co.propId}, o.extra||{})); };
+  // ── Desde la firma ──
+  if(!viejoF) A('itp-F',F,'Pedir el justificante del ITP (modelo 600) · '+lugar,'El arrendamiento temporal no está exento: el sujeto pasivo es el inquilino y el arrendador responde subsidiariamente si cobra la primera renta sin exigir el justificante (arts. 8.f y 9.1.b TRLITPAJD).',{tipo:'Obligatorio exigirlo',auto:!!co.itpOk,nivel:'alto'});
+  if(!co.itpOk&&!viejoF) A('itp-30',fxAdd(F,30),'Reclamar por escrito el justificante del ITP · '+lugar,'Han pasado 30 días desde la firma y no consta el modelo 600 de '+nom+'.',{tipo:'Recomendado'});
+  if(!viejoF){ const mF=F.slice(0,7), pF=v4PagoAlquiler(co,mF);
+    A('cobroF',F,'Cobrar en la firma: renta de '+v4MesNom(mF)+', fianza'+(parseFloat(co.g)>0?' y garantía':'')+' · '+lugar,'Al firmar se paga la renta del mes de la firma ('+v4E2(v4RentaMes(co,mF))+' €: renta ÷ días del mes × días), la fianza ('+v4E2(co.f)+' €)'+(parseFloat(co.g)>0?' y la garantía adicional ('+v4E2(co.g)+' €)':'')+'.'+(F===v4FinMes(F)?' Como se firma el último día del mes, el primer pago mensual vence el día 5 del mes siguiente.':''),{tipo:'Según contrato',auto:!!(pF&&pF.estado==='pagado'),nivel:'alto'}); }
+  A('F1m',v4AddM(F,1),'Desde hoy '+nom+' puede irse avisando con 10 días · '+lugar,'Ya ha pasado 1 mes desde la firma: el desistimiento es válido con preaviso escrito de 10 días (art. 11.2 LAU).',{tipo:'Solo informativo',nivel:'info',caduca:fxAdd(v4AddM(F,1),3)});
+  // ── Ciclo mensual de pagos ──
+  v4MesesCobro(co).forEach(mes=>{
+    if(mes===F.slice(0,7)) return;                       // la renta del mes de la firma se paga al firmar
+    const V=v4Venc(co,mes); if(!V) return;
+    if(legado&&V<fxAdd(hoy,-10)) return;                  // contrato antiguo: solo el ciclo actual
+    const c=v4Ciclo(co,mes), pag=v4Pagado(co,mes), enPlazo=v4OrdenEnPlazo(co,mes), renta=v4RentaMes(co,mes);
+    const ini=fxAdd(V,-5)<F?F:fxAdd(V,-5), lim=fxAdd(V,-3)<F?F:fxAdd(V,-3);
+    const ex={mes, V};
+    A('pm:'+mes+':email',lim,'Enviar el email mensual de '+v4MesNom(mes)+' y el WhatsApp · '+lugar,'Pago de '+v4MesNom(mes)+' (renta '+v4E2(renta)+' € + suministros pendientes), que vence el '+v4F2(V)+'. Envíalo entre el '+v4F2(ini)+' y el '+v4F2(lim)+': los 5 € de descuento se cuentan desde el envío (cláusula «Bonificación por rapidez»).',{desde:ini,tpl:['1','10'],tipo:'Obligatorio',auto:!!c.email||pag,nivel:'alto',extra:ex});
+    if(c.email&&!pag){ const fd=new Date(v4DT(c.email).getTime()+864e5); A('pm:'+mes+':dto',fxIso(fd),'Fin del descuento de 5 € a las '+v4HM(fd)+' · '+lugar,'Si '+nom+' ordena el pago antes del '+v4F2(fxIso(fd))+' a las '+v4HM(fd)+' (24 h desde el email), paga 5 € menos.',{desde:c.email.slice(0,10),tipo:'Automático',nivel:'info',caduca:fxIso(fd),extra:ex}); }
+    A('pm:'+mes+':rec',V,'Recordatorio del último día de pago · '+lugar,'Hoy es el último día para ordenar el pago de '+v4MesNom(mes)+'. Mándalo por la mañana solo si '+nom+' no ha enviado el justificante.',{tpl:['7'],tipo:'Recomendado',auto:pag||!!c.justif,extra:ex});
+    if(!enPlazo) A('pm:'+mes+':tarde',fxAdd(V,1),'Pago fuera de plazo: WhatsApp y penalización de 20 € · '+lugar,'No consta el pago de '+v4MesNom(mes)+' ordenado como máximo el '+v4F2(V)+'. Manda el WhatsApp de pago fuera de plazo y suma 20 € (se pierde el descuento de 5 €).',{tpl:['4'],tipo:'Recomendado',auto:!!c.pen20,nivel:'alto',extra:ex});
+    if(!pag) A('pm:'+mes+':req',fxAdd(V,6),'Preparar y enviar el requerimiento de pago · '+lugar,'5 días sin pagar '+v4MesNom(mes)+'. Envía el requerimiento por burofax o email certificado (Requerimiento_de_pago). Desde que lo reciba: 10 días para pagar y 30 días antes de poder demandar.',{tpl:['req'],tipo:'Recomendado',auto:(co.requerimientos||[]).some(r=>(r.envio||r.R||'')>=V),nivel:'alto',extra:ex});
+  });
+  // ── Final del contrato ──
+  const sv=v4SalidaValida(co), anticipada=!!(sv&&sv.anticipada), extCausa=!!(co.causaExt&&co.causaExt.R&&fxAdd(co.causaExt.R,30)<E), resol=!!(co.resolucion&&co.resolucion.R&&fxAdd(co.resolucion.R,7)<E);
+  if(!anticipada&&!extCausa&&!resol){
+    const pr=v4PuedeCambio(co);
+    A('E-30',fxAdd(E,-30),'Recordatorio de fin de contrato ('+v4F2(E)+') · '+lugar,'No hay preaviso legal, pero conviene recordarlo. Si pide prórroga: solo una, por escrito antes del '+v4F2(E)+', si la causa sigue y no ha habido anexo. '+pr.t,{tpl:['3'],tipo:'Recomendado',auto:!!L});
+    A('E-15',fxAdd(E,-15),'Desde hoy se puede enseñar la habitación · '+lugar,'Visitas con aviso escrito de 24 h, de 11:00 a 20:00 y como máximo 1 hora al día.',{tipo:'Según contrato',nivel:'info',caduca:E});
+    A('E-3',fxAdd(E,-3),'Email y WhatsApp de liquidación de la fianza · '+lugar,'El contrato termina el '+v4F2(E)+'. Manda el cálculo de la liquidación de la fianza y la garantía (las cifras se copian luego en el Anexo II).',{tpl:['2','12'],tipo:'Recomendado',auto:!!L});
+    A('E-1',fxAdd(E,-1),'Confirmar día y hora de la entrega de llaves · '+lugar,'Con al menos 24 h de antelación.',{tipo:'Obligatorio',auto:!!L,nivel:'alto'});
+    A('E',E,'HOY TERMINA EL CONTRATO · '+lugar+' ('+nom+')','Entrega de llaves, revisión, Anexo II y devolución de la fianza menos los descuentos y la retención ('+v4E2((parseFloat(co.ret)||100)*v4NumPersonas(co,E))+' €).',{tpl:['anexo2'],tipo:'Obligatorio',auto:!!L,nivel:'alto'});
+    if(!L) A('E+1',fxAdd(E,1),'URGENTE: '+nom+' sigue en la habitación · '+lugar,'Exige por escrito que se vaya. Desde hoy cuenta la indemnización por ocupación indebida ('+v4E2(v4OcupIndebidaDia(co))+' €/día, el doble de la renta diaria). No dejes pasar 15 días (art. 1.566 CC: tácita reconducción) → límite el '+v4F2(fxAdd(E,15))+'.',{tipo:'Urgente',nivel:'urgente'});
+    if(!L&&!H['E+1']) A('E+14',fxAdd(E,14),'ÚLTIMO DÍA: exige por escrito a '+nom+' que deje la habitación · '+lugar,'Mañana se cumplen 15 días desde el fin del contrato ('+v4F2(E)+'). Si sigue dentro sin que conste tu oposición por escrito, se entiende renovado por tácita reconducción (art. 1.566 CC). Envía hoy el requerimiento por burofax o email certificado.',{tipo:'Urgente',nivel:'urgente'});
+  }
+  if(anticipada){
+    const S=sv.S, Sv=sv.valida;
+    A('A',sv.A||S,'Confirmar por escrito el aviso de salida · '+lugar,nom+' avisó el '+v4F2(sv.A)+' de que se va el '+v4F2(S)+'.'+(sv.ok?' El aviso cumple los 10 días y el primer mes.':' ⚠️ No cumple: '+sv.motivos.join('; ')+'. La renta y los suministros se cobran hasta el '+v4F2(Sv)+'.')+' Desde hoy se puede enseñar la habitación (aviso de 24 h).',{tpl:['8'],tipo:'Recomendado'});
+    const mS=Sv.slice(0,7), Vs=v4Venc(co,mS);
+    if(Vs&&mS!==F.slice(0,7)&&(!sv.A||Vs>=sv.A)) A('S-mes',Vs,'El pago mensual de '+v4MesNom(mS)+' solo incluye la renta hasta el '+v4F2(Sv)+' · '+lugar,'Renta proporcional: '+v4E2(v4RentaMes(co,mS))+' € (renta ÷ días del mes × días).',{desde:fxAdd(Vs,-5),tpl:['1'],tipo:'Obligatorio',auto:!!v4Ciclo(co,mS).email});
+    A('S-3',fxAdd(S,-3),'Email y WhatsApp de liquidación (salida el '+v4F2(S)+') · '+lugar,'Cálculo de la liquidación de la fianza y la garantía.'+(Sv>S?' Se cobra renta hasta el '+v4F2(Sv)+'.':''),{tpl:['2','12'],tipo:'Recomendado',auto:!!L});
+    A('S-1',fxAdd(S,-1),'Confirmar la hora de entrega de llaves · '+lugar,'Con al menos 24 h de antelación.',{tipo:'Obligatorio',auto:!!L,nivel:'alto'});
+    const dev=v4DevolverRenta(co);
+    A('S',S,'HOY SALE '+nom.toUpperCase()+' · '+lugar,'Llaves, Anexo II y devolución de la fianza.'+(dev>0?' Ya pagó el mes completo: devuelve '+v4E2(dev)+' € de renta de los días posteriores al '+v4F2(Sv)+'.':'')+' Si entrega las llaves antes, la renta se cobra igualmente hasta el '+v4F2(Sv)+'.',{tpl:['anexo2'],tipo:'Obligatorio',auto:!!L,nivel:'alto'});
+    if(!L) A('S+1',fxAdd(S,1),'URGENTE: '+nom+' no ha entregado las llaves · '+lugar,'Exige por escrito la entrega. La ocupación sin título cuenta a '+v4E2(v4OcupIndebidaDia(co))+' €/día.',{tipo:'Urgente',nivel:'urgente'});
+    if(!L&&!H['S+1']) A('S+14',fxAdd(Sv,14),'ÚLTIMO DÍA: exige por escrito a '+nom+' que deje la habitación · '+lugar,'Mañana se cumplen 15 días desde el último día cobrado ('+v4F2(Sv)+'). Si sigue dentro sin que conste tu oposición por escrito, se entiende renovado por tácita reconducción (art. 1.566 CC). Envía hoy el requerimiento por burofax o email certificado.',{tipo:'Urgente',nivel:'urgente'});
+  }
+  // ── Fin de la causa antes de la fecha de fin ──
+  const C=v4C(co);
+  if(C&&C<E){
+    A('C-7',fxAdd(C,-7),'Pedir documentación actualizada de la causa · '+lugar,'La causa de '+nom+' termina el '+v4F2(C)+', antes que el contrato ('+v4F2(E)+'). El inquilino debe avisar en 7 días de cualquier cambio en su causa o su domicilio habitual.',{tipo:'Recomendado'});
+    A('C',C,'Fin de la causa de '+nom+' · '+lugar,'Si consta que la causa ha terminado, puedes enviar la comunicación de extinción por burofax o email certificado (plantilla pendiente de hacer). Desde que la reciba, tiene 30 días para dejar la habitación.',{tipo:'Opcional',nivel:'info',auto:!!(co.causaExt&&co.causaExt.R)});
+  }
+  if(co.causaExt&&co.causaExt.R){ const R30=fxAdd(co.causaExt.R,30); A('Rext',R30,'Fin de la causa: '+nom+' debe dejar la habitación · '+lugar,'Recibió la comunicación de extinción el '+v4F2(co.causaExt.R)+'. Hoy debe irse; devuelve la renta pagada de los días posteriores.',{tipo:'Según contrato',auto:!!L,nivel:'alto'}); }
+  // ── Después de la entrega de llaves ──
+  if(L){
+    A('L24',L,'Último momento para comunicar daños con fotos (24 h) · '+lugar,'Los daños vistos después de la entrega solo se pueden cobrar si se comunican por escrito y con fotos antes del '+v4F2(fxAdd(L,1))+' a la misma hora. Si no vino a la entrega, mándale las fotos o el vídeo.',{tipo:'Obligatorio',caduca:fxAdd(L,1)});
+    const ret=co.retencion||{};
+    A('L1m',v4AddM(L,1),'Límite para liquidar la retención · '+lugar,'Liquida la retención ('+v4E2((parseFloat(co.ret)||100)*v4NumPersonas(co,L))+' €) y devuelve lo que sobre como máximo hoy (art. 36.4 LAU: después, el saldo devenga el interés legal).',{desde:fxAdd(v4AddM(L,1),-10),tpl:['11','5'],tipo:'Obligatorio',auto:!!ret.liquidada,nivel:'alto'});
+    if(ret.comunicada&&parseFloat(ret.falta)>0) A('ret10',fxAdd(ret.comunicada,10),'¿Ha pagado la diferencia de la retención? · '+lugar,'La retención no llegó: faltaban '+v4E2(ret.falta)+' €, a pagar en 10 días desde el '+v4F2(ret.comunicada)+'.',{tpl:['11'],tipo:'Según contrato',auto:!!ret.faltaPagada});
+  }
+  // ── Impagos, incumplimientos y entradas ──
+  (co.requerimientos||[]).forEach((r,i)=>{ if(!r.R) return;
+    A('req'+i+':10',fxAdd(r.R,10),'Fin del plazo para pagar el requerimiento · '+lugar,'Recibió el requerimiento el '+v4F2(r.R)+(r.importe?' ('+v4E2(r.importe)+' €)':'')+'.',{tipo:'Según documento',auto:!!r.pagado});
+    A('req'+i+':30',fxAdd(r.R,30),'Desde hoy se puede presentar la demanda · '+lugar,'Ya han pasado 30 días desde la recepción del requerimiento (art. 22.4 LEC y LO 1/2025). Antes no se puede. Adjunta el requerimiento y la prueba de recepción.',{tipo:'Obligatorio esperar',auto:!!r.pagado,nivel:'alto'}); });
+  const porNorma={}; (co.advertencias||[]).forEach(a=>{ (porNorma[a.norma]=porNorma[a.norma]||[]).push(a); });
+  Object.entries(porNorma).forEach(([n,arr])=>{ if(arr.length>=2){ const f=arr.map(a=>a.fecha).sort()[1]; A('adv2:'+n,f,'2.ª advertencia por «'+n+'» · '+lugar,'Si vuelve a incumplir esta norma, ya se puede comunicar la resolución (cláusula «Incumplimiento», apartado h).',{tipo:'Obligatorio tener las dos',nivel:'info',caduca:fxAdd(f,7)}); } });
+  if(co.resolucion&&co.resolucion.R) A('res7',fxAdd(co.resolucion.R,7),'Resolución: '+nom+' debe dejar la habitación · '+lugar,'Recibió la resolución el '+v4F2(co.resolucion.R)+'. Si no se va, desahucio e indemnización por ocupación indebida ('+v4E2(v4OcupIndebidaDia(co))+' €/día).',{tipo:'Según contrato',auto:!!L,nivel:'urgente'});
+  if(co.resolucion&&co.resolucion.R&&!L){ const R7=fxAdd(co.resolucion.R,7); A('res8',fxAdd(R7,1),'URGENTE: '+nom+' no ha dejado la habitación tras la resolución · '+lugar,'Debía irse el '+v4F2(R7)+'. Prepara con tu abogado la demanda de desahucio; la ocupación indebida cuenta a '+v4E2(v4OcupIndebidaDia(co))+' €/día. Nunca cambies la cerradura ni cortes los suministros.',{tipo:'Urgente',nivel:'urgente'}); }
+  (co.entradas||[]).forEach((e,i)=>{ if(!e.fecha||!e.hora) return; const t=new Date(e.fecha+'T'+e.hora), h=e.tipo==='comunes'?12:24, lim=new Date(t.getTime()-h*36e5);
+    A('ent'+i,fxIso(lim),'Avisar por escrito de la entrada '+(e.tipo==='comunes'?'en zonas comunes':'en la habitación')+' · '+lugar,'Entrada el '+v4F2(e.fecha)+' de '+e.hora+' a '+(e.horaFin||'?')+(e.motivo?' ('+e.motivo+')':'')+'. El aviso tiene que llegar antes del '+v4F2(fxIso(lim))+' a las '+v4HM(lim)+' ('+h+' h antes)'+(e.tipo==='comunes'?', de 9:00 a 21:00':', con motivo, día y franja de 3 h como máximo, de 9:00 a 21:00')+', salvo urgencia.',{desde:fxAdd(fxIso(lim),-2),tipo:'Obligatorio',auto:!!e.avisado}); });
+  // Con las llaves entregadas, los recordatorios anteriores ya no tienen objeto
+  if(L) out.forEach(a=>{ if(!a.hecho&&a.fecha<=L&&['itp-30','E-30','E-3','A','S-mes','S-3','C-7','C','F1m'].includes(a.k)){ a.hecho=true; a.auto=true; } });
+  return out;
+}
+// Averías comunicadas por el inquilino (Incidencias): respuesta en 5 días hábiles (art. 21 bis LAU)
+function v4AlertasIncidencias(){
+  const out=[];
+  (D.incs||[]).forEach(inc=>{ if(!inc.fecha||!inc.propId) return; if(inc.estado==='resuelta') return;
+    const lim=v4AddHabiles(inc.fecha,5,inc.propId), p=(D.props||[]).find(x=>x.id==inc.propId), lugar=(inc.hab?'Hab. '+inc.hab+' · ':'')+(p?p.nom:'');
+    out.push({k:'inc', incId:inc.id, fecha:lim, desde:inc.fecha, titulo:'Responder a la avería: '+(inc.desc||'')+' · '+lugar, det:'Aviso del inquilino el '+v4F2(inc.fecha)+'. Límite para responder: '+v4F2(lim)+' (5 días hábiles, sin sábados, domingos ni festivos). Si no, el inquilino puede repararla y descontártela de la renta siguiente (art. 21 bis LAU).', tpl:[], tipo:'Obligatorio', nivel:'alto', auto:!!(inc.respondida||inc.estado==='proceso'), hecho:!!(inc.respondida||inc.estado==='proceso'||inc.avisoHecho), hechoEl:inc.avisoHecho||inc.respondida||'', lugar, propId:inc.propId, hab:inc.hab||''});
+  });
+  return out;
+}
+function v4Alertas(hoy){
+  hoy=hoy||v4Hoy();
+  let out=[]; (D.conts||[]).forEach(co=>{ try{ out=out.concat(v4AlertasContrato(co,hoy)); }catch(e){ console.warn('Avisos del contrato',co.id,e); } });
+  try{ out=out.concat(v4AlertasIncidencias()); }catch(e){ console.warn(e); }
+  try{ out=out.concat(v4AlertasVisitas(hoy)); }catch(e){ console.warn(e); }
+  out.forEach(a=>{ a.dias=v4Diff(hoy,a.fecha); a.vencido=!a.hecho&&a.fecha<hoy&&!(a.caduca&&a.caduca<hoy)&&a.nivel!=='info'; a.visible=!a.hecho&&a.desde<=fxAdd(hoy,10)&&!(a.caduca&&a.caduca<hoy); });
+  return out.sort((a,b)=>a.fecha.localeCompare(b.fecha)||((b.nivel==='urgente')-(a.nivel==='urgente')));
+}
+function v4Grupos(hoy){
+  hoy=hoy||v4Hoy(); const al=v4Alertas(hoy);
+  return {todas:al, vencidos:al.filter(a=>a.visible&&a.fecha<hoy&&a.nivel!=='info'), hoy:al.filter(a=>a.visible&&(a.fecha===hoy||(a.fecha<hoy&&a.nivel==='info'))), proximos:al.filter(a=>a.visible&&a.fecha>hoy&&a.fecha<=fxAdd(hoy,10)), hechos:al.filter(a=>a.hecho&&!a.auto&&a.hechoEl).sort((a,b)=>String(b.hechoEl).localeCompare(String(a.hechoEl)))};
+}
+function v4MarcarHecho(ref,k,on){
+  if(ref.startsWith('inc:')){ const inc=(D.incs||[]).find(i=>i.id==ref.slice(4)); if(!inc) return; inc.avisoHecho=on?new Date().toISOString():''; if(on&&!inc.respondida) inc.respondida=v4Hoy(); }
+  else if(ref.startsWith('vis:')){ const v=(D.visitas||[]).find(x=>x.id==ref.slice(4)); if(!v) return; v[k==='vis-com'?'avisoCom':'avisoHab']=on?new Date().toISOString():''; }
+  else { const co=(D.conts||[]).find(c=>c.id==ref); if(!co) return; co.hechos=Object.assign({},co.hechos||{}); if(on) co.hechos[k]=new Date().toISOString(); else delete co.hechos[k]; }
+  saveAndSync(); v4RefrescarAvisos();
+}
+
+// ── Cálculos del contrato ──
+function v4OcupIndebidaDia(co){ return Math.round((parseFloat(co.r)||0)/30*2*100)/100; }
+// Renta ya pagada de los días posteriores a la salida (si pagó el mes completo)
+function v4DevolverRenta(co){
+  const fin=v4FinCobro(co); if(!fin) return 0; const mes=fin.slice(0,7); if(fin===v4FinMes(mes)) return 0;
+  const p=v4PagoAlquiler(co,mes); if(!p||p.estado!=='pagado') return 0;
+  const debido=v4RentaMes(co,mes), pagado=parseFloat(p.imp)||0;
+  return Math.max(0,Math.round((pagado-debido)*100)/100);
+}
+const V4_PENAL={retraso:20, limpieza:30, llaves:100, descuento:5};
+
+// ══ Pago mensual: email (plantilla 1), WhatsApp (10), recordatorio (7), fuera de plazo (4) ══
+function v4EsSuministroPago(p){ return !!p.rep||V4_SUMINISTROS.includes(v4TipoSum(p.con))&&p.con!=='Alquiler'; }
+function v4EsExtraPago(p){ return !['Alquiler','Bonificación pago rápido'].includes(p.con)&&!v4EsSuministroPago(p)&&!/fianza|garant/i.test(p.con||''); }
+function v4PagosPendCo(co,mes,filtro){
+  const ids=[co.inqId,co.inqId2].filter(Boolean);
+  return (D.pagos||[]).filter(p=>ids.includes(p.inqId)&&p.estado!=='pagado'&&(!p.rep||!p.rep.coId||p.rep.coId===co.id)&&(!p.cicloMes||p.cicloMes===mes)&&filtro(p));
+}
+function v4CalculoMensual(co,mes){
+  const renta=v4RentaMes(co,mes), sum=v4PagosPendCo(co,mes,v4EsSuministroPago), otras=v4PagosPendCo(co,mes,v4EsExtraPago);
+  const sSum=Math.round(sum.reduce((s,p)=>s+(+p.imp||0),0)*100)/100, sOtras=Math.round(otras.reduce((s,p)=>s+(+p.imp||0),0)*100)/100;
+  const total=Math.round((renta+sSum+sOtras)*100)/100;
+  return {mes, V:v4Venc(co,mes), renta, sum, otras, sSum, sOtras, total};
+}
+function v4DatosCobro(co){ const cta=v4Cuenta(co), tit=v4TitularCobro(co); return {bizum:co.bizum||'[NÚMERO]', iban:(cta&&cta.num)||'[IBAN]', titular:tit?nombreC(tit):'[TITULAR]'}; }
+function v4Firma(){ return (D.cfg&&D.cfg.nom)||'[NOMBRE]'; }
+function v4TxtEmailMensual(co,mes){
+  const c=v4CalculoMensual(co,mes), p=v4Prop(co), dc=v4DatosCobro(co), hab=v4Hab(co), V=c.V, ms=v4MesNom(mes), Vd=fxDate(V);
+  const lineas=c.sum.map(pg=>pg.rep?v4LineaSuministro(Object.assign({},pg.rep,{importeHab:pg.imp}),hab):('- '+pg.con+': '+v4E2(pg.imp)+' euros.'+(pg.notas?' ('+pg.notas+')':'')));
+  const otras=c.otras.map(pg=>'- Otras cantidades pendientes ('+pg.con.toLowerCase()+(pg.mes&&pg.con==='Penalización retraso'?' del pago de '+v4MesNom(pg.mes):'')+'): '+v4E2(pg.imp)+' euros.');
+  const partesSum=c.sum.map(pg=>v4E2(pg.imp));
+  const t=['Asunto: Pago mensual de '+ms+' – habitación '+hab+' – '+(p?p.nom:''),'',
+    'Hola '+v4Nombres(co)+':','',
+    'Este es el pago mensual total de la habitación '+hab+', que debe ordenarse como máximo el '+Vd.getDate()+' de '+V4_MESES[Vd.getMonth()]+' de '+Vd.getFullYear()+'. Incluye la renta de '+ms+' y los suministros pendientes, calculados por personas-día según el contrato (adjunto las facturas):','',
+    '- Renta de '+ms+': '+v4E2(c.renta)+' euros.'+(c.renta<(parseFloat(co.r)||0)-0.004?' (Renta proporcional: '+v4E2(co.r)+' / '+v4DiasMes(mes)+' x días.)':'')]
+    .concat(lineas).concat(otras).concat(['',
+    'Total suministros: '+(partesSum.length?partesSum.join(' + ')+' = ':'')+v4E2(c.sSum)+' euros.',
+    'Total a pagar: '+v4E2(c.renta)+' + '+v4E2(c.sSum)+(c.sOtras?' + '+v4E2(c.sOtras):'')+' = '+v4E2(c.total)+' euros.','',
+    'Si el pago se ordena en menos de 24 horas desde el envío de este email, se pueden descontar 5 euros, y el total a pagar queda en '+v4E2(c.total-5)+' euros.','',
+    'El pago se hace por Bizum al '+dc.bizum+' o por transferencia a la cuenta '+dc.iban+', a nombre de '+dc.titular+'. Una vez ordenado, es necesario enviarme por este email o por WhatsApp una foto o copia del justificante.','',
+    'Quedo a disposición para cualquier duda o aclaración.','',
+    'Un saludo y gracias,',v4Firma()]);
+  return {texto:t.join('\n'), asunto:t[0].replace('Asunto: ',''), calc:c};
+}
+function v4TxtWAMensual(co,mes){
+  const c=v4CalculoMensual(co,mes), cic=v4Ciclo(co,mes), hab=v4Hab(co), Vd=fxDate(c.V);
+  const hora=cic.email?v4HM(v4DT(cic.email)):'[HORA DEL EMAIL]';
+  return 'Hola '+v4Nombres(co)+'. Acabo de enviar por email el cálculo del pago mensual de la habitación '+hab+', con las facturas: renta de '+v4MesNom(mes)+' '+v4E2(c.renta)+' euros + suministros '+v4E2(c.sSum+c.sOtras)+' euros = '+v4E2(c.total)+' euros, a pagar como máximo el '+Vd.getDate()+' de '+V4_MESES[Vd.getMonth()]+'. Si el pago se ordena antes de mañana a las '+hora+' (24 horas desde el envío del email), se pueden descontar 5 euros y quedan '+v4E2(c.total-5)+' euros. Cuando esté hecho, necesito por aquí la foto o captura del justificante. Para cualquier duda o aclaración, aquí estoy. ¡Un abrazo y gracias por todo! :-)';
+}
+function v4TotalCiclo(co,mes){ const cic=v4Ciclo(co,mes); return parseFloat(cic.total)>0?parseFloat(cic.total):v4CalculoMensual(co,mes).total; }
+function v4TxtRecordatorio(co,mes){ const cic=v4Ciclo(co,mes), V=v4Venc(co,mes); return 'Buenos días '+v4Nombres(co)+'. Solo recordar que hoy, '+v4FL(V)+', es el último día para ordenar el pago mensual de la habitación '+v4Hab(co)+': '+v4E2(v4TotalCiclo(co,mes))+' euros, según el email del '+(cic.email?v4F2(cic.email.slice(0,10)):'[FECHA DEL EMAIL]')+'. En cuanto esté hecho el Bizum, ingreso o transferencia, necesito por aquí una foto o captura del justificante. A partir de mañana se aplicaría la penalización de 20 euros prevista en el contrato. Un saludo y gracias por todo.'; }
+function v4TxtFueraPlazo(co,mes){ const V=v4Venc(co,mes), dc=v4DatosCobro(co), t=v4TotalCiclo(co,mes); return 'Hola '+v4Nombres(co)+'. El plazo para ordenar el pago mensual de la habitación '+v4Hab(co)+' terminó ayer, '+v4FL(V)+', y no me consta el pago ni el justificante. Según el contrato, el retraso supone una penalización de 20 euros, que hay que incluir en el mismo pago, así que el total queda en '+v4E2(t)+' + 20 = '+v4E2(t+20)+' euros, por Bizum al '+dc.bizum+' o transferencia a '+dc.iban+'. Por favor, que el pago se haga hoy y me llegue el justificante por aquí. Recuerdo que el pago en plazo es una obligación esencial del contrato y que su incumplimiento permite resolverlo (art. 27.2.a de la Ley de Arrendamientos Urbanos). Si hay algún problema, mejor hablarlo hoy. Gracias.'; }
+
+// ══ Fin de contrato y salida: recordatorio (3), aviso de salida (8), liquidación (2 y 12), retención (11 y 5) ══
+function v4TxtRecordatorioFin(co){ const E=v4E(co); return 'Hola '+v4Nombres(co)+'. Te recuerdo que tu contrato de la habitación '+v4Hab(co)+' termina el '+v4FL(E)+' y no se prorroga automáticamente, así que ese día hay que dejar la habitación vacía y limpia y entregar todas las llaves. Dime qué hora te va bien ese día para la entrega; revisaremos juntos la habitación y firmaremos el documento de finalización. Desde el '+v4FL(fxAdd(E,-15))+' enseñaré la habitación a posibles inquilinos, siempre avisándote con 24 horas de antelación. Unos días antes te mandaré por email el cálculo de la liquidación de la fianza. Cualquier duda, me dices. ¡Gracias!'; }
+function v4TxtAvisoSalida(co){
+  const sv=v4SalidaValida(co)||{}, S=sv.S||'[FECHA DE SALIDA]', ret=(parseFloat(co.ret)||100)*v4NumPersonas(co,sv.S), hab=v4Hab(co);
+  const p1=sv.ok!==false?'1) Renta y suministros. Se pagan hasta el '+v4FL(S)+', inclusive, aunque entregues las llaves antes. En el próximo pago mensual solo se incluirá la renta hasta esa fecha; si ya pagaste el mes completo, te devuelvo la parte de los días siguientes el día de la entrega de llaves. La última renta se paga como cualquier otro mes: no se puede descontar de la fianza.'
+    :'1) Renta y suministros. El contrato exige avisar con al menos 10 días de antelación y haber pasado un mes desde la firma, así que la renta y los suministros se pagan hasta el '+v4FL(sv.valida)+', aunque te vayas antes. La última renta se paga como cualquier otro mes: no se puede descontar de la fianza.';
+  return 'Hola '+v4Nombres(co)+'. Recibido tu aviso del '+v4FL(sv.A||S)+': dejas la habitación '+hab+' el '+v4FL(S)+'. Te recuerdo algunos puntos importantes del contrato sobre la salida:\n\n'+p1+'\n\n2) Visitas. Desde ahora empezaré a enseñar tu habitación a posibles inquilinos, como prevé el contrato. Te avisaré por escrito con al menos 24 horas de antelación, siempre entre las 11:00 y las 20:00 y como máximo una hora al día. No hace falta que estés, y me responsabilizo de que nadie toque nada. Por favor, mantén la habitación especialmente limpia y ordenada estos días, si eres tan amable.\n\n3) Entrega de llaves y fianza. Quedamos el '+v4FL(S)+' a las [HORA] (si te va mejor otra hora, dímelo con al menos 24 horas de antelación). Ese día revisaremos juntos la habitación y las zonas comunes, me entregarás todas las llaves, también las copias, y firmaremos el documento de finalización. Unos días antes te mandaré por email el cálculo de la liquidación de la fianza y la garantía: se descuentan las facturas ya llegadas que no se hayan cobrado y se retienen '+v4E2(ret)+' euros para las que falten por llegar. El resto te lo devuelvo ese mismo día, y el sobrante de la retención, como máximo un mes después, cuando lleguen las facturas.\n\n4) Inventario y limpieza. Revisa que todo lo del inventario esté bien. Si algo falta o se ha roto (no cuenta el desgaste normal por el uso), arréglalo o sustitúyelo antes de la salida, para no tener que descontarlo de la fianza. Y déjame la habitación vacía y limpia, con las fundas del colchón y de la almohada lavadas, secas y puestas, si eres tan amable.\n\n5) Padrón. Si estás empadronado en la vivienda, tienes que solicitar el cambio de empadronamiento al irte.\n\nAnte cualquier duda, dime. Muchas gracias por todo :-)';
+}
+function v4Liquidacion(co){
+  const fin=v4FinCobro(co), sv=v4SalidaValida(co), salida=(sv&&sv.anticipada)?sv.S:(co.causaExt&&co.causaExt.R?fin:v4E(co));
+  const gar=Math.round(((parseFloat(co.f)||0)+(parseFloat(co.g)||0))*100)/100;
+  const ids=[co.inqId,co.inqId2].filter(Boolean);
+  const pend=(D.pagos||[]).filter(p=>ids.includes(p.inqId)&&p.estado!=='pagado'&&(!p.rep||!p.rep.coId||p.rep.coId===co.id));
+  const sum=pend.filter(v4EsSuministroPago), otras=pend.filter(p=>!v4EsSuministroPago(p)&&p.con!=='Bonificación pago rápido');
+  const ret=Math.round((parseFloat(co.ret)||100)*v4NumPersonas(co,salida)*100)/100, dev=v4DevolverRenta(co);
+  const desc=Math.round((sum.reduce((s,p)=>s+(+p.imp||0),0)+otras.reduce((s,p)=>s+(+p.imp||0),0)+ret)*100)/100;
+  return {salida, finCobro:fin, gar, f:parseFloat(co.f)||0, g:parseFloat(co.g)||0, sum, otras, ret, dev, desc, total:Math.round((gar-desc+dev)*100)/100};
+}
+function v4TxtLiquidacionEmail(co){
+  const q=v4Liquidacion(co), p=v4Prop(co), hab=v4Hab(co), sv=v4SalidaValida(co), L=[];
+  L.push('Asunto: Salida y liquidación de la fianza – habitación '+hab+' – '+(p?p.nom:''),'','Hola '+v4Nombres(co)+':','');
+  if(sv&&sv.anticipada) L.push('Tal como se comunicó por escrito el '+v4FL(sv.A)+', la salida de la habitación '+hab+' será el '+v4FL(q.salida)+'. La renta y los suministros se pagan hasta '+(q.finCobro>q.salida?'el '+v4FL(q.finCobro)+' (fecha en que el desistimiento es válido)':'ese día')+', inclusive, aunque las llaves se entreguen antes.');
+  else L.push('Tal como prevé el contrato, la salida de la habitación '+hab+' será el '+v4FL(q.salida)+', fecha de fin del contrato. La renta y los suministros se pagan hasta ese día, inclusive, aunque las llaves se entreguen antes.');
+  L.push('','Entrega de llaves: propongo el '+v4FL(q.salida)+' a las [HORA]; si no va bien, hay que acordar otro momento con al menos 24 horas de antelación. Ese día revisaremos juntos la habitación y las zonas comunes, se entregarán todas las llaves (también las copias que se hayan hecho) y firmaremos el documento de finalización (Anexo II del contrato). La habitación tiene que quedar vacía y limpia.','',
+    'Este es el cálculo previsto de la liquidación de la fianza y la garantía adicional (adjunto las facturas):','',
+    'Fianza '+v4E2(q.f)+' euros + garantía adicional '+v4E2(q.g)+' euros = '+v4E2(q.gar)+' euros.','','A descontar:');
+  if(q.sum.length){ L.push('- Suministros ya facturados y aún no cobrados:'); q.sum.forEach(pg=>L.push('  '+(pg.rep?v4LineaSuministro(Object.assign({},pg.rep,{importeHab:pg.imp}),hab):'- '+pg.con+': '+v4E2(pg.imp)+' euros.'))); }
+  q.otras.forEach(pg=>L.push('- '+(pg.con==='Alquiler'?'Renta pendiente de '+v4MesNom(pg.mes||''):pg.con)+': '+v4E2(pg.imp)+' euros.'));
+  L.push('- Retención para las facturas que aún no han llegado ('+v4E2(parseFloat(co.ret)||100)+' euros por persona): '+v4E2(q.ret)+' euros.');
+  if(q.dev>0) L.push('','A sumar:','- Renta ya pagada de los días posteriores a la fecha de salida: '+v4E2(q.dev)+' euros.');
+  L.push('','Total a devolver el día de la entrega de llaves: '+v4E2(q.gar)+' − '+v4E2(q.desc)+(q.dev>0?' + '+v4E2(q.dev):'')+' = '+v4E2(q.total)+' euros, por transferencia o Bizum.','',
+    'Este importe puede variar si en la revisión aparecen desperfectos por mal uso (no el desgaste normal), falta de limpieza o llaves sin entregar. En ese caso se descontará lo que corresponda según el contrato y quedará reflejado en el documento de finalización.','',
+    'La retención se liquidará cuando lleguen las facturas pendientes y, como máximo, el '+v4FL(v4AddM(q.salida,1))+'. Las facturas que no hayan llegado para entonces se estimarán prorrateando por días la última factura de cada suministro. Se enviará el cálculo con copia de las facturas y se devolverá lo que sobre; si la retención no alcanzara, la diferencia habría que pagarla en 10 días.','',
+    'Para las devoluciones necesito el IBAN o el número de Bizum'+(co.inqId2?' (uno solo designado por las dos personas)':'')+', y el domicilio y el email de contacto a partir de la salida.','',
+    'Quedo a disposición para cualquier duda o aclaración.','','Un saludo y gracias por todo,',v4Firma());
+  return {texto:L.join('\n'), asunto:L[0].replace('Asunto: ',''), liq:q};
+}
+function v4TxtLiquidacionWA(co){ const q=v4Liquidacion(co); const sS=q.sum.reduce((s,p)=>s+(+p.imp||0),0), sO=q.otras.reduce((s,p)=>s+(+p.imp||0),0); return 'Hola '+v4Nombres(co)+'. Acabo de enviar por email el cálculo previsto de la liquidación de la fianza y la garantía, con las facturas: '+v4E2(q.gar)+' euros − '+v4E2(sS)+' euros de suministros'+(sO?' − '+v4E2(sO)+' euros de otras cantidades pendientes':'')+' − '+v4E2(q.ret)+' euros de retención para las facturas que faltan'+(q.dev>0?' + '+v4E2(q.dev)+' euros de renta a devolver':'')+' = '+v4E2(q.total)+' euros, que devolveré el día de la entrega de llaves, el '+v4FL(q.salida)+' a las [HORA], después de revisar juntos la habitación. El importe puede variar si en la revisión aparece algún desperfecto por mal uso, falta de limpieza o faltan llaves. Para la devolución necesito el IBAN o el número de Bizum. Para cualquier duda o aclaración, aquí estoy. ¡Un abrazo y gracias por todo! :-)'; }
+function v4TxtRetencionEmail(co){ const L=(co.llaves||{}).L||'[FECHA DE ENTREGA DE LLAVES]', ret=(parseFloat(co.ret)||100)*v4NumPersonas(co,(co.llaves||{}).L), p=v4Prop(co), hab=v4Hab(co), dc=v4DatosCobro(co); return 'Asunto: Liquidación de la retención – habitación '+hab+' – '+(p?p.nom:'')+'\n\nHola '+v4Nombres(co)+':\n\nEsta es la liquidación definitiva de la retención de '+v4E2(ret)+' euros que quedó reflejada en el documento de finalización del '+(L.length===10?v4FL(L):L)+' (adjunto las facturas):\n\n- [Suministro]. Factura de [IMPORTE] euros, del [DD/MM] al [DD/MM] ([N] días). Personas-día: [N] (hab. 1) + [N] (hab. 2) + [...] = [TOTAL]. Corresponde a la habitación '+hab+', hasta el '+v4FL(v4FinCobro(co))+': ([IMPORTE] / [TOTAL]) x [PERSONAS-DÍA DE LA HABITACIÓN] = [X] euros.\n- [Suministro] (estimado). La factura todavía no ha llegado, así que, según el contrato, se estima prorrateando por días la última factura recibida: ([IMPORTE ÚLTIMA FACTURA] / [DÍAS DE ESA FACTURA]) x [DÍAS DEL PERIODO PENDIENTE] = [IMPORTE ESTIMADO] euros. Personas-día del periodo pendiente: [...] = [TOTAL]. Corresponde a la habitación '+hab+': ([IMPORTE ESTIMADO] / [TOTAL]) x [PERSONAS-DÍA DE LA HABITACIÓN] = [X] euros.\n\nTotal: [X] + [X] = [SUMA] euros.\nRetención: '+v4E2(ret)+' − [SUMA] = [RESULTADO] euros.\n\n[SI SOBRA:] Hoy he devuelto [RESULTADO] euros por [transferencia / Bizum] a [la cuenta / el número] indicado en el documento de finalización. Con esto queda liquidada la fianza.\n[SI FALTA:] La retención no alcanza: faltan [RESULTADO] euros, que según el contrato hay que pagar en 10 días, como máximo el [FECHA], por Bizum al '+dc.bizum+' o transferencia a '+dc.iban+'.\n\nQuedo a disposición para cualquier duda o aclaración.\n\nUn saludo y gracias por todo,\n'+v4Firma(); }
+function v4TxtRetencionWA(co){ const ret=(parseFloat(co.ret)||100)*v4NumPersonas(co,(co.llaves||{}).L), dc=v4DatosCobro(co), r=co.retencion||{}; const falta=parseFloat(r.falta)>0; return falta?('Hola '+v4Nombres(co)+'. Ya he hecho la liquidación de la retención de '+v4E2(ret)+' euros y no ha llegado para cubrir las facturas pendientes: faltan '+v4E2(r.falta)+' euros. El detalle de los cálculos, con copia de las facturas, está en el email. Según el contrato, hay que pagarlos en 10 días, como máximo el '+(r.comunicada?v4FL(fxAdd(r.comunicada,10)):'[FECHA]')+', por Bizum al '+dc.bizum+' o transferencia a '+dc.iban+'. ¡Gracias!'):('Hola '+v4Nombres(co)+'. Ya he hecho la liquidación de la retención de '+v4E2(ret)+' euros y he devuelto el sobrante, '+(parseFloat(r.sobra)>0?v4E2(r.sobra):'[X]')+' euros, por [transferencia / Bizum]. El detalle de los cálculos, con copia de las facturas, está en el email. Con esto queda liquidada la fianza. Un abrazo y muchas gracias por haber sido '+(co.inqId2?'mis inquilinos':'mi inquilino')+' :-)'); }
+function v4Plantilla(tpl,co,ctx){
+  ctx=ctx||{}; const mes=ctx.mes;
+  switch(String(tpl)){
+    case '1': { const r=v4TxtEmailMensual(co,mes); return {t:'Plantilla 1 · Email mensual de pago', canal:'email', asunto:r.asunto, texto:r.texto.split('\n').slice(2).join('\n')}; }
+    case '10': return {t:'Plantilla 10 · WhatsApp del pago mensual', canal:'wa', texto:v4TxtWAMensual(co,mes)};
+    case '7': return {t:'Plantilla 7 · Recordatorio del último día de pago', canal:'wa', texto:v4TxtRecordatorio(co,mes)};
+    case '4': return {t:'Plantilla 4 · Pago fuera de plazo', canal:'wa', texto:v4TxtFueraPlazo(co,mes)};
+    case '3': return {t:'Plantilla 3 · Recordatorio de fin de contrato', canal:'wa', texto:v4TxtRecordatorioFin(co)};
+    case '8': return {t:'Plantilla 8 · Respuesta al aviso de salida', canal:'wa', texto:v4TxtAvisoSalida(co)};
+    case '2': { const r=v4TxtLiquidacionEmail(co); return {t:'Plantilla 2 · Email de liquidación a la salida', canal:'email', asunto:r.asunto, texto:r.texto.split('\n').slice(2).join('\n')}; }
+    case '12': return {t:'Plantilla 12 · WhatsApp de liquidación', canal:'wa', texto:v4TxtLiquidacionWA(co)};
+    case '11': { const x=v4TxtRetencionEmail(co); return {t:'Plantilla 11 · Email de liquidación de la retención', canal:'email', asunto:x.split('\n')[0].replace('Asunto: ',''), texto:x.split('\n').slice(2).join('\n')}; }
+    case '5': return {t:'Plantilla 5 · WhatsApp de la retención', canal:'wa', texto:v4TxtRetencionWA(co)};
+    case 'req': return {t:'Requerimiento de pago', canal:'doc', texto:'Usa el documento Requerimiento_de_pago_v20261021-2.docx.\n\nDeuda desglosada (rentas, suministros, penalizaciones de 20 € y otras), requerimiento de pago en 10 días, advertencia del art. 22.4 LEC (no se demanda antes de 30 días desde la recepción) y propuesta de negociación previa (LO 1/2025, 30 días naturales para responder).\n\nEnvío: burofax con certificación de texto y acuse de recibo a la vivienda, y además email certificado (prestador cualificado eIDAS). Cuando tengas el acuse, regístralo en el contrato (fecha de recepción R): la app avisará en R + 10 y R + 30.\n\nNo se reclaman intereses: la penalización de 20 € los sustituye (art. 1.152 CC).'};
+    case 'anexo2': { const q=v4Liquidacion(co); return {t:'Anexo II · Documento de finalización', canal:'doc', texto:'Imprime 2 copias del Anexo II, rellénalas y fírmalas en la entrega de llaves.\n\nCifras previstas (las del email de liquidación):\n· Fianza '+v4E2(q.f)+' € + garantía '+v4E2(q.g)+' € = '+v4E2(q.gar)+' €\n· Suministros pendientes: '+v4E2(q.sum.reduce((s,p)=>s+(+p.imp||0),0))+' €\n· Otras cantidades pendientes: '+v4E2(q.otras.reduce((s,p)=>s+(+p.imp||0),0))+' €\n· Retención (100 € por persona): '+v4E2(q.ret)+' €\n'+(q.dev>0?'· Renta a devolver de los días posteriores a la salida: '+v4E2(q.dev)+' €\n':'')+'· Total a devolver: '+v4E2(q.total)+' €\n\nRevisa la habitación y las zonas comunes, recoge todas las llaves (también las copias; si faltan, 100 € por llaves no devueltas) y anota la cuenta o Bizum para el saldo, el domicilio y el email posteriores y el padrón. Después registra en la app la entrega de llaves (fecha L): avisará en L + 24 h (daños con fotos) y en L + 1 mes (liquidación de la retención).'}; }
+  }
+  return {t:'Plantilla', canal:'doc', texto:''};
+}
+
+// ══ Registro de hechos del contrato (pagos, avisos, llaves, prórroga/anexos, etc.) ══
+function v4Co(id){ return (D.conts||[]).find(c=>c.id==id); }
+function v4Guardar(co,msg){ co._upd=Date.now(); v4SincronizarInqs(co); saveAndSync(); v4RefrescarAvisos(); if(msg) toast(msg); }
+function v4Modal(titulo,html,botones){
+  $i('m-v4-c').innerHTML='<h2>'+titulo+'</h2>'+html+'<div class="modal-footer">'+(botones||'')+'<button class="btn btn-ghost" onclick="closeM(\'m-v4\')">Cerrar</button></div>';
+  $i('m-v4').classList.add('open');
+}
+function v4Msg(id,html,tipo){ const e=$i(id); if(e) e.innerHTML='<div class="alert alert-'+(tipo||'y')+'" style="font-size:11.5px;line-height:1.55;margin-top:8px;">'+html+'</div>'; }
+
+// ── Pago mensual: email enviado, orden de pago, descuento de 5 € y penalización de 20 € ──
+function v4AbrirCiclo(coId,mes){
+  const co=v4Co(coId); if(!co) return;
+  const meses=v4MesesCobro(co).filter(m=>m!==v4F(co).slice(0,7));
+  if(!mes){ const hoy=v4Hoy(); mes=meses.find(m=>!v4Pagado(co,m)&&fxAdd(v4Venc(co,m),-10)<=hoy)||meses.find(m=>!v4Pagado(co,m))||meses[meses.length-1]; }
+  if(!mes){ toast('Este contrato no tiene pagos mensuales (solo la renta de la firma)',false); return; }
+  const c=v4CalculoMensual(co,mes), cic=v4Ciclo(co,mes), V=c.V;
+  const filas=[['Renta de '+v4MesNom(mes),c.renta]].concat(c.sum.map(p=>[p.con+(p.rep?' ('+v4DM(p.rep.ini)+'–'+v4DM(p.rep.fin)+')':''),+p.imp])).concat(c.otras.map(p=>[p.con,+p.imp]));
+  const total=parseFloat(cic.total)>0?parseFloat(cic.total):c.total;
+  const html='<div style="font-size:12px;color:var(--ink3);margin-bottom:10px;">'+v4Esc(v4Lugar(co))+' · '+v4Esc(v4NombresCompletos(co))+'</div>'
+   +'<div class="fg"><div class="fgrp"><label>Mes de renta</label><select id="v4c-mes" onchange="v4AbrirCiclo(\''+co.id+'\',this.value)">'+meses.map(m=>'<option value="'+m+'"'+(m===mes?' selected':'')+'>'+v4MesNom(m)+' '+m.slice(0,4)+(v4Pagado(co,m)?' ✓':'')+'</option>').join('')+'</select></div>'
+   +'<div class="fgrp"><label>Vence (último día para ordenar el pago)</label><input value="'+v4F2(V)+'" disabled></div></div>'
+   +'<div style="background:var(--bg);border-radius:var(--r2);padding:10px 12px;font-size:12px;margin:8px 0;">'+filas.map(f=>'<div style="display:flex;justify-content:space-between;gap:10px;"><span>'+v4Esc(f[0])+'</span><span class="mono">'+v4E2(f[1])+' €</span></div>').join('')
+   +'<div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700;"><span>Total del email</span><span class="mono">'+v4E2(total)+' €</span></div>'
+   +'<div style="font-size:11px;color:var(--ink3);margin-top:4px;">Con el descuento (pago en menos de 24 h): '+v4E2(total-5)+' € · Fuera de plazo: '+v4E2(total+20)+' €</div></div>'
+   +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"><button class="btn btn-secondary btn-sm" onclick="v4VerPlantilla(\'1\',\''+co.id+'\',\''+mes+'\')">📧 Email (plantilla 1)</button><button class="btn btn-secondary btn-sm" onclick="v4VerPlantilla(\'10\',\''+co.id+'\',\''+mes+'\')">💬 WhatsApp (10)</button><button class="btn btn-secondary btn-sm" onclick="v4VerPlantilla(\'7\',\''+co.id+'\',\''+mes+'\')">⏰ Recordatorio (7)</button><button class="btn btn-secondary btn-sm" onclick="v4VerPlantilla(\'4\',\''+co.id+'\',\''+mes+'\')">⚠️ Fuera de plazo (4)</button></div>'
+   +'<div class="form-section">1 · Email enviado</div><div class="fg"><div class="fgrp"><label>Fecha y hora del envío del email</label><input type="datetime-local" id="v4c-email" value="'+(cic.email||'')+'"></div>'
+   +'<div class="fgrp" style="display:flex;align-items:flex-end;"><button class="btn btn-secondary btn-sm" onclick="$i(\'v4c-email\').value=v4LocalDT(new Date())">🕒 Ahora</button></div></div>'
+   +'<div class="form-section">2 · Pago del inquilino</div><div class="fg"><div class="fgrp"><label>Fecha y hora en que ORDENÓ el pago</label><input type="datetime-local" id="v4c-orden" value="'+(cic.orden&&cic.orden.length>10?cic.orden:(cic.orden?cic.orden+'T12:00':''))+'"></div>'
+   +'<div class="fgrp"><label>Importe pagado (€)</label><input type="number" step="0.01" id="v4c-imp" value="'+(cic.importePagado||'')+'"></div>'
+   +'<div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="v4c-just" style="width:auto;"'+(cic.justif?' checked':'')+'> Me ha enviado el justificante</label></div></div>'
+   +'<div style="font-size:10.5px;color:var(--ink3);line-height:1.6;">Cuenta la fecha en que el inquilino ordena el pago, no la de llegada. Si la orden es como máximo 24 h después del email (y en plazo), se descuentan 5 €. Si es posterior al '+v4F2(V)+', se suman 20 € de penalización y se pierde el descuento.</div><div id="v4c-msg"></div>';
+  v4Modal('💶 Pago mensual · '+v4Esc(v4Lugar(co)),html,(!v4Pagado(co,mes)&&v4Hoy()>V&&!cic.pen20?'<button class="btn btn-danger" onclick="v4AnotarPenalizacion(\''+co.id+'\',\''+mes+'\')">+ Penalización 20 €</button>':'')+'<button class="btn btn-primary" onclick="v4GuardarCiclo(\''+co.id+'\',\''+mes+'\')">Guardar</button>');
+}
+function v4AnotarPenalizacion(coId,mes){
+  const co=v4Co(coId); if(!co) return; co.ciclos=Object.assign({},co.ciclos||{}); const cic=Object.assign({},co.ciclos[mes]||{}); if(cic.pen20){ toast('La penalización ya está anotada',false); return; }
+  cic.pen20=true; co.ciclos[mes]=cic;
+  D.pagos.push({id:uid(),inqId:v4PagadorInq(co),con:'Penalización retraso',mes,imp:V4_PENAL.retraso,estado:'pendiente',fecha:'',notas:'Pago de '+v4MesNom(mes)+' ordenado después del '+v4F2(v4Venc(co,mes))+' (cláusula penal, art. 1.152 CC)',cicloMes:mes,pen:{coId,mes}});
+  v4Guardar(co,'Penalización de 20 € anotada'); v4AbrirCiclo(coId,mes);
+}
+function v4GuardarCiclo(coId,mes){
+  const co=v4Co(coId); if(!co) return; co.ciclos=Object.assign({},co.ciclos||{});
+  const cic=Object.assign({},co.ciclos[mes]||{}), V=v4Venc(co,mes), email=gi('v4c-email'), orden=gi('v4c-orden'), imp=gn('v4c-imp');
+  const c=v4CalculoMensual(co,mes);
+  if(email&&!cic.email){ cic.email=email; cic.total=c.total; cic.emailTexto=v4TxtEmailMensual(co,mes).texto; c.sum.concat(c.otras).forEach(p=>{ p.cicloMes=mes; }); }
+  else if(email) cic.email=email;
+  cic.justif=$i('v4c-just').checked;
+  if(orden){
+    if(email&&orden<email){ v4Msg('v4c-msg','La orden de pago no puede ser anterior al envío del email. Revisa las fechas.','r'); return; }
+    const oD=orden.slice(0,10), tarde=oD>V, rapido=!!(cic.email&&!tarde&&(new Date(orden)-new Date(cic.email))<=864e5);
+    cic.orden=orden; cic.importePagado=imp||''; cic.dto=rapido; if(tarde) cic.pen20=true;
+    const total=parseFloat(cic.total)>0?parseFloat(cic.total):c.total, esperado=Math.round((total-(rapido?5:0)+(tarde?20:0))*100)/100;
+    cic.esperado=esperado;
+    // Pagos: renta y suministros incluidos en el email
+    let alq=v4PagoAlquiler(co,mes); if(!alq){ alq={id:uid(),inqId:v4PagadorInq(co),con:'Alquiler',mes,imp:c.renta,estado:'pendiente',fecha:'',notas:'Auto'}; D.pagos.push(alq); }
+    alq.estado='pagado'; alq.fecha=oD; alq.fechaOrden=orden;
+    (D.pagos||[]).filter(p=>p.cicloMes===mes&&[co.inqId,co.inqId2].includes(p.inqId)&&p.con!=='Penalización retraso').forEach(p=>{ p.estado='pagado'; p.fecha=oD; });
+    if(rapido&&!(D.pagos||[]).some(p=>p.con==='Bonificación pago rápido'&&p.cicloMes===mes&&p.inqId==v4PagadorInq(co))) D.pagos.push({id:uid(),inqId:v4PagadorInq(co),con:'Bonificación pago rápido',mes,imp:-V4_PENAL.descuento,estado:'pagado',fecha:oD,notas:'Pago ordenado en menos de 24 h desde el email (cláusula «Bonificación por rapidez»)',cicloMes:mes});
+    if(tarde){ let pen=(D.pagos||[]).find(p=>p.con==='Penalización retraso'&&p.pen&&p.pen.coId===co.id&&p.pen.mes===mes);
+      if(!pen){ pen={id:uid(),inqId:v4PagadorInq(co),con:'Penalización retraso',mes,imp:V4_PENAL.retraso,estado:'pendiente',fecha:'',notas:'Pago de '+v4MesNom(mes)+' ordenado el '+v4F2(oD)+', después del '+v4F2(V),cicloMes:mes,pen:{coId:co.id,mes}}; D.pagos.push(pen); }
+      if(imp&&imp>=esperado-0.004){ pen.estado='pagado'; pen.fecha=oD; } }
+    co.ciclos[mes]=cic; v4Guardar(co);
+    const dif=imp?Math.round((imp-esperado)*100)/100:null;
+    v4Msg('v4c-msg','Guardado. Importe que correspondía: <strong>'+v4E2(esperado)+' €</strong>'+(rapido?' (con el descuento de 5 €)':'')+(tarde?' (con la penalización de 20 €)':'')+'.'+(dif===null?'':dif<-0.004?' ⚠️ Faltan <strong>'+v4E2(-dif)+' €</strong>.':dif>0.004?' Ha pagado '+v4E2(dif)+' € de más.':' ✓ Cuadra.'),dif!==null&&dif<-0.004?'r':'g');
+    return;
+  }
+  co.ciclos[mes]=cic; v4Guardar(co,'Pago mensual guardado'); closeM('m-v4');
+}
+
+// ── ITP ──
+function v4ITP(coId){ const co=v4Co(coId); v4Modal('🧾 Justificante del ITP (modelo 600)','<div class="fg"><div class="fgrp"><label>Fecha en que lo recibes</label><input type="date" id="v4i-f" value="'+(co.itpFecha||v4Hoy())+'"></div><div class="fgrp fgf" style="font-size:11px;color:var(--ink3);line-height:1.6;">El arrendamiento temporal no está exento del ITP. Lo paga el inquilino (modelo 600, Agencia Tributaria de la Región de Murcia); el arrendador responde subsidiariamente si cobra la primera renta sin exigirle el justificante.</div></div>','<button class="btn btn-primary" onclick="(function(){const co=v4Co(\''+coId+'\');co.itpOk=true;co.itpFecha=gi(\'v4i-f\');v4Guardar(co,\'ITP recibido\');closeM(\'m-v4\');})()">✓ Recibido</button>'); }
+
+// ── Aviso de salida anticipada (A y S) ──
+function v4AvisoSalida(coId){
+  const co=v4Co(coId), s=co.salida||{};
+  v4Modal('🚪 Aviso de salida del inquilino','<div class="fg"><div class="fgrp"><label>Fecha del aviso por escrito (A)</label><input type="date" id="v4s-a" value="'+(s.A||v4Hoy())+'" oninput="v4PrevSalida(\''+coId+'\')"></div><div class="fgrp"><label>Fecha de salida que comunica (S)</label><input type="date" id="v4s-s" value="'+(s.S||'')+'" oninput="v4PrevSalida(\''+coId+'\')"></div></div><div id="v4s-msg"></div>',
+   (s.S?'<button class="btn btn-danger" onclick="(function(){const co=v4Co(\''+coId+'\');delete co.salida;v4Guardar(co,\'Aviso de salida eliminado\');closeM(\'m-v4\');})()">Quitar aviso</button>':'')+'<button class="btn btn-primary" onclick="v4GuardarSalida(\''+coId+'\')">Guardar</button>');
+  v4PrevSalida(coId);
+}
+function v4PrevSalida(coId){ const co=v4Co(coId), A=gi('v4s-a'), S=gi('v4s-s'); if(!S){ v4Msg('v4s-msg','Indica la fecha de salida.'); return; }
+  const tmp=Object.assign({},co,{salida:{A,S}}), sv=v4SalidaValida(tmp), E=v4E(co);
+  if(S>=E){ v4Msg('v4s-msg','La salida es en la fecha de fin del contrato o después: no es un desistimiento. Usa el recordatorio de fin de contrato (plantilla 3).'); return; }
+  v4Msg('v4s-msg',sv.ok?'✓ El aviso es válido: al menos 10 días de antelación y pasado el primer mes. Renta y suministros hasta el <strong>'+v4F2(S)+'</strong> ('+v4E2(v4RentaMes(tmp,S.slice(0,7)))+' € de renta de '+v4MesNom(S.slice(0,7))+').':'⚠️ No cumple: '+sv.motivos.join('; ')+'. La renta y los suministros se cobran hasta el <strong>'+v4F2(sv.valida)+'</strong>, primera fecha válida.',sv.ok?'g':'y'); }
+function v4GuardarSalida(coId){ const co=v4Co(coId), A=gi('v4s-a'), S=gi('v4s-s'); if(!A||!S){ toast('Indica el aviso y la fecha de salida',false); return; } if(S<A){ toast('La salida no puede ser anterior al aviso',false); return; } co.salida={A,S}; v4ActualizarRentasPendientes(co); v4Guardar(co,'Aviso de salida registrado'); closeM('m-v4'); }
+
+// ── Entrega de llaves (L) y Anexo II ──
+function v4Llaves(coId){ const co=v4Co(coId), l=co.llaves||{};
+  v4Modal('🔑 Entrega de llaves','<div class="fg"><div class="fgrp"><label>Fecha real de entrega de llaves (L)</label><input type="date" id="v4l-f" value="'+(l.L||v4Hoy())+'"></div><div class="fgrp" style="display:flex;align-items:flex-end;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="v4l-a2" style="width:auto;"'+(l.anexoII?' checked':'')+'> Anexo II firmado</label></div><div class="fgrp fgf"><label>Notas (daños, llaves no devueltas…)</label><input id="v4l-n" value="'+v4Esc(l.notas||'')+'"></div></div><div style="font-size:11px;color:var(--ink3);line-height:1.6;">Si entrega las llaves antes de la fecha de salida, la renta se cobra igualmente hasta esa fecha. Desde L: 24 h para comunicar daños con fotos y 1 mes como máximo para liquidar la retención (art. 36.4 LAU).</div>',
+   '<button class="btn btn-primary" onclick="(function(){const co=v4Co(\''+coId+'\');co.llaves={L:gi(\'v4l-f\'),anexoII:$i(\'v4l-a2\').checked,notas:gi(\'v4l-n\')};v4Guardar(co,\'Entrega de llaves registrada\');closeM(\'m-v4\');})()">Guardar</button>'); }
+
+// ── Retención: comunicación y liquidación ──
+function v4Retencion(coId){ const co=v4Co(coId), r=co.retencion||{}, tot=(parseFloat(co.ret)||100)*v4NumPersonas(co,(co.llaves||{}).L);
+  v4Modal('💶 Liquidación de la retención ('+v4E2(tot)+' €)','<div class="fg"><div class="fgrp"><label>Fecha de la comunicación con el cálculo</label><input type="date" id="v4r-c" value="'+(r.comunicada||v4Hoy())+'"></div><div class="fgrp"><label>Resultado</label><select id="v4r-t"><option value="sobra"'+(!(parseFloat(r.falta)>0)?' selected':'')+'>Sobra dinero (se devuelve)</option><option value="falta"'+(parseFloat(r.falta)>0?' selected':'')+'>No alcanza (el inquilino paga la diferencia)</option></select></div><div class="fgrp"><label>Importe que sobra o que falta (€)</label><input type="number" step="0.01" id="v4r-i" value="'+(r.falta||r.sobra||'')+'"></div><div class="fgrp" style="display:flex;flex-direction:column;justify-content:flex-end;gap:6px;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="v4r-l" style="width:auto;"'+(r.liquidada?' checked':'')+'> Liquidada (devuelto el sobrante o comunicada la diferencia)</label><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="v4r-p" style="width:auto;"'+(r.faltaPagada?' checked':'')+'> El inquilino ya pagó la diferencia</label></div></div>',
+   '<button class="btn btn-primary" onclick="(function(){const co=v4Co(\''+coId+'\');const t=$i(\'v4r-t\').value,i=gn(\'v4r-i\');co.retencion={comunicada:gi(\'v4r-c\'),liquidada:$i(\'v4r-l\').checked?(gi(\'v4r-c\')||v4Hoy()):\'\',falta:t===\'falta\'?i:0,sobra:t===\'sobra\'?i:0,faltaPagada:$i(\'v4r-p\').checked};v4Guardar(co,\'Retención guardada\');closeM(\'m-v4\');})()">Guardar</button>'); }
+
+// ── Prórroga o anexo (máximo uno por contrato, art. 9 bis.2 LAU) ──
+function v4Cambio(coId){
+  const co=v4Co(coId), pc=v4PuedeCambio(co);
+  if(!pc.ok){ v4Modal('🔁 Prórroga o anexo','<div class="alert alert-r" style="font-size:12px;line-height:1.6;">⛔ '+v4Esc(pc.t)+'</div>'+((co.cambios||[]).length?'<div style="font-size:11.5px;margin-top:10px;">Registrado: '+v4Esc(V4_CAMBIO_TXT[co.cambios[0].tipo])+' del '+v4F2(co.cambios[0].fecha)+'. <button class="btn btn-ghost btn-xs" onclick="if(confirm(\'¿Eliminar el cambio registrado?\')){const co=v4Co(\''+coId+'\');co.cambios=[];v4Guardar(co,\'Cambio eliminado\');closeM(\'m-v4\');}">Eliminar</button></div>':'')); return; }
+  const opts=Object.entries(V4_CAMBIO_TXT).map(([k,t])=>'<option value="'+k+'">'+t+'</option>').join('');
+  v4Modal('🔁 Prórroga o anexo','<div class="alert alert-y" style="font-size:11.5px;line-height:1.55;">Solo cabe <strong>un</strong> cambio en este contrato. Al registrarlo se bloquea cualquier otra prórroga o anexo, y ya no se podrá firmar con esta persona otro contrato temporal seguido en este piso. La comunicación de cambio de datos (contacto, cuenta, domicilio, alta o baja del wifi) no cuenta como cambio.</div>'
+   +'<div class="fg" style="margin-top:10px;"><div class="fgrp fgf"><label>Tipo</label><select id="v4x-t" onchange="v4CambioCampos()">'+opts+'</select></div><div class="fgrp"><label>Fecha de firma / efecto</label><input type="date" id="v4x-f" value="'+v4Hoy()+'"></div>'
+   +'<div class="fgrp v4x-pro"><label>Nueva fecha de fin</label><input type="date" id="v4x-e"></div>'
+   +'<div class="fgrp v4x-hab"><label>Nueva habitación</label><input type="number" id="v4x-h"></div><div class="fgrp v4x-hab v4x-inc"><label>Nueva renta mensual (€)</label><input type="number" step="0.01" id="v4x-r"></div>'
+   +'<div class="fgrp v4x-inc"><label>Arrendatario que entra</label><select id="v4x-i">'+'<option value="">—</option>'+(D.inqs||[]).map(i=>'<option value="'+i.id+'">'+v4Esc(i.nom+' '+(i.ap||''))+'</option>').join('')+'</select></div><div class="fgrp v4x-inc"><label>Fin de su causa (C)</label><input type="date" id="v4x-c"></div>'
+   +'<div class="fgrp v4x-sal"><label>Arrendatario que sale</label><select id="v4x-s"><option value="2">Arrendatario 2</option><option value="1">Arrendatario 1</option></select></div>'
+   +'<div class="fgrp fgf"><label>Notas</label><input id="v4x-n"></div></div><div id="v4x-msg"></div>','<button class="btn btn-primary" onclick="v4GuardarCambio(\''+coId+'\')">Registrar</button>');
+  v4CambioCampos();
+}
+function v4CambioCampos(){ const t=gi('v4x-t'); document.querySelectorAll('.v4x-pro,.v4x-hab,.v4x-inc,.v4x-sal').forEach(e=>e.style.display='none'); if(t==='prorroga') document.querySelectorAll('.v4x-pro').forEach(e=>e.style.display=''); if(t==='cambio_hab'||t==='combinado') document.querySelectorAll('.v4x-hab').forEach(e=>e.style.display=''); if(t==='incorporacion'||t==='combinado') document.querySelectorAll('.v4x-inc').forEach(e=>e.style.display=''); if(t==='salida_arr') document.querySelectorAll('.v4x-sal').forEach(e=>e.style.display=''); }
+function v4GuardarCambio(coId){
+  const co=v4Co(coId), t=gi('v4x-t'), f=gi('v4x-f'), E=v4E(co), F=v4F(co); if(!f){ v4Msg('v4x-msg','Indica la fecha.','r'); return; }
+  const pc=v4PuedeCambio(co); if(!pc.ok){ v4Msg('v4x-msg',v4Esc(pc.t),'r'); return; }
+  const x={tipo:t, fecha:f, nota:gi('v4x-n')};
+  if(t==='prorroga'){ const ne=gi('v4x-e'), C=v4C(co); const err=[];
+    if(!ne) err.push('Indica la nueva fecha de fin.'); else { if(ne<=E) err.push('La nueva fecha de fin debe ser posterior a la actual ('+v4F2(E)+').'); if(f>E) err.push('La prórroga tiene que acordarse por escrito antes de la fecha de fin ('+v4F2(E)+').'); if(C&&ne>C) err.push('La prórroga no puede pasar del fin de la causa ('+v4F2(C)+'): la causa tiene que seguir.'); if(ne>v4AddM(F,12)&&!co.causaSubsiste) err.push('Con la prórroga se superan los 12 meses desde la firma ('+v4F2(v4AddM(F,12))+').'); }
+    if(err.length){ v4Msg('v4x-msg',err.join('<br>'),'r'); return; } x.nuevaFin=ne; }
+  if(t==='cambio_hab'||t==='combinado'){ x.habNueva=gi('v4x-h'); x.habAnterior=co.hab; if(!x.habNueva){ v4Msg('v4x-msg','Indica la nueva habitación.','r'); return; } }
+  if(t==='incorporacion'||t==='combinado'){ const ni=gi('v4x-i'), c=gi('v4x-c'); if(!ni||!c){ v4Msg('v4x-msg','Indica quién entra y el fin de su causa.','r'); return; } if(c<E){ v4Msg('v4x-msg','El fin de la causa del que entra no puede ser anterior al fin del contrato ('+v4F2(E)+').','r'); return; } if(co.inqId2){ v4Msg('v4x-msg','El contrato ya tiene dos arrendatarios.','r'); return; } x.inqId=ni; co.inqId2=ni; co.desde2=f; co.cFin2=c; }
+  if(t==='cambio_hab'||t==='incorporacion'||t==='combinado'){ const nr=gn('v4x-r'); if(nr>0) x.nuevaRenta=nr; }
+  if(t==='salida_arr'){ const n=gi('v4x-s'); if(!co.inqId2){ v4Msg('v4x-msg','El contrato solo tiene un arrendatario: para su salida usa el aviso de salida.','r'); return; } x.persona=n; if(n==='2') co.hasta2=f; else co.hasta1=f; }
+  if(t==='cambio_hab'||t==='combinado') co.hab=x.habNueva;
+  co.cambios=[x]; v4ActualizarRentasPendientes(co); v4Guardar(co,(V4_CAMBIO_TXT[t]||'Cambio')+' registrado'); closeM('m-v4');
+}
+
+// ── Comunicación de cambio de datos: alta o baja del wifi (no cuenta como cambio) ──
+function v4Wifi(coId){ const co=v4Co(coId);
+  v4Modal('📶 Alta o baja del wifi (comunicación de datos)','<div class="fg"><div class="fgrp"><label>Arrendatario</label><select id="v4w-p"><option value="1">1 · '+v4Esc((v4Inq(co.inqId)||{}).nom||'')+'</option>'+(co.inqId2?'<option value="2">2 · '+v4Esc((v4Inq(co.inqId2)||{}).nom||'')+'</option>':'')+'</select></div><div class="fgrp"><label>Desde (fecha de efecto)</label><input type="date" id="v4w-f" value="'+v4Hoy()+'"></div><div class="fgrp"><label>Wifi</label><select id="v4w-w"><option value="1">Lo solicita</option><option value="0">Lo da de baja</option></select></div></div><div style="font-size:11px;color:var(--ink3);">Es una comunicación por escrito: no es anexo ni novación. El internet solo se reparte entre quienes lo tengan solicitado.</div>'
+   +((co.wifiCambios||[]).length?'<div style="font-size:11.5px;margin-top:8px;">'+co.wifiCambios.map((w,i)=>'· '+v4F2(w.fecha)+': arrendatario '+w.p+' '+(w.wifi?'lo solicita':'lo da de baja')+' <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.wifiCambios.splice('+i+',1);v4Guardar(co);v4Wifi(\''+coId+'\');})()">✕</button>').join('<br>')+'</div>':''),
+   '<button class="btn btn-primary" onclick="(function(){const co=v4Co(\''+coId+'\');co.wifiCambios=(co.wifiCambios||[]).concat([{p:+gi(\'v4w-p\'),fecha:gi(\'v4w-f\'),wifi:gi(\'v4w-w\')===\'1\'}]);v4Guardar(co,\'Cambio de wifi registrado\');closeM(\'m-v4\');})()">Guardar</button>'); }
+
+// ── Causa: nueva fecha de fin y comunicación de extinción ──
+function v4Causa(coId){ const co=v4Co(coId), e=co.causaExt||{};
+  v4Modal('🎓 Causa de la temporalidad','<div class="fg"><div class="fgrp"><label>Fin de la causa (C) del arrendatario 1</label><input type="date" id="v4k-1" value="'+(co.cFin1||'')+'"></div>'+(co.inqId2?'<div class="fgrp"><label>Fin de la causa (C) del arrendatario 2</label><input type="date" id="v4k-2" value="'+(co.cFin2||'')+'"></div>':'')+'<div class="fgrp fgf"><label>Recepción de la comunicación de extinción por fin de la causa (R)</label><input type="date" id="v4k-r" value="'+(e.R||'')+'"></div></div><div style="font-size:11px;color:var(--ink3);line-height:1.6;">El inquilino debe avisar por escrito en 7 días de cualquier cambio en su causa o su domicilio habitual. Si la causa termina antes, puedes enviar la comunicación de extinción por burofax o email certificado: debe dejar la habitación en R + 30 días.</div>',
+   '<button class="btn btn-primary" onclick="(function(){const co=v4Co(\''+coId+'\');co.cFin1=gi(\'v4k-1\');if($i(\'v4k-2\'))co.cFin2=gi(\'v4k-2\');const r=gi(\'v4k-r\');co.causaExt=r?{R:r}:null;v4ActualizarRentasPendientes(co);v4Guardar(co,\'Causa actualizada\');closeM(\'m-v4\');})()">Guardar</button>'); }
+
+// ── Advertencias por escrito, requerimientos de pago y resolución ──
+const V4_NORMAS=['Ruidos','Limpieza','Visitas','Fumar','Animales','Llaves','Salubridad','Seguridad de las instalaciones','Acceso a la habitación','Otra'];
+function v4Incumplimientos(coId){ const co=v4Co(coId), adv=co.advertencias||[], req=co.requerimientos||[], res=co.resolucion||{};
+  const lista=(arr,f)=>arr.length?arr.map(f).join(''):'<div style="font-size:11px;color:var(--ink3);">Ninguna.</div>';
+  v4Modal('⚠️ Incumplimientos, impagos y resolución',
+   '<div class="form-section">Advertencias por escrito (cláusula «Incumplimiento», apartado h)</div>'+lista(adv,(a,i)=>'<div style="font-size:12px;">'+(i+1)+'. '+v4F2(a.fecha)+' · '+v4Esc(a.norma)+(a.nota?' · '+v4Esc(a.nota):'')+' <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.advertencias.splice('+i+',1);v4Guardar(co);v4Incumplimientos(\''+coId+'\');})()">✕</button></div>')
+   +'<div class="fg" style="margin-top:6px;"><div class="fgrp"><label>Fecha</label><input type="date" id="v4a-f" value="'+v4Hoy()+'"></div><div class="fgrp"><label>Norma incumplida</label><select id="v4a-n">'+V4_NORMAS.map(n=>'<option>'+n+'</option>').join('')+'</select></div><div class="fgrp fgf"><label>Hechos y pruebas</label><input id="v4a-x"></div></div><button class="btn btn-secondary btn-sm" onclick="v4AddAdvertencia(\''+coId+'\')">+ Advertencia</button>'
+   +'<div class="form-section" style="margin-top:14px;">Requerimientos de pago (burofax o email certificado)</div>'+lista(req,(r,i)=>'<div style="font-size:12px;">'+(i+1)+'. Enviado '+v4F2(r.envio)+' · recibido (R) '+(r.R?v4F2(r.R):'<strong>sin acuse</strong>')+(r.importe?' · '+v4E2(r.importe)+' €':'')+(r.pagado?' · ✓ pagado':'')+' <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.requerimientos['+i+'].pagado=!co.requerimientos['+i+'].pagado;v4Guardar(co);v4Incumplimientos(\''+coId+'\');})()">'+(r.pagado?'Desmarcar pagado':'Marcar pagado')+'</button> <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.requerimientos.splice('+i+',1);v4Guardar(co);v4Incumplimientos(\''+coId+'\');})()">✕</button></div>')
+   +'<div class="fg" style="margin-top:6px;"><div class="fgrp"><label>Fecha de envío</label><input type="date" id="v4q-e" value="'+v4Hoy()+'"></div><div class="fgrp"><label>Fecha de recepción (R, del acuse)</label><input type="date" id="v4q-r"></div><div class="fgrp"><label>Deuda reclamada (€)</label><input type="number" step="0.01" id="v4q-i"></div></div><button class="btn btn-secondary btn-sm" onclick="v4AddRequerimiento(\''+coId+'\')">+ Requerimiento</button>'
+   +'<div class="form-section" style="margin-top:14px;">Resolución del contrato</div>'+(res.R?'<div style="font-size:12px;">Comunicada por '+v4Esc(res.motivo||'')+' · recibida (R) el '+v4F2(res.R)+' → debe irse el '+v4F2(fxAdd(res.R,7))+'. <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.resolucion=null;v4Guardar(co);v4Incumplimientos(\''+coId+'\');})()">✕</button></div>':'')
+   +'<div class="fg" style="margin-top:6px;"><div class="fgrp"><label>Motivo</label><select id="v4z-m"><option value="impago">Impago</option><option value="normas">Normas (apartado h)</option><option value="otro">Otro incumplimiento</option></select></div><div class="fgrp"><label>Norma (si es por normas)</label><select id="v4z-n">'+V4_NORMAS.map(n=>'<option>'+n+'</option>').join('')+'</select></div><div class="fgrp"><label>Recepción de la resolución (R)</label><input type="date" id="v4z-r"></div></div><button class="btn btn-secondary btn-sm" onclick="v4AddResolucion(\''+coId+'\')">Registrar resolución</button><div id="v4z-msg"></div>'
+   +'<div style="font-size:10.5px;color:var(--ink3);line-height:1.6;margin-top:10px;">Nunca cambies la cerradura, quites las llaves o cortes suministros para forzar la salida: solo un juez puede desalojar. Ocupación indebida: '+v4E2(v4OcupIndebidaDia(co))+' €/día (renta ÷ 30 × 2).</div>'); }
+function v4AddAdvertencia(coId){ const co=v4Co(coId); co.advertencias=(co.advertencias||[]).concat([{fecha:gi('v4a-f'),norma:gi('v4a-n'),nota:gi('v4a-x')}]); v4Guardar(co,'Advertencia registrada'); v4Incumplimientos(coId); }
+function v4AddRequerimiento(coId){ const co=v4Co(coId); if(!gi('v4q-e')){ toast('Indica la fecha de envío',false); return; } co.requerimientos=(co.requerimientos||[]).concat([{envio:gi('v4q-e'),R:gi('v4q-r'),importe:gn('v4q-i')}]); v4Guardar(co,'Requerimiento registrado'); v4Incumplimientos(coId); }
+function v4AddResolucion(coId){ const co=v4Co(coId), m=gi('v4z-m'), n=gi('v4z-n'), R=gi('v4z-r');
+  if(!R){ v4Msg('v4z-msg','Indica la fecha de recepción de la resolución.','r'); return; }
+  if(m==='normas'){ const nAdv=(co.advertencias||[]).filter(a=>a.norma===n&&a.fecha<=R).length; if(nAdv<2){ v4Msg('v4z-msg','⛔ Para resolver por la norma «'+v4Esc(n)+'» hacen falta 2 advertencias por escrito previas de esa norma (hay '+nAdv+').','r'); return; } }
+  co.resolucion={motivo:m==='normas'?'normas ('+n+')':m, R}; v4Guardar(co,'Resolución registrada'); v4Incumplimientos(coId); }
+
+// ── Entradas del arrendador ──
+function v4Entradas(coId){ const co=v4Co(coId), arr=co.entradas||[];
+  v4Modal('🚪 Entradas en la habitación o en zonas comunes',(arr.length?arr.map((e,i)=>'<div style="font-size:12px;">'+v4F2(e.fecha)+' '+e.hora+'–'+(e.horaFin||'')+' · '+(e.tipo==='comunes'?'zonas comunes':'habitación')+(e.motivo?' · '+v4Esc(e.motivo):'')+(e.avisado?' · ✓ avisado':'')+' <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.entradas['+i+'].avisado=!co.entradas['+i+'].avisado;v4Guardar(co);v4Entradas(\''+coId+'\');})()">'+(e.avisado?'Desmarcar':'Avisado')+'</button> <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.entradas.splice('+i+',1);v4Guardar(co);v4Entradas(\''+coId+'\');})()">✕</button></div>').join(''):'')
+   +'<div class="fg" style="margin-top:8px;"><div class="fgrp"><label>Dónde</label><select id="v4e-t"><option value="hab">Habitación (aviso 24 h, franja máx. 3 h)</option><option value="comunes">Zonas comunes o habitación libre (aviso 12 h)</option></select></div><div class="fgrp"><label>Día</label><input type="date" id="v4e-f"></div><div class="fgrp"><label>Desde</label><input type="time" id="v4e-h" value="10:00"></div><div class="fgrp"><label>Hasta</label><input type="time" id="v4e-hf" value="12:00"></div><div class="fgrp fgf"><label>Motivo</label><input id="v4e-m"></div><div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="v4e-u" style="width:auto;"> Urgencia (sin aviso previo)</label></div></div><div id="v4e-msg"></div>',
+   '<button class="btn btn-primary" onclick="v4AddEntrada(\''+coId+'\')">+ Programar entrada</button>'); }
+function v4AddEntrada(coId){ const co=v4Co(coId), t=gi('v4e-t'), f=gi('v4e-f'), h=gi('v4e-h'), hf=gi('v4e-hf'), u=$i('v4e-u').checked;
+  if(!f||!h||!hf){ v4Msg('v4e-msg','Indica el día y la franja.','r'); return; }
+  if(!u){ const err=[]; if(h<'09:00'||hf>'21:00') err.push('La franja debe estar entre las 9:00 y las 21:00.'); if(hf<=h) err.push('La hora de fin debe ser posterior a la de inicio.');
+    if(t==='hab'){ const dur=(new Date('2000-01-01T'+hf)-new Date('2000-01-01T'+h))/36e5; if(dur>3) err.push('En la habitación, la franja es de 3 horas como máximo.'); }
+    const lim=new Date(new Date(f+'T'+h).getTime()-(t==='comunes'?12:24)*36e5); if(lim<new Date()) err.push('Ya no da tiempo a avisar con '+(t==='comunes'?'12':'24')+' h de antelación (límite: '+v4F2(fxIso(lim))+' '+v4HM(lim)+').');
+    if(err.length){ v4Msg('v4e-msg',err.join('<br>'),'r'); return; } }
+  co.entradas=(co.entradas||[]).concat([{tipo:t,fecha:f,hora:h,horaFin:hf,motivo:gi('v4e-m'),urgente:u,avisado:u}]); v4Guardar(co,'Entrada programada'); v4Entradas(coId); }
+
+// ══ Pagos: generación por contrato (renta proporcional) y vencimiento el último día del mes anterior ══
+function v4ImporteAlquiler(inq,mes){
+  const co=v4CoDeInq(inq.id,mes);
+  if(co&&v4EsTemporal(co)&&v4F(co)){ if(co.inqId!=inq.id) return 0; return v4RentaMes(co,mes); }
+  return parseFloat(inq.alq)||0;
+}
+function v4ActualizarRentasPendientes(co){
+  (D.pagos||[]).filter(p=>p.inqId==co.inqId&&p.con==='Alquiler'&&p.estado!=='pagado'&&(p.notas==='Auto'||p.v4)).forEach(p=>{
+    const imp=v4RentaMes(co,p.mes); if(imp>0) p.imp=imp; else p._borrar=true; });
+  D.pagos=(D.pagos||[]).filter(p=>!p._borrar);
+}
+function generarPagosInquilinoMes(inqId,mes){
+  const inq=D.inqs.find(i=>i.id==inqId); if(!inq) return;
+  const conceptos=[['Alquiler',v4ImporteAlquiler(inq,mes)],['Luz',parseFloat(inq.luz)||0],['Agua',parseFloat(inq.agua)||0]];
+  conceptos.forEach(([con,imp])=>{ if(imp>0&&!D.pagos.find(p=>p.inqId==inqId&&p.mes===mes&&p.con===con)) D.pagos.push({id:uid(),inqId,con,mes,imp,estado:'pendiente',fecha:'',notas:'Auto',v4:con==='Alquiler'}); });
+  saveAndSync();
+}
+function autoGenerarPagosPendientes(){
+  const hoy=new Date(), mesLimite=v4MesSig(fxIso(hoy).slice(0,7)); let gen=0;
+  D.inqs.filter(i=>i.estado==='ACTIVO').forEach(inq=>{
+    const co=v4CoDeInq(inq.id); const ini=(co&&v4F(co))||inq.ini; if(!ini) return;
+    let m=ini.slice(0,7), g=0;
+    while(m<=mesLimite&&g<80){
+      [['Alquiler',v4ImporteAlquiler(inq,m)],['Luz',parseFloat(inq.luz)||0],['Agua',parseFloat(inq.agua)||0]].forEach(([con,imp])=>{
+        if(imp>0&&!D.pagos.find(p=>p.inqId==inq.id&&p.mes===m&&p.con===con)){ D.pagos.push({id:uid(),inqId:inq.id,con,mes:m,imp,estado:'pendiente',fecha:'',notas:'Auto',v4:con==='Alquiler'}); gen++; } });
+      m=v4MesSig(m); g++;
+    }
+  });
+  if(gen>0) saveAndSync();
+  return gen;
+}
+function genPagos(){ const n=autoGenerarPagosPendientes(); rTableroPagos(); toast(n+' cobros pendientes generados'); }
+function toggleCobroConcepto(inqId,mes,con){
+  let p=D.pagos.find(x=>x.inqId==inqId&&x.mes===mes&&x.con===con);
+  if(!p){ const inq=D.inqs.find(i=>i.id==inqId); if(!inq) return; const imp=con==='Alquiler'?v4ImporteAlquiler(inq,mes):con==='Luz'?inq.luz:con==='Agua'?inq.agua:0; p={id:uid(),inqId,con,mes,imp,estado:'pendiente',fecha:'',notas:'Auto'}; D.pagos.push(p); }
+  const hoy=v4Hoy(); if(p.estado==='pagado'){ p.estado='pendiente'; p.fecha=''; } else { p.estado='pagado'; p.fecha=hoy; }
+  saveAndSync(); rTableroPagos();
+}
+// Vencimiento del pago de un mes: último día del mes anterior (contrato v20261021-3), con las excepciones del contrato
+function v4VencInq(inqId,mes){ const co=v4CoDeInq(inqId,mes); if(co&&v4EsTemporal(co)&&v4F(co)){ const v=v4Venc(co,mes); if(v) return v; } return v4FinMes(v4MesSig(mes,-1)); }
+function estadoCobroInquilino(inqId,mes){
+  const pagos=D.pagos.filter(p=>p.inqId==inqId&&p.mes===mes);
+  if(!pagos.length) return {estado:'sin',pagados:[],pendientes:[],total:0,cobrado:0};
+  const cobrado=pagos.filter(p=>p.estado==='pagado'), pend=pagos.filter(p=>p.estado!=='pagado');
+  const totalImp=pagos.reduce((s,p)=>s+parseFloat(p.imp||0),0), cobradoImp=cobrado.reduce((s,p)=>s+parseFloat(p.imp||0),0);
+  const V=v4VencInq(inqId,mes), vencido=v4Hoy()>V;
+  let estado; if(pend.length===0) estado='cobrado'; else if(cobrado.length>0) estado='parcial'; else estado=vencido?'vencido':'pendiente';
+  return {estado,pagados:cobrado.map(p=>p.con),pendientes:pend.map(p=>p.con),total:totalImp,cobrado:cobradoImp,vencido,venc:V};
+}
+// Exigibilidad fiscal de cada pago (art. 14.1.a LIRPF): la del contrato
+function v2ExigIso(mes,cfg,pg){
+  if(pg&&pg.inqId){ const co=v4CoDeInq(pg.inqId,mes); if(co&&v4EsTemporal(co)&&v4F(co)){ const v=v4Venc(co,mes); if(v) return v; } }
+  const [y,m]=mes.split('-').map(Number); const base=cfg.exigMesAnt?new Date(y,m-2,1):new Date(y,m-1,1);
+  const last=new Date(base.getFullYear(),base.getMonth()+1,0).getDate(); base.setDate(Math.min(parseInt(cfg.diaExig)||15,last)); return fxIso(base);
+}
+
+// ── Sincroniza las fichas de inquilino con el contrato ──
+function v4SincronizarInqs(co){
+  if(!v4EsTemporal(co)) return;
+  const F=v4F(co), E=v4E(co), hoy=v4Hoy(), L=co.llaves&&co.llaves.L;
+  [co.inqId,co.inqId2].filter(Boolean).forEach((id,k)=>{ const i=v4Inq(id); if(!i) return;
+    i.propId=co.propId; i.hab=co.hab; i.ini=k===1?(co.desde2||F):F; i.fin=v4FinCobro(co)||E; i.alq=k===0?(v4RentaDia(co,(F&&F>hoy)?F:hoy)||parseFloat(co.r)||0):0; i.fia=k===0?(parseFloat(co.f)||0):0; i.personas=1;
+    const hasta=k===1?co.hasta2:co.hasta1;
+    if(L||(hasta&&hasta<hoy)) i.estado='PASADO'; else if(F&&F>hoy) i.estado='RESERVADO'; else if(i.estado!=='PASADO'||(F<=hoy&&E>=hoy)) i.estado='ACTIVO'; });
+}
+
+// ══ Formulario del contrato ══
+function v4ContReset(){
+  ['co-cfin1','co-cfin2','co-emerg1','co-emerg2','co-bizum','co-inet','co-itpf','co-edit-id','co-anx-data','co-anx-name'].forEach(i=>{ const e=$i(i); if(e) e.value=''; });
+  ['co-wifi1','co-wifi2','co-itp','co-anx-c1','co-anx-d1','co-anx-c2','co-anx-d2'].forEach(i=>{ const e=$i(i); if(e) e.checked=false; });
+  if($i('co-ret')) $i('co-ret').value='100'; if($i('co-prev')) $i('co-prev').value='0';
+  if($i('co-i2')) $i('co-i2').innerHTML='<option value="">— Sin segundo arrendatario —</option>'+(D.inqs||[]).map(i=>'<option value="'+i.id+'">'+v4Esc(i.nom+' '+(i.ap||''))+' ('+i.estado+')</option>').join('');
+  if($i('co-cta')) $i('co-cta').innerHTML='<option value="">— Cuenta del titular —</option>'+(D.ctasBanc||[]).filter(c=>c.tipo!=='tarjeta').map(c=>'<option value="'+c.id+'">'+v4Esc(c.nom+(c.titularId?' · '+nombreC(c.titularId):''))+'</option>').join('');
+  try{ clearPdfZone('co-anx-zone','co-anx-data'); }catch(e){}
+  const h=document.querySelector('#m-co h2'); if(h) h.textContent='📄 Nuevo contrato';
+  if($i('co-val')) $i('co-val').innerHTML='';
+}
+function v4ContRead(){ const ch=i=>!!($i(i)&&$i(i).checked);
+  return {inqId2:gi('co-i2'), cFin1:gi('co-cfin1'), cFin2:gi('co-cfin2'), emerg1:gi('co-emerg1'), emerg2:gi('co-emerg2'), ret:gn('co-ret')||100, wifi1:ch('co-wifi1'), wifi2:ch('co-wifi2'), internetAnual:gn('co-inet'), ctaId:gi('co-cta'), bizum:gi('co-bizum'), itpOk:ch('co-itp'), itpFecha:gi('co-itpf'), prevSeguidos:parseInt(gi('co-prev'))||0, anexoIData:gi('co-anx-data'), anexoIName:gi('co-anx-name'), anexoICausa1:ch('co-anx-c1'), anexoIDom1:ch('co-anx-d1'), anexoICausa2:ch('co-anx-c2'), anexoIDom2:ch('co-anx-d2')}; }
+function v4LeerFormCont(){
+  const id=gi('co-edit-id'), prev=id?v4Co(id):null;
+  const co=Object.assign({}, prev||{}, v2ContRead(), v4ContRead(), {id:id||'', inqId:gi('co-i'), propId:gi('co-prop'), hab:gi('co-hab'), ini:gi('co-ini'), fin:gi('co-fin'), r:gn('co-r'), f:gn('co-f'), g:gn('co-g'), n:gi('co-n')});
+  if(!co.firma) co.firma=co.ini;
+  if(!co.anexoIData&&prev&&prev.anexoIData){ co.anexoIData=prev.anexoIData; co.anexoIName=prev.anexoIName; }
+  if(!co.inqId2){ co.cFin2=''; co.emerg2=''; co.wifi2=false; co.anexoICausa2=false; co.anexoIDom2=false; }
+  return co;
+}
+function v4ValidarFormCont(){
+  const box=$i('co-val'); if(!box) return;
+  const co=v4LeerFormCont(), v=v4ValidarContrato(co);
+  const F=v4F(co), E=v4E(co);
+  const resumen=(F&&E)?'<div style="font-size:11px;color:var(--ink2);margin-bottom:6px;">F '+v4F2(F)+' → E '+v4F2(E)+' · '+v4Diff(F,E)+' días · máximo '+v4F2(v4AddM(F,12))+(v4C(co)?' · fin de la causa '+v4F2(v4C(co)):'')+(F===v4FinMes(F)?' · <strong>firma el último día del mes: el primer pago mensual vence el día 5</strong>':'')+'</div>':'';
+  box.innerHTML=resumen+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ No se puede guardar:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas del contrato temporal.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':'');
+  const tit=v4TitularCobro(co), ti=$i('co-titular'); if(ti) ti.textContent=tit?('Cobra: '+nombreC(tit)+' (titular de las rentas del piso en la fecha de firma)'):'';
+}
+function newCont(){
+  ['co-ini','co-fin','co-r','co-f','co-g','co-n','co-hab'].forEach(id=>{ const e=$i(id); if(e) e.value=''; });
+  const s=$i('co-i'); if(s) s.value=''; const p=$i('co-prop'); if(p) p.value='';
+  clearPdfZone('co-pdf-zone','co-pdf-data'); _fotosContrato={entrada:[],salida:[]}; pintarFotosContrato();
+  v2ContReset(); openM('m-co'); v4ContReset(); v4ValidarFormCont();
+}
+function editCont(id){
+  const co=v4Co(id); if(!co) return; openM('m-co'); v2ContReset(); v4ContReset();
+  const s=(i,v)=>{ const e=$i(i); if(e) e.value=(v===undefined||v===null)?'':v; }, ch=(i,v)=>{ const e=$i(i); if(e) e.checked=!!v; };
+  s('co-edit-id',co.id); s('co-i',co.inqId); s('co-i2',co.inqId2); s('co-prop',co.propId); s('co-hab',co.hab); s('co-ini',co.ini||co.firma); s('co-fin',co.fin); s('co-r',co.r); s('co-f',co.f); s('co-g',co.g); s('co-n',co.n);
+  s('co-tipo',co.tipoContrato||'temporal'); s('co-firma',co.firma); s('co-causa',co.causa); s('co-vivhab',co.vivHab); s('co-rant',co.rentaAnt);
+  ch('co-primer',co.primer); ch('co-indice',co.rentaInfIndice); ch('co-pj',co.arrPJ); ch('co-entero',co.pisoEntero); ch('co-tacita',co.prorrogaTacita); ch('co-subsiste',co.causaSubsiste);
+  s('co-cfin1',co.cFin1); s('co-cfin2',co.cFin2); s('co-emerg1',co.emerg1); s('co-emerg2',co.emerg2); s('co-ret',co.ret||100); ch('co-wifi1',co.wifi1); ch('co-wifi2',co.wifi2); s('co-inet',co.internetAnual); s('co-cta',co.ctaId); s('co-bizum',co.bizum); ch('co-itp',co.itpOk); s('co-itpf',co.itpFecha); s('co-prev',co.prevSeguidos||0);
+  ch('co-anx-c1',co.anexoICausa1); ch('co-anx-d1',co.anexoIDom1); ch('co-anx-c2',co.anexoICausa2); ch('co-anx-d2',co.anexoIDom2);
+  if(co.anexoIData){ s('co-anx-data',co.anexoIData); s('co-anx-name',co.anexoIName); const z=$i('co-anx-zone'); if(z){ z.classList.add('has-file'); const l=z.querySelector('.pdf-upload-label'); if(l) l.textContent='✓ '+(co.anexoIName||'Anexo I adjunto'); } }
+  _fotosContrato={entrada:[...(co.fotosEntrada||[])],salida:[...(co.fotosSalida||[])]}; pintarFotosContrato();
+  const h=document.querySelector('#m-co h2'); if(h) h.textContent='📄 Editar contrato';
+  v4ValidarFormCont();
+}
+function addCont(){
+  const co=v4LeerFormCont(); if(!co.inqId){ toast('Selecciona el arrendatario',false); return; }
+  const v=v4ValidarContrato(co);
+  if(!v.ok){ v4ValidarFormCont(); const b=$i('co-val'); if(b&&b.scrollIntoView) b.scrollIntoView({behavior:'smooth',block:'center'}); toast('No se puede guardar: revisa las reglas en rojo',false); return; }
+  if(!v4EsTemporal(co)){ const prob=v2ChequeoTemporal(co,co.id).filter(x=>x.n==='error'); if(prob.length&&!confirm('⚠️ Problemas legales del contrato:\n\n• '+prob.map(x=>x.t).join('\n• ')+'\n\n¿Guardarlo igualmente?')) return; }
+  const pdfData=$i('co-pdf-data')?.value||'', pdfName=$i('co-pdf-name')?.value||'';
+  co.fotosEntrada=[..._fotosContrato.entrada]; co.fotosSalida=[..._fotosContrato.salida];
+  if(pdfData){ co.pdfData=pdfData; co.pdfName=pdfName; }
+  if(v4EsTemporal(co)) co.v4=true;
+  let msg='Contrato guardado';
+  if(co.inqId2&&co.propId&&co.hab){ const pr=(D.props||[]).find(p=>p.id==co.propId); if(pr){ const cf=Object.assign({tipo:'individual',plazas:1,precio:0},(pr.habsConfig||{})[co.hab]||{}); if(cf.tipo!=='doble'){ pr.habsConfig=Object.assign({},pr.habsConfig||{}); cf.tipo='doble'; cf.plazas=2; pr.habsConfig[co.hab]=cf; msg+=' · hab. '+co.hab+' marcada como doble'; } } }
+  if(co.id){ const i=D.conts.findIndex(x=>x.id===co.id); if(i>=0) D.conts[i]=co; msg=msg.replace('Contrato guardado','Contrato actualizado'); } else { co.id=uid(); D.conts.push(co); }
+  v4SincronizarInqs(co); v4ActualizarRentasPendientes(co); autoGenerarPagosPendientes();
+  saveAndSync(); closeM('m-co'); clearPdfZone('co-pdf-zone','co-pdf-data'); rConts(); v4RefrescarAvisos(); toast(msg);
+}
+function v4FinIgualCausa(){ const c=[gi('co-cfin1'),gi('co-i2')?gi('co-cfin2'):''].filter(Boolean).sort()[0]; if(!c){ toast('Indica primero el fin de la causa',false); return; } const F=gi('co-ini'); let e=c; if(F&&e>v4AddM(F,12)) e=v4AddM(F,12); $i('co-fin').value=e; v4ValidarFormCont(); }
+function v4Fin12m(){ const F=gi('co-ini'); if(!F){ toast('Pon primero la fecha de firma',false); return; } let e=v4AddM(F,12); const c=[gi('co-cfin1'),gi('co-i2')?gi('co-cfin2'):''].filter(Boolean).sort()[0]; if(c&&c<e) e=c; $i('co-fin').value=e; v4ValidarFormCont(); }
+
+// ══ Lista de contratos ══
+function rConts(){
+  const div=$i('co-list'), fil=gi('cof'), propF=gi('co-prop-f'), q=gi('co-q').toLowerCase(), hoy=v4Hoy(); if(!div) return;
+  let list=(D.conts||[]).slice().sort((a,b)=>(v4E(a)||'9').localeCompare(v4E(b)||'9'));
+  if(fil==='vigente') list=list.filter(c=>!v4E(c)||v4E(c)>=hoy);
+  if(fil==='vence30') list=list.filter(c=>v4E(c)&&v4E(c)>=hoy&&v4Diff(hoy,v4E(c))<=30);
+  if(fil==='exp') list=list.filter(c=>v4E(c)&&v4E(c)<hoy);
+  if(propF) list=list.filter(c=>c.propId==propF);
+  if(q) list=list.filter(c=>v4NombresCompletos(c).toLowerCase().includes(q));
+  if(!list.length){ div.innerHTML='<div class="empty"><div class="empty-icon">📄</div><p>Sin contratos</p></div>'; return; }
+  const al=v4Alertas(hoy);
+  div.innerHTML=list.map(c=>{
+    const pr=v4Prop(c), F=v4F(c), E=v4E(c), ds=E?v4Diff(hoy,E):null, L=c.llaves&&c.llaves.L;
+    const es=L?'<span class="badge badge-b">Finalizado</span>':ds===null?'<span class="badge badge-b">Sin fin</span>':ds<0?'<span class="badge badge-r">Terminado sin entrega de llaves</span>':ds===0?'<span class="badge badge-r">Termina HOY</span>':ds<=30?'<span class="badge badge-y">Termina en '+ds+' días</span>':'<span class="badge badge-g">Vigente</span>';
+    const mios=al.filter(a=>a.coId===c.id&&a.visible), venc=mios.filter(a=>a.fecha<hoy&&a.nivel!=='info').length, hoyN=mios.filter(a=>a.fecha===hoy).length;
+    const pc=v4PuedeCambio(c), sv=v4SalidaValida(c), C=v4C(c);
+    return '<div class="card mb"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;"><div style="min-width:0;flex:1;">'
+     +'<div style="font-family:\'Syne\',sans-serif;font-size:14px;font-weight:700;">'+v4Esc(v4NombresCompletos(c))+' '+es+(venc?' <span class="badge badge-r">🔔 '+venc+' vencido'+(venc>1?'s':'')+'</span>':'')+(hoyN?' <span class="badge badge-y">🔔 '+hoyN+' hoy</span>':'')+'</div>'
+     +'<div style="font-size:11px;color:var(--ink3);margin-top:4px;">F '+v4F2(F)+' → E '+v4F2(E)+(C?' · causa hasta '+v4F2(C):'')+' · '+v4E2(c.r)+' €/mes · fianza '+v4E2(c.f)+' €'+(c.g?' · garantía '+v4E2(c.g)+' €':'')+'</div>'
+     +(sv&&sv.anticipada?'<div style="font-size:11px;color:var(--ye);margin-top:3px;">🚪 Aviso de salida: se va el '+v4F2(sv.S)+(sv.ok?'':' · se cobra hasta el '+v4F2(sv.valida))+'</div>':'')
+     +'<div style="margin-top:6px;max-width:620px;">'+v4HtmlPasoCo(c)+'</div>'
+     +'<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;"><span class="badge badge-b">🏢 '+v4Esc(pr?pr.nom:'Piso sin asignar')+'</span><span class="badge badge-p">🚪 Hab. '+v4Esc(v4Hab(c))+(c.inqId2?' · doble':'')+'</span>'
+     +(v4EsTemporal(c)?('<span class="badge '+(c.itpOk?'badge-g':'badge-y')+'">ITP '+(c.itpOk?'✓':'pendiente')+'</span><span class="badge badge-b">📶 '+((c.wifi1||c.wifi2)?'wifi':'sin wifi')+'</span><span class="badge '+(pc.ok?'badge-g':'badge-r')+'" title="'+v4Esc(pc.t)+'">'+(pc.ok?'Admite 1 prórroga o anexo':'Sin prórroga ni anexo')+'</span>'):'')
+     +(c.anexoIData?'<button class="pdf-badge green" onclick="openPdf(\''+c.anexoIData+'\',\''+v4Esc(c.anexoIName||'anexo_I.pdf')+'\')">📎 Anexo I</button>':'')
+     +((c.fotosEntrada&&c.fotosEntrada.length)?'<button class="pdf-badge green" onclick="event.stopPropagation();verFotosContrato(\''+c.id+'\',\'entrada\')">📸 Entrada ('+c.fotosEntrada.length+')</button>':'')+'</div></div>'
+     +'<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-primary btn-sm" onclick="v4Gestionar(\''+c.id+'\')">⚙️ Gestionar</button><button class="btn btn-ghost btn-sm" onclick="editCont(\''+c.id+'\')">✏️ Editar</button>'
+     +(c.pdfData?'<button class="pdf-badge green" onclick="openPdf(\''+c.pdfData+'\',\''+v4Esc(c.pdfName||'contrato.pdf')+'\')">📄 Firmado</button>':'')
+     +'<button class="btn btn-danger btn-xs" onclick="delCont(\''+c.id+'\')">🗑</button></div></div></div>';
+  }).join('');
+}
+function delCont(id){ if(!confirm('¿Eliminar el contrato? Se perderán sus avisos y registros (pagos mensuales, llaves, anexos…).')) return; D.conts=D.conts.filter(c=>c.id!==id); saveAndSync(); rConts(); v4RefrescarAvisos(); toast('Eliminado'); }
+
+// ══ Ficha de gestión del contrato ══
+function v4Gestionar(coId){
+  const co=v4Co(coId); if(!co) return; const hoy=v4Hoy(), F=v4F(co), E=v4E(co), C=v4C(co), fin=v4FinCobro(co), sv=v4SalidaValida(co), pc=v4PuedeCambio(co), ps=v4PuedeSeguido(co), dc=v4DatosCobro(co);
+  const al=v4Alertas(hoy).filter(a=>a.coId===co.id), pend=al.filter(a=>!a.hecho&&!(a.caduca&&a.caduca<hoy)), hechos=al.filter(a=>a.hecho);
+  const fila=(k,v)=>'<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--line);"><span style="color:var(--ink3);">'+k+'</span><span style="text-align:right;">'+v+'</span></div>';
+  const btn=(t,f)=>'<button class="btn btn-secondary btn-sm" onclick="'+f+'">'+t+'</button>';
+  $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">⚙️ '+v4Esc(v4Lugar(co))+'</div><div style="font-size:12px;color:var(--ink3);margin-top:3px;">'+v4Esc(v4NombresCompletos(co))+'</div></div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'
+   +'<div style="margin-bottom:10px;">'+v4HtmlPasoCo(co)+'</div>'
+   +'<div class="card" style="padding:12px;margin-bottom:12px;">'
+   +fila('Firma (F)',v4F2(F))+fila('Fin del contrato (E)',v4F2(E)+(v4Prorroga(co)?' (prorrogado)':''))+fila('Fin de la causa (C)',C?v4F2(C):'—')+fila('Se cobra hasta',v4F2(fin))
+   +fila('Renta · fianza · garantía',v4E2(co.r)+' € · '+v4E2(co.f)+' € · '+v4E2(co.g)+' €')+fila('Retención a la salida',v4E2((parseFloat(co.ret)||100)*v4NumPersonas(co,fin))+' € ('+v4E2(parseFloat(co.ret)||100)+' €/persona)')
+   +fila('Cobra',v4Esc(dc.titular)+' · '+v4Esc(dc.iban)+(co.bizum?' · Bizum '+v4Esc(co.bizum):''))+fila('Wifi',(co.wifi1?'Arr. 1 sí':'Arr. 1 no')+(co.inqId2?(co.wifi2?' · arr. 2 sí':' · arr. 2 no'):'')+((co.wifiCambios||[]).length?' · '+co.wifiCambios.length+' cambio(s)':'')+(parseFloat(co.internetAnual)>0?' · tope anual '+v4E2(co.internetAnual)+' €':''))
+   +fila('ITP',co.itpOk?'✓ recibido el '+v4F2(co.itpFecha):'<span style="color:var(--rd);">pendiente</span>')+fila('Prórroga o anexo',(co.cambios||[]).length?v4Esc(V4_CAMBIO_TXT[co.cambios[0].tipo])+' ('+v4F2(co.cambios[0].fecha)+')':(pc.ok?'Admite uno':'<span style="color:var(--rd);">No admite</span>'))
+   +fila('Otro contrato seguido',ps.ok?'Solo uno más, sin cambios':'<span style="color:var(--rd);">No se puede</span>')
+   +(sv&&sv.anticipada?fila('Aviso de salida','Aviso '+v4F2(sv.A)+' · salida '+v4F2(sv.S)+(sv.ok?'':' · cobro hasta '+v4F2(sv.valida))):'')
+   +(co.llaves&&co.llaves.L?fila('Entrega de llaves',v4F2(co.llaves.L)+(co.llaves.anexoII?' · Anexo II ✓':'')):'')
+   +fila('Ocupación indebida',v4E2(v4OcupIndebidaDia(co))+' €/día'+(()=>{ const o=v4OcupIndebida(co,hoy); if(!o) return ''; return '<br><span style="color:var(--rd);">'+o.diasTotal+' día'+(o.diasTotal===1?'':'s')+' desde el '+v4F2(fxAdd(o.fin,1))+' = '+v4E2(o.totalDesdeFin)+' €</span>'+(o.dias?' <button class="btn btn-danger btn-xs" onclick="v4AnotarOcupacion(\''+co.id+'\')">Anotar '+o.dias+' día'+(o.dias===1?'':'s')+' ('+v4E2(o.total)+' €)</button>':' (anotado hasta el '+v4F2(co.ocupHasta)+')'); })())+'</div>'
+   +'<div class="form-section">Registrar</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
+   +btn('💶 Pago mensual','v4AbrirCiclo(\''+co.id+'\')')+btn('🧾 ITP recibido','v4ITP(\''+co.id+'\')')+btn('🚪 Aviso de salida','v4AvisoSalida(\''+co.id+'\')')+btn('🔑 Entrega de llaves','v4Llaves(\''+co.id+'\')')
+   +btn('💶 Retención','v4Retencion(\''+co.id+'\')')+btn('🔁 Prórroga o anexo','v4Cambio(\''+co.id+'\')')+btn('📶 Wifi','v4Wifi(\''+co.id+'\')')+btn('🎓 Causa','v4Causa(\''+co.id+'\')')
+   +btn('⚠️ Incumplimientos e impagos','v4Incumplimientos(\''+co.id+'\')')+btn('🚪 Entradas','v4Entradas(\''+co.id+'\')')+btn('➕ Penalizaciones','v4Penalizacion(\''+co.id+'\')')+btn('✏️ Editar contrato','closeDrw();editCont(\''+co.id+'\')')+'</div>'
+   +'<div class="form-section">Plantillas</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
+   +[['3','Fin de contrato'],['8','Aviso de salida'],['2','Liquidación (email)'],['12','Liquidación (WhatsApp)'],['11','Retención (email)'],['5','Retención (WhatsApp)'],['anexo2','Anexo II'],['req','Requerimiento']].map(([t,n])=>'<button class="btn btn-ghost btn-sm" onclick="v4VerPlantilla(\''+t+'\',\''+co.id+'\')">📋 '+n+'</button>').join('')+'</div>'
+   +'<div class="form-section">Avisos pendientes ('+pend.length+')</div>'+(pend.length?pend.map(a=>v4HtmlAviso(a,hoy)).join(''):'<div style="font-size:12px;color:var(--ink3);">Nada pendiente.</div>')
+   +(hechos.length?'<details style="margin-top:10px;"><summary style="font-size:12px;cursor:pointer;color:var(--ink3);">Hechos ('+hechos.length+')</summary>'+hechos.map(a=>v4HtmlAviso(a,hoy)).join('')+'</details>':'');
+  $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
+}
+
+// ══ Avisos: tarjetas, sección, ventana al abrir y notificaciones ══
+function v4BadgeDias(a,hoy){ const d=v4Diff(hoy,a.fecha); if(a.hecho) return '<span class="badge badge-g">✓ Hecho</span>'; if(d===0) return '<span class="badge badge-r">HOY</span>'; if(d<0) return '<span class="badge badge-r">Hace '+(-d)+' día'+(d===-1?'':'s')+'</span>'; if(d===1) return '<span class="badge badge-y">Mañana</span>'; return '<span class="badge badge-y">Faltan '+d+' días</span>'; }
+function v4HtmlAviso(a,hoy){
+  const ref=a.incId?('inc:'+a.incId):a.visId?('vis:'+a.visId):a.coId, col=a.nivel==='urgente'?'var(--rd)':a.nivel==='alto'?'var(--acc)':a.nivel==='info'?'var(--bl)':'var(--ye)';
+  const tpls=(a.tpl||[]).map(t=>'<button class="btn btn-ghost btn-xs" onclick="v4VerPlantilla(\''+t+'\',\''+(a.coId||'')+'\',\''+(a.visId||a.mes||'')+'\')">📋 '+(t==='req'?'Requerimiento':t==='anexo2'?'Anexo II':t==='visHab'?'Aviso de visita':t==='visCom'?'Aviso zonas comunes':'Plantilla '+t)+'</button>').join('');
+  const acc=a.coId&&String(a.k).startsWith('pm:')?'<button class="btn btn-ghost btn-xs" onclick="v4AbrirCiclo(\''+a.coId+'\',\''+a.mes+'\')">💶 Pago</button>':'';
+  return '<div style="border-left:3px solid '+col+';background:var(--card);border-radius:8px;padding:9px 11px;margin:6px 0;box-shadow:0 1px 0 var(--line);">'
+   +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;"><div style="font-size:12.5px;font-weight:700;line-height:1.35;min-width:0;flex:1;">'+v4Esc(a.titulo)+'</div><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'+v4BadgeDias(a,hoy)+'<span class="badge badge-b">'+v4Esc(a.tipo)+'</span></div></div>'
+   +'<div style="font-size:11.5px;color:var(--ink2);line-height:1.55;margin-top:4px;">'+v4Esc(a.det)+'</div>'
+   +'<div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">'+v4F2(a.fecha)+(a.desde&&a.desde<a.fecha?' · desde el '+v4F2(a.desde):'')+(a.hecho&&a.hechoEl?' · hecho el '+v4F2(String(a.hechoEl).slice(0,10)):'')+(a.auto?' · completado con los datos':'')+'</div>'
+   +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">'+(a.auto?'':'<button class="btn '+(a.hecho?'btn-ghost':'btn-success')+' btn-xs" onclick="v4MarcarHecho(\''+ref+'\',\''+a.k+'\','+(a.hecho?'false':'true')+')">'+(a.hecho?'↩ Deshacer':'✓ Hecho')+'</button>')+tpls+acc+(a.coId?'<button class="btn btn-ghost btn-xs" onclick="v4Gestionar(\''+a.coId+'\')">⚙️ Contrato</button>':'')+(a.incId?'<button class="btn btn-ghost btn-xs" onclick="document.querySelector(\'.nav-item[data-s=incs]\').click()">🔧 Incidencias</button>':'')+(a.visId?'<button class="btn btn-ghost btn-xs" onclick="closeM(\'m-v4av\');v4IrA(\'visitas\')">📅 Visitas</button>':'')+'</div></div>';
+}
+function rAvisos(){
+  const box=$i('av-list'); if(!box) return; const hoy=v4Hoy(), g=v4Grupos(hoy), pf=gi('av-prop'), tf=gi('av-tipo');
+  const f=arr=>arr.filter(a=>(!pf||a.propId==pf)&&(!tf||(tf==='obl'?/Obligatorio|Urgente/.test(a.tipo):tf==='urg'?a.nivel==='urgente':true)));
+  const sec=(t,arr,vacio)=>'<div class="card mb"><div class="card-title">'+t+' ('+arr.length+')</div>'+(arr.length?arr.map(a=>v4HtmlAviso(a,hoy)).join(''):'<div style="font-size:12px;color:var(--ink3);">'+vacio+'</div>')+'</div>';
+  const mas=f(g.todas.filter(a=>!a.hecho&&a.fecha>fxAdd(hoy,10))).slice(0,60);
+  box.innerHTML=sec('🔴 Vencidos sin hacer',f(g.vencidos),'Nada vencido.')+sec('📌 Hoy',f(g.hoy),'Nada para hoy.')+sec('⏳ Próximos 10 días',f(g.proximos),'Nada en los próximos 10 días.')
+   +'<details class="card mb"><summary class="card-title" style="cursor:pointer;">🗓 Más adelante ('+mas.length+')</summary>'+mas.map(a=>v4HtmlAviso(a,hoy)).join('')+'</details>'
+   +'<details class="card mb"><summary class="card-title" style="cursor:pointer;">✓ Hechos ('+f(g.hechos).length+')</summary>'+f(g.hechos).slice(0,80).map(a=>v4HtmlAviso(a,hoy)).join('')+'</details>';
+  const n=$i('av-notif'); if(n) n.innerHTML=('Notification' in window)?(Notification.permission==='granted'?'🔔 Notificaciones del navegador activadas':'<button class="btn btn-secondary btn-sm" onclick="v4PedirNotif()">🔔 Activar notificaciones del navegador</button>'):'';
+}
+function v4PedirNotif(){ if(!('Notification' in window)) return; Notification.requestPermission().then(()=>{ rAvisos(); v4Notificar(true); }); }
+function v4Contador(){ const g=v4Grupos(); return {venc:g.vencidos.length, hoy:g.hoy.length, prox:g.proximos.length, g}; }
+function v4PintarBadge(){ const c=v4Contador(), n=c.venc+c.hoy, b=$i('av-badge'); if(b){ b.textContent=n; b.style.display=n?'':'none'; } return c; }
+function v4RefrescarAvisos(){
+  try{ v4InvalidarCaches(); }catch(e){}
+  try{ v4PintarBadge(); }catch(e){}
+  try{ const a=document.querySelector('.nav-item.on'); const s=a?a.dataset.s:''; if(s==='avisos') rAvisos(); if(s==='contratos') rConts(); if(s==='dash'){ v4WidgetDash(); if(typeof rCartera==='function') rCartera(); } if(s==='habs') rHabs(); if(s==='activos') rActivos(); }catch(e){}
+  try{ if($i('drawer').classList.contains('open')&&$i('drw-c').innerHTML.includes('⚙️ ')){ const m=$i('drw-c').innerHTML.match(/v4AbrirCiclo\('([^']+)'\)/); if(m) v4Gestionar(m[1]); } }catch(e){}
+}
+function v4WidgetDash(){
+  const box=$i('dash-avisos'); if(!box) return; const hoy=v4Hoy(), c=v4Contador(), top=c.g.vencidos.concat(c.g.hoy).concat(c.g.proximos).slice(0,6);
+  box.innerHTML='<div class="card mb"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><div class="card-title" style="margin:0;">🔔 Avisos de contratos</div><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="badge badge-r">'+c.venc+' vencidos</span><span class="badge badge-y">'+c.hoy+' hoy</span><span class="badge badge-b">'+c.prox+' próximos 10 días</span><button class="btn btn-primary btn-xs" onclick="document.querySelector(\'.nav-item[data-s=avisos]\').click()">Ver todos</button></div></div>'
+   +(top.length?top.map(a=>v4HtmlAviso(a,hoy)).join(''):'<div style="font-size:12px;color:var(--ink3);margin-top:8px;">Todo al día.</div>')+v4HtmlPasosHabs()+'</div>';
+}
+// Ventana de avisos al abrir la aplicación
+function v4VentanaAvisos(forzar){
+  const hoy=v4Hoy();
+  try{ if(!forzar&&sessionStorage.getItem('rc_v4_avisos')===hoy) return; }catch(e){}
+  if(!forzar&&$i('m-v4av')&&$i('m-v4av').classList.contains('open')) return;
+  const g=v4Grupos(hoy), lista=g.vencidos.concat(g.hoy), prox=g.proximos;
+  if(!forzar&&!lista.length&&!prox.filter(a=>a.dias<=3).length) return;
+  try{ sessionStorage.setItem('rc_v4_avisos',hoy); }catch(e){}
+  $i('m-v4av-c').innerHTML='<h2>🔔 Avisos de hoy · '+v4FL(hoy)+'</h2>'
+   +(lista.length?lista.map(a=>v4HtmlAviso(a,hoy)).join(''):'<div style="font-size:12px;color:var(--ink3);">Nada vencido ni para hoy.</div>')
+   +(prox.length?'<div class="form-section" style="margin-top:12px;">Próximos días</div>'+prox.slice(0,12).map(a=>v4HtmlAviso(a,hoy)).join(''):'')
+   +'<div class="modal-footer"><button class="btn btn-ghost" onclick="closeM(\'m-v4av\')">Cerrar</button><button class="btn btn-primary" onclick="closeM(\'m-v4av\');document.querySelector(\'.nav-item[data-s=avisos]\').click()">Ver todos los avisos</button></div>';
+  $i('m-v4av').classList.add('open');
+  v4Notificar(false);
+}
+// Notificación del navegador (una vez al día por aviso)
+function v4Notificar(prueba){
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  const hoy=v4Hoy(), g=v4Grupos(hoy), arr=g.vencidos.concat(g.hoy); let vistos={};
+  try{ vistos=JSON.parse(localStorage.getItem('rc_v4_notif')||'{}'); }catch(e){}
+  const clave=a=>(a.visId||a.coId||a.incId)+'|'+a.k;
+  const nuevos=arr.filter(a=>vistos[clave(a)]!==hoy);
+  if(!nuevos.length&&!prueba) return;
+  v4MostrarNotif(nuevos.length?('RentaControl: '+nuevos.length+' aviso'+(nuevos.length>1?'s':'')+' para hoy'):'RentaControl: avisos activados',{body:nuevos.length?nuevos.slice(0,4).map(a=>'• '+a.titulo).join('\n')+(nuevos.length>4?'\n…y '+(nuevos.length-4)+' más':''):'Te avisaré de los plazos de los contratos.',tag:'rc-v4-'+hoy,icon:'icon-192.png',badge:'icon-192.png',data:{url:location.href.split('#')[0]}});
+  nuevos.forEach(a=>{ vistos[clave(a)]=hoy; });
+  try{ localStorage.setItem('rc_v4_notif',JSON.stringify(vistos)); }catch(e){}
+}
+
+// ── Visor de plantillas rellenadas ──
+function v4VerPlantilla(tpl,coId,mes){
+  if(String(tpl).startsWith('vis')) return v4VerPlantillaVisita(tpl,mes);
+  const co=v4Co(coId); if(!co){ toast('Contrato no encontrado',false); return; }
+  if(['1','10','7','4'].includes(String(tpl))&&!mes){ const hoy=v4Hoy(); mes=v4MesesCobro(co).find(m=>m!==v4F(co).slice(0,7)&&!v4Pagado(co,m))||v4MesSig(hoy.slice(0,7)); }
+  const r=v4Plantilla(tpl,co,{mes}), i1=v4Inq(co.inqId)||{}, tel=String(i1.wa||i1.tel||'').replace(/\D/g,''), emails=v4InqsCo(co).map(i=>i.email).filter(Boolean).join(',');
+  $i('m-v4tpl-c').innerHTML='<h2>📋 '+v4Esc(r.t)+'</h2><div style="font-size:11.5px;color:var(--ink3);margin-bottom:6px;">'+v4Esc(v4Lugar(co))+' · '+v4Esc(v4NombresCompletos(co))+'. Revisa el texto y completa lo que esté entre corchetes antes de enviarlo.</div>'
+   +(r.asunto?'<div class="fgrp"><label>Asunto</label><input id="v4t-asunto" value="'+v4Esc(r.asunto)+'"></div>':'')
+   +'<textarea id="v4t-txt" rows="16" style="width:100%;font-size:12px;line-height:1.5;font-family:inherit;padding:10px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);">'+v4Esc(r.texto)+'</textarea>'
+   +'<div class="modal-footer"><button class="btn btn-ghost" onclick="closeM(\'m-v4tpl\')">Cerrar</button><button class="btn btn-secondary" onclick="v4CopiarTpl()">📋 Copiar</button>'
+   +(r.canal==='wa'&&tel?'<button class="btn btn-success" onclick="window.open(\'https://wa.me/'+(tel.length===9?'34'+tel:tel)+'?text=\'+encodeURIComponent($i(\'v4t-txt\').value),\'_blank\')">💬 WhatsApp</button>':'')
+   +(r.canal==='email'?'<button class="btn btn-primary" onclick="window.open(\'mailto:'+encodeURIComponent(emails)+'?subject=\'+encodeURIComponent(($i(\'v4t-asunto\')||{}).value||\'\')+\'&body=\'+encodeURIComponent($i(\'v4t-txt\').value))">📧 Email</button>':'')+'</div>';
+  $i('m-v4tpl').classList.add('open');
+}
+function v4CopiarTpl(){ const t=(($i('v4t-asunto')||{}).value?'Asunto: '+$i('v4t-asunto').value+'\n\n':'')+$i('v4t-txt').value; try{ navigator.clipboard.writeText(t).then(()=>toast('Copiado')); }catch(e){ $i('v4t-txt').select(); document.execCommand('copy'); toast('Copiado'); } }
+
+// ══ Reparto de suministros (pantalla) ══
+function calcularReparto(){
+  const propId=gi('rp-prop'), fIni=gi('rp-ini'), fFin=gi('rp-fin'), imp=gn('rp-imp'), con=$i('rp-con')?$i('rp-con').value:'Luz', box=$i('rp-resultado'); if(!box) return;
+  if(!propId||!fIni||!fFin||!imp){ box.innerHTML='<div style="font-size:11.5px;color:var(--ink3);padding:12px;background:var(--bg);border-radius:var(--r2);">Rellena piso, fechas de la factura e importe para ver el reparto.</div>'; window._ultimoReparto=null; return; }
+  const r=v4Reparto(propId,con,fIni,fFin,imp); if(!r){ box.innerHTML='<div style="color:var(--rd);font-size:12px;">Las fechas no son válidas.</div>'; return; }
+  window._ultimoReparto=r;
+  const filas=r.habs.map(h=>'<tr><td style="font-weight:600;">Hab. '+v4Esc(h.hab)+'</td><td style="font-size:11px;color:var(--ink3);">'+(h.personas.map(p=>{ const i=v4Inq(p.inqId); return v4Esc((i?i.nom:'')+' · '+p.pd+' p-día')+(p.topado?' · <span style="color:var(--ye);">tope 1.200 €/año</span>':''); }).join('<br>')||'sin personas')+'</td><td class="mono" style="text-align:right;">'+h.pd+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--acc);">'+v4E2(h.importe)+' €</td></tr>').join('');
+  box.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Habitación</th><th>Personas</th><th class="n">'+(r.tipo==='Internet'?'P-día con wifi':'Personas-día')+'</th><th class="n">A pagar</th></tr></thead><tbody>'+filas
+   +'<tr style="background:var(--ye-l);"><td colspan="2">🏠 Arrendador'+(r.landlord.pd?' · '+r.landlord.pd+' '+(r.tipo==='Internet'?'días sin nadie con wifi':'días con el piso vacío'):'')+(r.landlord.exInet>0?' · exceso sobre el tope anual de internet '+v4E2(r.landlord.exInet)+' €':'')+(r.landlord.exTope>0?' · exceso del tope de 1.200 € '+v4E2(r.landlord.exTope)+' €':'')+'</td><td class="mono" style="text-align:right;">'+r.landlord.pd+'</td><td class="mono" style="text-align:right;font-weight:700;color:var(--ye);">'+v4E2(r.landlord.importe)+' €</td></tr>'
+   +'<tr style="font-weight:700;background:var(--bg2);"><td colspan="2">TOTAL FACTURA</td><td class="mono" style="text-align:right;">'+r.totalPD+'</td><td class="mono" style="text-align:right;">'+v4E2(r.suma)+' €</td></tr></tbody></table></div>'
+   +'<div class="alert '+(r.cuadra?'alert-g':'alert-r')+'" style="font-size:11.5px;margin-top:8px;">'+(r.cuadra?'✓ Comprobado: lo que paga cada habitación más la parte del arrendador suma exactamente '+v4E2(r.importe)+' €.':'⛔ La suma no cuadra con la factura.')+'</div>'
+   +'<div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-top:6px;">'+v4Esc(r.linPD)+(r.tipo==='Internet'?(r.internetAnual&&r.internetAnual.anual>0?' · Tope: '+v4E2(r.internetAnual.anual)+' €/año × '+r.dias+'/365 = '+v4E2(r.base)+' €'+(r.internetAnual.distintos?' (hay contratos con importes anuales distintos: se aplica el menor)':''):' · ⚠️ Falta el importe anual de internet en los contratos: no se puede aplicar el tope.'):'')+'</div>';
+}
+function generarCobrosReparto(){
+  const r=window._ultimoReparto; if(!r){ toast('No hay reparto que generar',false); return; }
+  const mes=gi('rp-mes')||v4Hoy().slice(0,7), facKey=r.propId+'|'+r.tipo+'|'+r.ini+'|'+r.fin+'|'+r.importe;
+  if((D.pagos||[]).some(p=>p.rep&&p.rep.facKey===facKey)){ if(!confirm('Esta factura ya se repartió. ¿Generar los cobros otra vez?')) return; }
+  let n=0;
+  r.habs.forEach(h=>{ if(!(h.importe>0)) return; const pag=h.co?v4PagadorInq(h.co):(h.personas[0]||{}).inqId; if(!pag) return;
+    D.pagos.push({id:uid(),inqId:pag,con:r.tipo,mes,imp:h.importe,estado:'pendiente',fecha:'',notas:r.tipo+' '+v4F2(r.ini)+'–'+v4F2(r.fin)+' · hab. '+h.hab+' · '+h.pd+'/'+r.totalPD+' p-día',
+      rep:{facKey, tipo:r.tipo, ini:r.ini, fin:r.fin, dias:r.dias, importe:r.importe, base:r.base, totalPD:r.totalPD, linPD:r.linPD, habsPD:r.habs.map(x=>({hab:x.hab,pd:x.pd})), hab:h.hab, exInet:r.landlord.exInet, ajuste:h.ajuste||0, topado:h.personas.some(p=>p.topado), personas:h.personas.map(p=>({n:p.n,inqId:p.inqId,pd:p.pd,importe:p.importe})), coId:h.co?h.co.id:null}}); n++; });
+  saveAndSync(); closeM('m-reparto'); if(typeof rTableroPagos==='function') rTableroPagos(); toast('✓ '+n+' cobro(s) de '+r.tipo+' generados · arrendador '+v4E2(r.landlord.importe)+' €');
+}
+
+// ══ Arranque: migraciones, estados de inquilinos y ventana de avisos ══
+function v4Migrar(){
+  D.cfg=D.cfg||{}; let cambio=false;
+  if(!D.cfg.migV4Exig){ if(D.cfg.diaExig===undefined||D.cfg.diaExig===''||parseInt(D.cfg.diaExig)===15) D.cfg.diaExig=31; D.cfg.migV4Exig=true; cambio=true; }
+  (D.conts||[]).forEach(co=>{ if(v4EsTemporal(co)&&v4F(co)){ const antes=JSON.stringify(v4InqsCo(co).map(i=>[i.estado,i.ini,i.fin,i.alq])); v4SincronizarInqs(co); if(JSON.stringify(v4InqsCo(co).map(i=>[i.estado,i.ini,i.fin,i.alq]))!==antes) cambio=true; } });
+  if(cambio) saveAndSync();
+}
+function v4Arranque(){ try{ v4Migrar(); }catch(e){ console.warn('v4Migrar',e); } try{ v4PintarBadge(); }catch(e){}
+  try{ if(location.hash==='#avisos'){ history.replaceState(null,'',location.pathname+location.search); setTimeout(()=>{ try{ v4IrA('avisos'); }catch(e){} },300); } }catch(e){} if(WS==='gentaury'||!WS){ setTimeout(()=>{ try{ if(document.body.classList.contains('ws-personal')) return; if(typeof currentUser!=='undefined'&&!currentUser) return; v4VentanaAvisos(false); }catch(e){ console.warn(e); } },1800); } }
+setInterval(()=>{ try{ v4PintarBadge(); v4Notificar(false); }catch(e){} },30*60*1000);
+
+// ══ Enlaces con el resto de la app ══
+RENDERS.avisos=rAvisos;
+RENDERS.dash=function(){ rDash(); v4WidgetDash(); };
+document.addEventListener('DOMContentLoaded',()=>{
+  const m=$i('m-co'); if(m){ m.addEventListener('input',()=>{ try{ v4ValidarFormCont(); }catch(e){} }); m.addEventListener('change',()=>{ try{ v4ValidarFormCont(); }catch(e){} }); }
+  const fe=$i('av-fest'); if(fe){ fe.value=(D.cfg&&D.cfg.festivosExtra)||''; fe.addEventListener('change',()=>{ D.cfg=D.cfg||{}; D.cfg.festivosExtra=fe.value; saveAndSync(); rAvisos(); toast('Festivos guardados'); }); }
+  let n=0, hecho=false;
+  const t=setInterval(()=>{ n++; try{
+      const ls=$i('login-screen'), ws=$i('ws-screen');
+      const dentro=typeof currentUser!=='undefined'&&currentUser&&(!ls||ls.classList.contains('hidden'))&&!(ws&&ws.classList.contains('show'))&&WS==='gentaury';
+      if(dentro&&!hecho){ hecho=true; clearInterval(t); v4Arranque(); try{ v4WidgetDash(); }catch(e){} }
+    }catch(e){}
+    if(n>180) clearInterval(t); },1000);
+});
+setInterval(()=>{ try{ v4PintarBadge(); }catch(e){} },60*1000);
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// v4.1 · Siguiente paso por inquilino y habitación, visitas con inquilinos dentro,
+// penalizaciones, ocupación indebida, notificaciones, EBITDA mensual y ROCE con el dinero propio
+// ══════════════════════════════════════════════════════════════════════════════
+(function(){ try{ const st=document.createElement('style'); st.textContent='.v4-paso{font-size:10.5px;line-height:1.35;border-left:3px solid var(--ink3);padding:4px 7px;background:var(--bg);border-radius:6px;cursor:pointer;text-align:left;}.v4-paso:hover{filter:brightness(.97);}.v4-paso strong{font-weight:700;}'; document.head.appendChild(st); }catch(e){} })();
+
+// Contratos dados de alta antes de los avisos (sin fin de causa ni Anexo I): sin avisos de hace tiempo
+function v4EsLegado(co){ return !co.v4&&!co.cFin1&&!co.anexoIData; }
+
+// ── Cachés cortas (como mucho 0,8 s) ──
+var _v4AlCache={t:0,hoy:'',al:null}, _v4ItCache={t:0,items:null};
+function v4AlertasCache(hoy){ hoy=hoy||v4Hoy(); const n=Date.now(); if(_v4AlCache.al&&_v4AlCache.hoy===hoy&&n-_v4AlCache.t<800) return _v4AlCache.al; const al=v4Alertas(hoy); _v4AlCache={t:n,hoy,al}; return al; }
+function v4ItemsCache(){ const n=Date.now(); if(_v4ItCache.items&&n-_v4ItCache.t<800) return _v4ItCache.items; let it=[]; try{ it=v2Items(); }catch(e){ console.warn('v2Items',e); } _v4ItCache={t:n,items:it}; return it; }
+function v4InvalidarCaches(){ _v4AlCache.al=null; _v4ItCache.items=null; }
+
+// ══ Siguiente paso ══
+function v4TituloCorto(a){ let t=String(a.titulo||''); if(a.lugar){ const i=t.indexOf(' · '+a.lugar); if(i>0) t=t.slice(0,i); } return t; }
+// Prioridad: urgente que ya toca → vencido → hoy → próximo → informativo
+function v4Prio(a,hoy){ const info=a.nivel==='info'; if(a.nivel==='urgente'&&a.fecha<=hoy) return 0; if(a.fecha<hoy&&!info) return 1; if(a.fecha===hoy&&!info) return 2; if(!info) return 3; return 4; }
+function v4PasoDe(lista,hoy){ const p=(lista||[]).filter(a=>!a.hecho&&!(a.caduca&&a.caduca<hoy)); if(!p.length) return null; return p.slice().sort((x,y)=>v4Prio(x,hoy)-v4Prio(y,hoy)||x.fecha.localeCompare(y.fecha))[0]; }
+// Situación de una habitación hoy y su contrato
+function v4CoHab(propId,hab,hoy){
+  hoy=hoy||v4Hoy();
+  const cs=(D.conts||[]).filter(c=>c.propId==propId&&String(v4Hab(c))===String(hab)&&v4F(c)&&v4EsTemporal(c));
+  const L=c=>c.llaves&&c.llaves.L, fin=c=>v4FinCobro(c)||v4E(c)||'9999-12-31';
+  const fut=cs.filter(c=>v4F(c)>hoy).sort((a,b)=>v4F(a).localeCompare(v4F(b)));
+  const act=cs.filter(c=>v4F(c)<=hoy&&fin(c)>=hoy&&!(L(c)&&L(c)<=hoy)).sort((a,b)=>v4F(b).localeCompare(v4F(a)));
+  if(act.length) return {co:act[0], estado:'ocupada', sig:fut[0]||null};
+  const sinL=cs.filter(c=>!L(c)&&fin(c)<hoy&&!(v4EsLegado(c)&&v4E(c)<fxAdd(hoy,-45))).sort((a,b)=>fin(b).localeCompare(fin(a)));
+  if(sinL.length) return {co:sinL[0], estado:'sin-llaves', sig:fut[0]||null};
+  if(fut.length) return {co:fut[0], estado:'reservada', sig:null};
+  // Inquilino en la ficha (ACTIVO o RESERVADO) sin contrato en vigor registrado
+  const li=(D.inqs||[]).find(i=>i.propId==propId&&String(i.hab)===String(hab)&&(i.estado==='ACTIVO'||i.estado==='RESERVADO'));
+  if(li){ const co=v4CoDeInq(li.id); return {co:null, inq:li, coViejo:(co&&co.propId==propId&&String(v4Hab(co))===String(hab))?co:null, estado:'sin-contrato', sig:null}; }
+  const cierre=cs.filter(c=>L(c)&&!(c.retencion&&c.retencion.liquidada)&&!(v4EsLegado(c)&&L(c)<fxAdd(hoy,-60))).sort((a,b)=>L(b).localeCompare(L(a)));
+  if(cierre.length) return {co:cierre[0], estado:'cerrando', sig:null};
+  return {co:null, estado:'libre', sig:null};
+}
+function v4PasoHab(propId,hab,hoy,al){
+  hoy=hoy||v4Hoy(); al=al||v4AlertasCache(hoy);
+  const x=v4CoHab(propId,hab,hoy);
+  const lista=al.filter(a=>(x.co&&a.coId===x.co.id)||((a.incId||a.visId)&&a.propId==propId&&String(a.hab||'')===String(hab)));
+  return {x, a:v4PasoDe(lista,hoy)};
+}
+const V4_ESTADO_HAB={ocupada:'ocupada','sin-llaves':'terminado sin entrega de llaves',reservada:'reservada',cerrando:'libre · pendiente de liquidar la retención',libre:'libre','sin-contrato':'sin contrato registrado'};
+function v4Cuando(d){ return d===0?'hoy':d<0?('hace '+(-d)+' día'+(d===-1?'':'s')):d===1?'mañana':('en '+d+' días'); }
+function v4ChipPaso(a,hoy){
+  hoy=hoy||v4Hoy();
+  const d=v4Diff(hoy,a.fecha), urg=a.nivel==='urgente'||(d<0&&a.nivel!=='info'), col=urg?'var(--rd)':d===0?'var(--acc)':d<=10?'var(--ye)':'var(--ink3)';
+  const click=a.coId?'v4Gestionar(\''+a.coId+'\')':a.incId?'v4IrA(\'incs\')':a.visId?'v4IrA(\'visitas\')':'';
+  return '<div class="v4-paso" style="border-left-color:'+col+';" onclick="event.stopPropagation();'+click+'" title="'+v4Esc(a.det)+'"><span style="color:var(--ink3);">Siguiente paso:</span> '+v4Esc(v4TituloCorto(a))+' <strong style="color:'+col+';white-space:nowrap;">· '+v4Cuando(d)+(Math.abs(d)>1?' ('+v4F2(a.fecha).slice(0,5)+')':'')+'</strong></div>';
+}
+function v4IrA(s){ const el=document.querySelector('.nav-item[data-s='+s+']'); if(el) el.click(); }
+function v4ChipTxt(col,txt,click){ return '<div class="v4-paso" style="border-left-color:'+col+';"'+(click?' onclick="event.stopPropagation();'+click+'"':'')+'><span style="color:var(--ink3);">Siguiente paso:</span> '+txt+'</div>'; }
+function v4ChipLibre(){ return v4ChipTxt('var(--bl)','habitación libre: publica el anuncio y organiza visitas','v4IrA(\'anuncios\')'); }
+function v4ChipOk(){ return '<div class="v4-paso" style="border-left-color:var(--gn);cursor:default;"><span style="color:var(--gn);">✓ Al día:</span> nada pendiente</div>'; }
+function v4ChipSinContrato(inq,coViejo){
+  const nom=v4Esc(((inq.nom||'')+' '+(inq.ap||'')).trim()||'el inquilino');
+  if(coViejo&&!(coViejo.llaves&&coViejo.llaves.L)) return v4ChipTxt('var(--ye)','el contrato de '+nom+' terminó el '+v4F2(v4FinCobro(coViejo)||v4E(coViejo))+': si sigue, registra el contrato nuevo; si se fue, registra la entrega de llaves','v4Gestionar(\''+coViejo.id+'\')');
+  return v4ChipTxt('var(--ye)','registra el contrato de '+nom+' en Contratos para tener sus avisos','v4IrA(\'contratos\');setTimeout(newCont,250)');
+}
+function v4HtmlPasoDe(r,hoy){
+  if(r.a) return v4ChipPaso(r.a,hoy);
+  if(r.x.estado==='sin-contrato') return v4ChipSinContrato(r.x.inq,r.x.coViejo);
+  if(r.x.estado==='libre') return v4ChipLibre();
+  return v4ChipOk();
+}
+// Tarjeta de la habitación (Habitaciones)
+function v4HtmlPasoHab(propId,hab){
+  try{
+    const hoy=v4Hoy(), r=v4PasoHab(propId,hab,hoy);
+    let html=v4HtmlPasoDe(r,hoy), extra='';
+    if(r.x.co&&r.x.estado==='ocupada'&&!r.x.sig){
+      const fin=v4FinCobro(r.x.co)||v4E(r.x.co), d=v4Diff(hoy,fin);
+      if(d>=0&&d<=30) extra='Queda libre el '+v4F2(fin)+(fxAdd(fin,-15)<=hoy?': ya se puede enseñar (aviso de 24 h, de 11:00 a 20:00, máx. 1 h al día).':': se puede enseñar desde el '+v4F2(fxAdd(fin,-15))+'.');
+    }
+    if((r.x.estado==='cerrando'||r.x.estado==='libre')&&r.a) extra='La habitación está libre: publica el anuncio.';
+    if(r.x.sig) extra=(extra?extra+' ':'')+'Próximo contrato: '+v4Esc(v4Nombres(r.x.sig))+' desde el '+v4F2(v4F(r.x.sig))+'.';
+    return '<div style="margin-top:7px;">'+html+(extra?'<div style="font-size:9.5px;color:var(--ye);margin-top:3px;line-height:1.35;">'+extra+'</div>':'')+'</div>';
+  }catch(e){ console.warn('Siguiente paso',e); return ''; }
+}
+// Fila del inquilino (Inquilinos activos)
+function v4HtmlPasoInq(inq){
+  try{
+    const hoy=v4Hoy(), co=v4CoDeInq(inq.id);
+    if(!co) return inq.estado==='PASADO'?'':v4ChipSinContrato(inq,null);
+    if(!v4EsTemporal(co)) return '';
+    const a=v4PasoDe(v4AlertasCache(hoy).filter(x=>x.coId===co.id),hoy);
+    if(a) return v4ChipPaso(a,hoy);
+    const L=co.llaves&&co.llaves.L;
+    if(inq.estado==='ACTIVO'&&!L&&(v4FinCobro(co)||v4E(co))<hoy) return v4ChipSinContrato(inq,co);
+    return v4ChipOk();
+  }catch(e){ console.warn(e); return ''; }
+}
+// Tarjeta del contrato (Contratos y ficha de gestión)
+function v4HtmlPasoCo(co){
+  try{ if(!v4EsTemporal(co)) return ''; const hoy=v4Hoy(), a=v4PasoDe(v4AlertasCache(hoy).filter(x=>x.coId===co.id),hoy); return a?v4ChipPaso(a,hoy):v4ChipOk(); }catch(e){ return ''; }
+}
+// Lista del dashboard: siguiente paso de cada habitación
+function v4HtmlPasosHabs(){
+  const hoy=v4Hoy(), al=v4AlertasCache(hoy), filas=[];
+  (D.props||[]).forEach(p=>{ const n=parseInt(p.habs)||0; for(let h=1;h<=n;h++){ const r=v4PasoHab(p.id,h,hoy,al); filas.push({p,h,x:r.x,a:r.a,r}); } });
+  if(!filas.length) return '';
+  const peso=f=>f.a?(v4Prio(f.a,hoy)*1e6+v4Diff(hoy,f.a.fecha)+5e5):(f.x.estado==='sin-contrato'?7e6:f.x.estado==='libre'?8e6:9e6);
+  filas.sort((a,b)=>peso(a)-peso(b));
+  const pend=filas.filter(f=>f.a||f.x.estado==='sin-contrato').length;
+  const quien=f=>f.x.co?(v4Esc(v4NombresCompletos(f.x.co))+' · '+(f.x.estado==='reservada'?'entra el '+v4F2(v4F(f.x.co)):V4_ESTADO_HAB[f.x.estado])):f.x.inq?(v4Esc(((f.x.inq.nom||'')+' '+(f.x.inq.ap||'')).trim())+' · '+V4_ESTADO_HAB[f.x.estado]):'libre';
+  return '<details open style="margin-top:12px;"><summary style="cursor:pointer;font-size:12.5px;font-weight:700;">➡️ Siguiente paso de cada habitación <span class="badge badge-b">'+pend+' con algo pendiente</span></summary>'
+   +filas.map(f=>'<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);flex-wrap:wrap;">'
+     +'<div style="font-size:11.5px;min-width:150px;flex:0 1 230px;"><strong>'+v4Esc(f.p.nom)+'</strong> · Hab. '+f.h+'<div style="font-size:10.5px;color:var(--ink3);">'+quien(f)+'</div></div>'
+     +'<div style="flex:1;min-width:200px;">'+v4HtmlPasoDe(f.r,hoy)+'</div></div>').join('')
+   +'</details>';
+}
+
+// ══ Visitas a habitaciones con inquilinos (cláusulas de acceso y de entrada) ══
+const V4_VIS_ACTIVAS=['pendiente','confirmada'];
+function v4MinHM(h){ const [a,b]=String(h||'0:0').split(':').map(Number); return (a||0)*60+(b||0); }
+function v4HMde(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+function v4Presente(c,iso){ return v4EsTemporal(c)&&v4PersonasCo(c).some(p=>p.desde<=iso&&p.hasta>=iso)&&!(c.llaves&&c.llaves.L&&c.llaves.L<=iso); }
+function v4OcupHab(propId,hab,iso){ return (D.conts||[]).filter(c=>c.propId==propId&&String(v4Hab(c))===String(hab)&&v4Presente(c,iso)); }
+function v4OcupPiso(propId,iso,excluirHab){ return (D.conts||[]).filter(c=>c.propId==propId&&(excluirHab==null||excluirHab===''||String(v4Hab(c))!==String(excluirHab))&&v4Presente(c,iso)); }
+function v4ValidarVisita(v,ahora){
+  const err=[], av=[]; if(!v||!v.propId||!v.fecha||!v.hora||!V4_VIS_ACTIVAS.includes(v.est||'pendiente')) return {err,av};
+  ahora=ahora||new Date();
+  const ini=v4MinHM(v.hora), dur=parseInt(v.dur)||30, fin=ini+dur, horas=(new Date(v.fecha+'T'+v.hora)-ahora)/36e5;
+  if(v.hab){ const occ=v4OcupHab(v.propId,v.hab,v.fecha);
+    if(occ.length){ const co=occ[0], fc=v4FinCobro(co)||v4E(co), sv=v4SalidaValida(co), nom=v4Nombres(co);
+      let desde=fxAdd(fc,-15), motivo='15 días antes de que termine, el '+v4F2(fc);
+      if(sv&&sv.anticipada&&sv.A&&sv.A<desde){ desde=sv.A; motivo='aviso de salida del '+v4F2(sv.A); }
+      if(v.fecha<desde) err.push('La habitación '+v.hab+' está alquilada a '+nom+': solo se puede enseñar desde el '+v4F2(desde)+' ('+motivo+').');
+      if(ini<v4MinHM('11:00')||fin>v4MinHM('20:00')) err.push('Con la habitación ocupada, las visitas son de 11:00 a 20:00 (esta iría de '+v.hora+' a '+v4HMde(fin)+').');
+      const mismoDia=(D.visitas||[]).filter(x=>x.id!==v.id&&x.propId==v.propId&&String(x.hab||'')===String(v.hab)&&x.fecha===v.fecha&&V4_VIS_ACTIVAS.concat(['realizada','interesado','alquilado']).includes(x.est||'pendiente')).reduce((s,x)=>s+(parseInt(x.dur)||30),0);
+      if(mismoDia+dur>60) err.push('En una habitación ocupada, como máximo 1 hora de visitas al día (ese día ya hay '+mismoDia+' min).');
+      if(horas<24) av.push('Hay que avisar a '+nom+' por escrito con 24 h de antelación: con menos tiempo necesitas su conformidad por escrito.');
+    } }
+  const otros=v4OcupPiso(v.propId,v.fecha,v.hab||null);
+  if(otros.length){
+    if(ini<v4MinHM('09:00')||fin>v4MinHM('21:00')) err.push('Hay inquilinos en el piso: para entrar en las zonas comunes, de 9:00 a 21:00.');
+    if(horas<12) av.push('Hay que avisar a los inquilinos del piso ('+otros.map(v4Nombres).join(', ')+') por escrito con 12 h de antelación.');
+  }
+  return {err,av};
+}
+function v4AlertasVisitas(hoy){
+  hoy=hoy||v4Hoy(); const out=[];
+  (D.visitas||[]).forEach(v=>{ if(!v.propId||!v.fecha||!v.hora||!V4_VIS_ACTIVAS.includes(v.est||'pendiente')||v.fecha<fxAdd(hoy,-1)) return;
+    const p=(D.props||[]).find(x=>x.id==v.propId), cuando=new Date(v.fecha+'T'+v.hora), lugarHab=(v.hab?'Hab. '+v.hab+' · ':'')+(p?p.nom:'');
+    const occ=v.hab?v4OcupHab(v.propId,v.hab,v.fecha):[];
+    if(occ.length){ const co=occ[0], lim=new Date(cuando.getTime()-24*36e5);
+      out.push({k:'vis-hab', visId:v.id, coId:co.id, fecha:fxIso(lim), desde:fxAdd(fxIso(lim),-3), titulo:'Avisar a '+v4Nombres(co)+' de la visita del '+v4F2(v.fecha)+' a las '+v.hora+' · '+lugarHab, det:'Visita de '+(v.nom||'una persona interesada')+'. Aviso por escrito antes del '+v4F2(fxIso(lim))+' a las '+v4HM(lim)+' (24 h), entre las 11:00 y las 20:00 y como máximo 1 hora al día (cláusula «Garantías del acceso a la habitación»).', tpl:['visHab'], tipo:'Obligatorio', nivel:'alto', auto:false, hecho:!!v.avisoHab, hechoEl:v.avisoHab||'', lugar:lugarHab, propId:v.propId, hab:v.hab||''}); }
+    const otros=v4OcupPiso(v.propId,v.fecha,v.hab||null);
+    if(otros.length){ const lim=new Date(cuando.getTime()-12*36e5), lugar=p?p.nom:'';
+      out.push({k:'vis-com', visId:v.id, fecha:fxIso(lim), desde:fxAdd(fxIso(lim),-3), titulo:'Avisar a los inquilinos del piso de la visita del '+v4F2(v.fecha)+' a las '+v.hora+' · '+lugar, det:'Entrada en las zonas comunes'+(v.hab?' para enseñar la habitación '+v.hab:'')+': aviso por escrito a '+otros.map(v4Nombres).join(', ')+' antes del '+v4F2(fxIso(lim))+' a las '+v4HM(lim)+' (12 h), entre las 9:00 y las 21:00 (cláusula «Derecho de entrada para la parte arrendadora»).', tpl:['visCom'], tipo:'Obligatorio', nivel:'alto', auto:false, hecho:!!v.avisoCom, hechoEl:v.avisoCom||'', lugar, propId:v.propId, hab:v.hab||''}); }
+  });
+  return out;
+}
+function v4TxtVisita(tpl,v){
+  const dia=v4FL(v.fecha);
+  if(tpl==='visHab'){ const co=v4OcupHab(v.propId,v.hab,v.fecha)[0]; return {co, dest:co?[co]:[], texto:'Hola '+(co?v4Nombres(co):'[NOMBRE]')+'. Te aviso de que el '+dia+' a las '+v.hora+' enseñaré tu habitación ('+v.hab+') a una persona interesada, como prevé el contrato: como máximo una hora y entre las 11:00 y las 20:00. No hace falta que estés y me responsabilizo de que nadie toque nada. Si puedes, déjala recogida. ¡Gracias!'}; }
+  const otros=v4OcupPiso(v.propId,v.fecha,v.hab||null);
+  return {co:otros[0], dest:otros, texto:'Hola a todos. Os aviso de que el '+dia+' a las '+v.hora+' entraré en el piso'+(v.hab?' para enseñar la habitación '+v.hab:'')+' a una persona interesada; solo pasaremos por las zonas comunes'+(v.hab?' y esa habitación':'')+'. ¡Gracias!'};
+}
+function v4VerPlantillaVisita(tpl,visId){
+  const v=(D.visitas||[]).find(x=>x.id==visId); if(!v){ toast('Visita no encontrada',false); return; }
+  const r=v4TxtVisita(tpl,v);
+  const tels=[]; r.dest.forEach(c=>v4InqsCo(c).forEach(i=>{ const t=String(i.wa||i.tel||'').replace(/\D/g,''); if(t) tels.push({n:i.nom||'',t:t.length===9?'34'+t:t}); }));
+  $i('m-v4tpl-c').innerHTML='<h2>📋 '+(tpl==='visHab'?'Aviso de visita a la habitación (24 h)':'Aviso de entrada en zonas comunes (12 h)')+'</h2><div style="font-size:11.5px;color:var(--ink3);margin-bottom:6px;">Mándalo por escrito (WhatsApp o email) y guarda la prueba.'+(tpl==='visCom'?' Envíalo a cada inquilino del piso.':'')+'</div>'
+   +'<textarea id="v4t-txt" rows="8" style="width:100%;font-size:12px;line-height:1.5;font-family:inherit;padding:10px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);">'+v4Esc(r.texto)+'</textarea>'
+   +'<div class="modal-footer"><button class="btn btn-ghost" onclick="closeM(\'m-v4tpl\')">Cerrar</button><button class="btn btn-secondary" onclick="v4CopiarTpl()">📋 Copiar</button>'
+   +tels.map(x=>'<button class="btn btn-success" onclick="window.open(\'https://wa.me/'+x.t+'?text=\'+encodeURIComponent($i(\'v4t-txt\').value),\'_blank\')">💬 '+v4Esc(x.n||'WhatsApp')+'</button>').join('')+'</div>';
+  $i('m-v4tpl').classList.add('open');
+}
+
+// ══ Penalizaciones del contrato (30 € limpieza semanal no hecha, 100 € llaves no devueltas) ══
+function v4Penalizacion(coId){
+  v4Modal('➕ Penalizaciones del contrato','<div class="fg"><div class="fgrp"><label>Concepto</label><select id="v4p-t"><option value="limpieza">Limpieza semanal no hecha ('+V4_PENAL.limpieza+' €)</option><option value="llaves">Llaves no devueltas ('+V4_PENAL.llaves+' €)</option></select></div><div class="fgrp"><label>Fecha o semana</label><input type="date" id="v4p-f" value="'+v4Hoy()+'"></div><div class="fgrp fgf"><label>Hechos y pruebas</label><input id="v4p-n" placeholder="Turno de la semana del…, fotos…"></div></div><div style="font-size:11px;color:var(--ink3);line-height:1.6;">Se suma a «Otras cantidades pendientes» del siguiente pago mensual o, a la salida, a la liquidación de la fianza. Los 20 € por pago retrasado se anotan desde el pago mensual.</div>',
+   '<button class="btn btn-primary" onclick="v4GuardarPenalizacion(\''+coId+'\')">Anotar</button>');
+}
+function v4GuardarPenalizacion(coId){
+  const co=v4Co(coId); if(!co) return; const t=gi('v4p-t'), f=gi('v4p-f')||v4Hoy();
+  const con=t==='llaves'?'Llaves no devueltas':'Limpieza semanal no hecha', imp=t==='llaves'?V4_PENAL.llaves:V4_PENAL.limpieza;
+  D.pagos.push({id:uid(),inqId:v4PagadorInq(co),con,mes:f.slice(0,7),imp,estado:'pendiente',fecha:'',notas:(gi('v4p-n')?gi('v4p-n')+' · ':'')+v4F2(f)+' (penalización del contrato)',pen:{coId,tipo:t,fecha:f}});
+  v4Guardar(co,con+': '+imp+' € anotados'); closeM('m-v4');
+}
+// ══ Ocupación indebida: renta mensual vigente ÷ 30 × 2 por día, desde el día siguiente al último día cobrado ══
+// (el total se calcula con la cifra diaria exacta y se redondea al final: 3 días de 400 € = 80,00 €)
+function v4OcupDiaExacto(co){ const f=v4FinCobro(co)||v4E(co)||v4Hoy(); return (v4RentaDia(co,f)||parseFloat(co.r)||0)/30*2; }
+function v4OcupIndebidaDia(co){ return Math.round(v4OcupDiaExacto(co)*100)/100; }
+function v4OcupIndebida(co,hoy){
+  hoy=hoy||v4Hoy(); const fin=v4FinCobro(co); if(!fin||(co.llaves&&co.llaves.L)||hoy<=fin) return null;
+  const desde=co.ocupHasta&&co.ocupHasta>=fin?fxAdd(co.ocupHasta,1):fxAdd(fin,1), dias=desde<=hoy?v4Diff(desde,hoy)+1:0, ex=v4OcupDiaExacto(co), dia=Math.round(ex*100)/100;
+  return {fin, desde, dias, dia, total:Math.round(dias*ex*100)/100, diasTotal:v4Diff(fin,hoy), totalDesdeFin:Math.round(v4Diff(fin,hoy)*ex*100)/100};
+}
+function v4AnotarOcupacion(coId){
+  const co=v4Co(coId), o=co&&v4OcupIndebida(co); if(!o||!o.dias){ toast('No hay días nuevos que anotar',false); return; }
+  D.pagos.push({id:uid(),inqId:v4PagadorInq(co),con:'Ocupación indebida',mes:v4Hoy().slice(0,7),imp:o.total,estado:'pendiente',fecha:'',notas:o.dias+' días del '+v4F2(o.desde)+' al '+v4F2(v4Hoy())+' × '+v4E2(o.dia)+' € (renta ÷ 30 × 2)',pen:{coId,tipo:'ocupacion',desde:o.desde,hasta:v4Hoy()}});
+  co.ocupHasta=v4Hoy(); v4Guardar(co,'Indemnización por ocupación indebida anotada: '+v4E2(o.total)+' €'); v4Gestionar(coId);
+}
+
+// ══ Notificaciones: en Android solo funcionan a través del service worker ══
+function v4MostrarNotif(titulo,opts){
+  const directo=()=>{ try{ new Notification(titulo,opts); }catch(e){} };
+  try{ if(navigator.serviceWorker&&navigator.serviceWorker.getRegistration){ navigator.serviceWorker.getRegistration().then(r=>{ if(r&&r.showNotification) r.showNotification(titulo,opts).catch(directo); else directo(); }).catch(directo); return; } }catch(e){}
+  directo();
+}
+// Al tocar la notificación con la app abierta: ir a Avisos
+try{ if(navigator.serviceWorker) navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.tipo==='abrir-avisos'){ try{ v4IrA('avisos'); }catch(x){} } }); }catch(e){}
+// Al volver a la app (o al cambiar el día con la app abierta): avisos de nuevo
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState!=='visible') return; try{ v4InvalidarCaches(); v4PintarBadge(); if(typeof currentUser!=='undefined'&&currentUser&&WS==='gentaury'){ v4VentanaAvisos(false); v4Notificar(false); } }catch(e){} });
+
+// ══ EBITDA mensual y ROCE con todo el dinero propio (criterio de la Calculadora de rentabilidad) ══
+// EBITDA = ingresos − gastos operativos − cuotas de los préstamos. ROCE = EBITDA anual ÷ dinero propio invertido.
+const V4_CAPEX=['A','B','C','G','K'];
+function v4PrimerAlquiler(p){ const fs=(D.conts||[]).filter(c=>c.propId==p.id&&v4F(c)).map(v4F).concat((D.inqs||[]).filter(i=>i.propId==p.id&&i.ini).map(i=>i.ini)).sort(); return fs[0]||''; }
+// Inversión: compra y sus gastos, gastos del préstamo, mejoras, muebles, usufructo, y reparaciones antes del primer alquiler
+function v4EsCapex(it,p){ if(V4_CAPEX.includes(it.catF)) return true; if(it.catF==='D'){ const pa=v4PrimerAlquiler(p); return !pa||(!!it.fecha&&it.fecha<pa); } return false; }
+// Intereses y capital del préstamo: se cuentan por la cuota de Hipotecas (si está)
+function v4EsCuotaHipo(it){ const r=it.ref||{}; return it.catF==='F'||r.cat==='Hipoteca'||/amortizaci[oó]n (de )?capital|cuota (de la )?hipoteca|intereses (de la )?hipoteca|intereses del pr[eé]stamo/i.test(it.con||''); }
+function v4Ventana(p,hoy){ let ini=fxAdd(hoy,-364); if(p.fcompra&&p.fcompra>ini) ini=p.fcompra; if(ini>hoy) ini=hoy; const dias=v4Diff(ini,hoy)+1; return {ini, fin:hoy, dias, meses:Math.max(1,dias/30.4375)}; }
+function v4PeriodoGasto(it){
+  if(it.pIni&&it.pFin&&it.pFin>=it.pIni) return [it.pIni,it.pFin];
+  const f=it.fecha||''; if(!f) return null;
+  if(['D','I','J'].includes(it.catF)&&!/\bibi\b|basura|seguro|tasa municipal/i.test(it.con||'')) return [f,fxAdd(f,364)];   // gastos puntuales: repartidos en un año
+  try{ const per=v2Periodo(it); if(per&&per[0]&&per[1]) return per; }catch(e){}
+  return [f,f];
+}
+function v4Solape(a,b,c,d){ const i=a>c?a:c, f=b<d?b:d; return f<i?0:v4Diff(i,f)+1; }
+function v4GastosMesPiso(p,hoy){
+  hoy=hoy||v4Hoy(); const w=v4Ventana(p,hoy), det=[], conCuota=v4CuotaMesPiso(p)>0; let tot=0;
+  v4ItemsCache().filter(it=>it.propId==p.id&&!it.dup&&(+it.imp||0)>0&&!v4EsCapex(it,p)&&!(conCuota&&v4EsCuotaHipo(it))).forEach(it=>{
+    const per=v4PeriodoGasto(it); if(!per) return; const len=v4Diff(per[0],per[1])+1, sol=v4Solape(per[0],per[1],w.ini,w.fin); if(!sol) return;
+    const parte=(+it.imp)*sol/len; tot+=parte; det.push({con:it.con||it.emp||'Gasto', cat:it.catF, imp:+it.imp, parte:Math.round(parte*100)/100});
+  });
+  return {mes:Math.round(tot/w.meses*100)/100, total:Math.round(tot*100)/100, ventana:w, det:det.sort((a,b)=>b.parte-a.parte)};
+}
+function v4CuotaMesPiso(p){ const todas=(D.hipotecas||[]).filter(h=>h.propId==p.id); if(!todas.length) return parseFloat(p.hipo)||0; const vivas=todas.filter(h=>!(String(h.pend).trim()!==''&&parseFloat(h.pend)===0)); return Math.round(vivas.reduce((s,h)=>s+(parseFloat(h.cuota)||0),0)*100)/100; }
+function v4IngresosMesPiso(p,hoy){
+  hoy=hoy||v4Hoy(); let renta=0; const enVig=new Set();
+  // Rentas de hoy: contratos en vigor (con el cambio de renta del anexo) + inquilinos activos sin contrato en vigor
+  (D.conts||[]).filter(c=>c.propId==p.id&&v4EsTemporal(c)&&v4F(c)&&v4F(c)<=hoy&&(v4FinCobro(c)||'9999')>=hoy&&!(c.llaves&&c.llaves.L&&c.llaves.L<=hoy)).forEach(c=>{ renta+=v4RentaDia(c,hoy); [c.inqId,c.inqId2].forEach(i=>i&&enVig.add(i)); });
+  (D.inqs||[]).filter(i=>i.estado==='ACTIVO'&&i.propId==p.id&&!enVig.has(i.id)).forEach(i=>{ renta+=parseFloat(i.alq)||0; });
+  // Suministros cobrados a los inquilinos: media mensual en la misma ventana que los gastos
+  const w=v4Ventana(p,hoy), ids=new Set((D.inqs||[]).filter(i=>i.propId==p.id).map(i=>i.id));
+  (D.conts||[]).filter(c=>c.propId==p.id).forEach(c=>[c.inqId,c.inqId2].forEach(i=>i&&ids.add(i)));
+  let sum=0;
+  (D.pagos||[]).forEach(pg=>{ if(!ids.has(pg.inqId)||!v4EsSuministroPago(pg)) return; if(pg.rep&&pg.rep.coId){ const c=v4Co(pg.rep.coId); if(c&&c.propId!=p.id) return; }
+    let a,b; if(pg.rep&&pg.rep.ini&&pg.rep.fin){ a=pg.rep.ini; b=pg.rep.fin; } else if(pg.mes){ a=pg.mes+'-01'; b=v4FinMes(a); } else return;
+    const len=v4Diff(a,b)+1, sol=v4Solape(a,b,w.ini,w.fin); if(sol) sum+=(+pg.imp||0)*sol/len; });
+  const sm=Math.round(sum/w.meses*100)/100;
+  return {renta:Math.round(renta*100)/100, suministros:sm, total:Math.round((renta+sm)*100)/100};
+}
+function v4EbitdaPiso(p,hoy){
+  hoy=hoy||v4Hoy(); const ing=v4IngresosMesPiso(p,hoy), g=v4GastosMesPiso(p,hoy), cuota=v4CuotaMesPiso(p);
+  const mes=Math.round((ing.total-g.mes-cuota)*100)/100; return {ing, gastos:g, cuota, mes, anual:Math.round(mes*12*100)/100};
+}
+function v4CapitalPropio(p){
+  const it=v4ItemsCache().filter(x=>x.propId==p.id&&!x.dup&&(+x.imp||0)>0&&v4EsCapex(x,p));
+  const capex=Math.round(it.reduce((s,x)=>s+(+x.imp||0),0)*100)/100, precio=parseFloat(p.precio)||0;
+  const prest=Math.round((D.hipotecas||[]).filter(h=>h.propId==p.id).reduce((s,h)=>s+(parseFloat(h.ini)||0),0)*100)/100;
+  return {precio, capex, prestamo:prest, total:Math.max(0,Math.round((precio+capex-prest)*100)/100), det:it.map(x=>({con:x.con||x.emp||'',cat:x.catF,imp:+x.imp}))};
+}
+// Redefiniciones: todo el dinero propio y ROCE = EBITDA anual ÷ dinero propio
+function dineroPropio(p){ return v4CapitalPropio(p).total; }
+function roceDe(p){ const dp=dineroPropio(p); if(!(dp>0)) return null; return v4EbitdaPiso(p).anual/dp*100; }
+function v4Pct(x){ return x===null||!isFinite(x)?'—':x.toFixed(1).replace('.',',')+' %'; }
+function v4HtmlDetalleRoce(props){
+  const hoy=v4Hoy();
+  return '<details style="margin-top:12px;"><summary style="cursor:pointer;font-size:12px;color:var(--ink2);">🧮 Cómo se calculan el EBITDA mensual y el ROCE de cada piso</summary>'
+   +'<div style="font-size:11px;color:var(--ink3);line-height:1.6;margin:6px 0;"><strong>EBITDA mensual</strong> = ingresos del mes (rentas de los contratos en vigor hoy + media de los suministros cobrados a los inquilinos) − gastos (media mensual de todos los gastos del piso del último año, o desde la compra: comunidad, IBI, seguro, suministros, reparaciones, gestoría…) − cuotas de los préstamos (capital e intereses). <strong>ROCE</strong> = EBITDA × 12 ÷ dinero propio. <strong>Dinero propio</strong> = precio + gastos de compra y del préstamo + mejoras, muebles y electrodomésticos + reparaciones antes del primer alquiler + usufructo − préstamos concedidos. Es el criterio de tu Calculadora de rentabilidad.</div>'
+   +props.map(p=>{ const e=v4EbitdaPiso(p,hoy), k=v4CapitalPropio(p), roce=k.total>0?e.anual/k.total*100:null, w=e.gastos.ventana;
+      return '<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;margin:6px 0;font-size:11.5px;line-height:1.6;"><strong>'+v4Esc(p.nom)+'</strong><br>'
+       +'Ingresos '+v4E2(e.ing.total)+' € (rentas '+v4E2(e.ing.renta)+' € + suministros cobrados '+v4E2(e.ing.suministros)+' €) − gastos '+v4E2(e.gastos.mes)+' € ('+v4E2(e.gastos.total)+' € en '+(Math.round(w.meses*10)/10).toLocaleString('es-ES')+' meses desde el '+v4F2(w.ini)+(e.gastos.det.length?': '+e.gastos.det.slice(0,4).map(d=>v4Esc(d.con)+' '+v4E2(d.parte)+' €').join(', ')+(e.gastos.det.length>4?'…':''):'')+') − cuotas '+v4E2(e.cuota)+' € = <strong>EBITDA '+v4E2(e.mes)+' €/mes</strong><br>'
+       +'Dinero propio: precio '+v4E2(k.precio)+' € + gastos e inversiones '+v4E2(k.capex)+' € − préstamos '+v4E2(k.prestamo)+' € = <strong>'+v4E2(k.total)+' €</strong> · ROCE <strong>'+v4Pct(roce)+'</strong></div>'; }).join('')
+   +'</details>';
 }
 
 </script>
