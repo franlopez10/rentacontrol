@@ -1363,6 +1363,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Agenda de visitas a las habitaciones y seguimiento de candidatos</div></div>
     <div class="ph-acts">
       <button class="btn btn-secondary" onclick="pedirPermisoNotif()">🔔 Activar avisos</button>
+      <button class="btn btn-secondary" onclick="v4FormReserva(null,{modo:'distancia'})" title="Para quien reserva sin haber visitado la habitación">📝 Reserva sin visita</button>
       <button class="btn btn-primary" onclick="newVisita()">+ Nueva visita</button>
     </div>
   </div>
@@ -1897,7 +1898,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Renta mensual (€)</label><input id="co-r" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Fianza entregada (€)</label><input id="co-f" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Garantía adicional (€)</label><input id="co-g" type="number" placeholder="0"></div>
-    <div class="fgrp"><label>Tipo de contrato *</label><select id="co-tipo"><option value="temporal">Temporal (art. 3 LAU · causa acreditada)</option><option value="habitual">Vivienda habitual (LAU)</option><option value="temporadaPre">Temporada firmado antes del 08/10/2026</option><option value="usoDistinto">Uso distinto de vivienda</option><option value="esal">Social / Administración o entidad sin ánimo de lucro</option></select></div>
+    <div class="fgrp"><label>Tipo de contrato *</label><select id="co-tipo"><option value="temporal">Temporal (art. 2.3 LAU · causa acreditada)</option><option value="habitual">Vivienda habitual (LAU)</option><option value="temporadaPre">Temporada firmado antes del 08/10/2026</option><option value="usoDistinto">Uso distinto de vivienda</option><option value="esal">Social / Administración o entidad sin ánimo de lucro</option></select></div>
     <div class="fgrp" style="display:none;"><label>Fecha de firma</label><input id="co-firma" type="date"></div>
     <div class="fgrp fgf"><label>Causa de temporalidad (obligatoria en temporal)</label><input id="co-causa" placeholder="Desplazamiento por prácticas en Hospital X hasta junio"></div>
     <div class="fgrp fgf"><label>Domicilio habitual del arrendatario (del que se desplaza) *</label><input id="co-vivhab" placeholder="C/ Mayor 3, Albacete"></div>
@@ -2414,12 +2415,14 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <h2 id="m-cu-title">🧾 Registrar cuota</h2>
   <input type="hidden" id="cu-hip-id"><input type="hidden" id="cu-edit-id">
   <div class="fg">
-    <div class="fgrp"><label>Mes de la cuota *</label><input id="cu-mes" type="month"></div>
-    <div class="fgrp"><label>Fecha de cobro</label><input id="cu-fecha" type="date"></div>
+    <div class="fgrp"><label>Mes de la cuota *</label><input id="cu-mes" type="month" oninput="cuCalc()"></div>
+    <div class="fgrp"><label>Fecha de cobro</label><input id="cu-fecha" type="date" oninput="cuCalc()"></div>
     <div class="fgrp"><label>Importe cuota (€) *</label><input id="cu-imp" type="number" step="0.01" oninput="cuCalc()"></div>
-    <div class="fgrp"><label>Tipo aplicado (%)</label><input id="cu-tipo" type="number" step="0.001" placeholder="ej 3.49" oninput="cuAuto()"></div>
-    <div class="fgrp"><label>Intereses (€) — deducible *</label><input id="cu-int" type="number" step="0.01" oninput="cuCalc()"></div>
-    <div class="fgrp"><label>Amortización capital (€)</label><input id="cu-cap" type="number" step="0.01" oninput="cuCalc()"></div>
+    <div class="fgrp"><label>Intereses (€) — deducible *</label><input id="cu-int" type="number" step="0.01" oninput="v5CuEditado();cuCalc()"></div>
+    <div class="fgrp"><label>Amortización de capital (€) *</label><input id="cu-cap" type="number" step="0.01" oninput="v5CuEditado();cuCalc()"></div>
+    <div class="fgrp"><label>Capital pendiente tras esta cuota (€)</label><input id="cu-pend" type="number" step="0.01" oninput="v5CuPendManual();cuCalc()" title="Lo calcula la app; si el recibo del banco trae otro, escríbelo"></div>
+    <div class="fgrp fgf"><label>Tipo de interés aplicado (TIN anual · se calcula solo)</label><input id="cu-tipo" type="number" step="0.001" readonly tabindex="-1" style="background:var(--bg);font-weight:700;color:var(--bl);"></div>
+    <div class="fgrp fgf" style="font-size:10.5px;color:var(--ink3);margin-top:-4px;line-height:1.5;">Pon los intereses y la amortización del recibo del banco. El tipo se calcula con el capital pendiente antes de la cuota (el de después + la amortización). Si el recibo trae otro capital pendiente, escríbelo y se usa el del banco.</div>
     <div class="fgrp fgf"><label>Notas (ej: quitada bonificación nómina)</label><input id="cu-notas" placeholder="Cambios de tipo, bonificaciones..."></div>
     <div class="fgrp fgf"><label>Adjuntar justificante del movimiento (PDF o foto)</label>
       <div class="pdf-upload-zone" id="cu-pdf-zone" onclick="document.getElementById('cu-pdf').click()">
@@ -3380,15 +3383,18 @@ function rHabs(){
     const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado!=='PASADO');
     const renta=iqs.filter(i=>i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0);
     const libre=Math.max(0,(parseInt(p.habs)||0)-new Set(iqs.filter(i=>i.estado==='ACTIVO').map(i=>String(i.hab))).size);
+    const nRes=Array.from({length:parseInt(p.habs)||0},(_,n)=>n+1).filter(num=>v4ResDeHab(p.id,num)&&!iqs.some(i=>i.estado==='ACTIVO'&&parseInt(i.hab)==num)).length;
     const cfgAll=p.habsConfig||{};
     // Renta potencial: precio configurado de cada habitación
     const rentaPot=Array.from({length:p.habs},(_,n)=>parseFloat((cfgAll[n+1]||{}).precio)||0).reduce((a,b)=>a+b,0);
 
     const cards=Array.from({length:p.habs},(_,n)=>{
       const num=n+1;
-      const inq=iqs.find(i=>parseInt(i.hab)==num), inq2=iqs.filter(i=>parseInt(i.hab)==num)[1];
+      const rsv=v4ResDeHab(p.id,num), rsvIds=rsv?[rsv.inqId,rsv.inqId2].filter(Boolean):[];
+      const iqH=iqs.filter(i=>parseInt(i.hab)==num&&!(rsv&&i.estado==='RESERVADO'&&rsvIds.includes(i.id))).sort((a,b)=>(b.estado==='ACTIVO')-(a.estado==='ACTIVO'));
+      const inq=iqH[0], inq2=iqH[1];
       const cfg=cfgAll[num]||{tipo:'individual',plazas:1,precio:0};
-      const est=inq?(inq.estado==='RESERVADO'?'res':'occ'):'free';
+      const est=inq?(inq.estado==='RESERVADO'?'res':'occ'):(rsv?'res':'free');
       const col=est==='occ'?'var(--gn)':est==='res'?'var(--ye)':'var(--rd)';
       const label=est==='occ'?'Ocupada':est==='res'?'Reservada':'Libre';
       const esDoble=cfg.tipo==='doble';
@@ -3398,7 +3404,7 @@ function rHabs(){
           <span class="room-num" style="color:${col};font-size:15px;">H${num}</span>
           <span style="font-size:8.5px;font-family:'DM Mono',monospace;color:${col};text-transform:uppercase;letter-spacing:.6px;">${label}</span>
         </div>
-        <div class="room-name" style="font-size:12px;${inq?'cursor:pointer;':''}" ${inq?`onclick="openPerfil('${inq.id}')"`:''}>${inq?inq.nom+' '+(inq.ap||'')+(inq2?' y '+inq2.nom+' '+(inq2.ap||''):''):'Disponible'}</div>
+        <div class="room-name" style="font-size:12px;${inq||rsv?'cursor:pointer;':''}" ${inq?`onclick="openPerfil('${inq.id}')"`:(rsv?`onclick="v4GestionarReserva('${rsv.id}')"`:'')}>${inq?inq.nom+' '+(inq.ap||'')+(inq2?' y '+inq2.nom+' '+(inq2.ap||''):''):(rsv?v4Esc(v4NomRes(rsv)):'Disponible')}</div>
         ${inq?`<div style="font-size:10px;color:var(--ink3);margin-top:2px;">Desde ${fD(inq.ini)} · ${inq.alq||0}€/mes</div>`:''}
         <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;">
           <div class="hab-tipo" role="group" aria-label="Tipo de habitación">
@@ -3422,7 +3428,7 @@ function rHabs(){
         <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${p.nom}</div><div style="font-size:11px;color:var(--ink3);">${p.dir||''}</div>${v2TxtM2(p)}</div>
         <div style="text-align:right;">
           <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gn);">${renta}€/mes</div>
-          <div style="font-size:10px;color:var(--ink3);">${libre} hab. libre${libre!==1?'s':''}${rentaPot>0?` · potencial ${eur(rentaPot)}`:''}</div>
+          <div style="font-size:10px;color:var(--ink3);">${libre-nRes} hab. libre${(libre-nRes)!==1?'s':''}${nRes?' · '+nRes+' reservada'+(nRes!==1?'s':''):''}${rentaPot>0?` · potencial ${eur(rentaPot)}`:''}</div>
         </div>
       </div>
       <div class="room-grid">${cards}</div>
@@ -5512,6 +5518,7 @@ function rVisitas(){
           ${Object.entries(VI_ESTADOS).map(([k,o])=>`<option value="${k}" ${v.est===k?'selected':''}>${o.ico} ${o.et}</option>`).join('')}
         </select>
         ${['interesado','realizada'].includes(v.est)?`<button class="btn btn-primary btn-xs" onclick="visitaAInquilino('${v.id}')" title="Dar de alta como inquilino">🎉</button>`:''}
+        ${v4BtnReservarVisita(v)}
         <button class="btn btn-secondary btn-xs" onclick="editVisita('${v.id}')">✏️</button>
         <button class="btn btn-danger btn-xs" onclick="delVisita('${v.id}')">🗑</button>
       </div>
@@ -5979,7 +5986,7 @@ function verCuotas(hipId){
       <div style="background:var(--bg);border:1px solid var(--line);border-radius:var(--r2);padding:12px;margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div><div style="font-size:13px;font-weight:700;">${cu.mes||'—'}${cu.fecha?' · '+fD(cu.fecha):''}</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:2px;">Cuota ${eur(cu.imp,2)}${cu.tipo?' · tipo '+cu.tipo+'%':''}</div></div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px;">Cuota ${eur(cu.imp,2)}${v5TxtTipoLista(h,cu)}</div></div>
           <div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editCuota('${hipId}','${cu.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCuota('${hipId}','${cu.id}')">🗑</button></div>
         </div>
         <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;align-items:center;">
@@ -6044,7 +6051,7 @@ function rHipotecas(){
       </div>`:''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
         <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Cuota/mes</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${eur(h.cuota,2)}</div>${h.dia?`<div style="font-size:9px;color:var(--ink3);">día ${h.dia}</div>`:''}</div>
-        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Tipo result.</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--bl);">${t.toFixed(2)}%</div>${h.tipo==='Variable'?`<div style="font-size:9px;color:var(--ink3);">Eur ${(+h.euribor||0)}% + ${(+h.dif||0)}%${h.bonif?' − '+h.bonif+'%':''}</div>`:''}</div>
+        <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Tipo result.</div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--bl);">${t.toFixed(2)}%</div>${h.tipo==='Variable'?`<div style="font-size:9px;color:var(--ink3);">Eur ${(+h.euribor||0)}% + ${(+h.dif||0)}%${h.bonif?' − '+h.bonif+'%':''}</div>`:''}${v5HtmlUltimoTipo(h,t)}</div>
         <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Interés/mes</div><div class="mono" style="font-size:13px;color:var(--rd);">${eur(interesMes,2)}</div></div>
         <div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;">Amortiz./mes</div><div class="mono" style="font-size:13px;color:var(--gn);">${eur(capitalMes,2)}</div></div>
       </div>
@@ -10686,7 +10693,7 @@ function v2ChequeoTemporal(co, excluirId){
   const cfg=v2cfg(), inq=(D.inqs||[]).find(i=>i.id==co.inqId), nm=inq?((inq.nom||'')+' '+(inq.ap||'')).trim():'Contrato';
   { const pv=(D.props||[]).find(x=>x.id==co.propId); if(pv&&pv.vpo==='vigente') out.push({n:'error',t:nm+': contrato temporal en una VPO con el régimen vigente. '+V2_VPO_TXT.charAt(0).toUpperCase()+V2_VPO_TXT.slice(1)+'.'});
     else if(pv&&pv.vpo==='revisar') out.push({n:'aviso',t:nm+': el piso consta como VPO. Comprueba que el régimen de protección ya no está vigente antes de firmar un temporal.'}); }
-  if(!co.causa) out.push({n:'error',t:nm+': contrato temporal sin causa expresa → se considera de vivienda habitual (art. 3 LAU, RDL 29/2026).'});
+  if(!co.causa) out.push({n:'error',t:nm+': contrato temporal sin causa expresa → se considera de vivienda habitual (art. 2.3 LAU, RDL 29/2026).'});
   if(!co.vivHab) out.push({n:'aviso',t:nm+': indica la vivienda habitual de la que se desplaza el inquilino (acredita la temporalidad).'});
   if(co.ini&&co.fin){
     const dias=Math.round((fxDate(co.fin)-fxDate(co.ini))/864e5)+1;
@@ -10867,7 +10874,7 @@ function rFiscalV2(){
     · Gastos solo por el periodo arrendado: STS 25-02-2021 y Manual práctico de Renta de la AEAT. Reparaciones previas: DGT V3146-18.<br>
     · Amortización 3% sobre el mayor de coste o valor catastral sin suelo; usufructo 3% del coste satisfecho: art. 14 RIRPF. Coste del usufructo lucrativo: DGT V1973-20 / Manual AEAT.<br>
     · Reducción por arrendamiento de vivienda: art. 23.2 LIRPF en la redacción del RDL 29/2026 (se asume convalidado). No aplicable a arrendamientos temporales o de temporada: DGT V2810-19 y V0444-24.<br>
-    · Arrendamiento temporal: art. 3 LAU en la redacción del RDL 29/2026 (causa acreditada, más de 31 días, máximo general 12 meses, no más de 2 contratos consecutivos, subida limitada al IRAV).<br>
+    · Arrendamiento temporal: art. 2.3 LAU en la redacción del RDL 29/2026 (causa acreditada, más de 31 días, máximo general 12 meses, no más de 2 contratos consecutivos, subida limitada al IRAV).<br>
     · Imputación de rentas: art. 85 LIRPF; 1,1% en 2026 si la revisión catastral es desde 2012 (DA 55ª, RDL 29/2026).<br>
     · Rendimiento mínimo del nudo propietario que constituye el usufructo gratis a favor de pariente: art. 24 LIRPF y cuadro de usufructo del Manual AEAT.<br>
     · Reparto de rentas entre propietario y usufructuario por días: art. 474 del Código Civil.<br>
@@ -11053,7 +11060,7 @@ function v2ContReset(){ if($i('co-tipo')) $i('co-tipo').value='temporal'; ['co-f
 function v2ContRead(){ const ch=i=>!!($i(i)&&$i(i).checked); return {tipoContrato:gi('co-tipo'),firma:gi('co-firma'),causa:gi('co-causa'),rentaAnt:gn('co-rant'),primer:ch('co-primer'),rentaInfIndice:ch('co-indice'),arrPJ:ch('co-pj'),pisoEntero:ch('co-entero'),prorrogaTacita:ch('co-tacita'),vivHab:gi('co-vivhab'),causaSubsiste:ch('co-subsiste')}; }
 
 
-// Fin de contrato temporal: más de 31 días y, como regla general, máximo 12 meses (art. 3 LAU, RDL 29/2026)
+// Fin de contrato temporal: más de 31 días y, como regla general, máximo 12 meses (arts. 2.3 y 9 bis LAU, RDL 29/2026)
 function v2FinTemporal(ini,mmdd){
   const d=fxDate(ini), max=fxDate(ini); max.setFullYear(max.getFullYear()+1); max.setDate(max.getDate()-1);
   const min=fxDate(ini); min.setDate(min.getDate()+31);
@@ -12002,7 +12009,7 @@ function v4ValidarContrato(co){
   if(!co.cFin1) add('Falta la fecha de fin prevista de la causa (C) del arrendatario 1.');
   if(co.inqId2&&!co.cFin2) add('Falta la fecha de fin prevista de la causa (C) del arrendatario 2.');
   if(co.inqId2&&co.inqId2==co.inqId) add('El arrendatario 2 no puede ser el mismo que el arrendatario 1.');
-  if(!co.causa) add('Falta la causa de la temporalidad (art. 3 LAU).');
+  if(!co.causa) add('Falta la causa de la temporalidad (art. 2.3 LAU).');
   if(!co.vivHab) add('Falta el domicilio habitual del arrendatario (Anexo I).');
   if(F&&E){
     if(!(v4Diff(F,E)>31)) add('E − F = '+v4Diff(F,E)+' días: el contrato temporal debe durar más de 31 días (art. 9 bis.1 LAU).');
@@ -12029,6 +12036,12 @@ function v4ValidarContrato(co){
   if(co.itpOpcion==='fran'&&co.itpPres&&!(parseFloat(co.itpImp)>0)) add('Indica el importe del ITP que pagaste.');
   { const rs=co.resId?v4Res(co.resId):null; if(rs){ const sen=parseFloat(rs.senal)||0, fg=(parseFloat(co.f)||0)+(parseFloat(co.g)||0);
       if(sen>fg+0.004) add('La señal de la reserva ('+v4E2(sen)+' €) no cabe en la fianza más la garantía ('+v4E2(fg)+' €): se descuenta de ellas en la firma.');
+      const rr=parseFloat(rs.renta)||0, Pr=v4ResP(rs);
+      if(rr>0&&Math.abs((parseFloat(co.r)||0)-rr)>0.004) add('La renta ('+v4E2(co.r)+' €) no es la de la oferta y reserva ('+v4E2(rr)+' €; cláusula 5): si cambia, el interesado puede no firmar y habría que devolverle el doble. Si lo habéis cambiado de mutuo acuerdo y por escrito, corrige antes la renta en la reserva.');
+      if(rr>0&&(Math.abs((parseFloat(co.f)||0)-rr)>0.004||Math.abs((parseFloat(co.g)||0)-rr)>0.004)) add('La oferta fija una fianza y una garantía adicional de una mensualidad cada una ('+v4E2(rr)+' €; cláusula 5).');
+      if(F&&Pr&&F>Pr) warn('La firma ('+v4F2(F)+') es posterior a la fecha de la reserva ('+v4F2(Pr)+'): la reserva quedó sin efecto ese día (cláusula 2). Si firmáis igualmente, que conste por escrito que los dos lo aceptáis y que la señal se descuenta.');
+      if(rs.E&&E&&E!==rs.E) warn('El fin del contrato ('+v4F2(E)+') no es el de la oferta ('+v4F2(rs.E)+'; cláusula 3): si cambia, que conste por escrito que el interesado lo acepta.');
+      if(parseFloat(rs.internetAnual)>0&&parseFloat(co.internetAnual)>0&&Math.abs(parseFloat(co.internetAnual)-parseFloat(rs.internetAnual))>0.004) warn('El importe máximo de internet ('+v4E2(co.internetAnual)+' €) no es el de la oferta ('+v4E2(rs.internetAnual)+' €; cláusula 5).');
       if(!co.igualModelo) add('Marca que el contrato es el modelo enviado tras la reserva, sin cambios: si cambia algo, el interesado puede no firmar y habría que devolverle el doble (oferta, cláusulas 4 y 10).'); } }
   // Habitación que exista en el piso y que no esté alquilada a otra persona en esas fechas
   const prH=(D.props||[]).find(p=>p.id==co.propId), nH=parseInt(prH&&prH.habs)||0;
@@ -12689,7 +12702,7 @@ function addCont(){
   if(co.inqId2&&co.propId&&co.hab){ const pr=(D.props||[]).find(p=>p.id==co.propId); if(pr){ const cf=Object.assign({tipo:'individual',plazas:1,precio:0},(pr.habsConfig||{})[co.hab]||{}); if(cf.tipo!=='doble'){ pr.habsConfig=Object.assign({},pr.habsConfig||{}); cf.tipo='doble'; cf.plazas=2; pr.habsConfig[co.hab]=cf; msg+=' · hab. '+co.hab+' marcada como doble'; } } }
   if(co.id){ const i=D.conts.findIndex(x=>x.id===co.id); if(i>=0) D.conts[i]=co; msg=msg.replace('Contrato guardado','Contrato actualizado'); } else { co.id=uid(); D.conts.push(co); }
   if(co.itpOpcion==='fran'&&co.itpPres){ co.itpOk=true; co.itpFecha=co.itpPres; }
-  if(co.resId){ const rs=v4Res(co.resId); if(rs) rs.coId=co.id; }
+  if(co.resId){ const rs=v4Res(co.resId); if(rs){ rs.coId=co.id; const vv=rs.visitaId&&(D.visitas||[]).find(x=>x.id==rs.visitaId); if(vv) vv.est='alquilado'; (D.anuncios||[]).forEach(a=>{ if(a.pausaRes===rs.id) delete a.pausaRes; }); } }
   v4SincronizarInqs(co); v4ActualizarRentasPendientes(co); autoGenerarPagosPendientes();
   try{ v4PagoReembolsoItp(co); }catch(e){ console.warn(e); }
   saveAndSync(); closeM('m-co'); clearPdfZone('co-pdf-zone','co-pdf-data'); rConts(); v4RefrescarAvisos(); toast(msg);
@@ -12972,8 +12985,9 @@ function v4HtmlPasoHab(propId,hab){
     if((r.x.estado==='cerrando'||r.x.estado==='libre')&&r.a) extra='La habitación está libre: publica el anuncio.';
     if(r.x.sig) extra=(extra?extra+' ':'')+'Próximo contrato: '+v4Esc(v4Nombres(r.x.sig))+' desde el '+v4F2(v4F(r.x.sig))+'.';
     const rsv=(D.reservas||[]).find(x=>v4ResActiva(x)&&x.propId==propId&&String(x.hab)===String(hab));
-    if(rsv) extra=(extra?extra+' ':'')+'Reservada por '+v4Esc(v4NomRes(rsv))+': firma prevista el '+v4F2(v4ResP(rsv))+'.';
-    return '<div style="margin-top:7px;">'+html+(extra?'<div style="font-size:9.5px;color:var(--ye);margin-top:3px;line-height:1.35;">'+extra+'</div>':'')+'</div>';
+    if(rsv) extra=(extra?extra+' ':'')+'📝 Reservada por '+v4Esc(v4NomRes(rsv))+': firma y entrada el '+v4F2(v4ResP(rsv))+' · renta '+v4E2(rsv.renta)+' €/mes.';
+    let btnR=''; if(!rsv&&!r.x.sig&&!(D.inqs||[]).some(i=>i.propId==propId&&String(i.hab)===String(hab)&&i.estado==='RESERVADO')&&(r.x.estado==='libre'||r.x.estado==='cerrando'||(r.x.estado==='ocupada'&&r.x.co&&v4Diff(hoy,v4FinCobro(r.x.co)||v4E(r.x.co))<=30))) btnR='<button class="btn btn-secondary btn-xs" style="margin-top:6px;" onclick="event.stopPropagation();v4FormReserva(null,{propId:\''+propId+'\',hab:\''+hab+'\'})">📝 Reservar</button>';
+    return '<div style="margin-top:7px;">'+html+(extra?'<div style="font-size:9.5px;color:var(--ye);margin-top:3px;line-height:1.35;">'+extra+'</div>':'')+btnR+'</div>';
   }catch(e){ console.warn('Siguiente paso',e); return ''; }
 }
 // Fila del inquilino (Inquilinos activos)
@@ -13021,6 +13035,7 @@ function v4OcupPiso(propId,iso,excluirHab){ return (D.conts||[]).filter(c=>c.pro
 function v4ValidarVisita(v,ahora){
   const err=[], av=[]; if(!v||!v.propId||!v.fecha||!v.hora||!V4_VIS_ACTIVAS.includes(v.est||'pendiente')) return {err,av};
   ahora=ahora||new Date();
+  if(v.hab){ const rsv=v4ResDeHab(v.propId,v.hab,v.fecha); if(rsv&&rsv.visitaId!==v.id&&!v4EsDeLaReserva(rsv,v.tel,v.email)) err.push('La habitación '+v.hab+' está reservada por '+v4NomRes(rsv)+' hasta el '+v4F2(v4ResP(rsv))+': mientras dure la reserva no se puede ofrecer a otras personas (cláusula 1 de la oferta y reserva). Si termina sin contrato, se podrá enseñar de nuevo.'); }
   const ini=v4MinHM(v.hora), dur=parseInt(v.dur)||30, fin=ini+dur, horas=(new Date(v.fecha+'T'+v.hora)-ahora)/36e5;
   if(v.hab){ const occ=v4OcupHab(v.propId,v.hab,v.fecha);
     if(occ.length){ const co=occ[0], fc=v4FinCobro(co)||v4E(co), sv=v4SalidaValida(co), nom=v4Nombres(co);
@@ -13275,6 +13290,9 @@ function v4AvisoCorreccion(res){
 // opciones, certificado energético por piso, conservación de datos y validaciones nuevas
 // ══════════════════════════════════════════════════════════════════════════════
 
+// v4.4 · 29/10/2026: reserva desde la visita o a distancia, renta desde Habitaciones, habitación reservada,
+// caducidad a los 15 días como máximo (aviso para comunicarlo), datos de la oferta en orden y fin de la reserva
+
 // ── Fechas ──
 function v4SubHabiles(iso,n,propId){ const f=v4Festivos(propId); let d=iso,c=0,g=0; while(c<n&&g<400){ d=fxAdd(d,-1); if(v4EsHabil(d,f)) c++; g++; } return d; }
 // Plazos que corren contra nosotros: sin festivos locales, para no pasarnos nunca
@@ -13380,67 +13398,135 @@ function v4MedioRes(r){ if(r.medio==='bizum') return 'Bizum'+(r.bizum?' al '+r.b
 function v4LimRechazo(r){ if(!r.M) return null; const m48=new Date(v4DT(r.M).getTime()+48*36e5), P=v4ResP(r), pdt=P?v4DTde(P,r.Phora||'23:59'):null; return (pdt&&pdt<m48)?pdt:m48; }
 function v4ResDeContrato(co){ return (D.reservas||[]).find(r=>(r.coId?r.coId===co.id:!r.fin)&&r.propId==co.propId&&String(r.hab)===String(co.hab)&&[co.inqId,co.inqId2].filter(Boolean).some(i=>i==r.inqId||i==r.inqId2)); }
 
+const V4_CAUSAS={trabajo:'Trabajo o desplazamiento laboral temporal', estudios:'Estudios, formación, prácticas u oposiciones', medico:'Tratamiento médico propio o de un familiar', obras:'Obras o inhabitabilidad temporal de su vivienda habitual'};
+function v4CfgHab(propId,hab){ const p=(D.props||[]).find(x=>x.id==propId); if(!p||!hab) return {}; const c=p.habsConfig||{}; return c[hab]||c[parseInt(hab)]||c[String(hab)]||{}; }
+function v4PrecioHab(propId,hab){ return parseFloat(v4CfgHab(propId,hab).precio)||0; }
+function v4InetPiso(propId){ const cs=(D.conts||[]).filter(c=>c.propId==propId&&parseFloat(c.internetAnual)>0).sort((a,b)=>String(v4F(b)).localeCompare(String(v4F(a)))); if(cs.length) return parseFloat(cs[0].internetAnual); const p=(D.props||[]).find(x=>x.id==propId); return parseFloat(p&&p.internetAnual)||0; }
+function v4ResCaducada(r,hoy){ return v4ResActiva(r)&&!!v4ResP(r)&&v4ResP(r)<(hoy||v4Hoy()); }
+function v4ResDeHab(propId,hab,iso){ return (D.reservas||[]).find(r=>v4ResActiva(r)&&r.propId==propId&&String(r.hab)===String(hab)&&(!iso||(r.O<=iso&&iso<=v4ResP(r)))); }
+function v4CausaTxt(t,d){ return (V4_CAUSAS[t]||'')+(d?' ('+d+')':''); }
+function v4TelNorm(s){ const t=String(s||'').replace(/\D/g,''); return t.length>9&&t.startsWith('34')?t.slice(2):t; }
+function v4EsDeLaReserva(r,tel,email){ const t=v4TelNorm(tel), e=String(email||'').trim().toLowerCase(); return [r.inqId,r.inqId2].filter(Boolean).map(v4Inq).filter(Boolean).some(i=>(t&&t.length>=6&&v4TelNorm(i.tel||i.wa)===t)||(e&&String(i.email||'').trim().toLowerCase()===e)); }
+function v4Letras(n){
+  const U=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte','veintiuno','veintidós','veintitrés','veinticuatro','veinticinco','veintiséis','veintisiete','veintiocho','veintinueve'];
+  const DD=['','','','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'], C=['','ciento','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];
+  const m100=x=>x<30?U[x]:DD[Math.floor(x/10)]+(x%10?' y '+U[x%10]:''), m1000=x=>x===100?'cien':(x>100?C[Math.floor(x/100)]+(x%100?' '+m100(x%100):''):m100(x));
+  n=Math.floor(Math.abs(+n||0)); if(n<1000) return m1000(n);
+  const m=Math.floor(n/1000), r=n%1000; return (m===1?'mil':v4Apoc(m1000(m))+' mil')+(r?' '+m1000(r):'');
+}
+function v4Apoc(s){ return String(s).replace(/veintiuno$/,'veintiún').replace(/(^|\s)uno$/,'$1un'); }
+function v4NumDoc(x){ const v=Math.round((+x||0)*100)/100, ent=Math.floor(v), dec=Math.round((v-ent)*100); return String(ent).replace(/\B(?=(\d{3})+(?!\d))/g,'.')+(dec?','+String(dec).padStart(2,'0'):''); }
+function v4EurosLetras(x){ const v=Math.round((+x||0)*100), e=Math.floor(v/100), c=v%100; return v4Apoc(v4Letras(e))+(e===1?' euro':' euros')+(c?' con '+v4Apoc(v4Letras(c))+(c===1?' céntimo':' céntimos'):''); }
+function v4EurosDoc(x){ return v4EurosLetras(x)+' ('+v4NumDoc(x)+'€)'; }
 function v4ValidarReserva(r){
-  const err=[], av=[]; const p=(D.props||[]).find(x=>x.id==r.propId);
+  const err=[], av=[]; const p=(D.props||[]).find(x=>x.id==r.propId), hoy=v4Hoy();
   if(!r.inqId) err.push('Falta el interesado.');
   if(r.inqId==='__nuevo'&&!(r._nuevo&&r._nuevo.nom)) err.push('Escribe el nombre del interesado nuevo.');
+  if(r.inqId2==='__nuevo'&&!(r._nuevo2&&r._nuevo2.nom)) err.push('Escribe el nombre del segundo interesado.');
+  const pers=[{n:1,dni:r.dni1,dom:r.vivHab1,ct:r.causaTipo1,cf:r.cFin1,nac:r.nac1}].concat(r.inqId2?[{n:2,dni:r.dni2,dom:r.vivHab2,ct:r.causaTipo2,cf:r.cFin2,nac:r.nac2}]:[]);
+  pers.forEach(x=>{ const q=x.n===1?'del interesado':'del segundo interesado';
+    if(!x.dni) err.push('Falta el DNI, NIE o pasaporte '+q+' (va en la oferta y en la consulta de ASNEF).');
+    if(!x.dom) err.push('Falta el domicilio habitual '+q+' (encabezamiento de la oferta).');
+    if(!x.ct) err.push('Marca la causa de temporalidad '+q+' (cláusula 3).');
+    if(!x.cf) err.push('Falta la fecha prevista de fin de la causa '+q+' (cláusula 3).');
+    if(!x.nac) av.push('Falta la nacionalidad '+q+'.'); });
   if(!r.propId) err.push('Falta el piso.'); if(!r.hab) err.push('Falta la habitación.');
   if(p&&r.hab){ const n=parseInt(p.habs)||0, h=parseInt(r.hab); if(n&&!(String(h)===String(r.hab).trim()&&h>=1&&h<=n)) err.push('La habitación «'+r.hab+'» no existe en '+p.nom+'.'); }
   if(!r.O) err.push('Falta la fecha de firma de la oferta y pago de la señal (O).');
   const P=v4ResP(r);
-  if(!P) err.push('Falta la fecha prevista de firma del contrato (P).');
-  if(r.O&&r.P){ if(r.P<r.O) err.push('P no puede ser anterior a O.'); if(r.P>fxAdd(r.O,15)) err.push('P ('+v4F2(r.P)+') es posterior a O + 15 días ('+v4F2(fxAdd(r.O,15))+'): la reserva bloquea la habitación como máximo 15 días (oferta, cláusula 2). Si se pacta una prórroga por escrito, regístrala con «Prorrogar».'); }
-  const renta=parseFloat(r.renta)||0, s=parseFloat(r.senal)||0;
+  if(!P) err.push('Falta la fecha prevista de firma del contrato y entrada (P).');
+  if(r.O&&r.P){ if(r.P<r.O) err.push('P no puede ser anterior a O.'); if(r.P>fxAdd(r.O,15)) err.push('P ('+v4F2(r.P)+') es posterior a O + 15 días naturales ('+v4F2(fxAdd(r.O,15))+'): la reserva bloquea la habitación como máximo 15 días (cláusula 2 de la oferta).'); }
+  // Duración del futuro contrato (cláusula 3): más de 31 días, máximo 12 meses y no después del fin de la causa
+  const E=r.E, Cm=[r.cFin1,r.inqId2?r.cFin2:''].filter(Boolean).sort()[0];
+  if(!E) err.push('Falta la fecha prevista de fin del contrato (cláusula 3).');
+  if(P&&E){ if(!(v4Diff(P,E)>31)) err.push('Del '+v4F2(P)+' al '+v4F2(E)+' hay '+v4Diff(P,E)+' días: el contrato temporal tiene que durar más de 31 días (art. 9 bis.1 LAU).'); if(E>v4AddM(P,12)) err.push('El fin ('+v4F2(E)+') pasa de 12 meses desde la firma ('+v4F2(v4AddM(P,12))+'): art. 9 bis.1 LAU.'); }
+  if(E&&Cm&&E>Cm) err.push('El fin del contrato ('+v4F2(E)+') es posterior al fin de la causa'+(r.inqId2?' que acaba antes':'')+' ('+v4F2(Cm)+'): cláusula 3.');
+  // Renta: precio de Habitaciones e IRAV (art. 17.8 LAU)
+  const renta=parseFloat(r.renta)||0, s=parseFloat(r.senal)||0, pc=v4PrecioHab(r.propId,r.hab);
   if(!(renta>0)) err.push('Falta la renta mensual del contrato.');
+  if(r.propId&&r.hab&&!pc) av.push('La habitación '+r.hab+' no tiene precio en Habitaciones: ponlo allí y se usará en las reservas.');
+  else if(pc&&renta>0&&Math.abs(pc-renta)>0.004) av.push('La renta ('+v4E2(renta)+' €) no coincide con el precio de la habitación en Habitaciones ('+v4E2(pc)+' €).');
+  if(renta>0&&P&&r.propId&&r.hab){ try{ (v4ValidarContrato({tipoContrato:'temporal',id:'__res',propId:r.propId,hab:String(r.hab),firma:P,ini:P,fin:E||v4AddM(P,2),r:renta}).err||[]).filter(e=>/IRAV/.test(e)).forEach(e=>err.push(e)); }catch(e){} }
   if(!(s>0)) err.push('Falta el importe de la señal.');
-  if(renta>0&&s>renta+0.004) err.push('La señal ('+v4E2(s)+' €) supera 1 mensualidad de renta ('+v4E2(renta)+' €): oferta, cláusula 4.');
-  const tit=r.propId?titularidadDia(r.propId,r.O||v4Hoy()).disfrute:null;
+  if(renta>0&&s>renta+0.004) err.push('La señal ('+v4E2(s)+' €) supera 1 mensualidad de renta ('+v4E2(renta)+' €): cláusula 4.');
+  if(!(parseFloat(r.internetAnual)>0)) av.push('Falta el importe anual máximo de internet del piso (cláusula 5 de la oferta).');
+  const tit=r.propId?titularidadDia(r.propId,r.O||hoy).disfrute:null;
   if(!r.medio) err.push('Indica cómo se cobra la señal.');
-  if(r.medio==='transferencia'){ const c=(D.ctasBanc||[]).find(x=>x.id==r.ctaId); if(!c) err.push('Elige la cuenta del titular del piso.'); else if(tit&&c.titularId&&c.titularId!==tit) err.push('La cuenta es de '+nombreC(c.titularId)+', pero quien cobra las rentas de este piso es '+nombreC(tit)+': la señal se cobra en su cuenta (oferta, cláusula 4).'); }
+  if(r.medio==='transferencia'){ const c=(D.ctasBanc||[]).find(x=>x.id==r.ctaId); if(!c) err.push('Elige la cuenta del titular del piso.'); else if(tit&&c.titularId&&c.titularId!==tit) err.push('La cuenta es de '+nombreC(c.titularId)+', pero quien cobra las rentas de este piso es '+nombreC(tit)+': la señal se cobra en su cuenta (cláusula 4).'); }
   if(r.medio==='bizum'){ if(!r.bizum) err.push('Escribe el número de Bizum del titular del piso.'); else if(tit) av.push('Comprueba que el Bizum '+r.bizum+' es de '+nombreC(tit)+', que es quien cobra las rentas de este piso.'); }
   if(r.medio==='efectivo'&&!r.efectivoExc) err.push('En efectivo solo si el interesado no tiene cuenta ni medios electrónicos y lo pide (art. 17.3 LAU): marca la casilla si es el caso.');
-  if(p){ if(!p.ceeCalif) err.push('Registra la calificación energética de '+p.nom+' en su ficha: va en la oferta (manifiesta 3; RD 390/2021, art. 15.2).'); else { const e=v4CeeEstado(p,r.O||v4Hoy()); if(e.caducado) err.push(e.txt); else if(e.falta) av.push('Falta '+e.falta.join(', ')+' del certificado energético: para firmar el contrato será obligatorio.'); } }
+  if(p){ if(!p.ceeCalif) err.push('Registra la calificación energética de '+p.nom+' en su ficha: va en la oferta (manifiesta 3; RD 390/2021, art. 15.2).'); else { const e=v4CeeEstado(p,r.O||hoy); if(e.caducado) err.push(e.txt); else if(e.falta) av.push('Falta '+e.falta.join(', ')+' del certificado energético: para firmar el contrato será obligatorio.'); } }
   const m=parseFloat(r.multiplo), g=parseFloat((D.cfg||{}).multiploIngresos);
-  if(!(m>0)) err.push('Rellena el múltiplo de ingresos exigido («____ veces la renta»; oferta, condición ii).');
+  if(!(m>0)) err.push('Rellena el múltiplo de ingresos exigido («____ veces la renta»; condición ii).');
   else if(g>0&&Math.abs(g-m)>1e-9) err.push('El múltiplo de ingresos tiene que ser el mismo para todos: ahora es '+String(g).replace('.',',')+' veces la renta. Si quieres cambiarlo para todos, hazlo en la cabecera de Reservas.');
-  if(r.propId&&r.hab){
-    const otra=(D.reservas||[]).find(x=>x.id!==r.id&&v4ResActiva(x)&&x.propId==r.propId&&String(x.hab)===String(r.hab));
-    if(otra&&v4ResActiva(r)) err.push('Ya hay otra reserva en curso de esta habitación ('+v4NomRes(otra)+', firma prevista el '+v4F2(v4ResP(otra))+').');
-    if(P&&v4ResActiva(r)){ const occ=v4OcupHab(r.propId,r.hab,P).filter(c=>!(r.coId&&c.id===r.coId)); if(occ.length) err.push('El '+v4F2(P)+' la habitación sigue alquilada a '+v4Nombres(occ[0])+' (hasta el '+v4F2(v4FinCobro(occ[0]))+'): no se podría entregar en P.'); }
+  if(r.propId&&r.hab&&v4ResActiva(r)){
+    const otras=(D.reservas||[]).filter(x=>x.id!==r.id&&v4ResActiva(x)&&x.propId==r.propId&&String(x.hab)===String(r.hab));
+    const cad=otras.find(x=>v4ResCaducada(x,hoy)), viva=otras.find(x=>!v4ResCaducada(x,hoy));
+    if(viva) err.push('Ya hay otra reserva en curso de esta habitación ('+v4NomRes(viva)+', firma prevista el '+v4F2(v4ResP(viva))+').');
+    if(cad) err.push('La reserva anterior de esta habitación ('+v4NomRes(cad)+') quedó sin efecto el '+v4F2(v4ResP(cad))+', pero falta registrar cómo terminó («Terminar sin contrato»).');
+    if(P){ const occ=v4OcupHab(r.propId,r.hab,P).filter(c=>!(r.coId&&c.id===r.coId)); if(occ.length){ const fc=v4FinCobro(occ[0])||v4E(occ[0]), lib=fc?fxAdd(fc,1):''; err.push('El '+v4F2(P)+' la habitación sigue alquilada a '+v4Nombres(occ[0])+' (hasta el '+v4F2(fc)+'): no se podría entregar en P.'+(lib?' Queda libre el '+v4F2(lib)+': como la reserva dura 15 días como máximo, la oferta se puede firmar como pronto el '+v4F2(fxAdd(lib,-15))+'.':'')); } }
   }
-  if(!r.ceeDicha) av.push('En la visita hay que decir la calificación energética y enseñar la etiqueta (oferta, manifiesta 3): marca la casilla cuando lo hayas hecho.');
+  const tipo=v4CfgHab(r.propId,r.hab).tipo||'individual';
+  if(r.inqId2&&tipo!=='doble') av.push('La habitación '+r.hab+' está configurada como individual y la reservan dos personas: en la oferta se marca «doble» (manifiesta 2) y al firmar el contrato quedará como doble.');
+  if(r.modo==='visita'&&r.visitaId&&r.O){ const vv=(D.visitas||[]).find(x=>x.id==r.visitaId); if(vv&&vv.fecha&&vv.fecha>r.O) av.push('La visita enlazada es del '+v4F2(vv.fecha)+', después de la firma de la oferta ('+v4F2(r.O)+'): el manifiesta 3 dice que ya ha visitado la habitación.'); }
+  if(r.modo==='distancia') av.push('Reserva sin visita: el manifiesta 3 de la oferta v20261026-3 dice que el interesado ha visitado la vivienda y la habitación. Sin visita, ese punto no sería cierto: adapta la oferta (por ejemplo, «ha visto la vivienda y la habitación por fotos y videollamada») y mándale la calificación y la etiqueta energética antes de que pague.');
+  if(!r.ceeDicha) av.push(r.modo==='distancia'?'Antes de que pague, hay que informarle de la calificación energética y mandarle la etiqueta (manifiesta 3): marca la casilla cuando lo hayas hecho.':'En la visita hay que decir la calificación energética y enseñar la etiqueta (manifiesta 3): marca la casilla cuando lo hayas hecho.');
+  if(!r.info31) av.push('Antes de pagar, el interesado ha podido pedir la información del art. 31 de la Ley 12/2023 (manifiesta 3): marca la casilla.');
+  try{ const i1=r.inqId&&r.inqId!=='__nuevo'?v4Inq(r.inqId):(r._nuevo||{}); const vt=buscarVetado(i1.nom||'',i1.ap||'',r.dni1||'',i1.email||'',i1.tel||''); if(vt&&vt.id!==r.inqId) av.push('🚫 Coincide con una persona de tu lista negra ('+((vt.nom||'')+' '+(vt.ap||'')).trim()+(vt.aptoMotivo?': '+vt.aptoMotivo:'')+').'); }catch(e){}
   if(r.asnef&&r.asnef.resultado==='figura') av.push('Figura en ASNEF o BADEXCUG con deudas: la reserva termina y se devuelve la señal íntegra («Terminar sin contrato»).');
   if(r.rechazo&&r.M){ const lim=v4LimRechazo(r); av.push(v4DT(r.rechazo)<=lim?'Rechazó el modelo dentro del plazo: la reserva termina y se devuelve la señal íntegra.':'Rechazó el modelo fuera de plazo ('+v4FmtDT(lim)+'): si no firma, pierde la señal.'); }
   return {err,av,ok:!err.length};
 }
 
-function v4OptsInqsRes(sel){ return '<option value="__nuevo">➕ Interesado nuevo…</option>'+(D.inqs||[]).filter(i=>!i.suprimido).map(i=>'<option value="'+i.id+'"'+(i.id==sel?' selected':'')+'>'+v4Esc(((i.nom||'')+' '+(i.ap||'')).trim())+' ('+i.estado+')</option>').join(''); }
+function v4OptsInqsRes(sel,segundo){ return (segundo?'<option value="">— Ninguno —</option>':'')+'<option value="__nuevo">➕ Interesado nuevo…</option>'+(D.inqs||[]).filter(i=>!i.suprimido).map(i=>'<option value="'+i.id+'"'+(i.id==sel?' selected':'')+'>'+v4Esc(((i.nom||'')+' '+(i.ap||'')).trim())+' ('+i.estado+')</option>').join(''); }
 function v4FormReserva(id,pre){
-  const r=id?v4Res(id):Object.assign({O:v4Hoy(),Ohora:v4HM(new Date()),multiplo:(D.cfg||{}).multiploIngresos||'',medio:'bizum'},pre||{});
-  if(!r) return; const prorr=(r.prorrogas||[]).length;
-  const I=(lbl,idf,v,t,ex)=>'<div class="fgrp'+(ex&&ex.full?' fgf':'')+'"'+(ex&&ex.grp?' data-g="'+ex.grp+'"':'')+'><label>'+lbl+'</label><input id="'+idf+'" type="'+(t||'text')+'" value="'+v4Esc(v==null?'':v)+'"'+(t==='number'?' step="0.01"':'')+(ex&&ex.ph?' placeholder="'+v4Esc(ex.ph)+'"':'')+(ex&&ex.dis?' disabled':'')+'></div>';
+  pre=pre||{};
+  const base={O:v4Hoy(),Ohora:v4HM(new Date()),multiplo:(D.cfg||{}).multiploIngresos||'',medio:'bizum',modo:'visita'};
+  const r=id?v4Res(id):Object.assign(base,pre);
+  if(!r) return; const prorr=(r.prorrogas||[]).length, np=pre._pre||{}, np2=pre._pre2||{};
+  const I=(lbl,idf,v,t,ex)=>'<div class="fgrp'+(ex&&ex.full?' fgf':'')+'"><label>'+lbl+'</label><input id="'+idf+'" type="'+(t||'text')+'" value="'+v4Esc(v==null?'':v)+'"'+(t==='number'?' step="0.01"':'')+(ex&&ex.ph?' placeholder="'+v4Esc(ex.ph)+'"':'')+(ex&&ex.dis?' disabled':'')+'></div>';
   const S=(lbl,idf,opts,ex)=>'<div class="fgrp'+(ex&&ex.full?' fgf':'')+'"><label>'+lbl+'</label><select id="'+idf+'">'+opts+'</select></div>';
+  const optC=sel=>'<option value="">— Elegir —</option>'+Object.entries(V4_CAUSAS).map(([k,t])=>'<option value="'+k+'"'+(sel===k?' selected':'')+'>'+t+'</option>').join('');
+  const vis=(D.visitas||[]).slice().sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha))).slice(0,60);
   const asn=r.asnef||{}, Md=r.M?r.M.slice(0,10):'', Mh=r.M?r.M.slice(11,16):'', Rd=r.rechazo?r.rechazo.slice(0,10):'', Rh=r.rechazo?r.rechazo.slice(11,16):'';
+  const i1=r.inqId&&r.inqId!=='__nuevo'?(v4Inq(r.inqId)||{}):{}, i2=r.inqId2&&r.inqId2!=='__nuevo'?(v4Inq(r.inqId2)||{}):{};
   v4Modal((id?'✏️ Editar':'📝 Nueva')+' reserva de habitación',
    '<input type="hidden" id="rs-id" value="'+(id||'')+'"><div class="fg">'
-   +'<div class="fgrp fgf"><div class="form-section" style="margin-top:0;">Interesado</div></div>'
+   +'<div class="fgrp fgf"><div class="form-section" style="margin-top:0;">Cómo llega</div></div>'
+   +S('Origen *','rs-modo',[['visita','Ha visitado la habitación'],['distancia','Reserva sin visita (a distancia)']].map(([v,t])=>'<option value="'+v+'"'+(r.modo===v?' selected':'')+'>'+t+'</option>').join(''))
+   +'<div class="fgrp" data-modo="visita"><label>Visita</label><select id="rs-vis"><option value="">— Sin enlazar —</option>'+vis.map(v=>{ const pp=(D.props||[]).find(x=>x.id==v.propId); return '<option value="'+v.id+'"'+(v.id==r.visitaId?' selected':'')+'>'+v4Esc((v.nom||'')+' · '+v4F2(v.fecha)+' '+(v.hora||'')+(pp?' · '+pp.nom:'')+(v.hab?' · hab. '+v.hab:''))+'</option>'; }).join('')+'</select></div>'
+   +'<div class="fgrp fgf"><div class="form-section">Interesado</div></div>'
    +S('Interesado *','rs-inq',v4OptsInqsRes(r.inqId||'__nuevo'))
-   +S('Segundo interesado (habitación doble)','rs-inq2','<option value="">— Ninguno —</option>'+(D.inqs||[]).filter(i=>!i.suprimido).map(i=>'<option value="'+i.id+'"'+(i.id==r.inqId2?' selected':'')+'>'+v4Esc(((i.nom||'')+' '+(i.ap||'')).trim())+'</option>').join(''))
-   +'<div class="fgrp fgf" id="rs-nuevo"><div class="fg">'+I('Nombre *','rs-nom','')+I('Apellidos','rs-ap','')+I('DNI, NIE o pasaporte','rs-dni','')+I('Teléfono (WhatsApp)','rs-tel','')+I('Email','rs-email','','email')+'</div></div>'
-   +'<div class="fgrp fgf"><div class="form-section">Habitación y fechas</div></div>'
+   +'<div class="fgrp fgf" id="rs-nuevo"><div class="fg">'+I('Nombre *','rs-nom',np.nom)+I('Apellidos','rs-ap',np.ap)+I('Teléfono (WhatsApp)','rs-tel',np.tel)+I('Email','rs-email',np.email,'email')+'</div></div>'
+   +I('DNI, NIE o pasaporte *','rs-dni1',r.dni1||i1.dni||'')+I('Nacionalidad','rs-nac1',r.nac1||i1.nac||'')
+   +I('Domicilio habitual (calle, número, localidad y provincia o país) *','rs-dom1',r.vivHab1||'','text',{full:true})
+   +S('Causa de temporalidad *','rs-ct1',optC(r.causaTipo1))+I('Detalle (empresa, centro…)','rs-cd1',r.causaDet1||'')+I('Fecha prevista de fin de la causa *','rs-cf1',r.cFin1||'','date')
+   +'<div class="fgrp fgf"><div class="form-section">Segundo interesado (solo habitación doble)</div></div>'
+   +S('Segundo interesado','rs-inq2',v4OptsInqsRes(r.inqId2||'',true))
+   +'<div class="fgrp fgf" data-i2="1"><div class="fg">'
+     +'<div class="fgrp fgf" id="rs-nuevo2"><div class="fg">'+I('Nombre *','rs-nom2',np2.nom)+I('Apellidos','rs-ap2',np2.ap)+I('Teléfono (WhatsApp)','rs-tel2',np2.tel)+I('Email','rs-email2',np2.email,'email')+'</div></div>'
+     +I('DNI, NIE o pasaporte *','rs-dni2',r.dni2||i2.dni||'')+I('Nacionalidad','rs-nac2',r.nac2||i2.nac||'')
+     +I('Domicilio habitual *','rs-dom2',r.vivHab2||'','text',{full:true})
+     +S('Causa de temporalidad *','rs-ct2',optC(r.causaTipo2))+I('Detalle','rs-cd2',r.causaDet2||'')+I('Fecha prevista de fin de la causa *','rs-cf2',r.cFin2||'','date')
+   +'</div></div>'
+   +'<div class="fgrp fgf"><div class="form-section">Habitación</div></div>'
    +S('Piso *','rs-prop','<option value="">— Piso —</option>'+(D.props||[]).map(p=>'<option value="'+p.id+'"'+(p.id==r.propId?' selected':'')+'>'+v4Esc(p.nom)+'</option>').join(''))
-   +I('Habitación nº *','rs-hab',r.hab,'number')+I('Renta mensual del contrato (€) *','rs-renta',r.renta,'number')
+   +I('Habitación nº *','rs-hab',r.hab,'number')
+   +'<div class="fgrp fgf"><div id="rs-habinfo" style="font-size:11px;color:var(--ink3);"></div></div>'
+   +I('Renta mensual (€) *','rs-renta',r.renta,'number')+I('Importe anual máximo de internet del piso (€)','rs-inet',r.internetAnual,'number')
+   +'<div class="fgrp fgf"><div class="form-section">Fechas</div></div>'
    +I('O · firma de la oferta y pago de la señal *','rs-o',r.O,'date')+I('Hora de la firma de la oferta','rs-oh',r.Ohora,'time')
-   +I('P · fecha prevista de firma del contrato *','rs-p',r.P,'date',{dis:prorr})+I('Hora prevista de la firma','rs-ph',r.Phora,'time')
-   +(prorr?'<div class="fgrp fgf" style="font-size:11px;color:var(--ye);">Reserva prorrogada por escrito: firma prevista el '+v4F2(v4ResP(r))+'.</div>':'')
+   +I('P · firma del contrato y entrada *','rs-p',r.P,'date',{dis:prorr})+I('Hora prevista de la firma','rs-ph',r.Phora,'time')
+   +'<div class="fgrp fgf"><div style="display:flex;gap:8px;flex-wrap:wrap;">'+(prorr?'<span style="font-size:11px;color:var(--ye);">Reserva prorrogada por escrito: firma prevista el '+v4F2(v4ResP(r))+'.</span>':'<button type="button" class="btn btn-secondary btn-sm" onclick="v4ResPMax()">📅 P = O + 15 días</button>')+'<button type="button" class="btn btn-secondary btn-sm" onclick="v4ResEcausa()">📅 Fin = fin de la causa</button><button type="button" class="btn btn-secondary btn-sm" onclick="v4ResE12()">📅 Fin = 12 meses</button></div></div>'
+   +I('Fin previsto del contrato (E) *','rs-e',r.E,'date')
    +'<div class="fgrp fgf"><div class="form-section">Señal (como máximo 1 mensualidad)</div></div>'
-   +I('Señal (€) *','rs-sen',r.senal,'number')
+   +I('Señal (€) *','rs-sen',r.senal,'number',{ph:'150'})
    +S('Cómo se cobra *','rs-medio',['bizum','transferencia','efectivo'].map(x=>'<option value="'+x+'"'+(r.medio===x?' selected':'')+'>'+({bizum:'Bizum',transferencia:'Transferencia',efectivo:'Efectivo (excepción)'}[x])+'</option>').join(''))
    +'<div class="fgrp" data-m="transferencia"><label>Cuenta del titular del piso</label><select id="rs-cta"><option value="">— Cuenta —</option>'+(D.ctasBanc||[]).filter(c=>c.tipo!=='tarjeta').map(c=>'<option value="'+c.id+'"'+(c.id==r.ctaId?' selected':'')+'>'+v4Esc(c.nom+(c.titularId?' · '+nombreC(c.titularId):''))+'</option>').join('')+'</select></div>'
    +'<div class="fgrp" data-m="bizum"><label>Bizum del titular del piso</label><input id="rs-biz" value="'+v4Esc(r.bizum||'')+'" placeholder="6XX XXX XXX"></div>'
    +'<div class="fgrp fgf" data-m="efectivo">'+v4Chk('rs-efe','No tiene cuenta bancaria ni medios electrónicos y pide pagar en efectivo (art. 17.3 LAU); la oferta firmada sirve de justificante',r.efectivoExc)+'</div>'
    +I('Múltiplo de ingresos exigido (veces la renta) *','rs-mult',r.multiplo,'number')
-   +'<div class="fgrp fgf">'+v4Chk('rs-cee','En la visita se dijo la calificación energética y se enseñó la etiqueta (manifiesta 3)',r.ceeDicha)+'</div>'
+   +'<div class="fgrp fgf"><div class="form-section">Antes de que pague (manifiesta 3)</div>'+v4Chk('rs-cee','Informado de la calificación energética y vista la etiqueta',r.ceeDicha)+v4Chk('rs-i31','Ha podido pedir la información del art. 31 de la Ley 12/2023 antes de pagar',r.info31)+'</div>'
    +'<div class="fgrp fgf"><div class="form-section">Seguimiento</div></div>'
    +I('M · recibió el modelo de contrato el','rs-m',Md,'date')+I('a las (hora del doble check)','rs-mh',Mh,'time')
    +I('Acceso a ASNEF y BADEXCUG pedido el','rs-asp',asn.pedida,'date')
@@ -13454,47 +13540,83 @@ function v4FormReserva(id,pre){
    +'<div class="fgrp fgf">'+v4Chk('rs-recl','Reclamación en curso (no se suprimen los datos mientras dure)',r.reclamacion)+'</div>'
    +'</div><div id="rs-val" style="margin-top:8px;"></div>',
    '<button class="btn btn-primary" onclick="v4GuardarReserva()">Guardar reserva</button>');
-  const m=$i('m-v4-c'); if(m){ m.oninput=()=>v4ValidarFormRes(); m.onchange=()=>v4ValidarFormRes(); }
+  const m=$i('m-v4-c'); if(m){ m.dataset.inqPrev=r.inqId||''; m.dataset.inq2Prev=r.inqId2||''; m.dataset.rentaAuto=(r.renta&&!id)?'':(id?'':'1'); m.dataset.inetAuto=id?'':'1'; m.oninput=()=>v4ValidarFormRes(); m.onchange=()=>v4ValidarFormRes(); }
   v4ValidarFormRes();
 }
+function v4ResPMax(){ const o=gi('rs-o'); if(!o){ toast('Pon primero la fecha O',false); return; } $i('rs-p').value=fxAdd(o,15); v4ValidarFormRes(); }
+function v4ResEcausa(){ const c=[gi('rs-cf1'),gi('rs-inq2')?gi('rs-cf2'):''].filter(Boolean).sort()[0], P=gi('rs-p'); if(!c){ toast('Pon primero el fin de la causa',false); return; } let e=c; if(P&&e>v4AddM(P,12)) e=v4AddM(P,12); $i('rs-e').value=e; v4ValidarFormRes(); }
+function v4ResE12(){ const P=gi('rs-p'); if(!P){ toast('Pon primero la fecha P',false); return; } let e=v4AddM(P,12); const c=[gi('rs-cf1'),gi('rs-inq2')?gi('rs-cf2'):''].filter(Boolean).sort()[0]; if(c&&c<e) e=c; $i('rs-e').value=e; v4ValidarFormRes(); }
 function v4LeerFormRes(){
   const id=gi('rs-id'), prev=id?v4Res(id):null, ch=i=>!!($i(i)&&$i(i).checked);
-  const r=Object.assign({}, prev||{}, {id:id||'', inqId:gi('rs-inq'), inqId2:gi('rs-inq2'), propId:gi('rs-prop'), hab:gi('rs-hab'), renta:gn('rs-renta'), O:gi('rs-o'), Ohora:gi('rs-oh'),
-    P:(prev&&(prev.prorrogas||[]).length)?prev.P:gi('rs-p'), Phora:gi('rs-ph'), senal:gn('rs-sen'), medio:gi('rs-medio'), ctaId:gi('rs-cta'), bizum:gi('rs-biz'), efectivoExc:ch('rs-efe'),
-    multiplo:gn('rs-mult'), ceeDicha:ch('rs-cee'), M:gi('rs-m')?(gi('rs-m')+'T'+(gi('rs-mh')||'00:00')):'', asnef:{pedida:gi('rs-asp'), resultado:gi('rs-asr'), fecha:gi('rs-asf')},
+  const r=Object.assign({}, prev||{}, {id:id||'', modo:gi('rs-modo')||'visita', visitaId:gi('rs-modo')==='visita'?gi('rs-vis'):'', inqId:gi('rs-inq'), inqId2:gi('rs-inq2'), propId:gi('rs-prop'), hab:gi('rs-hab'), renta:gn('rs-renta'), internetAnual:gn('rs-inet'),
+    dni1:gi('rs-dni1'), nac1:gi('rs-nac1'), vivHab1:gi('rs-dom1'), causaTipo1:gi('rs-ct1'), causaDet1:gi('rs-cd1'), cFin1:gi('rs-cf1'),
+    dni2:gi('rs-dni2'), nac2:gi('rs-nac2'), vivHab2:gi('rs-dom2'), causaTipo2:gi('rs-ct2'), causaDet2:gi('rs-cd2'), cFin2:gi('rs-cf2'),
+    O:gi('rs-o'), Ohora:gi('rs-oh'), P:(prev&&(prev.prorrogas||[]).length)?prev.P:gi('rs-p'), Phora:gi('rs-ph'), E:gi('rs-e'), senal:gn('rs-sen'), medio:gi('rs-medio'), ctaId:gi('rs-cta'), bizum:gi('rs-biz'), efectivoExc:ch('rs-efe'),
+    multiplo:gn('rs-mult'), ceeDicha:ch('rs-cee'), info31:ch('rs-i31'), M:gi('rs-m')?(gi('rs-m')+'T'+(gi('rs-mh')||'00:00')):'', asnef:{pedida:gi('rs-asp'), resultado:gi('rs-asr'), fecha:gi('rs-asf')},
     ingresosPedidos:gi('rs-ingp'), copiaIngresos:ch('rs-copia'), falsedad:ch('rs-fals'), falsedadFecha:gi('rs-falsf'), rechazo:gi('rs-rech')?(gi('rs-rech')+'T'+(gi('rs-rechh')||'00:00')):'', autRetirada:gi('rs-aut'), reclamacion:ch('rs-recl')});
-  if(r.inqId==='__nuevo') r._nuevo={nom:gi('rs-nom'),ap:gi('rs-ap'),dni:gi('rs-dni'),tel:gi('rs-tel'),email:gi('rs-email')};
-  if(r.inqId2&&r.inqId2===r.inqId) r.inqId2='';
+  if(r.inqId==='__nuevo') r._nuevo={nom:gi('rs-nom'),ap:gi('rs-ap'),tel:gi('rs-tel'),email:gi('rs-email')};
+  if(r.inqId2==='__nuevo') r._nuevo2={nom:gi('rs-nom2'),ap:gi('rs-ap2'),tel:gi('rs-tel2'),email:gi('rs-email2')};
+  if(r.inqId2&&r.inqId2!=='__nuevo'&&r.inqId2===r.inqId) r.inqId2='';
+  if(!r.inqId2){ ['dni2','nac2','vivHab2','causaTipo2','causaDet2','cFin2'].forEach(k=>{ r[k]=''; }); }
   return r;
 }
 function v4ValidarFormRes(){
-  const box=$i('rs-val'); if(!box) return; const r=v4LeerFormRes(), v=v4ValidarReserva(r);
+  const box=$i('rs-val'); if(!box) return; const m=$i('m-v4-c');
+  // Al cambiar de interesado, se traen sus datos de la ficha
+  const sync=(sel,prevKey,dni,nac)=>{ const v=gi(sel); if(m&&m.dataset[prevKey]!==v){ m.dataset[prevKey]=v; const i=v&&v!=='__nuevo'?v4Inq(v):null; if(i){ if($i(dni)) $i(dni).value=i.dni||''; if($i(nac)) $i(nac).value=i.nac||''; } } };
+  sync('rs-inq','inqPrev','rs-dni1','rs-nac1'); sync('rs-inq2','inq2Prev','rs-dni2','rs-nac2');
+  // Renta e internet desde Habitaciones y el piso, mientras no se escriban a mano
+  const pc=v4PrecioHab(gi('rs-prop'),gi('rs-hab')), cfg=v4CfgHab(gi('rs-prop'),gi('rs-hab')), rr=$i('rs-renta');
+  if(m&&rr){ if(document.activeElement===rr) m.dataset.rentaAuto=''; else if((m.dataset.rentaAuto==='1'||!rr.value)&&pc){ rr.value=pc; m.dataset.rentaAuto='1'; } }
+  const ri=$i('rs-inet'), ia=v4InetPiso(gi('rs-prop')); if(m&&ri){ if(document.activeElement===ri) m.dataset.inetAuto=''; else if((m.dataset.inetAuto==='1'||!ri.value)&&ia){ ri.value=ia; m.dataset.inetAuto='1'; } }
+  const hi=$i('rs-habinfo'); if(hi){ const p=(D.props||[]).find(x=>x.id==gi('rs-prop')); hi.textContent=p&&gi('rs-hab')?('Habitación '+gi('rs-hab')+' de '+p.nom+': '+(cfg.tipo==='doble'?'doble':'individual')+(pc?' · precio en Habitaciones '+v4E2(pc)+' €/mes':' · sin precio en Habitaciones')+(p.ceeCalif?' · calificación energética '+p.ceeCalif:' · sin certificado energético')):''; }
+  const r=v4LeerFormRes(), v=v4ValidarReserva(r);
   const nv=$i('rs-nuevo'); if(nv) nv.style.display=gi('rs-inq')==='__nuevo'?'':'none';
+  const nv2=$i('rs-nuevo2'); if(nv2) nv2.style.display=gi('rs-inq2')==='__nuevo'?'':'none';
+  document.querySelectorAll('#m-v4-c [data-i2]').forEach(e=>{ e.style.display=gi('rs-inq2')?'':'none'; });
   document.querySelectorAll('#m-v4-c [data-m]').forEach(e=>{ e.style.display=e.dataset.m===gi('rs-medio')?'':'none'; });
-  const P=v4ResP(r), info=(r.O&&P)?'<div style="font-size:11px;color:var(--ink2);margin-bottom:6px;">O '+v4F2(r.O)+' → P '+v4F2(P)+' (máximo '+v4F2(fxAdd(r.O,15))+') · modelo de contrato como máximo el '+v4FmtDT(new Date(v4DTde(r.O,r.Ohora||'00:00').getTime()+864e5))+(r.M?' · puede rechazarlo hasta el '+v4FmtDT(v4LimRechazo(r)):'')+'</div>':'';
+  document.querySelectorAll('#m-v4-c [data-modo]').forEach(e=>{ e.style.display=e.dataset.modo===gi('rs-modo')?'':'none'; });
+  const P=v4ResP(r), info=(r.O&&P)?'<div style="font-size:11px;color:var(--ink2);margin-bottom:6px;line-height:1.55;">O '+v4F2(r.O)+' → P '+v4F2(P)+' (máximo '+v4F2(fxAdd(r.O,15))+') · modelo de contrato como máximo el '+v4FmtDT(new Date(v4DTde(r.O,r.Ohora||'00:00').getTime()+864e5))+(r.M?' · puede rechazarlo hasta el '+v4FmtDT(v4LimRechazo(r)):'')+(r.renta>0?'<br>Pago en la firma: '+v4E2(v4PagoFirmaRes(r))+' € (renta proporcional + fianza + garantía − señal)':'')+'</div>':'';
   box.innerHTML=info+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ No se puede guardar:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas de la oferta y reserva.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':'');
 }
+function v4PagoFirmaRes(r){ const P=v4ResP(r), ren=parseFloat(r.renta)||0; if(!P||!(ren>0)) return 0; const dm=v4DiasMes(P.slice(0,7)), d=v4Diff(P,v4FinMes(P))+1; return Math.round((ren/dm*d+2*ren-(parseFloat(r.senal)||0))*100)/100; }
+function v4RentaPropRes(r){ const P=v4ResP(r), ren=parseFloat(r.renta)||0; if(!P) return 0; const dm=v4DiasMes(P.slice(0,7)), d=v4Diff(P,v4FinMes(P))+1; return Math.round(ren/dm*d*100)/100; }
 function v4GuardarReserva(){
   const r=v4LeerFormRes(), v=v4ValidarReserva(r);
   if(!v.ok){ v4ValidarFormRes(); toast('No se puede guardar: revisa las reglas en rojo',false); return; }
   D.reservas=D.reservas||[]; D.cfg=D.cfg||{};
-  if(r._nuevo){ const i={id:uid(), nom:r._nuevo.nom, ap:r._nuevo.ap, dni:r._nuevo.dni, tel:r._nuevo.tel, wa:r._nuevo.tel, email:r._nuevo.email, estado:'RESERVADO', propId:r.propId, hab:String(r.hab)}; D.inqs.push(i); r.inqId=i.id; }
-  delete r._nuevo;
-  if(v4ResActiva(r)) [r.inqId,r.inqId2].filter(Boolean).forEach(iid=>{ const i=v4Inq(iid); if(i&&i.estado!=='ACTIVO'){ i.estado='RESERVADO'; i.propId=r.propId; i.hab=String(r.hab); } });
+  const crear=(n)=>{ const i={id:uid(), nom:n.nom, ap:n.ap, tel:n.tel, wa:n.tel, email:n.email, estado:'RESERVADO', propId:r.propId, hab:String(r.hab)}; D.inqs.push(i); return i.id; };
+  if(r._nuevo) r.inqId=crear(r._nuevo); if(r._nuevo2) r.inqId2=crear(r._nuevo2);
+  delete r._nuevo; delete r._nuevo2;
+  [[r.inqId,r.dni1,r.nac1],[r.inqId2,r.dni2,r.nac2]].forEach(([iid,dni,nac])=>{ const i=iid&&v4Inq(iid); if(!i) return; if(dni) i.dni=dni; if(nac) i.nac=nac; if(v4ResActiva(r)&&i.estado!=='ACTIVO'){ i.estado='RESERVADO'; i.propId=r.propId; i.hab=String(r.hab); } });
   if(!(parseFloat(D.cfg.multiploIngresos)>0)) D.cfg.multiploIngresos=r.multiplo;
   if(r.id){ const k=D.reservas.findIndex(x=>x.id===r.id); if(k>=0) D.reservas[k]=r; } else { r.id=uid(); r.creada=new Date().toISOString(); D.reservas.push(r); }
-  saveAndSync(); closeM('m-v4'); v4RefrescarAvisos(); try{ v4PintarReservas(); }catch(e){} toast('Reserva guardada');
+  if(r.visitaId){ const vv=(D.visitas||[]).find(x=>x.id==r.visitaId); if(vv){ vv.resId=r.id; if(['pendiente','confirmada','realizada'].includes(vv.est||'pendiente')) vv.est='interesado'; } }
+  saveAndSync(); closeM('m-v4'); v4RefrescarAvisos(); try{ v4PintarReservas(); }catch(e){} try{ const a=document.querySelector('.nav-item.on'); if(a&&a.dataset.s==='visitas') rVisitas(); }catch(e){}
+  toast('Reserva guardada · la habitación queda reservada hasta el '+v4F2(v4ResP(r)));
 }
 function v4GuardarMultiplo(){ const v=gn('res-mult'); if(!(v>0)){ toast('Escribe un múltiplo válido',false); return; } D.cfg=D.cfg||{}; D.cfg.multiploIngresos=v; const dist=(D.reservas||[]).filter(r=>v4ResActiva(r)&&parseFloat(r.multiplo)!==v); saveAndSync(); toast('Múltiplo de ingresos: '+String(v).replace('.',',')+' veces la renta para todos'+(dist.length?' · ojo: '+dist.length+' reserva(s) en curso tienen otro':'')); }
 
 // Prórroga de la reserva por escrito (nueva P)
+function v4ReservarDesdeVisita(vid){ const v=(D.visitas||[]).find(x=>x.id==vid); if(!v) return;
+  const tel=v4TelNorm(v.tel), em=String(v.email||'').trim().toLowerCase();
+  const ya=(D.inqs||[]).find(i=>!i.suprimido&&((tel&&tel.length>=6&&v4TelNorm(i.tel||i.wa)===tel)||(em&&String(i.email||'').trim().toLowerCase()===em)));
+  const parts=String(v.nom||'').trim().split(/\s+/);
+  v4FormReserva(null,{modo:'visita',visitaId:v.id,propId:v.propId,hab:v.hab||'',inqId:ya?ya.id:'__nuevo',_pre:ya?null:{nom:parts[0]||'',ap:parts.slice(1).join(' '),tel:v.tel||'',email:v.email||''},ceeDicha:!!v.ceeDicha});
+}
+function v4BtnReservarVisita(v){ try{ const r=v.resId?v4Res(v.resId):null; if(r&&!r.fin) return '<button class="btn btn-ghost btn-xs" onclick="v4GestionarReserva(\''+r.id+'\')">📝 '+(r.coId?'Contrato firmado':'Reservada · firma '+v4F2(v4ResP(r)).slice(0,5))+'</button>'; if(['descartado','noshow','alquilado'].includes(v.est)) return ''; return '<button class="btn btn-primary btn-xs" onclick="v4ReservarDesdeVisita(\''+v.id+'\')" title="Firmar la oferta y reserva">📝 Reservar</button>'; }catch(e){ return ''; } }
+function v4ResNoProrroga(r){ if(!r) return 'Reserva no encontrada'; if(!v4ResActiva(r)) return 'La reserva ya está terminada o firmada'; if(v4ResCaducada(r)) return 'La reserva quedó sin efecto el '+v4F2(fxAdd(v4ResP(r),1))+': ya no se puede prorrogar (cláusula 2). Registra cómo terminó'; if(!(r.asnef&&r.asnef.pedida&&!r.asnef.resultado)) return 'La oferta solo permite prorrogar si en la fecha prevista no ha llegado la respuesta de ASNEF o BADEXCUG (cláusula 9)'; return ''; }
+function v4ResPuedeProrrogar(r){ return !v4ResNoProrroga(r); }
 function v4ProrrogarReserva(id){ const r=v4Res(id); if(!r) return;
-  v4Modal('📅 Prorrogar la reserva','<div class="fg"><div class="fgrp"><label>Fecha del acuerdo por escrito</label><input type="date" id="rp-f" value="'+v4Hoy()+'"></div><div class="fgrp"><label>Nueva fecha prevista de firma (P)</label><input type="date" id="rp-p"></div><div class="fgrp"><label>Hora de la firma</label><input type="time" id="rp-h" value="'+(r.Phora||'')+'"></div><div class="fgrp fgf">'+v4Chk('rp-e','La prórroga está pactada por escrito (WhatsApp o email de los dos)',false)+'</div></div><div style="font-size:11px;color:var(--ink3);line-height:1.6;">P actual: '+v4F2(v4ResP(r))+'. La reserva bloquea la habitación como máximo 15 días, salvo prórroga por escrito (oferta, cláusula 2). Se usa, por ejemplo, si no ha llegado la respuesta de ASNEF.</div>',
+  if(!v4ResPuedeProrrogar(r)){ toast(v4ResNoProrroga(r),false); return; }
+  v4Modal('📅 Prorrogar la reserva','<div class="fg"><div class="fgrp"><label>Fecha del acuerdo por escrito</label><input type="date" id="rp-f" value="'+v4Hoy()+'"></div><div class="fgrp"><label>Nueva fecha de firma y entrada (P)</label><input type="date" id="rp-p"></div><div class="fgrp"><label>Hora de la firma</label><input type="time" id="rp-h" value="'+(r.Phora||'')+'"></div><div class="fgrp fgf">'+v4Chk('rp-e','La prórroga está pactada por escrito (WhatsApp o email de los dos)',false)+'</div></div><div style="font-size:11px;color:var(--ink3);line-height:1.6;">P actual: '+v4F2(v4ResP(r))+'. Solo cabe porque todavía no ha llegado la respuesta de ASNEF o BADEXCUG (cláusula 9). Si no se prorroga, la señal se devuelve íntegra en 3 días hábiles.</div>',
    '<button class="btn btn-primary" onclick="v4GuardarProrroga(\''+id+'\')">Guardar prórroga</button>'); }
 function v4GuardarProrroga(id){ const r=v4Res(id); if(!r) return; const p=gi('rp-p');
+  if(!v4ResPuedeProrrogar(r)){ toast(v4ResNoProrroga(r),false); return; }
   if(!($i('rp-e')&&$i('rp-e').checked)){ toast('La prórroga tiene que estar pactada por escrito',false); return; }
   if(!p||p<=v4ResP(r)){ toast('La nueva P tiene que ser posterior a la actual ('+v4F2(v4ResP(r))+')',false); return; }
   const occ=v4OcupHab(r.propId,r.hab,p); if(occ.length){ toast('El '+v4F2(p)+' la habitación sigue alquilada a '+v4Nombres(occ[0]),false); return; }
+  if(r.E&&!(v4Diff(p,r.E)>31)){ toast('Con la nueva P el contrato duraría 31 días o menos: cambia también el fin previsto',false); return; }
   r.prorrogas=(r.prorrogas||[]).concat([{fecha:gi('rp-f')||v4Hoy(), P:p}]); if(gi('rp-h')) r.Phora=gi('rp-h');
   saveAndSync(); closeM('m-v4'); v4RefrescarAvisos(); try{ v4PintarReservas(); }catch(e){} toast('Reserva prorrogada hasta el '+v4F2(p)); }
 
@@ -13507,12 +13629,13 @@ function v4ChequeoTerminar(r,k,f){
   if(!f) err.push('Indica la fecha del hecho.');
   if(k==='rechazo'){ const lim=v4LimRechazo(r); if(!r.M) av.push('No consta cuándo recibió el modelo de contrato (M): anótalo en la reserva.'); if(!r.rechazo) av.push('Anota en la reserva la fecha y hora en que rechazó el modelo.'); else if(lim&&v4DT(r.rechazo)>lim) err.push('El rechazo ('+v4FmtDT(v4DT(r.rechazo))+') fue después del plazo ('+v4FmtDT(lim)+'): no es este caso. Si no firma, pierde la señal («El interesado desiste…»).'); }
   if(k==='asnef'&&!(r.asnef&&r.asnef.resultado==='figura')) av.push('Anota en la reserva que figura en ASNEF o BADEXCUG (solo el resultado).');
-  if(k==='sinrespuesta'&&r.asnef&&r.asnef.resultado) err.push('En la reserva consta la respuesta de ASNEF: no es este caso.');
+  if(k==='sinrespuesta'){ if(r.asnef&&r.asnef.resultado) err.push('En la reserva consta la respuesta de ASNEF: no es este caso.'); else if(!(r.asnef&&r.asnef.pedida)) av.push('No consta que se pidiera el acceso a ASNEF y BADEXCUG: anota la fecha en la reserva.'); if(f&&v4ResP(r)&&f<v4ResP(r)) av.push('Este caso se da en la fecha prevista de firma ('+v4F2(v4ResP(r))+'), no antes.'); }
   if(k==='autorizacion'&&r.asnef&&r.asnef.resultado) err.push('La autorización se retiró después de llegar la respuesta de ASNEF: no es este caso.');
   if(k==='ingresos'&&!r.ingresosPedidos) av.push('No consta que se pidieran los justificantes de ingresos por escrito.');
+  if(k==='interesado'&&f&&v4ResP(r)&&f<v4ResP(r)) av.push('Antes de la fecha prevista de firma, solo si el interesado ha desistido por escrito, no ha aportado en plazo lo que se le pidió o ha dado datos falsos.');
   const txt=c.s==='integra'?'Se devuelve la señal íntegra: '+v4E2(sen)+' €.':c.s==='doble'?'Fran devuelve el doble de la señal: '+v4E2(2*sen)+' €.':'El interesado pierde la señal ('+v4E2(sen)+' €, arras penitenciales): no hay que devolver nada.';
   const plazo=(c.s!=='pierde'&&f)?' Como máximo el '+v4F2(v4AddHabilesSeg(f,3))+' (3 días hábiles), por el mismo medio por el que se cobró ('+v4MedioRes(r)+'), y firmad el justificante de devolución.':'';
-  return {err,av,txt:txt+plazo,s:c.s};
+  return {err,av,txt:txt+plazo+' Después, comunícaselo por escrito: la app te prepara el mensaje.',s:c.s};
 }
 function v4PrevTerminar(id){ const r=v4Res(id); if(!r) return; const x=v4ChequeoTerminar(r,gi('rt-caso'),gi('rt-f'));
   $i('rt-prev').innerHTML='<div class="alert '+(x.s==='pierde'?'alert-y':'alert-g')+'" style="font-size:11.5px;line-height:1.55;">'+v4Esc(x.txt)+'</div>'+(x.err.length?'<div class="alert alert-r" style="font-size:11.5px;margin-top:6px;">⛔ '+x.err.map(v4Esc).join('<br>⛔ ')+'</div>':'')+(x.av.length?'<div class="alert alert-y" style="font-size:11px;margin-top:6px;">⚠️ '+x.av.map(v4Esc).join('<br>⚠️ ')+'</div>':''); }
@@ -13520,7 +13643,8 @@ function v4GuardarTerminar(id){ const r=v4Res(id); if(!r) return; const k=gi('rt
   if(x.err.length){ v4PrevTerminar(id); toast('Revisa lo que está en rojo',false); return; }
   r.fin={caso:k, fecha:f, senal:x.s};
   [r.inqId,r.inqId2].filter(Boolean).forEach(iid=>{ const i=v4Inq(iid); if(i&&i.estado==='RESERVADO'&&!(D.conts||[]).some(c=>c.inqId==iid||c.inqId2==iid)) i.estado='PASADO'; });
-  saveAndSync(); closeM('m-v4'); v4RefrescarAvisos(); try{ v4PintarReservas(); }catch(e){} toast('Reserva terminada: la señal '+V4_RES_SENAL[x.s]); }
+  saveAndSync(); closeM('m-v4'); v4RefrescarAvisos(); try{ v4PintarReservas(); }catch(e){} toast('Reserva terminada: la señal '+V4_RES_SENAL[x.s]+' · la habitación vuelve a estar libre');
+  setTimeout(()=>{ try{ v4VerPlantillaReserva('finres',id); }catch(e){} },60); }
 function v4DevolucionReserva(id){ const r=v4Res(id); if(!r) return; const imp=v4ResImporteDev(r);
   v4Modal('💶 Devolución de la señal','<div class="fg"><div class="fgrp"><label>Fecha de la devolución</label><input type="date" id="rd-f" value="'+v4Hoy()+'"></div><div class="fgrp"><label>Importe devuelto (€)</label><input type="number" step="0.01" id="rd-i" value="'+imp+'"></div><div class="fgrp fgf">'+v4Chk('rd-j','Justificante de devolución firmado por los dos',false)+'</div></div><div style="font-size:11px;color:var(--ink3);">Por el mismo medio por el que se cobró: '+v4Esc(v4MedioRes(r))+'.</div>',
    '<button class="btn btn-primary" onclick="v4GuardarDevolucion(\''+id+'\')">Guardar</button>'); }
@@ -13530,8 +13654,10 @@ function v4GuardarDevolucion(id){ const r=v4Res(id); if(!r) return; const imp=gn
   saveAndSync(); closeM('m-v4'); v4RefrescarAvisos(); try{ v4PintarReservas(); }catch(e){} toast('Devolución registrada'); }
 // Contrato desde la reserva: P pasa a ser F y la señal se descuenta de la fianza y la garantía
 function v4ContratoDesdeReserva(id){ const r=v4Res(id); if(!r) return; try{ closeM('m-v4'); closeDrw(); }catch(e){}
-  v4IrA('contratos'); setTimeout(()=>{ newCont(); const s=(i,v)=>{ const e=$i(i); if(e) e.value=v==null?'':v; };
-    s('co-i',r.inqId); s('co-i2',r.inqId2||''); s('co-prop',r.propId); s('co-hab',r.hab); s('co-ini',v4ResP(r)); s('co-r',r.renta); s('co-resid',r.id); v4ValidarFormCont(); },250); }
+  v4IrA('contratos'); setTimeout(()=>{ newCont(); const s=(i,v)=>{ const e=$i(i); if(e&&v!=null&&v!=='') e.value=v; };
+    s('co-i',r.inqId); s('co-i2',r.inqId2||''); s('co-prop',r.propId); s('co-hab',r.hab); s('co-ini',v4ResP(r)); s('co-r',r.renta); s('co-f',r.renta); s('co-g',r.renta); s('co-fin',r.E);
+    s('co-cfin1',r.cFin1); s('co-cfin2',r.cFin2); s('co-causa',[r.causaTipo1?v4CausaTxt(r.causaTipo1,r.causaDet1):'',r.inqId2&&r.causaTipo2?v4CausaTxt(r.causaTipo2,r.causaDet2):''].filter(Boolean).join(' · ')); s('co-vivhab',[r.vivHab1,r.inqId2?r.vivHab2:''].filter(Boolean).join(' · '));
+    s('co-inet',r.internetAnual); if(r.medio==='transferencia') s('co-cta',r.ctaId); if(r.medio==='bizum') s('co-bizum',r.bizum); s('co-resid',r.id); v4ValidarFormCont(); },250); }
 
 // Plantillas de la reserva
 function v4Txt14(r,ahora){
@@ -13550,42 +13676,95 @@ function v4TxtJustDev(r){
    +(r.fin?'- Plazo: como máximo el '+v4F2(v4AddHabilesSeg(r.fin.fecha,3))+' (3 días hábiles desde el hecho)\n':'')
    +'Firmadlo los dos y guardad cada uno una copia.';
 }
+const V4_RES_MOTIVO={asnef:'porque, consultados los sistemas de información crediticia, figura en ellos con deudas pendientes', ingresos:'porque la documentación aportada no acredita los ingresos o medios exigidos en la condición (ii) de la reserva', rechazo:'porque me comunicó dentro del plazo que no acepta el modelo de contrato', autorizacion:'porque retiró la autorización para consultar los ficheros de morosidad antes de recibirse la respuesta', causa:'porque su causa de temporalidad ha desaparecido por un motivo ajeno a su voluntad, que ha acreditado', sinrespuesta:'porque en la fecha prevista de firma no se había recibido la respuesta de los sistemas de información crediticia y no se ha prorrogado la reserva', nadie:'[porque así lo hemos acordado / por una causa no imputable a ninguna de las partes]'};
+function v4TxtFinRes(r){
+  const p=(D.props||[]).find(x=>x.id==r.propId), s=v4ResSenalRes(r), imp=v4ResImporteDev(r), sen=parseFloat(r.senal)||0, lim=r.fin?v4AddHabilesSeg(r.fin.fecha,3):'';
+  const ini='Hola '+v4NomResCorto(r)+'. Le escribo por la reserva de la habitación '+r.hab+' de '+(p?p.nom:'')+' que firmamos el '+v4F2(r.O)+'. ';
+  if(!r.fin) return ini+'[Registra antes cómo termina la reserva.]';
+  if(s==='integra') return ini+'La reserva ha quedado sin efecto '+(V4_RES_MOTIVO[r.fin.caso]||'[motivo]')+'. Según la cláusula «Devolución de la cantidad entregada», le devuelvo íntegramente los '+v4E2(sen)+' euros por el mismo medio por el que los recibí ('+v4MedioRes(r)+'), como máximo el '+v4F2(lim)+', y firmaremos el justificante de devolución. Un saludo y gracias.';
+  if(s==='doble') return ini+'Por causa imputable a la parte arrendadora, la reserva ha quedado sin efecto. Según la cláusula «Arras penitenciales», le devuelvo el doble de la cantidad entregada, '+v4E2(imp)+' euros, por el mismo medio ('+v4MedioRes(r)+'), como máximo el '+v4F2(lim)+', y firmaremos el justificante de devolución. Disculpe las molestias.';
+  return ini+'La reserva ha quedado sin efecto porque el contrato no se ha firmado por causa imputable a la parte interesada ([desistimiento / no firmó el '+v4F2(v4ResP(r))+' / no aportó la documentación pedida / datos no veraces]). Según la cláusula «Arras penitenciales», la cantidad entregada ('+v4E2(sen)+' euros) no se devuelve. Desde hoy la habitación queda libre. Un saludo.';
+}
+function v4TxtDatosOferta(r){
+  const p=(D.props||[]).find(x=>x.id==r.propId)||{}, P=v4ResP(r), t=titularidadDia(r.propId,r.O||v4Hoy()), cfg=v4CfgHab(r.propId,r.hab), ren=parseFloat(r.renta)||0;
+  const fr=(D.propietarios||[]).find(o=>v4NifNorm(o.dni)==='48720635B')||{}, nifU=t.usuf?v4NifNorm(nifC(t.usuf.ownerId)):'', nifP=t.pleno?v4NifNorm(nifC(t.pleno.ownerId)):'';
+  const arr=t.usuf?(nifU==='48720635B'?'Marca la 1.ª opción: Francisco José, usufructuario vitalicio (escritura de donación del 8 de octubre de 2026, protocolo 1.496).':'⚠️ El usufructuario de este piso es '+nombreC(t.usuf.ownerId)+' y el documento no trae esa opción: adáptalo antes de firmar.')
+    :nifP==='21654808D'?'Marca la 2.ª opción: María de los Ángeles, propietaria, representada por Francisco José con el poder especial del 8 de octubre de 2026 (protocolo 1.497).'
+    :nifP==='48720635B'?'⚠️ Este piso es tuyo en pleno dominio y el documento no trae esa opción: añade «D. Francisco José López Francés (…) en su propio nombre y derecho, en su condición de propietario de la vivienda».'
+    :'⚠️ No consta quién es el titular del piso el '+v4F2(r.O||v4Hoy())+': revisa la titularidad en la ficha del piso.';
+  const per=n=>{ const iid=n===1?r.inqId:r.inqId2, i=v4Inq(iid)||{}; return ((i.nom||'')+' '+(i.ap||'')).trim()+' · nacionalidad '+(r['nac'+n]||'[NACIONALIDAD]')+' · '+(r['dni'+n]||'[DOCUMENTO]')+' · domicilio habitual: '+(r['vivHab'+n]||'[DOMICILIO]')+' · email '+(i.email||'[EMAIL]')+' · WhatsApp '+(i.wa||i.tel||'[TELÉFONO]'); };
+  const L=[];
+  L.push('Datos para rellenar la «Oferta y reserva de habitación» (versión 20261026-3), en el orden del documento:');
+  L.push('- Ubicación de la vivienda: '+([p.dir,[p.cp,p.ciu].filter(Boolean).join(' ')].filter(Boolean).join(', ')||'[DIRECCIÓN]')+'. Ref. catastral: '+(p.refCat||'[REF. CATASTRAL]')+'.');
+  L.push('- En '+(p.ciu||'[LOCALIDAD]')+', a '+v4FL(r.O)+'.');
+  L.push('- Parte arrendadora: '+arr+' Contacto: email '+(fr.email||'[EMAIL]')+' y WhatsApp '+(fr.tel||'[TELÉFONO]')+'.');
+  L.push('- Interesado: '+per(1)+'.');
+  if(r.inqId2) L.push('- Segundo interesado: '+per(2)+'.');
+  L.push('- Manifiesta 2: habitación número '+r.hab+', marcar «'+(r.inqId2||cfg.tipo==='doble'?'doble, para dos personas':'individual, para una persona')+'».');
+  L.push('- Manifiesta 3: calificación energética '+(p.ceeCalif||'[CALIFICACIÓN]')+'.'+(r.modo==='distancia'?' ⚠️ Reserva sin visita: adapta la frase «ha visitado la vivienda y la habitación».':''));
+  L.push('- Cláusula 2: firma del contrato y entrada el '+v4FL(P)+' (no puede ser más tarde del '+v4FL(fxAdd(r.O,15))+').');
+  L.push('- Cláusula 3, interesado: '+(V4_CAUSAS[r.causaTipo1]||'[CAUSA]')+'. Detalle: '+(r.causaDet1||'—')+'. Fin previsto de la causa: '+v4FL(r.cFin1)+'.');
+  if(r.inqId2) L.push('- Cláusula 3, segundo interesado: '+(V4_CAUSAS[r.causaTipo2]||'[CAUSA]')+'. Detalle: '+(r.causaDet2||'—')+'. Fin previsto de la causa: '+v4FL(r.cFin2)+'.');
+  L.push('- Cláusula 3: fin previsto del contrato el '+v4FL(r.E)+(P&&r.E?' ('+v4Diff(P,r.E)+' días)':'')+'.');
+  L.push('- Cláusula 4: '+v4EurosDoc(r.senal)+', por '+(r.medio==='bizum'?'Bizum al número '+(r.bizum||'[NÚMERO]'):r.medio==='transferencia'?'transferencia a la cuenta IBAN '+(((D.ctasBanc||[]).find(c=>c.id==r.ctaId)||{}).num||'[IBAN]'):'metálico (excepción del art. 17.3 LAU)')+'.');
+  L.push('- Cláusula 5: renta mensual '+v4EurosDoc(ren)+'; internet, importe anual máximo '+v4EurosDoc(r.internetAnual||0)+'; fianza '+v4EurosDoc(ren)+'; garantía adicional '+v4EurosDoc(ren)+'; en la firma '+v4EurosDoc(v4PagoFirmaRes(r))+' (renta proporcional '+v4E2(v4RentaPropRes(r))+' € + fianza + garantía − señal).');
+  L.push('- Cláusula 8 (ii): '+(r.multiplo?String(r.multiplo).replace('.',','):'____')+' veces la renta mensual.');
+  L.push('- Cláusula 14: marca y firma la autorización de ASNEF y BADEXCUG '+(r.inqId2?'de cada interesado':'del interesado')+'.');
+  L.push('Firmad por duplicado, en todas las caras, y adjuntad copia de los documentos de identidad.');
+  return L.join('\n');
+}
 function v4VerPlantillaReserva(tpl,id){
-  const r=v4Res(id); if(!r){ toast('Reserva no encontrada',false); return; } const i1=v4Inq(r.inqId)||{}, tel=String(i1.wa||i1.tel||'').replace(/\D/g,''), em=i1.email||'';
-  const es14=String(tpl)==='14', texto=es14?v4Txt14(r):v4TxtJustDev(r);
-  $i('m-v4tpl-c').innerHTML='<h2>📋 '+(es14?'Plantilla 14 · Envío del modelo de contrato':'Justificante de devolución de la reserva')+'</h2><div style="font-size:11.5px;color:var(--ink3);margin-bottom:6px;">'+(es14?'Adjunta el PDF del modelo de contrato vigente (v20261025-2), sin rellenar. La hora límite se calcula desde ahora: si lo envías más tarde, ajústala (48 h desde que lo recibe, o la firma si es antes). Después anota en la reserva la fecha y hora de recepción (M) y guarda el chat.':'Usa el documento «Justificante de devolución de reserva v20261026-2» con estos datos.')+'</div>'
-   +'<textarea id="v4t-txt" rows="'+(es14?9:11)+'" style="width:100%;font-size:12px;line-height:1.5;font-family:inherit;padding:10px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);">'+v4Esc(texto)+'</textarea>'
+  const r=v4Res(id); if(!r){ toast('Reserva no encontrada',false); return; } const i1=v4Inq(r.inqId)||{}, tel=String(i1.wa||i1.tel||'').replace(/\D/g,''), em=i1.email||'', t=String(tpl);
+  const conf={'14':{tit:'Plantilla 14 · Envío del modelo de contrato',nota:'Adjunta el PDF del modelo de contrato vigente (v20261025-2), sin rellenar. La hora límite se calcula desde ahora: si lo envías más tarde, ajústala (48 h desde que lo recibe, o la firma si es antes). Después anota en la reserva la fecha y hora de recepción (M) y guarda el chat.',txt:()=>v4Txt14(r),wa:true,rows:9},
+    finres:{tit:'Comunicación del fin de la reserva',nota:'Por email o WhatsApp (cláusula 12). Si se queda con la señal, mejor por comunicación electrónica certificada, para tener prueba fehaciente. Revisa el texto entre corchetes.',txt:()=>v4TxtFinRes(r),wa:true,rows:8},
+    justdev:{tit:'Justificante de devolución de la reserva',nota:'Usa el documento «Justificante de devolución de reserva v20261026-2» con estos datos.',txt:()=>v4TxtJustDev(r),rows:11},
+    oferta:{tit:'Datos para rellenar la oferta y reserva',nota:'Cópialos en el documento «Oferta y reserva de habitación» v20261026-3. Revisa lo que esté entre corchetes.',txt:()=>v4TxtDatosOferta(r),rows:18}}[t];
+  if(!conf) return;
+  $i('m-v4tpl-c').innerHTML='<h2>📋 '+conf.tit+'</h2><div style="font-size:11.5px;color:var(--ink3);margin-bottom:6px;">'+conf.nota+'</div>'
+   +'<textarea id="v4t-txt" rows="'+conf.rows+'" style="width:100%;font-size:12px;line-height:1.5;font-family:inherit;padding:10px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);">'+v4Esc(conf.txt())+'</textarea>'
    +'<div class="modal-footer"><button class="btn btn-ghost" onclick="closeM(\'m-v4tpl\')">Cerrar</button><button class="btn btn-secondary" onclick="v4CopiarTpl()">📋 Copiar</button>'
-   +(es14&&tel?'<button class="btn btn-success" onclick="window.open(\'https://wa.me/'+(tel.length===9?'34'+tel:tel)+'?text=\'+encodeURIComponent($i(\'v4t-txt\').value),\'_blank\')">💬 WhatsApp</button>':'')
-   +(es14&&em?'<button class="btn btn-primary" onclick="window.open(\'mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent('Modelo de contrato – habitación '+r.hab)+'&body=\'+encodeURIComponent($i(\'v4t-txt\').value))">📧 Email</button>':'')+'</div>';
+   +(conf.wa&&tel?'<button class="btn btn-success" onclick="window.open(\'https://wa.me/'+(tel.length===9?'34'+tel:tel)+'?text=\'+encodeURIComponent($i(\'v4t-txt\').value),\'_blank\')">💬 WhatsApp</button>':'')
+   +(conf.wa&&em?'<button class="btn btn-primary" onclick="window.open(\'mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent((t==='14'?'Modelo de contrato':'Reserva')+' – habitación '+r.hab)+'&body=\'+encodeURIComponent($i(\'v4t-txt\').value))">📧 Email</button>':'')+'</div>';
   $i('m-v4tpl').classList.add('open');
 }
 
 // Avisos de la reserva
+function v4AnunciosRes(r){ return (D.anuncios||[]).filter(a=>a.propId==r.propId&&String(a.hab)===String(r.hab)); }
+function v4VisitasTercerosRes(r){ const P=v4ResP(r); return (D.visitas||[]).filter(v=>v.propId==r.propId&&String(v.hab||'')===String(r.hab)&&V4_VIS_ACTIVAS.includes(v.est||'pendiente')&&v.id!==r.visitaId&&v.fecha&&v.fecha>=r.O&&(!P||v.fecha<=P)&&!v4EsDeLaReserva(r,v.tel,v.email)); }
+function v4PausarAnunciosRes(id){ const r=v4Res(id); if(!r) return; let n=0; v4AnunciosRes(r).filter(a=>a.est==='publicado').forEach(a=>{ a.est='pausado'; a.pausaRes=r.id; n++; }); saveAndSync(); v4RefrescarAvisos(); toast(n?'Anuncio marcado como pausado: páusalo también en Idealista':'No había anuncios publicados'); }
+function v4ReactivarAnunciosRes(id){ let n=0; (D.anuncios||[]).filter(a=>a.pausaRes===id).forEach(a=>{ if(a.est==='pausado'){ a.est='publicado'; n++; } delete a.pausaRes; }); saveAndSync(); v4RefrescarAvisos(); toast(n?'Anuncio marcado como publicado: reactívalo también en Idealista':'Hecho'); }
 function v4AlertasReservas(hoy){
   hoy=hoy||v4Hoy(); const out=[];
   (D.reservas||[]).forEach(r=>{
-    if(r.coId||r.datosSuprimidos) return;
+    if(r.datosSuprimidos) return;
     const H=r.hechos||{}, p=(D.props||[]).find(x=>x.id==r.propId), lugar='Hab. '+r.hab+' · '+(p?p.nom:''), nom=v4NomResCorto(r), P=v4ResP(r), sen=parseFloat(r.senal)||0;
     const A=(k,fecha,titulo,det,o)=>{ o=o||{}; if(!fecha) return; out.push(Object.assign({k, resId:r.id, fecha, desde:o.desde||fecha, titulo:titulo+' · '+lugar, det, tpl:o.tpl||[], tipo:o.tipo||'Obligatorio', nivel:o.nivel||'alto', caduca:o.caduca||'', auto:!!o.auto, hecho:!!(o.auto||H[k]), hechoEl:H[k]||'', lugar, nom, propId:r.propId, hab:String(r.hab||'')},o.extra||{})); };
+    if(r.coId) return;
     if(r.fin){
       const s=v4ResSenalRes(r);
       if(s==='integra'||s==='doble'){ const lim=v4AddHabilesSeg(r.fin.fecha,3), imp=v4ResImporteDev(r);
-        A('r-dev',lim,(s==='doble'?'Devolver el doble de la señal ('+v4E2(imp)+' €)':'Devolver la señal íntegra ('+v4E2(imp)+' €)')+' a '+nom,'Motivo: '+V4_RES_CASOS[r.fin.caso].t+' ('+v4F2(r.fin.fecha)+'). Como máximo el '+v4F2(lim)+' (3 días hábiles), por el mismo medio por el que se cobró ('+v4MedioRes(r)+'), y firmad el justificante de devolución (oferta, cláusulas 7 y 9).',{desde:r.fin.fecha,tpl:['justdev'],auto:!!(r.devolucion&&r.devolucion.fecha),nivel:'urgente'}); }
+        A('r-dev',lim,(s==='doble'?'Devolver el doble de la señal ('+v4E2(imp)+' €)':'Devolver la señal íntegra ('+v4E2(imp)+' €)')+' a '+nom,'Motivo: '+V4_RES_CASOS[r.fin.caso].t+' ('+v4F2(r.fin.fecha)+'). Como máximo el '+v4F2(lim)+' (3 días hábiles), por el mismo medio por el que se cobró ('+v4MedioRes(r)+'), y firmad el justificante de devolución (cláusulas 7 y 9).',{desde:r.fin.fecha,tpl:['justdev'],auto:!!(r.devolucion&&r.devolucion.fecha),nivel:'urgente'}); }
+      A('r-comunica',r.fin.fecha,'Comunicar por escrito a '+nom+' el fin de la reserva','Por email o WhatsApp (cláusula 12). '+(['asnef','ingresos'].includes(r.fin.caso)?'Si la reserva no se formaliza por la consulta de solvencia, hay que informarle (cláusula 13). ':'')+(s==='pierde'?'Como se queda con la señal, mejor por comunicación electrónica certificada.':'Indícale el importe, el medio y el plazo de la devolución.'),{tpl:['finres'],tipo:['asnef','ingresos'].includes(r.fin.caso)?'Obligatorio (cláusula 13)':'Recomendado',nivel:'alto'});
+      if((D.anuncios||[]).some(a=>a.pausaRes===r.id&&a.est==='pausado')) A('r-reanuncio',r.fin.fecha,'Reactivar el anuncio de la habitación','La reserva terminó sin contrato y la habitación vuelve a estar libre.',{tipo:'Recomendado',nivel:'normal'});
       return;
     }
-    A('r-asnef',r.O,'Pedir el acceso a ASNEF y BADEXCUG de '+nom,'Con la autorización firmada en la oferta (condición i). Guarda solo el resultado (si figura o no y la fecha), nunca el informe.',{auto:!!(r.asnef&&r.asnef.pedida)});
+    A('r-asnef',r.O,'Pedir el acceso a ASNEF y BADEXCUG de '+nom,'Con la autorización firmada en la oferta (condición i y cláusula 14). Guarda solo el resultado (si figura o no y la fecha), nunca el informe.',{auto:!!(r.asnef&&r.asnef.pedida),caduca:P||''});
+    const ads=v4AnunciosRes(r);
+    if(ads.length) A('r-anuncio',r.O,'Pausar el anuncio de la habitación','Mientras la reserva esté vigente no se puede ofrecer la habitación a terceros (cláusula 1 de la oferta). Páusalo en Idealista y márcalo aquí como pausado.',{auto:!ads.some(a=>a.est==='publicado'),caduca:P||''});
+    const vt=v4VisitasTercerosRes(r);
+    if(vt.length) A('r-visitas',r.O,'Cancelar '+vt.length+' visita'+(vt.length>1?'s':'')+' de otras personas a la habitación','Está reservada hasta el '+v4F2(P)+' y no se puede ofrecer a terceros (cláusula 1): '+vt.map(v=>(v.nom||'')+' ('+v4F2(v.fecha)+' '+(v.hora||'')+')').join(', ')+'. Avísales y márcalas como descartadas.',{nivel:'alto',caduca:P||''});
     const O24=new Date(v4DTde(r.O,r.Ohora||'00:00').getTime()+864e5);
-    A('r-modelo',fxIso(O24),'Enviar a '+nom+' el modelo de contrato en blanco (plantilla 14)','Por WhatsApp o email, en PDF y sin rellenar, como máximo el '+v4FmtDT(O24)+' (24 h desde la reserva; oferta, cláusula 10). El mensaje lleva la fecha y hora límite para rechazarlo: 48 h desde que lo recibe, o la firma si es antes. Después anota en la reserva cuándo lo recibió (M).',{desde:r.O,tpl:['14'],auto:!!r.M});
+    A('r-modelo',fxIso(O24),'Enviar a '+nom+' el modelo de contrato en blanco (plantilla 14)','Por WhatsApp o email, en PDF y sin rellenar, como máximo el '+v4FmtDT(O24)+' (24 h desde la reserva; cláusula 10). El mensaje lleva la fecha y hora límite para rechazarlo: 48 h desde que lo recibe, o la firma si es antes. Después anota en la reserva cuándo lo recibió (M).',{desde:r.O,tpl:['14'],auto:!!r.M,caduca:P||''});
     if(r.M){ const lr=v4LimRechazo(r); A('r-rechazo',fxIso(lr),'Fin del plazo de '+nom+' para rechazar el contrato sin dar motivos','Hasta el '+v4FmtDT(lr)+' puede decir por escrito que no acepta el modelo de contrato, y se le devuelve la señal íntegra en 3 días hábiles. Después, si no firma, pierde la señal.',{tipo:'Según oferta',nivel:'info',caduca:fxAdd(fxIso(lr),1),desde:r.M.slice(0,10)}); }
-    if(r.asnef&&r.asnef.resultado==='figura') A('r-asnef-mal',r.asnef.fecha||hoy,'Figura en ASNEF o BADEXCUG: terminar la reserva y devolver la señal','Con deudas pendientes no se firma (condición i): registra «Terminar sin contrato» y devuelve la señal íntegra en 3 días hábiles.',{nivel:'urgente'});
+    if(r.asnef&&r.asnef.resultado==='figura') A('r-asnef-mal',r.asnef.fecha||hoy,'Figura en ASNEF o BADEXCUG: terminar la reserva y devolver la señal','Con deudas pendientes no se firma (condición i): registra «Terminar sin contrato», devuelve la señal íntegra en 3 días hábiles e infórmale (cláusula 13).',{nivel:'urgente'});
     if(r.rechazo&&r.M&&v4DT(r.rechazo)<=v4LimRechazo(r)) A('r-rech-ok',r.rechazo.slice(0,10),'Ha rechazado el modelo a tiempo: terminar la reserva y devolver la señal','Rechazó el '+v4FmtDT(v4DT(r.rechazo))+', dentro del plazo: registra «Terminar sin contrato» y devuelve la señal íntegra en 3 días hábiles.',{nivel:'urgente'});
     if(P){
       const p3=v4SubHabiles(P,3,r.propId);
-      A('r-ingresos',p3,'Último día para pedir a '+nom+' justificantes de ingresos (si se piden)','Por escrito y con un plazo de al menos 3 días hábiles para aportarlos (oferta, cláusula 9). Múltiplo exigido: '+(r.multiplo?String(r.multiplo).replace('.',','):'—')+' veces la renta. Solo si algo no cuadra.',{tipo:'Solo si se piden',nivel:'info',caduca:fxAdd(p3,1),auto:!!r.ingresosPedidos});
-      if(!(r.asnef&&r.asnef.resultado)) A('r-P-asnef',P,'Sin respuesta de ASNEF o BADEXCUG de '+nom+': prorrogar o devolver','Si en la fecha prevista de firma no ha llegado la respuesta: prorroga la reserva por escrito (nueva P) o devuelve la señal íntegra con el justificante de devolución.',{desde:fxAdd(P,-2)});
-      A('r-firma',P,'Firma del contrato con '+nom+(r.Phora?' a las '+r.Phora:''),'P pasa a ser F. La señal ('+v4E2(sen)+' €) se descuenta de la fianza y la garantía: pago en la firma = renta proporcional del mes + fianza + garantía − señal. El contrato tiene que ser exactamente el modelo enviado; si cambia algo, puede no firmar y habría que devolverle el doble.',{desde:fxAdd(P,-3)});
-      A('r-P1',fxAdd(P,1),'La reserva de '+nom+' sigue abierta: registra la firma, la prórroga o cómo termina','Ha pasado la fecha prevista de firma ('+v4F2(P)+') sin contrato registrado.',{nivel:'urgente'});
+      A('r-ingresos',p3,'Último día para pedir a '+nom+' justificantes de ingresos (si se piden)','Por escrito y con un plazo de al menos 3 días hábiles para aportarlos (condición ii y cláusula 9). Múltiplo exigido: '+(r.multiplo?String(r.multiplo).replace('.',','):'—')+' veces la renta. Solo si algo no cuadra.',{tipo:'Solo si se piden',nivel:'info',caduca:fxAdd(p3,1),auto:!!r.ingresosPedidos});
+      A('r-vence',fxAdd(P,-2),'La reserva de '+nom+' vence el '+v4F2(P)+': confirmar la firma','Si ese día no se firma, la reserva queda sin efecto (cláusula 2). Recuérdale que traiga el documento de identidad en vigor y los justificantes de la causa y del domicilio habitual (condición iii): si no los aporta, se considera que desiste y pierde la señal (cláusula 9).',{tipo:'Recomendado',nivel:'normal',desde:fxAdd(P,-3),caduca:P});
+      if(!(r.asnef&&r.asnef.resultado)) A('r-P-asnef',P,'Sin respuesta de ASNEF o BADEXCUG de '+nom+': prorrogar o devolver','Si en la fecha prevista de firma no ha llegado la respuesta: prorroga la reserva por escrito (nueva P; es el único caso en que cabe, cláusula 9) o devuelve la señal íntegra con el justificante de devolución.',{desde:fxAdd(P,-2),caduca:P});
+      A('r-firma',P,'Firma del contrato con '+nom+(r.Phora?' a las '+r.Phora:''),'P pasa a ser F. Pago en la firma: '+v4E2(v4PagoFirmaRes(r))+' € (renta proporcional '+v4E2(v4RentaPropRes(r))+' € + fianza '+v4E2(r.renta)+' € + garantía '+v4E2(r.renta)+' € − señal '+v4E2(sen)+' €). El contrato tiene que ser el modelo enviado, con las condiciones de la oferta: si cambia algo, puede no firmar y habría que devolverle el doble.',{desde:fxAdd(P,-3),caduca:P});
+      if(hoy>P) A('r-caduca',fxAdd(P,1),'La reserva de '+nom+' ha quedado sin efecto: comunicárselo','El '+v4F2(P)+((r.prorrogas||[]).length?' (fecha prorrogada por escrito)':'')+' no se firmó el contrato, así que la reserva ha quedado sin efecto (cláusula 2 de la oferta; como máximo dura 15 días desde la firma de la oferta, salvo prórroga). Registra cómo termina («Terminar sin contrato») para saber qué pasa con la señal: la pierde si no firmó por causa suya; se devuelve íntegra si no llegó la respuesta de ASNEF y no se prorrogó, o por otra causa no imputable; el doble si fue por causa tuya. Después, comunícaselo por escrito: la habitación vuelve a estar libre.',{nivel:'urgente'});
     }
   });
   return out;
@@ -13626,8 +13805,10 @@ function v4AlertasDatos(hoy){
   });
   (D.reservas||[]).forEach(r=>{ if(r.coId||!r.fin||r.datosSuprimidos) return;
     const H=r.hechos||{}, p=(D.props||[]).find(x=>x.id==r.propId), lugar='Hab. '+r.hab+' · '+(p?p.nom:''), nom=v4NomResCorto(r), s=v4ResSenalRes(r), base={resId:r.id, lugar, nom, propId:r.propId, hab:String(r.hab||'')};
+    // Cláusula 13: «una vez devuelta o aplicada la cantidad entregada»
+    const fYa=s==='pierde'?r.fin.fecha:(r.devolucion&&r.devolucion.fecha);
     const ya=s==='pierde'?'Bloquear la oferta y los datos necesarios para una posible reclamación; suprimir la copia de los justificantes de ingresos':'Suprimir los datos de la reserva y la copia de los justificantes de ingresos';
-    out.push(Object.assign({k:'d-res-ya', fecha:r.fin.fecha, desde:r.fin.fecha, titulo:ya+' de '+nom+' · '+lugar, det:(s==='pierde'?'Quedan bloqueados la oferta y los datos necesarios para reclamar.':'Solo se guardan, bloqueados, la oferta y el justificante de devolución firmados.')+(r.falsedad?' La copia con indicios de falsedad se conserva bloqueada.':'')+' Todo se suprime el '+v4F2(v4AddM(r.O,60))+' (O + 5 años), salvo reclamación en curso.', tpl:[], tipo:'Obligatorio', nivel:'normal', caduca:'', auto:!!r.bloqueada, hecho:!!(r.bloqueada||H['d-res-ya']), hechoEl:r.bloqueada||H['d-res-ya']||''},base));
+    if(fYa) out.push(Object.assign({k:'d-res-ya', fecha:fYa, desde:fYa, titulo:ya+' de '+nom+' · '+lugar, det:(s==='pierde'?'Quedan bloqueados la oferta y los datos necesarios para reclamar.':'Una vez devuelta la señal, solo se guardan, bloqueados, la oferta y el justificante de devolución firmados.')+(r.falsedad?' La copia con indicios de falsedad se conserva bloqueada.':'')+' Todo se suprime el '+v4F2(v4AddM(r.O,60))+' (O + 5 años), salvo reclamación en curso (cláusula 13 de la oferta).', tpl:[], tipo:'Obligatorio', nivel:'normal', caduca:'', auto:!!r.bloqueada, hecho:!!(r.bloqueada||H['d-res-ya']), hechoEl:r.bloqueada||H['d-res-ya']||''},base));
     if(!r.reclamacion){ const f5=v4AddM(r.O,60); out.push(Object.assign({k:'d-res-5', fecha:f5, desde:fxAdd(f5,-30), titulo:'Suprimir la oferta'+(s==='pierde'?' y los datos bloqueados':' y el justificante de devolución')+' de '+nom+' · '+lugar, det:'O + 5 años (prescripción de las acciones personales, art. 1.964 CC), salvo reclamación en curso.', tpl:[], tipo:'Obligatorio', nivel:'alto', caduca:'', auto:false, hecho:!!H['d-res-5'], hechoEl:H['d-res-5']||''},base)); }
     if(r.falsedad&&r.falsedadFecha&&!r.reclamacion){ const ff=v4AddM(r.falsedadFecha,60); out.push(Object.assign({k:'d-fals', fecha:ff, desde:fxAdd(ff,-30), titulo:'Suprimir la copia de los justificantes con indicios de falsedad de '+nom+' · '+lugar, det:'Fecha de detección ('+v4F2(r.falsedadFecha)+') + 5 años, salvo reclamación en curso.', tpl:[], tipo:'Obligatorio', nivel:'alto', caduca:'', auto:false, hecho:!!H['d-fals'], hechoEl:H['d-fals']||''},base)); }
   });
@@ -13646,7 +13827,7 @@ function v4SuprimirDatos(tipo,id){
   if(tipo==='co'){ const co=v4Co(id); if(!co) return; [co.inqId,co.inqId2].filter(Boolean).forEach(iid=>{ const i=v4Inq(iid); if(i&&!v4InqEnUso(iid,co.id,null)) v4AnonInq(i); });
     ['pdfData','pdfName','anexoIData','anexoIName','fotosEntrada','fotosSalida','emerg1','emerg2','vivHab','causa','n'].forEach(k=>{ delete co[k]; }); co.datosSuprimidos=v4Hoy(); }
   else { const r=v4Res(id); if(!r) return; [r.inqId,r.inqId2].filter(Boolean).forEach(iid=>{ const i=v4Inq(iid); if(i&&!v4InqEnUso(iid,null,r.id)) v4AnonInq(i); });
-    ['bizum','copiaIngresos','asnef'].forEach(k=>{ delete r[k]; }); r.datosSuprimidos=v4Hoy(); }
+    ['bizum','copiaIngresos','asnef','dni1','dni2','nac1','nac2','vivHab1','vivHab2','causaDet1','causaDet2'].forEach(k=>{ delete r[k]; }); r.datosSuprimidos=v4Hoy(); }
   saveAndSync(); v4RefrescarAvisos(); try{ v4PintarReservas(); }catch(e){} toast('Datos personales suprimidos');
 }
 function v4ToggleReclamacion(tipo,id){ const x=tipo==='co'?v4Co(id):v4Res(id); if(!x) return; x.reclamacion=!x.reclamacion; saveAndSync(); v4RefrescarAvisos(); toast(x.reclamacion?'Reclamación en curso: no se suprimen los datos':'Reclamación quitada'); if(tipo==='co') v4Gestionar(id); else v4GestionarReserva(id); }
@@ -13657,7 +13838,7 @@ function v4TxtDatosFila(co){
 }
 
 // ══ Lista de reservas y ficha de gestión ══
-function v4EstadoRes(r){ if(r.datosSuprimidos) return '<span class="badge badge-b">Datos suprimidos</span>'; if(r.coId) return '<span class="badge badge-g">Contrato firmado</span>'; if(r.fin){ const s=v4ResSenalRes(r); return '<span class="badge '+(s==='pierde'?'badge-y':'badge-b')+'">Terminada · señal '+(s==='integra'?'devuelta íntegra':s==='doble'?'devuelta el doble':'perdida')+'</span>'+(s!=='pierde'&&!(r.devolucion&&r.devolucion.fecha)?' <span class="badge badge-r">Devolución pendiente</span>':''); } const P=v4ResP(r), d=v4Diff(v4Hoy(),P); return '<span class="badge '+(d<0?'badge-r':'badge-y')+'">En curso · firma '+(d===0?'HOY':d<0?'hace '+(-d)+' días':'en '+d+' días')+'</span>'; }
+function v4EstadoRes(r){ if(r.datosSuprimidos) return '<span class="badge badge-b">Datos suprimidos</span>'; if(r.coId) return '<span class="badge badge-g">Contrato firmado</span>'; if(r.fin){ const s=v4ResSenalRes(r); return '<span class="badge '+(s==='pierde'?'badge-y':'badge-b')+'">Terminada · señal '+(s==='integra'?'devuelta íntegra':s==='doble'?'devuelta el doble':'perdida')+'</span>'+(s!=='pierde'&&!(r.devolucion&&r.devolucion.fecha)?' <span class="badge badge-r">Devolución pendiente</span>':''); } const P=v4ResP(r), d=v4Diff(v4Hoy(),P); if(d<0) return '<span class="badge badge-r">Sin efecto desde el '+v4F2(fxAdd(P,1))+' · registra cómo termina</span>'; return '<span class="badge badge-y">En curso · firma '+(d===0?'HOY (último día)':d===1?'mañana':'en '+d+' días')+'</span>'; }
 function v4PintarReservas(){
   const box=$i('res-list'); if(!box) return; const hoy=v4Hoy(), rs=D.reservas||[];
   const act=rs.filter(v4ResActiva).sort((a,b)=>String(v4ResP(a)).localeCompare(String(v4ResP(b)))), otras=rs.filter(r=>!v4ResActiva(r)).sort((a,b)=>String(b.O).localeCompare(String(a.O))).slice(0,40);
@@ -13670,26 +13851,40 @@ function v4PintarReservas(){
 function v4GestionarReserva(id){
   const r=v4Res(id); if(!r) return; const hoy=v4Hoy(), p=(D.props||[]).find(x=>x.id==r.propId), al=v4AlertasCache(hoy).filter(a=>a.resId===r.id), pend=al.filter(a=>!a.hecho&&!(a.caduca&&a.caduca<hoy)), hechos=al.filter(a=>a.hecho), a1=v4PasoDe(al,hoy);
   const fila=(k,v)=>'<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--line);"><span style="color:var(--ink3);">'+k+'</span><span style="text-align:right;">'+v+'</span></div>';
-  const btn=(t,f,c)=>'<button class="btn '+(c||'btn-secondary')+' btn-sm" onclick="'+f+'">'+t+'</button>', asn=r.asnef||{}, s=v4ResSenalRes(r), lr=v4LimRechazo(r);
+  const btn=(t,f,c)=>'<button class="btn '+(c||'btn-secondary')+' btn-sm" onclick="'+f+'">'+t+'</button>', asn=r.asnef||{}, s=v4ResSenalRes(r), lr=v4LimRechazo(r), P=v4ResP(r), vis=r.visitaId?(D.visitas||[]).find(x=>x.id==r.visitaId):null, ads=v4AnunciosRes(r);
+  const causa=n=>{ const t=r['causaTipo'+n]; return t?v4Esc(v4CausaTxt(t,r['causaDet'+n]))+(r['cFin'+n]?' · hasta el '+v4F2(r['cFin'+n]):''):'<span style="color:var(--ye);">sin anotar</span>'; };
   $i('drw-c').innerHTML='<div data-res="'+r.id+'" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">📝 Reserva · Hab. '+v4Esc(r.hab)+' · '+v4Esc(p?p.nom:'')+'</div><div style="font-size:12px;color:var(--ink3);margin-top:3px;">'+v4Esc(v4NomRes(r))+' '+v4EstadoRes(r)+'</div></div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'
    +(a1?'<div style="margin-bottom:10px;">'+v4ChipPaso(a1,hoy)+'</div>':'')
    +'<div class="card" style="padding:12px;margin-bottom:12px;">'
-   +fila('Oferta y señal (O)',v4F2(r.O)+(r.Ohora?' a las '+r.Ohora:''))+fila('Firma prevista (P)',v4F2(v4ResP(r))+(r.Phora?' a las '+r.Phora:'')+((r.prorrogas||[]).length?' · prorrogada por escrito el '+v4F2(r.prorrogas[r.prorrogas.length-1].fecha):''))
+   +fila('Origen',r.modo==='distancia'?'<span style="color:var(--ye);">sin visita (a distancia): adapta el manifiesta 3</span>':'visita'+(vis?' del '+v4F2(vis.fecha)+(vis.hora?' a las '+vis.hora:''):''))
+   +fila('Oferta y señal (O)',v4F2(r.O)+(r.Ohora?' a las '+r.Ohora:''))
+   +fila('Firma y entrada (P)',v4F2(P)+(r.Phora?' a las '+r.Phora:'')+((r.prorrogas||[]).length?' · prorrogada por escrito el '+v4F2(r.prorrogas[r.prorrogas.length-1].fecha):' · máximo '+v4F2(fxAdd(r.O,15))))
+   +fila('Fin previsto del contrato (E)',r.E?v4F2(r.E)+(P?' · '+v4Diff(P,r.E)+' días':''):'<span style="color:var(--ye);">sin anotar</span>')
+   +fila('Causa'+(r.inqId2?' (1)':''),causa(1))+(r.inqId2?fila('Causa (2)',causa(2)):'')
    +fila('Modelo de contrato recibido (M)',r.M?v4FmtDT(v4DT(r.M))+' · puede rechazarlo hasta el '+v4FmtDT(lr):'<span style="color:var(--ye);">pendiente de enviar o de anotar</span>')
-   +fila('Señal',v4E2(r.senal)+' € · '+v4Esc(v4MedioRes(r)))+fila('Renta del contrato',v4E2(r.renta)+' €/mes · múltiplo exigido '+(r.multiplo?String(r.multiplo).replace('.',','):'—')+' veces')
+   +fila('Señal',v4E2(r.senal)+' € · '+v4Esc(v4MedioRes(r)))
+   +fila('Renta del contrato',v4E2(r.renta)+' €/mes'+(v4PrecioHab(r.propId,r.hab)&&Math.abs(v4PrecioHab(r.propId,r.hab)-(parseFloat(r.renta)||0))>0.004?' · <span style="color:var(--ye);">en Habitaciones: '+v4E2(v4PrecioHab(r.propId,r.hab))+' €</span>':'')+' · múltiplo exigido '+(r.multiplo?String(r.multiplo).replace('.',','):'—')+' veces')
+   +fila('Pago en la firma',P&&r.renta>0?v4E2(v4PagoFirmaRes(r))+' € (renta proporcional '+v4E2(v4RentaPropRes(r))+' € + fianza '+v4E2(r.renta)+' € + garantía '+v4E2(r.renta)+' € − señal)':'—')
+   +fila('Internet (máximo anual del piso)',parseFloat(r.internetAnual)>0?v4E2(r.internetAnual)+' €':'<span style="color:var(--ye);">sin anotar</span>')
    +fila('ASNEF y BADEXCUG',asn.pedida?('pedido el '+v4F2(asn.pedida)+' · '+(asn.resultado==='figura'?'<span style="color:var(--rd);">figura con deudas</span>':asn.resultado==='no-figura'?'no figura':'sin respuesta')+(asn.fecha?' ('+v4F2(asn.fecha)+')':'')):'<span style="color:var(--ye);">sin pedir</span>')
    +fila('Justificantes de ingresos',(r.ingresosPedidos?'pedidos el '+v4F2(r.ingresosPedidos):'no pedidos')+(r.copiaIngresos?' · copia guardada':'')+(r.falsedad?' · <span style="color:var(--rd);">indicios de falsedad'+(r.falsedadFecha?' ('+v4F2(r.falsedadFecha)+')':'')+'</span>':''))
-   +fila('Certificado energético',r.ceeDicha?'calificación dicha y etiqueta enseñada':'<span style="color:var(--ye);">sin marcar</span>')
+   +fila('Antes de pagar (manifiesta 3)',(r.ceeDicha?'calificación y etiqueta ✓':'<span style="color:var(--ye);">calificación y etiqueta sin marcar</span>')+' · '+(r.info31?'información del art. 31 ✓':'<span style="color:var(--ye);">art. 31 sin marcar</span>'))
+   +(ads.length?fila('Anuncio de la habitación',ads.map(a=>v4Esc(a.tit||'anuncio')+': '+(a.est==='publicado'&&v4ResActiva(r)?'<span style="color:var(--rd);">publicado</span>':a.est)).join(' · ')):'')
    +(r.fin?fila('Final',v4Esc(V4_RES_CASOS[r.fin.caso].t)+' ('+v4F2(r.fin.fecha)+') · señal: '+V4_RES_SENAL[s]+(s!=='pierde'?' · '+(r.devolucion&&r.devolucion.fecha?'devueltos '+v4E2(r.devolucion.importe)+' € el '+v4F2(r.devolucion.fecha)+(r.devolucion.justificante?' (justificante firmado)':''):'<span style="color:var(--rd);">devolución pendiente: '+v4E2(v4ResImporteDev(r))+' € como máximo el '+v4F2(v4AddHabilesSeg(r.fin.fecha,3))+'</span>'):'')):'')
    +(r.fin?fila('Datos personales',r.datosSuprimidos?'suprimidos el '+v4F2(r.datosSuprimidos):(r.bloqueada?'bloqueados desde el '+v4F2(r.bloqueada):'<span style="color:var(--ye);">pendiente de bloquear o suprimir</span>')+' · se suprimen el '+v4F2(v4AddM(r.O,60))+(r.reclamacion?' (en suspenso: reclamación en curso)':'')):'')
    +'</div><div class="form-section">Registrar</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
    +btn('✏️ Editar y seguimiento','closeDrw();v4FormReserva(\''+r.id+'\')')
-   +(v4ResActiva(r)?btn('📄 Firmar contrato','v4ContratoDesdeReserva(\''+r.id+'\')','btn-success')+btn('📅 Prorrogar','v4ProrrogarReserva(\''+r.id+'\')')+btn('🏁 Terminar sin contrato','v4TerminarReserva(\''+r.id+'\')'):'')
+   +(v4ResActiva(r)?btn('📄 Firmar contrato','v4ContratoDesdeReserva(\''+r.id+'\')','btn-success')+(v4ResPuedeProrrogar(r)?btn('📅 Prorrogar','v4ProrrogarReserva(\''+r.id+'\')'):'')+btn('🏁 Terminar sin contrato','v4TerminarReserva(\''+r.id+'\')'):'')
+   +(v4ResActiva(r)&&ads.some(a=>a.est==='publicado')?btn('⏸ Anuncio pausado','v4PausarAnunciosRes(\''+r.id+'\');v4GestionarReserva(\''+r.id+'\')'):'')
    +(r.fin&&s!=='pierde'?btn('💶 Devolución hecha','v4DevolucionReserva(\''+r.id+'\')'):'')
    +(r.fin&&!r.datosSuprimidos&&!r.bloqueada?btn('🔒 Bloquear datos','v4BloquearDatosRes(\''+r.id+'\')'):'')
    +(r.fin&&!r.datosSuprimidos?btn('🗑 Suprimir datos','v4SuprimirDatos(\'res\',\''+r.id+'\')','btn-danger'):'')
    +btn(r.reclamacion?'Quitar reclamación':'Reclamación en curso','v4ToggleReclamacion(\'res\',\''+r.id+'\')','btn-ghost')+'</div>'
-   +'<div class="form-section">Plantillas</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"><button class="btn btn-ghost btn-sm" onclick="v4VerPlantillaReserva(\'14\',\''+r.id+'\')">📋 Plantilla 14 · modelo de contrato</button>'+(r.fin&&s!=='pierde'?'<button class="btn btn-ghost btn-sm" onclick="v4VerPlantillaReserva(\'justdev\',\''+r.id+'\')">📋 Justificante de devolución</button>':'')+'</div>'
+   +'<div class="form-section">Documentos y mensajes</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
+   +(!r.datosSuprimidos?'<button class="btn btn-ghost btn-sm" onclick="v4VerPlantillaReserva(\'oferta\',\''+r.id+'\')">📄 Datos para la oferta</button>':'')
+   +'<button class="btn btn-ghost btn-sm" onclick="v4VerPlantillaReserva(\'14\',\''+r.id+'\')">📋 Plantilla 14 · modelo de contrato</button>'
+   +(r.fin?'<button class="btn btn-ghost btn-sm" onclick="v4VerPlantillaReserva(\'finres\',\''+r.id+'\')">📋 Comunicación del fin</button>':'')
+   +(r.fin&&s!=='pierde'?'<button class="btn btn-ghost btn-sm" onclick="v4VerPlantillaReserva(\'justdev\',\''+r.id+'\')">📋 Justificante de devolución</button>':'')+'</div>'
    +'<div class="form-section">Avisos pendientes ('+pend.length+')</div>'+(pend.length?pend.map(a=>v4HtmlAviso(a,hoy)).join(''):'<div style="font-size:12px;color:var(--ink3);">Nada pendiente.</div>')
    +(hechos.length?'<details style="margin-top:10px;"><summary style="font-size:12px;cursor:pointer;color:var(--ink3);">Hechos ('+hechos.length+')</summary>'+hechos.map(a=>v4HtmlAviso(a,hoy)).join('')+'</details>':'');
   $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
@@ -13725,26 +13920,32 @@ function v4MarcarHecho(ref,k,on){
   else { const co=(D.conts||[]).find(c=>c.id==ref); if(!co) return; co.hechos=Object.assign({},co.hechos||{}); if(on) co.hechos[k]=ts; else delete co.hechos[k]; }
   saveAndSync(); v4RefrescarAvisos();
 }
+const V4_TPL_RES=['14','justdev','finres','oferta'];
 function v4HtmlAviso(a,hoy){
   const ref=v4RefAviso(a), col=a.nivel==='urgente'?'var(--rd)':a.nivel==='alto'?'var(--acc)':a.nivel==='info'?'var(--bl)':'var(--ye)';
-  const nomTpl=t=>t==='req'?'Requerimiento':t==='anexo2'?'Anexo II':t==='visHab'?'Aviso de visita':t==='visCom'?'Aviso zonas comunes':t==='14'?'Plantilla 14':t==='justdev'?'Justificante de devolución':'Plantilla '+t;
-  const tpls=(a.tpl||[]).map(t=>(t==='14'||t==='justdev')?'<button class="btn btn-ghost btn-xs" onclick="v4VerPlantillaReserva(\''+t+'\',\''+a.resId+'\')">📋 '+nomTpl(t)+'</button>':'<button class="btn btn-ghost btn-xs" onclick="v4VerPlantilla(\''+t+'\',\''+(a.coId||'')+'\',\''+(a.visId||a.mes||'')+'\')">📋 '+nomTpl(t)+'</button>').join('');
+  const nomTpl=t=>t==='req'?'Requerimiento':t==='anexo2'?'Anexo II':t==='visHab'?'Aviso de visita':t==='visCom'?'Aviso zonas comunes':t==='14'?'Plantilla 14':t==='justdev'?'Justificante de devolución':t==='finres'?'Comunicación del fin':t==='oferta'?'Datos para la oferta':'Plantilla '+t;
+  const tpls=(a.tpl||[]).map(t=>(a.resId&&V4_TPL_RES.includes(String(t)))?'<button class="btn btn-ghost btn-xs" onclick="v4VerPlantillaReserva(\''+t+'\',\''+a.resId+'\')">📋 '+nomTpl(t)+'</button>':'<button class="btn btn-ghost btn-xs" onclick="v4VerPlantilla(\''+t+'\',\''+(a.coId||'')+'\',\''+(a.visId||a.mes||'')+'\')">📋 '+nomTpl(t)+'</button>').join('');
   const k=String(a.k);
   let acc='';
   if(a.coId&&k.startsWith('pm:')) acc+='<button class="btn btn-ghost btn-xs" onclick="v4AbrirCiclo(\''+a.coId+'\',\''+a.mes+'\')">💶 Pago</button>';
   if(a.coId&&/^itp|^F-firma/.test(k)) acc+='<button class="btn btn-ghost btn-xs" onclick="v4ITP(\''+a.coId+'\')">🧾 ITP</button>';
   if(a.resId&&k==='r-firma'&&!a.hecho) acc+='<button class="btn btn-success btn-xs" onclick="v4ContratoDesdeReserva(\''+a.resId+'\')">📄 Firmar contrato</button>';
   if(a.resId&&k==='r-dev'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4DevolucionReserva(\''+a.resId+'\')">💶 Devolución hecha</button>';
-  if(a.resId&&/^r-(P-asnef|P1|asnef-mal|rech-ok)$/.test(k)&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4TerminarReserva(\''+a.resId+'\')">🏁 Terminar</button>'+(k!=='r-asnef-mal'&&k!=='r-rech-ok'?'<button class="btn btn-ghost btn-xs" onclick="v4ProrrogarReserva(\''+a.resId+'\')">📅 Prorrogar</button>':'');
+  if(a.resId&&/^r-(P-asnef|caduca|P1|asnef-mal|rech-ok)$/.test(k)&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4TerminarReserva(\''+a.resId+'\')">🏁 Terminar</button>';
+  if(a.resId&&k==='r-P-asnef'&&!a.hecho&&v4ResPuedeProrrogar(v4Res(a.resId))) acc+='<button class="btn btn-ghost btn-xs" onclick="v4ProrrogarReserva(\''+a.resId+'\')">📅 Prorrogar</button>';
+  if(a.resId&&k==='r-anuncio'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4PausarAnunciosRes(\''+a.resId+'\')">⏸ Marcar pausado</button>';
+  if(a.resId&&k==='r-reanuncio'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4ReactivarAnunciosRes(\''+a.resId+'\')">▶ Reactivar anuncio</button>';
+  if(a.resId&&k==='r-visitas') acc+='<button class="btn btn-ghost btn-xs" onclick="closeM(\'m-v4av\');closeDrw();v4IrA(\'visitas\')">📅 Visitas</button>';
   if(k==='d-bloq'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4BloquearDatosCo(\''+a.coId+'\')">🔒 Bloquear datos</button>';
   if(k==='d-res-ya'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4BloquearDatosRes(\''+a.resId+'\')">🔒 Hacerlo ahora</button>';
   if((k==='d-sup'||k==='d-res-5')&&!a.hecho) acc+='<button class="btn btn-danger btn-xs" onclick="v4SuprimirDatos(\''+(a.coId?'co':'res')+'\',\''+(a.coId||a.resId)+'\')">🗑 Suprimir datos</button>';
   if(a.propAl) acc+='<button class="btn btn-ghost btn-xs" onclick="closeM(\'m-v4av\');editProp(\''+a.propId+'\')">🏢 Ficha del piso</button>';
+  const sinHecho=a.auto||a.soloDatos||k==='r-caduca'||k==='r-visitas'||k==='r-anuncio';
   return '<div style="border-left:3px solid '+col+';background:var(--card);border-radius:8px;padding:9px 11px;margin:6px 0;box-shadow:0 1px 0 var(--line);">'
    +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;"><div style="font-size:12.5px;font-weight:700;line-height:1.35;min-width:0;flex:1;">'+v4Esc(a.titulo)+'</div><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'+v4BadgeDias(a,hoy)+'<span class="badge badge-b">'+v4Esc(a.tipo)+'</span></div></div>'
    +'<div style="font-size:11.5px;color:var(--ink2);line-height:1.55;margin-top:4px;">'+v4Esc(a.det)+'</div>'
    +'<div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">'+v4F2(a.fecha)+(a.desde&&a.desde<a.fecha?' · desde el '+v4F2(a.desde):'')+(a.hecho&&a.hechoEl?' · hecho el '+v4F2(String(a.hechoEl).slice(0,10)):'')+(a.auto?' · completado con los datos':'')+'</div>'
-   +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">'+(a.auto||a.soloDatos?'':'<button class="btn '+(a.hecho?'btn-ghost':'btn-success')+' btn-xs" onclick="v4MarcarHecho(\''+ref+'\',\''+a.k+'\','+(a.hecho?'false':'true')+')">'+(a.hecho?'↩ Deshacer':'✓ Hecho')+'</button>')+tpls+acc
+   +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">'+(sinHecho?'':'<button class="btn '+(a.hecho?'btn-ghost':'btn-success')+' btn-xs" onclick="v4MarcarHecho(\''+ref+'\',\''+a.k+'\','+(a.hecho?'false':'true')+')">'+(a.hecho?'↩ Deshacer':'✓ Hecho')+'</button>')+tpls+acc
    +(a.coId?'<button class="btn btn-ghost btn-xs" onclick="v4Gestionar(\''+a.coId+'\')">⚙️ Contrato</button>':'')
    +(a.resId?'<button class="btn btn-ghost btn-xs" onclick="closeM(\'m-v4av\');v4GestionarReserva(\''+a.resId+'\')">📝 Reserva</button>':'')
    +(a.incId?'<button class="btn btn-ghost btn-xs" onclick="document.querySelector(\'.nav-item[data-s=incs]\').click()">🔧 Incidencias</button>':'')
@@ -13758,6 +13959,161 @@ function v4MigrarCee(){
   if(p.ceeCalif||p.ceeFecha||(D.cfg||{}).migCeeMolina) return false;
   p.ceeCalif='E'; p.ceeFecha='2020-03-16'; p.ceeCaduca='2030-03-16'; D.cfg=D.cfg||{}; D.cfg.migCeeMolina=true; return true;
 }
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// v4.5 · 30/10/2026 · Hipotecas: tipo de interés de cada cuota calculado
+// TIN anual aplicado = intereses de la cuota ÷ capital pendiente antes de la cuota × 12 × 100
+// capital pendiente antes de la cuota = capital pendiente tras la cuota + amortización de la cuota
+// ═════════════════════════════════════════════════════════════════════════════
+function v5R2(x){ return Math.round((+x||0)*100)/100; }
+function v5Num(x){ if(x===''||x==null) return null; const v=parseFloat(x); return isNaN(v)?null:v; }
+function v5PctTxt(x,d){ if(x==null||!isFinite(x)) return '—'; d=d==null?3:d; return x.toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d})+' %'; }
+function v5TipoCuota(int,antes){ int=parseFloat(int); antes=parseFloat(antes); if(!(antes>0)||!(int>=0)) return null; return int/antes*1200; }
+// Capital antes y después de cada cuota registrada, de la más reciente a la más antigua.
+// Usa el capital que se anotó al registrar cada cuota; si no consta (cuotas antiguas), lo deduce del pendiente actual.
+function v5CadenaCapital(h){
+  const out={}; let sig=parseFloat(h.pend)||0;
+  [...(h.cuotas||[])].sort((a,b)=>String(b.mes||'').localeCompare(String(a.mes||''))||String(b.fecha||'').localeCompare(String(a.fecha||''))).forEach(cu=>{
+    const pd=v5Num(cu.pendDesp), despues=pd!=null?pd:sig, antes=v5R2(despues+(parseFloat(cu.cap)||0));
+    out[cu.id]={antes, despues:v5R2(despues)}; sig=antes; });
+  return out;
+}
+function v5AntesCuota(h,cu){ const a=v5Num(cu.capAntes); if(a!=null&&a>0) return a; const c=v5CadenaCapital(h)[cu.id]; return c?c.antes:null; }
+function v5TipoDeCuota(h,cu){ return v5TipoCuota(cu.int,v5AntesCuota(h,cu)); }
+// Capital antes de la cuota según la app: el anotado en la cuota (si se edita) o el que queda antes de ese mes
+function v5AntesApp(h,cu,mes){
+  if(cu){ const a=v5Num(cu.capAntes); if(a!=null&&a>0) return a;
+    const cs=(h.cuotas||[]).map(x=>x.id===cu.id?Object.assign({},x,{pendDesp:null}):x), c=v5CadenaCapital(Object.assign({},h,{cuotas:cs}))[cu.id]; return c?c.antes:(parseFloat(h.pend)||0); }
+  const later=(h.cuotas||[]).filter(x=>String(x.mes||'')>String(mes||'')).sort((a,b)=>String(a.mes).localeCompare(String(b.mes)))[0];
+  return later?v5AntesCuota(h,later):(parseFloat(h.pend)||0);
+}
+// Días reales desde el cobro de la cuota del mes anterior (para bancos que liquidan por días)
+function v5Dias(h,cu,mes,fecha){ if(!fecha||!/^\d{4}-\d{2}$/.test(mes||'')) return null; const pm=v4AddM(mes+'-01',-1).slice(0,7);
+  const ant=(h.cuotas||[]).find(x=>x.mes===pm&&x.fecha&&(!cu||x.id!==cu.id)); if(!ant) return null; const d=v4Diff(ant.fecha,fecha); return (d>0&&d<=62)?{d,desde:ant.fecha}:null; }
+function v5UltimaCuota(h){ return [...(h.cuotas||[])].sort((a,b)=>String(b.mes||'').localeCompare(String(a.mes||'')))[0]||null; }
+
+// ── Formulario de la cuota ──
+function v5CuEditado(){ const m=$i('m-cuota'); if(m) m.dataset.estimado=''; }
+function v5CuPendManual(){ const m=$i('m-cuota'); if(m) m.dataset.pendAuto=''; }
+function v5CuPendAuto(){ const m=$i('m-cuota'); if(m){ m.dataset.pendAuto='1'; cuCalc(); } }
+function v5CuLeer(){
+  const h=(D.hipotecas||[]).find(x=>x.id==gi('cu-hip-id')); if(!h) return null;
+  const eid=gi('cu-edit-id'), cu=eid?(h.cuotas||[]).find(x=>x.id==eid):null, m=($i('m-cuota')||{}).dataset||{};
+  const mes=gi('cu-mes'), fecha=gi('cu-fecha'), imp=gn('cu-imp'), int=v5R2(gn('cu-int')), cap=v5R2(gn('cu-cap'));
+  const antesApp=v5R2(v5AntesApp(h,cu,mes));
+  let pend;
+  if(m.pendAuto==='1'){ pend=v5R2(antesApp-cap); if($i('cu-pend')) $i('cu-pend').value=pend.toFixed(2); }
+  else pend=v5Num(gi('cu-pend'));
+  const antes=pend!=null?v5R2(pend+cap):null, tipo=antes>0?v5TipoCuota(int,antes):null;
+  const err=[], av=[];
+  if(!/^\d{4}-\d{2}$/.test(mes||'')) err.push('Indica el mes de la cuota.');
+  if(!(imp>0)) err.push('Indica el importe de la cuota.');
+  if(gn('cu-int')<0||gn('cu-cap')<0) err.push('Los intereses y la amortización no pueden ser negativos.');
+  if(imp>0&&int>imp+0.005) err.push('Los intereses ('+eur(int,2)+') no pueden ser mayores que la cuota ('+eur(imp,2)+').');
+  if(pend==null) err.push('Falta el capital pendiente tras esta cuota.');
+  else if(pend<0) err.push('El capital pendiente tras la cuota no puede ser negativo: la amortización ('+eur(cap,2)+') es mayor que el capital que quedaba ('+eur(antesApp,2)+').');
+  else if(!(antes>0)) err.push('Sin capital pendiente no se puede calcular el tipo de interés.');
+  const dup=/^\d{4}-\d{2}$/.test(mes||'')&&(h.cuotas||[]).find(x=>x.mes===mes&&(!cu||x.id!==cu.id));
+  if(dup) err.push('Ya hay una cuota registrada del mes '+mes+': edítala en lugar de registrar otra.');
+  if(imp>0&&Math.abs(imp-(int+cap))>0.01) av.push('La cuota ('+eur(imp,2)+') no es igual a intereses + amortización ('+eur(int+cap,2)+'): diferencia de '+eur(imp-int-cap,2)+'. Revisa los importes del recibo.');
+  if(m.pendAuto!=='1'&&pend!=null&&antes>0&&Math.abs(antes-antesApp)>0.5) av.push('Según la app, antes de esta cuota quedaban '+eur(antesApp,2)+'; con el dato del banco eran '+eur(antes,2)+' (diferencia de '+eur(antes-antesApp,2)+'). Se usa el del banco'+(!(h.cuotas||[]).some(x=>x.id!==(cu&&cu.id)&&String(x.mes||'')>String(mes||''))?' y el capital pendiente de la hipoteca pasará a '+eur(pend,2)+'.':'.'));
+  if(m.estimado==='1') av.push('Intereses y amortización estimados con el tipo de la ficha: pon los del recibo del banco para que el tipo calculado sea el real.');
+  const exp=tipoResultante(h);
+  if(tipo!=null&&exp>0&&m.estimado!=='1'&&Math.abs(tipo-exp)>0.05) av.push('El tipo de esta cuota ('+v5PctTxt(tipo)+') no coincide con el de la ficha de la hipoteca ('+v5PctTxt(exp)+(h.tipo==='Fija'?'':' = euríbor + diferencial − bonificación')+'). Puede que el banco haya revisado el tipo o que se haya perdido alguna bonificación: compruébalo en el recibo y, si ha cambiado, actualiza la ficha.');
+  return {h,cu,mes,fecha,imp,int,cap,pend,antes,antesApp,tipo,exp,err,av};
+}
+function cuCalc(){
+  const el=$i('cu-resumen'); if(!el) return; const x=v5CuLeer(); if(!x){ el.innerHTML=''; return; }
+  const m=$i('m-cuota').dataset, fila=(k,v,c)=>'<div style="display:flex;justify-content:space-between;gap:10px;padding:2px 0;"><span style="color:var(--ink3);">'+k+'</span><span class="mono" style="text-align:right;'+(c?'color:'+c+';':'')+'">'+v+'</span></div>';
+  if($i('cu-tipo')) $i('cu-tipo').value=x.tipo!=null?x.tipo.toFixed(3):'';
+  const dd=v5Dias(x.h,x.cu,x.mes,x.fecha);
+  let dias='';
+  if(dd&&x.antes>0&&x.int>0&&dd.d!==30){ const t360=x.int/x.antes*36000/dd.d, t365=x.int/x.antes*36500/dd.d;
+    const pista=(x.exp>0&&Math.abs(x.tipo-x.exp)>0.02)?(Math.abs(t360-x.exp)<=0.02?' Con base 360 coincide con la ficha: tu banco parece liquidar por días reales con año de 360 días.':Math.abs(t365-x.exp)<=0.02?' Con base 365 coincide con la ficha: tu banco parece liquidar por días reales con año de 365 días.':''):'';
+    dias='<div style="font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.5;">Si el banco calcula los intereses por días reales (del '+fD(dd.desde)+' al '+fD(x.fecha)+', '+dd.d+' días), el tipo equivalente es '+v5PctTxt(t360)+' con año de 360 días o '+v5PctTxt(t365)+' con año de 365. La escritura dice cuál usa.'+pista+'</div>'; }
+  el.innerHTML=fila('Intereses (deducible)',eur(x.int,2),'var(--rd)')+fila('Amortización de capital',eur(x.cap,2),'var(--gn)')
+   +'<div style="display:flex;justify-content:space-between;padding:6px 0 2px;margin-top:4px;border-top:1px solid var(--line);font-weight:600;"><span>Suma</span><span class="mono">'+eur(x.int+x.cap,2)+'</span></div>'
+   +(x.imp>0?(Math.abs(x.imp-(x.int+x.cap))>0.01?'':'<div style="color:var(--gn);font-size:11px;">✓ Cuadra con la cuota</div>'):'')
+   +'<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--line);">'
+   +fila('Capital pendiente antes de la cuota',x.antes!=null?eur(x.antes,2):'—')
+   +'<div style="font-size:10.5px;color:var(--ink3);text-align:right;">= capital tras la cuota '+(x.pend!=null?eur(x.pend,2):'—')+' + amortización '+eur(x.cap,2)+(m.pendAuto==='1'?' · calculado por la app':' · dato del banco <a href="#" onclick="event.preventDefault();v5CuPendAuto()" style="color:var(--bl);">(volver al de la app)</a>')+'</div>'
+   +'<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0 0;font-size:14px;font-weight:700;"><span>Tipo de interés aplicado (TIN anual)</span><span class="mono" style="color:var(--bl);">'+v5PctTxt(x.tipo)+'</span></div>'
+   +'<div style="font-size:10.5px;color:var(--ink3);text-align:right;">= intereses '+eur(x.int,2)+' ÷ capital antes '+(x.antes!=null?eur(x.antes,2):'—')+' × 12 meses × 100</div>'
+   +(x.exp>0?'<div style="font-size:10.5px;color:var(--ink3);text-align:right;">Tipo de la ficha de la hipoteca: '+v5PctTxt(x.exp)+'</div>':'')
+   +dias+'</div>'
+   +(x.err.length?'<div class="alert alert-r" style="font-size:11.5px;margin-top:8px;line-height:1.5;">⛔ '+x.err.map(v4Esc).join('<br>⛔ ')+'</div>':'')
+   +(x.av.length?'<div class="alert alert-y" style="font-size:11px;margin-top:8px;line-height:1.5;">⚠️ '+x.av.map(v4Esc).join('<br>⚠️ ')+'</div>':'');
+}
+function cuAuto(){ cuCalc(); }
+function newCuota(hipId){
+  const h=(D.hipotecas||[]).find(x=>x.id==hipId); if(!h)return;
+  $i('cu-hip-id').value=hipId; $i('cu-edit-id').value='';
+  const p=D.props.find(x=>x.id==h.propId);
+  $i('m-cu-title').textContent='🧾 Cuota — '+(p?p.nom:'')+' ('+(h.banco||'')+')';
+  ['cu-int','cu-cap','cu-notas','cu-pend'].forEach(id=>{const e=$i(id);if(e)e.value='';});
+  const ult=v5UltimaCuota(h), hoy=v4Hoy();
+  const mes=ult&&/^\d{4}-\d{2}$/.test(ult.mes||'')?v4AddM(ult.mes+'-01',1).slice(0,7):hoy.slice(0,7);
+  $i('cu-mes').value=mes;
+  const dia=parseInt(h.dia); $i('cu-fecha').value=dia>=1&&dia<=31?mes+'-'+String(Math.min(dia,v4DiasMes(mes))).padStart(2,'0'):hoy;
+  $i('cu-imp').value=h.cuota||'';
+  // Estimación inicial con el último tipo calculado (o el de la ficha): se sustituye por el recibo del banco
+  const tEst=(ult&&v5TipoDeCuota(h,ult))||tipoResultante(h), antes=v5AntesApp(h,null,mes), int=v5R2(antes*tEst/1200);
+  $i('cu-int').value=int.toFixed(2); $i('cu-cap').value=Math.max(0,v5R2((parseFloat(h.cuota)||0)-int)).toFixed(2);
+  const m=$i('m-cuota'); m.dataset.pendAuto='1'; m.dataset.estimado='1';
+  clearPdfZone('cu-pdf-zone','cu-pdf-data');
+  $i('cu-doc-actual').innerHTML='';
+  cuCalc(); openM('m-cuota');
+}
+function editCuota(hipId, cuId){
+  const h=(D.hipotecas||[]).find(x=>x.id==hipId); if(!h)return;
+  const cu=(h.cuotas||[]).find(x=>x.id==cuId); if(!cu)return;
+  $i('cu-hip-id').value=hipId; $i('cu-edit-id').value=cuId;
+  $i('m-cu-title').textContent='✏️ Editar cuota';
+  $i('cu-mes').value=cu.mes||''; $i('cu-fecha').value=cu.fecha||'';
+  $i('cu-imp').value=cu.imp||''; $i('cu-int').value=cu.int!=null?cu.int:''; $i('cu-cap').value=cu.cap!=null?cu.cap:''; $i('cu-notas').value=cu.notas||'';
+  const m=$i('m-cuota'); m.dataset.estimado=cu.estimado?'1':''; m.dataset.pendAuto=cu.pendBanco?'':'1'; $i('cu-pend').value=cu.pendBanco?cu.pendDesp:'';
+  clearPdfZone('cu-pdf-zone','cu-pdf-data');
+  $i('cu-doc-actual').innerHTML = cu.pdfData ? `<div class="form-section" style="margin-top:14px;">Justificante guardado</div><button class="pdf-badge green" onclick="openPdf('${cu.pdfData}','${cu.pdfName||'movimiento.pdf'}')">📄 ${cu.pdfName||'Ver'}</button>` : '';
+  cuCalc(); openM('m-cuota');
+}
+function saveCuota(){
+  const x=v5CuLeer(); if(!x) return;
+  if(x.err.length){ cuCalc(); toast(x.err[0],false); return; }
+  const h=x.h, cu=x.cu, mes=x.mes, m=$i('m-cuota').dataset;
+  if(!h.cuotas) h.cuotas=[];
+  const p=D.props.find(z=>z.id==h.propId);
+  const pdfData=$i('cu-pdf-data')?.value||'', pdfName=$i('cu-pdf-name')?.value||'';
+  const campos={mes,fecha:gi('cu-fecha'),imp:x.imp,tipo:Math.round(x.tipo*1000)/1000,tipoCalc:true,int:x.int,cap:x.cap,pendDesp:x.pend,pendBanco:m.pendAuto!=='1',capAntes:x.antes,estimado:m.estimado==='1',notas:gi('cu-notas')};
+  if(pdfData){ campos.pdfData=pdfData; campos.pdfName=pdfName; }
+  const ultima=!h.cuotas.some(z=>z.id!==(cu&&cu.id)&&String(z.mes||'')>mes), bancoDespues=h.cuotas.some(z=>z.id!==(cu&&cu.id)&&String(z.mes||'')>mes&&z.pendBanco);
+  const pendPrev=parseFloat(h.pend)||0, capPrev=cu?(parseFloat(cu.cap)||0):0;
+  if(cu){ revertirGastosCuota(h,cu); Object.assign(cu,campos); toast('Cuota actualizada · tipo '+v5PctTxt(x.tipo)); }
+  else { h.cuotas.push(Object.assign({id:uid()},campos)); toast('Cuota registrada · tipo '+v5PctTxt(x.tipo)); }
+  // Capital pendiente de la hipoteca: tras la última cuota, el anotado en ella; si es una cuota anterior y una posterior
+  // trae el capital del banco, manda ese dato; si no, se ajusta por la diferencia de amortización
+  h.pend=ultima?Math.max(0,x.pend):bancoDespues?pendPrev:Math.max(0,v5R2(pendPrev+capPrev-x.cap));
+  if(p) p.capital=h.pend;
+  registrarGastosCuota(h, h.cuotas.find(z=>z.mes===mes)||campos, mes);
+  saveAndSync(); closeM('m-cuota'); rHipotecas();
+  try{ rDash(); }catch(e){}
+  if(!cu&&x.cap>0) setTimeout(()=>toast(`🏠 +${eur(x.cap,2)} de patrimonio neto · pendiente ${eur(h.pend)}`), 900);
+}
+function delCuota(hipId, cuId){
+  const h=(D.hipotecas||[]).find(x=>x.id==hipId); if(!h)return;
+  const cu=(h.cuotas||[]).find(x=>x.id==cuId); if(!cu)return;
+  if(!confirm('¿Eliminar esta cuota? El capital pendiente volverá a subir.'))return;
+  const pendPrev=parseFloat(h.pend)||0, ultima=!h.cuotas.some(z=>z.id!==cu.id&&String(z.mes||'')>String(cu.mes||'')), bancoDespues=h.cuotas.some(z=>z.id!==cu.id&&String(z.mes||'')>String(cu.mes||'')&&z.pendBanco);
+  revertirGastosCuota(h, cu);
+  if(ultima){ const a=v5Num(cu.capAntes); if(a!=null&&a>0) h.pend=a; } else if(bancoDespues) h.pend=pendPrev;
+  const p=D.props.find(x=>x.id==h.propId); if(p) p.capital=h.pend;
+  h.cuotas=h.cuotas.filter(x=>x.id!==cuId);
+  saveAndSync(); rHipotecas(); try{ rDash(); }catch(e){} toast('Cuota eliminada · pendiente '+eur(h.pend,2));
+}
+// Lista de cuotas y tarjeta de la hipoteca
+function v5TxtTipoLista(h,cu){ const t=v5TipoDeCuota(h,cu), a=v5AntesCuota(h,cu); return (t!=null?' · TIN '+v5PctTxt(t):'')+(a?' · capital antes '+eur(a,2):'')+(cu.estimado?' · desglose estimado, falta el del recibo':''); }
+function v5HtmlUltimoTipo(h,t){ const u=v5UltimaCuota(h); if(!u) return ''; const tc=v5TipoDeCuota(h,u); if(tc==null) return ''; const dif=t>0&&!u.estimado&&Math.abs(tc-t)>0.05;
+  return '<div style="font-size:9px;color:'+(dif?'var(--ye)':'var(--ink3)')+';" title="Intereses ÷ capital pendiente antes de la cuota × 12">última cuota ('+v4Esc(u.mes||'')+'): '+v5PctTxt(tc,2)+(dif?' ⚠️ distinto de la ficha':'')+'</div>'; }
 
 </script>
 </body>
