@@ -954,7 +954,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- ═══════════════ AVISOS ═══════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-avisos">
   <div class="ph"><div><div class="ph-title">🔔 Avisos de contratos</div>
-    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Fechas y plazos de cada contrato de habitación (contrato v20261025-2). Marca cada aviso como hecho cuando lo hagas.</div></div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Fechas y plazos de cada contrato de habitación (contrato v20261102). Marca cada aviso como hecho cuando lo hagas.</div></div>
     <div class="ph-acts"><button class="btn btn-secondary btn-sm" onclick="v4VentanaAvisos(true)">Ver resumen de hoy</button></div>
   </div>
   <div class="fb">
@@ -1049,7 +1049,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <select id="co-prop-f" onchange="rConts()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:170px;outline:none;"></select>
     <div class="fi"><span class="fi-icon">🔍</span><input id="co-q" placeholder="Buscar inquilino..." oninput="rConts()"></div>
   </div>
-  <div id="res-list"></div>
+  <div id="norm-box"></div><div id="res-list"></div>
   <div id="co-list"></div>
 </section>
 
@@ -1651,7 +1651,15 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>m² de zonas comunes (útiles − habitaciones)</label><input id="pr-m2c" type="number" step="0.5"><div id="pr-m2c-info" style="font-size:10px;color:var(--ink3);margin-top:3px;"></div></div>
     <div class="fgrp"><label>Valor de referencia del Catastro a la fecha de compra (€)</label><input id="pr-vref" type="number" step="0.01" placeholder="base del ITP si supera al precio"></div>
     <div class="fgrp"><label>Tipo de ITP aplicado (%)</label><input id="pr-itp" type="number" step="0.01" placeholder="auto: 8% hasta 24/07/2025 · 7,75% después"></div>
-    <div class="fgrp"><label>Renta del contrato unitario de referencia (€/mes)</label><input id="pr-runit" type="number" placeholder="límite suma habitaciones"></div>
+    <div class="fgrp"><label>Renta del contrato del piso entero, si se alquiló (€/mes)</label><input id="pr-runit" type="number" placeholder="límite suma habitaciones (art. 17.9)"></div>
+    <div class="fgrp"><label>¿Se alquiló entero alguna vez? (escritura de compra)</label><select id="pr-entero"><option value="">— Sin comprobar —</option><option value="no">No, comprobado</option><option value="si">Sí</option></select></div>
+    <div class="fgrp"><label>Fin de ese contrato del piso entero</label><input id="pr-enterofin" type="date"></div>
+    <div class="fgrp fgf"><div class="form-section" style="margin-top:4px;">Datos registrales (cabecera del contrato)</div></div>
+    <div class="fgrp"><label>Registro de la Propiedad</label><input id="pr-regreg" placeholder="Molina de Segura nº 1"></div>
+    <div class="fgrp"><label>Finca</label><input id="pr-regfin"></div>
+    <div class="fgrp"><label>Tomo</label><input id="pr-regtom"></div>
+    <div class="fgrp"><label>Libro</label><input id="pr-reglib"></div>
+    <div class="fgrp"><label>Folio</label><input id="pr-regfol"></div>
     <div class="fgrp"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="pr-tens" style="width:auto;"> En zona de mercado residencial tensionado</label></div>
     <div class="fgrp"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="pr-nosusc" style="width:auto;"> No susceptible de uso (sin imputación de rentas)</label></div>
     <div class="fgrp fgf"><div class="form-section" style="margin-top:4px;">Certificado energético (RD 390/2021)</div></div>
@@ -1913,7 +1921,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-wifi1" style="width:auto;"> El arrendatario 1 solicita el wifi</label>
       <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-wifi2" style="width:auto;"> El arrendatario 2 solicita el wifi</label>
     </div>
-    <div class="fgrp"><label>Contratos temporales anteriores seguidos con esta persona en este piso</label><select id="co-prev"><option value="0">0 · normal</option><option value="1">1 · sin prórroga ni anexo posible</option><option value="2">2 o más · no se puede firmar como temporal</option></select></div>
+    <div class="fgrp"><label>Contratos temporales seguidos anteriores que no están en la app (por ejemplo, con el titular anterior), con sus prórrogas o anexos</label><select id="co-prev"><option value="0">0 · normal</option><option value="1">1 · sin prórroga ni anexo posible</option><option value="2">2 o más · no se puede firmar como temporal</option></select></div>
+    <div class="fgrp"><label>Modelo de contrato firmado *</label><select id="co-modelo"><option value="v20261102">v20261102 · pago el día 1 de cada mes</option><option value="v20261025-2">v20261025-2 o anterior · pago el último día del mes anterior</option></select></div>
     <div class="fgrp"><label>Opción del ITP marcada en el contrato *</label><select id="co-itpop"><option value="">— Elegir —</option><option value="inquilino">Lo presenta el inquilino</option><option value="fran">Lo presenta Fran y el inquilino se lo reembolsa</option></select></div>
     <div class="fgrp" data-itp="inquilino" style="display:flex;align-items:center;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-itp" style="width:auto;"> Copia del modelo 600 y del pago recibida</label></div>
     <div class="fgrp" data-itp="inquilino"><label>Fecha en que la recibes</label><input id="co-itpf" type="date"></div>
@@ -1929,6 +1938,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
         <label id="co-igual-lbl" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-igual" style="width:auto;"> El contrato es el modelo enviado tras la reserva, sin cambios (solo rellenado) *</label>
       </div>
     </div>
+    <div class="fgrp fgf"><div class="form-section" style="margin-top:4px;">Causa y antecedentes en el piso (cláusula 3)</div><div class="fg"><div class="fgrp"><label>Tipo de causa del arrendatario 1 *</label><select id="co-ct1"><option value="">— Elegir —</option><option value="trabajo">Trabajo o desplazamiento laboral temporal</option><option value="estudios">Estudios, formación, prácticas u oposiciones</option><option value="medico">Tratamiento médico propio o de un familiar</option><option value="obras">Obras o inhabitabilidad temporal de su vivienda habitual</option></select></div><div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-fue1" style="width:auto;"> Arrendatario 1: ya fue inquilino de este piso (cualquier habitación y titular)</label></div><div class="fgrp" data-fue="1"><label>Tipo de contrato que tuvo</label><select id="co-fuet1"><option value="">— Tipo —</option><option value="temporal">Temporal (vivienda temporal)</option><option value="habitual">Vivienda habitual</option><option value="cc">Código Civil (habitación antes del 08/10/2026)</option><option value="otro">Otro título</option></select></div><div class="fgrp" data-fue="1"><label>Fecha de salida</label><input type="date" id="co-fues1"></div><div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-otro1" style="width:auto;"> Arrendatario 1: en los 3 meses anteriores a la firma ocupó una habitación del piso con otro título (vivienda habitual, Código Civil u otro)</label></div><div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-vol1" style="width:auto;"> Anexo I: volante o certificado individual de empadronamiento del arrendatario 1 (obligatorio si ya fue inquilino del piso)</label></div><div class="fgrp" data-arr2><label>Tipo de causa del arrendatario 2 *</label><select id="co-ct2"><option value="">— Elegir —</option><option value="trabajo">Trabajo o desplazamiento laboral temporal</option><option value="estudios">Estudios, formación, prácticas u oposiciones</option><option value="medico">Tratamiento médico propio o de un familiar</option><option value="obras">Obras o inhabitabilidad temporal de su vivienda habitual</option></select></div><div class="fgrp fgf" data-arr2><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-fue2" style="width:auto;"> Arrendatario 2: ya fue inquilino de este piso (cualquier habitación y titular)</label></div><div class="fgrp" data-fue="2"><label>Tipo de contrato que tuvo</label><select id="co-fuet2"><option value="">— Tipo —</option><option value="temporal">Temporal (vivienda temporal)</option><option value="habitual">Vivienda habitual</option><option value="cc">Código Civil (habitación antes del 08/10/2026)</option><option value="otro">Otro título</option></select></div><div class="fgrp" data-fue="2"><label>Fecha de salida</label><input type="date" id="co-fues2"></div><div class="fgrp fgf" data-arr2><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-otro2" style="width:auto;"> Arrendatario 2: en los 3 meses anteriores a la firma ocupó una habitación del piso con otro título (vivienda habitual, Código Civil u otro)</label></div><div class="fgrp fgf" data-arr2><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-vol2" style="width:auto;"> Anexo I: volante o certificado individual de empadronamiento del arrendatario 2 (obligatorio si ya fue inquilino del piso)</label></div><div class="fgrp fgf"><div id="co-irav-info" style="font-size:11px;color:var(--ink3);line-height:1.5;"></div></div></div></div>
     <div class="fgrp fgf"><div class="form-section" style="margin-top:4px;">Anexo I · justificantes de la causa y del domicilio habitual (obligatorio)</div>
       <div class="pdf-upload-zone" id="co-anx-zone" onclick="document.getElementById('co-anx').click()">
         <input type="file" id="co-anx" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload('co-anx','co-anx-zone','co-anx-data')">
@@ -1948,7 +1958,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-primer" style="width:auto;"> Primer alquiler de la vivienda</label>
       <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-indice" style="width:auto;"> Renta inicial inferior al índice de referencia</label>
       <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-pj" style="width:auto;"> Arrendatario persona jurídica</label>
-      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-entero" style="width:auto;"> Contrato de la vivienda completa</label>
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-entero" style="width:auto;"> Contrato de la vivienda completa (no se permite en contratos nuevos, art. 17.9 LAU)</label>
       <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-tacita" style="width:auto;"> En prórroga tácita (art. 10.1 LAU)</label>
     </div>
     <div class="fgrp fgf"><label>Cláusulas adicionales</label><textarea id="co-n" rows="3" placeholder="Mascotas, subarriendo, suministros incluidos..."></textarea></div>
@@ -1991,6 +2001,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Prioridad</label><select id="in-pri"><option value="alta">🔴 Alta — Urgente</option><option value="media" selected>🟡 Media</option><option value="baja">🟢 Baja</option></select></div>
     <div class="fgrp"><label>Estado</label><select id="in-est"><option value="abierta">Abierta</option><option value="proceso">En proceso</option><option value="resuelta">Resuelta</option></select></div>
     <div class="fgrp"><label>Fecha del aviso del inquilino (V)</label><input id="in-f" type="date"></div>
+    <div class="fgrp"><label>Recepción de un requerimiento con presupuesto</label><input id="in-presu" type="date"></div>
+    <div class="fgrp" style="display:flex;align-items:flex-end;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="in-urg" style="width:auto;"> Reparación urgente (art. 21.3 LAU)</label></div>
     <div class="fgrp"><label>Coste (€)</label><input id="in-co" type="number" placeholder="0"></div>
     <div class="fgrp fgf"><label>Proveedor / técnico</label><input id="in-pv" placeholder="Fontanero García — 600 111 222"></div>
     <div class="fgrp fgf"><label>Notas</label><textarea id="in-n" rows="2"></textarea></div>
@@ -3414,12 +3426,14 @@ function rHabs(){
           <div class="hab-campos">
             <label>€/mes<input type="number" step="1" min="0" value="${precioCfg||''}" placeholder="0" onchange="editHabCfg('${p.id}',${num},'precio',this.value)"></label>
             <label>m²<input type="number" step="0.01" min="0" value="${cfg.m2||''}" placeholder="0" onchange="editHabCfg('${p.id}',${num},'m2',this.value)"></label>
+            <label>Capacidad máx.<input type="number" step="1" min="1" max="6" value="${cfg.cap||''}" placeholder="${esDoble?2:1}" onchange="editHabCfg('${p.id}',${num},'cap',this.value)" title="Nº máximo de personas (cláusula 1)"></label>
           </div>
         </div>
         ${(cfg.m2>0&&precioCfg>0)?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">${v2NumEs(cfg.m2)} m² · ${v2NumEs(precioCfg/cfg.m2,1)} €/m²</div>`:(cfg.m2>0?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">${v2NumEs(cfg.m2)} m²</div>`:'')}
         ${(!inq&&precioCfg>0)?`<div style="font-size:9.5px;color:var(--ink3);margin-top:5px;">Precio de oferta: <strong style="color:var(--ink2);">${precioCfg}€</strong></div>`:''}
         ${(inq&&precioCfg>0&&Math.abs(precioCfg-(parseFloat(inq.alq)||0))>0.5)?`<div style="font-size:9.5px;color:var(--ye);margin-top:5px;">⚠ Cobra ${parseFloat(inq.alq)||0}€, configurado ${precioCfg}€</div>`:''}
         ${v4HtmlPasoHab(p.id,num)}
+        ${v5HistHab(p.id,num)}
       </div>`;
     }).join('');
 
@@ -3448,6 +3462,7 @@ function editHabCfg(propId, num, campo, valor){
   if(campo==='tipo'){ cfg.tipo=valor; cfg.plazas = valor==='doble'?2:1; }
   else if(campo==='precio'){ cfg.precio=parseFloat(valor)||0; }
   else if(campo==='m2'){ cfg.m2=parseFloat(valor)||0; }
+  else if(campo==='cap'){ const v=parseInt(valor); if(v>0) cfg.cap=v; else delete cfg.cap; }
   p.habsConfig[num]=cfg;
   v2SyncM2C(p);
   saveAndSync();
@@ -8451,7 +8466,7 @@ function rInfs(){
 // ══════════════════════════════════════════════════════════════
 function addInc(){
   const d=gi('in-d');if(!d){toast('Introduce la descripción',false);return;}
-  D.incs.push({id:uid(),desc:d,propId:gi('in-p'),hab:gi('in-h'),pri:$i('in-pri').value,estado:$i('in-est').value,fecha:gi('in-f'),coste:gn('in-co'),prov:gi('in-pv'),notas:gi('in-n')});
+  D.incs.push({id:uid(),desc:d,propId:gi('in-p'),hab:gi('in-h'),pri:$i('in-pri').value,estado:$i('in-est').value,fecha:gi('in-f'),coste:gn('in-co'),prov:gi('in-pv'),notas:gi('in-n'),presu:gi('in-presu'),urgente:!!($i('in-urg')&&$i('in-urg').checked)}); if($i('in-presu')) $i('in-presu').value=''; if($i('in-urg')) $i('in-urg').checked=false; try{ v4RefrescarAvisos(); }catch(e){}
   saveAndSync();closeM('m-inc');rIncs();toast('Incidencia registrada');
 }
 function nextEst(id){const inc=D.incs.find(i=>i.id==id);if(!inc)return;const c=['abierta','proceso','resuelta'];inc.estado=c[(c.indexOf(inc.estado)+1)%3];saveAndSync();rIncs();rDash();toast('Estado: '+inc.estado);}
@@ -8461,7 +8476,7 @@ function rIncs(){
   if(!list.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔧</div><p>Sin incidencias</p></div></td></tr>';return;}
   const pM={alta:'<span class="badge badge-r">🔴 Alta</span>',media:'<span class="badge badge-y">🟡 Media</span>',baja:'<span class="badge badge-g">🟢 Baja</span>'};
   const eM={abierta:'<span class="badge badge-r">Abierta</span>',proceso:'<span class="badge badge-b">En proceso</span>',resuelta:'<span class="badge badge-g">✅ Resuelta</span>'};
-  tb.innerHTML=list.map(inc=>{const p=D.props.find(pr=>pr.id==inc.propId);return `<tr><td>${p?p.nom:'–'}${inc.hab?' H'+inc.hab:''}</td><td><div style="font-size:12px;">${inc.desc}</div>${inc.notas?`<div style="font-size:10px;color:var(--ink3);">${inc.notas}</div>`:''}</td><td>${pM[inc.pri]||''}</td><td>${eM[inc.estado]||''}</td><td style="font-size:11px;color:var(--ink3);">${inc.fecha?fD(inc.fecha):'–'}</td><td class="mono" style="color:${inc.coste>0?'var(--rd)':'var(--ink3)'};">${inc.coste>0?eur(inc.coste):'–'}</td><td style="font-size:11px;color:var(--ink3);">${inc.prov||'–'}</td><td style="display:flex;gap:4px;"><button class="btn btn-ghost btn-xs" onclick="nextEst('${inc.id}')">→</button><button class="btn btn-danger btn-xs" onclick="D.incs=D.incs.filter(i=>i.id!='${inc.id}');saveAndSync();rIncs();toast('Eliminada')">🗑</button></td></tr>`;}).join('');
+  tb.innerHTML=list.map(inc=>{const p=D.props.find(pr=>pr.id==inc.propId);return `<tr><td>${p?p.nom:'–'}${inc.hab?' H'+inc.hab:''}</td><td><div style="font-size:12px;">${inc.desc}</div>${inc.notas?`<div style="font-size:10px;color:var(--ink3);">${inc.notas}</div>`:''}</td><td>${pM[inc.pri]||''}</td><td>${eM[inc.estado]||''}</td><td style="font-size:11px;color:var(--ink3);">${inc.fecha?fD(inc.fecha):'–'}</td><td class="mono" style="color:${inc.coste>0?'var(--rd)':'var(--ink3)'};">${inc.coste>0?eur(inc.coste):'–'}</td><td style="font-size:11px;color:var(--ink3);">${inc.prov||'–'}</td><td style="display:flex;gap:4px;"><button class="btn btn-ghost btn-xs" onclick="v5IncPresupuesto('${inc.id}')" title="Requerimiento con presupuesto o reparación urgente">📄</button><button class="btn btn-ghost btn-xs" onclick="nextEst('${inc.id}')">→</button><button class="btn btn-danger btn-xs" onclick="D.incs=D.incs.filter(i=>i.id!='${inc.id}');saveAndSync();rIncs();toast('Eliminada')">🗑</button></td></tr>`;}).join('');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -11053,9 +11068,9 @@ function v2PropLoad(p){
   const s=(id,v)=>{ const e=$i(id); if(e) e.value=v||''; }, ch=(id,v)=>{ const e=$i(id); if(e) e.checked=!!v; };
   s('pr-ceecal',p.ceeCalif); s('pr-ceereg',p.ceeReg); s('pr-ceefecha',p.ceeFecha); s('pr-ceecad',p.ceeCaduca); try{ v4CeeInfoForm(); }catch(e){}
   s('pr-refcat',p.refCat); s('pr-revcat',p.revCat); s('pr-vct',p.vct); s('pr-vcs',p.vcs); s('pr-vcc',p.vcc);
-  s('pr-m2t',p.m2t); s('pr-m2c',p.m2c); s('pr-vref',p.vRef); s('pr-itp',p.itpTipo); setTimeout(v2RecalcM2C,0); s('pr-runit',p.rentaUnit); ch('pr-tens',p.zonaTens); ch('pr-nosusc',p.noSusc); if($i('pr-vpo')) $i('pr-vpo').value=p.vpo||'';
+  s('pr-m2t',p.m2t); s('pr-m2c',p.m2c); s('pr-vref',p.vRef); s('pr-itp',p.itpTipo); setTimeout(v2RecalcM2C,0); s('pr-runit',p.rentaUnit); s('pr-entero',p.enteroAlq); s('pr-enterofin',p.enteroFin); s('pr-regreg',p.regRegistro); s('pr-regfin',p.regFinca); s('pr-regtom',p.regTomo); s('pr-reglib',p.regLibro); s('pr-regfol',p.regFolio); ch('pr-tens',p.zonaTens); ch('pr-nosusc',p.noSusc); if($i('pr-vpo')) $i('pr-vpo').value=p.vpo||'';
 }
-function v2PropRead(){ return {ceeCalif:gi('pr-ceecal'),ceeReg:gi('pr-ceereg'),ceeFecha:gi('pr-ceefecha'),ceeCaduca:gi('pr-ceecad'),refCat:gi('pr-refcat'),revCat:gi('pr-revcat'),vct:gn('pr-vct'),vcs:gn('pr-vcs'),vcc:gn('pr-vcc'),m2t:gn('pr-m2t'),m2c:v2M2CForm(),vRef:gn('pr-vref'),itpTipo:gn('pr-itp'),rentaUnit:gn('pr-runit'),zonaTens:!!($i('pr-tens')&&$i('pr-tens').checked),noSusc:!!($i('pr-nosusc')&&$i('pr-nosusc').checked),vpo:$i('pr-vpo')?$i('pr-vpo').value:''}; }
+function v2PropRead(){ return {ceeCalif:gi('pr-ceecal'),ceeReg:gi('pr-ceereg'),ceeFecha:gi('pr-ceefecha'),ceeCaduca:gi('pr-ceecad'),refCat:gi('pr-refcat'),revCat:gi('pr-revcat'),vct:gn('pr-vct'),vcs:gn('pr-vcs'),vcc:gn('pr-vcc'),m2t:gn('pr-m2t'),m2c:v2M2CForm(),vRef:gn('pr-vref'),itpTipo:gn('pr-itp'),rentaUnit:gn('pr-runit'),enteroAlq:gi('pr-entero'),enteroFin:gi('pr-enterofin'),regRegistro:gi('pr-regreg'),regFinca:gi('pr-regfin'),regTomo:gi('pr-regtom'),regLibro:gi('pr-reglib'),regFolio:gi('pr-regfol'),zonaTens:!!($i('pr-tens')&&$i('pr-tens').checked),noSusc:!!($i('pr-nosusc')&&$i('pr-nosusc').checked),vpo:$i('pr-vpo')?$i('pr-vpo').value:''}; }
 function v2ContReset(){ if($i('co-tipo')) $i('co-tipo').value='temporal'; ['co-firma','co-causa','co-rant','co-vivhab'].forEach(i=>{const e=$i(i); if(e) e.value='';}); ['co-primer','co-indice','co-pj','co-entero','co-tacita','co-subsiste'].forEach(i=>{const e=$i(i); if(e) e.checked=false;}); }
 function v2ContRead(){ const ch=i=>!!($i(i)&&$i(i).checked); return {tipoContrato:gi('co-tipo'),firma:gi('co-firma'),causa:gi('co-causa'),rentaAnt:gn('co-rant'),primer:ch('co-primer'),rentaInfIndice:ch('co-indice'),arrPJ:ch('co-pj'),pisoEntero:ch('co-entero'),prorrogaTacita:ch('co-tacita'),vivHab:gi('co-vivhab'),causaSubsiste:ch('co-subsiste')}; }
 
@@ -11832,7 +11847,7 @@ function v2HtmlDiagImput(y){
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// v4 · CONTRATOS TEMPORALES DE HABITACIÓN (contrato v20261025-2): fechas, avisos,
+// v4 · CONTRATOS TEMPORALES DE HABITACIÓN (contrato v20261102): fechas, avisos,
 // pagos mensuales, reparto de suministros y bloqueos
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -11939,8 +11954,8 @@ function v4RentaMes(co,mes){
   for(let d=a; d<=b; d=fxAdd(d,1)) s+=v4RentaDia(co,d)/dm;
   return Math.round(s*100)/100;
 }
-// Vencimiento del pago de la renta del mes M: último día del mes anterior.
-// La renta del mes de la firma se paga al firmar. Si se firma el último día de un mes, el primer pago vence el día 5.
+// Vencimiento del pago de la renta del mes M (contrato v20261102): día 1 de ese mes; la del mes de la firma se paga al firmar.
+// (Redefinido en el bloque v4.6.)
 function v4Venc(co,mes){
   const F=v4F(co); if(!F) return null; const mF=F.slice(0,7);
   if(mes<mF) return null; if(mes===mF) return F;
@@ -11998,7 +12013,8 @@ function v4PuedeSeguido(co){
 // ── Validaciones al dar de alta un contrato (bloquean el guardado) ──
 function v4ValidarContrato(co){
   const err=[], av=[], add=(t)=>err.push(t), warn=(t)=>av.push(t);
-  if(!v4EsTemporal(co)) return {err, av, ok:true};
+  if(co.pisoEntero&&!v5ContratoExistente(co)) add('Nunca un contrato del piso entero: haz un contrato por habitación (art. 17.9 LAU: crearía la referencia del tope de la suma de rentas).');
+  if(!v4EsTemporal(co)) return {err, av, ok:!err.length};
   const F=v4F(co), E=v4E(co), C=v4C(co);
   if(!co.inqId) add('Falta el arrendatario.');
   if(!co.propId) add('Falta el piso.');
@@ -12022,13 +12038,8 @@ function v4ValidarContrato(co){
   if(!co.anexoIData) add('Falta adjuntar el Anexo I con el justificante de la causa y del domicilio habitual (art. 7.2 LAU: la prueba es del arrendador).');
   if(!co.anexoICausa1||!co.anexoIDom1) add('Marca que el Anexo I incluye el justificante de la causa y el del domicilio habitual del arrendatario 1.');
   if(co.inqId2&&(!co.anexoICausa2||!co.anexoIDom2)) add('Marca que el Anexo I incluye el justificante de la causa y el del domicilio habitual del arrendatario 2.');
-  // Renta en contratos siguientes del mismo piso (misma habitación): solo puede subir el IRAV (art. 17.8 LAU)
-  const ant=(D.conts||[]).filter(x=>x.id!==co.id&&v4EsTemporal(x)&&x.propId==co.propId&&String(x.hab||'')===String(co.hab||'')&&v4F(x)&&F&&v4F(x)<F&&parseFloat(x.r)>0).sort((a,b)=>v4F(b).localeCompare(v4F(a)))[0];
-  if(ant&&parseFloat(co.r)>0){
-    const irav=parseFloat((D.cfg||{}).irav)||0, max=Math.round(parseFloat(ant.r)*(1+irav/100)*100)/100;
-    if(parseFloat(co.r)>max+0.004) add(irav?('La renta ('+v4E2(co.r)+' €) supera la del contrato anterior de esta habitación ('+v4E2(ant.r)+' €) más el IRAV ('+irav+' %): máximo '+v4E2(max)+' € (art. 17.8 LAU).'):('La renta ('+v4E2(co.r)+' €) es mayor que la del contrato anterior de esta habitación ('+v4E2(ant.r)+' €). Solo puede subir lo que marque el IRAV (art. 17.8 LAU): indica el IRAV vigente en Fiscal → ⚙️ Criterios.'));
-  }
-  // Comprobaciones de la firma (contrato v20261025-2)
+  // Renta entre contratos de la habitación (art. 17.8 LAU): ver v5ValidarV1102
+  // Comprobaciones de la firma (contrato v20261102)
   if(!co.mayor1) add('Comprueba y marca que el arrendatario 1 es mayor de edad y tiene el documento de identidad en vigor (un menor no emancipado no puede firmar solo, art. 1.263 CC).');
   if(co.inqId2&&!co.mayor2) add('Comprueba y marca que el arrendatario 2 es mayor de edad y tiene el documento de identidad en vigor (art. 1.263 CC).');
   { const pC=(D.props||[]).find(p=>p.id==co.propId); if(pC&&F){ const ce=v4CeeEstado(pC,F); if(!ce.ok) add(ce.txt); } }
@@ -12048,27 +12059,27 @@ function v4ValidarContrato(co){
   if(prH&&co.hab&&nH>0){ const h=parseInt(co.hab); if(!(String(h)===String(co.hab).trim()&&h>=1&&h<=nH)) add('La habitación «'+co.hab+'» no existe en '+prH.nom+' (tiene '+nH+' habitaciones: de la 1 a la '+nH+').'); }
   if(F&&E&&co.propId&&co.hab){ const finN=v4FinCobro(co)||E;
     (D.conts||[]).filter(x=>x.id!==co.id&&x.propId==co.propId&&String(x.hab||'')===String(co.hab)&&v4F(x)).forEach(x=>{
-      const Fx=v4F(x), fx=v4FinCobro(x)||v4E(x), Lx=x.llaves&&x.llaves.L;
+      const Fx=v4F(x), Lx=x.llaves&&x.llaves.L; let fx=v4FinCobro(x)||v4E(x);
+      { const svx=v4SalidaValida(x); if(svx&&!svx.ok&&F>svx.S&&fxAdd(F,-1)<fx) fx=fxAdd(F,-1); }
       if(!fx){ warn('El contrato de '+v4Nombres(x)+' en esta habitación (desde el '+v4F2(Fx)+') no tiene fecha de fin: comprueba que haya terminado.'); return; }
       const Ex=(Lx&&Lx>fx)?Lx:fx;
       if(F<Ex&&Fx<finN) add('Se solapa con el contrato de '+v4Nombres(x)+' en esta habitación ('+v4F2(Fx)+' → '+v4F2(Ex)+'). En una doble, los dos arrendatarios van en el mismo contrato.');
       else if(F===Ex||Fx===finN) warn('El contrato de '+v4Nombres(x)+' en esta habitación y este empiezan y terminan el mismo día ('+v4F2(F===Ex?F:Fx)+'): ese día se cobraría a los dos.');
     }); }
-  if(co.inqId2&&prH&&co.hab){ const cf=(prH.habsConfig||{})[co.hab]; if(!cf||cf.tipo!=='doble') warn('La habitación '+co.hab+' está configurada como individual: al guardar se marcará como doble.'); }
+  if(co.inqId2&&prH&&co.hab){ const cf=(prH.habsConfig||{})[co.hab]; if((!cf||cf.tipo!=='doble')&&v5CapHab(co.propId,co.hab).cap>=2) warn('La habitación '+co.hab+' está configurada como individual: al guardar se marcará como doble.'); }
   // Avisos (no bloquean)
   const ps=v4InqsCo(co);
   ps.forEach((i,k)=>{ const falta=[]; if(!i.dni) falta.push('documento'); if(!i.email) falta.push('email'); if(!(i.tel||i.wa)) falta.push('teléfono'); if(falta.length) warn('Arrendatario '+(k+1)+' ('+(i.nom||'')+'): faltan '+falta.join(', ')+' en su ficha.'); });
   if(!co.emerg1) warn('Falta el contacto de emergencia del arrendatario 1.');
   if(co.inqId2&&!co.emerg2) warn('Falta el contacto de emergencia del arrendatario 2.');
-  if(!(parseFloat(co.f)>0)) warn('No consta la fianza.');
-  if(parseFloat(co.g)>(parseFloat(co.r)||0)+0.01) warn('La garantía adicional supera 1 mensualidad: el contrato v20261025-2 la limita a 1 mes (art. 36.5 LAU).');
   if(!v4Cuenta(co)&&!co.bizum) warn('Indica la cuenta o el Bizum del titular que cobra.');
   const cta=v4Cuenta(co), tit=v4TitularCobro(co); if(cta&&tit&&cta.titularId&&cta.titularId!==tit) warn('La cuenta elegida es de '+nombreC(cta.titularId)+', pero quien cobra las rentas de este piso es '+nombreC(tit)+'.');
   if((co.wifi1||co.wifi2)&&!(parseFloat(co.internetAnual)>0)) warn('Hay wifi solicitado pero falta el importe anual de internet del piso (art. 20.1 LAU).');
+  { const x=v5ValidarV1102(co); x.err.forEach(add); x.av.forEach(warn); }
   return {err, av, ok:!err.length};
 }
 
-// ══ Reparto de suministros por personas-día (contrato v20261025-2) ══
+// ══ Reparto de suministros por personas-día (contrato v20261102) ══
 // · Personas-día: días de la factura en que cada habitación está alquilada, contando el primero y el último
 //   (en una doble, días por persona). Días con el piso entero vacío: el arrendador cuenta como 1 persona.
 // · Internet: solo entre quienes tienen el wifi solicitado; días sin nadie con wifi → arrendador.
@@ -12179,7 +12190,7 @@ function v4AlertasContrato(co,hoy){
   // ── Desde la firma ──
   if(!viejoF){
     const op=co.itpOpcion||'', F30=v4AddHabilesSeg(F,30), itxt=v4TxtItpCalc(co);
-    // F: etiqueta energética anexa al contrato y opción del ITP (contrato v20261025-2)
+    // F: etiqueta energética anexa al contrato y opción del ITP (contrato v20261102)
     A('F-firma',F,'Firma: entregar copia de la etiqueta energética y de las recomendaciones de uso · '+lugar,'La etiqueta se anexa al contrato (RD 390/2021, art. 17.2). '+(op?'Opción del ITP marcada en el contrato: '+V4_ITP_OP[op]+'.':'Falta marcar en la app la opción del ITP que figura en el contrato.'),{tipo:'Obligatorio',auto:!!(co.ceeEntregada&&op),nivel:'alto'});
     if(op==='fran'){
       A('itp-fran',v4AddHabilesSeg(F,5),'Presentar y pagar el modelo 600 de '+nom+' · '+lugar,'Lo presentas tú en su nombre en la Agencia Tributaria de la Región de Murcia y guardas copia y justificante. '+itxt,{tipo:'Recomendado (límite legal: '+v4F2(F30)+')',auto:!!co.itpPres,nivel:'alto',desde:F});
@@ -12197,28 +12208,30 @@ function v4AlertasContrato(co,hoy){
     }
     // Cobro en la firma: renta proporcional + fianza + garantía − señal de la reserva
     const mF=F.slice(0,7), pF=v4PagoAlquiler(co,mF), rsv=co.resId?v4Res(co.resId):null, sen=rsv?(parseFloat(rsv.senal)||0):0, rpF=v4RentaMes(co,mF), fF=parseFloat(co.f)||0, gF=parseFloat(co.g)||0;
-    A('cobroF',F,'Cobrar en la firma: renta de '+v4MesNom(mF)+', fianza'+(gF>0?' y garantía':'')+(sen?' menos la señal':'')+' · '+lugar,'Al firmar se paga la renta del mes de la firma ('+v4E2(rpF)+' €: renta ÷ días del mes × días), la fianza ('+v4E2(co.f)+' €)'+(gF>0?' y la garantía adicional ('+v4E2(co.g)+' €)':'')+(sen?', menos la señal de la reserva ('+v4E2(sen)+' €): total '+v4E2(rpF+fF+gF-sen)+' €':'')+'.'+(F===v4FinMes(F)?' Como se firma el último día del mes, el primer pago mensual vence el día 5 del mes siguiente.':''),{tipo:'Según contrato',auto:!!(pF&&pF.estado==='pagado'),nivel:'alto'});
+    A('cobroF',F,'Cobrar en la firma: renta de '+v4MesNom(mF)+', fianza'+(gF>0?' y garantía':'')+(sen?' menos la señal':'')+' · '+lugar,'Al firmar se paga la renta del mes de la firma ('+v4E2(rpF)+' €: renta ÷ días del mes × días), la fianza ('+v4E2(co.f)+' €)'+(gF>0?' y la garantía adicional ('+v4E2(co.g)+' €)':'')+(sen?', menos la señal de la reserva ('+v4E2(sen)+' €): total '+v4E2(rpF+fF+gF-sen)+' €':'')+'.'+(v5Nuevo(co)?' El primer pago mensual vence el 1 de '+v4MesNom(v4MesSig(mF))+(v5FirmaFinMes(F)?' y, como se firma en los 3 últimos días del mes, su email se envía hoy o mañana':'')+'.':(F===v4FinMes(F)?' Como se firma el último día del mes, el primer pago mensual vence el día 5 del mes siguiente (contrato '+v5Modelo(co)+').':'')),{tipo:'Según contrato',auto:!!(pF&&pF.estado==='pagado'),nivel:'alto'});
   }
-  A('F1m',v4AddM(F,1),'Desde hoy '+nom+' puede irse avisando con 10 días · '+lugar,'Ya ha pasado 1 mes desde la firma: el desistimiento es válido con preaviso escrito de 10 días (art. 11.2 LAU).',{tipo:'Solo informativo',nivel:'info',caduca:fxAdd(v4AddM(F,1),3)});
+  A('F1m',v4AddM(F,1),'Desde hoy '+nom+' puede irse avisando con 10 días · '+lugar,'Desde hoy el inquilino puede irse. El aviso de 10 días puede haberlo dado antes, siempre que la salida sea a partir de hoy (S ≥ F + 1 mes; art. 11.2 LAU).',{tipo:'Solo informativo',nivel:'info',caduca:fxAdd(v4AddM(F,1),3)});
   // ── Ciclo mensual de pagos ──
   v4MesesCobro(co).forEach(mes=>{
     if(mes===F.slice(0,7)) return;                       // la renta del mes de la firma se paga al firmar
     const V=v4Venc(co,mes); if(!V) return;
     if(legado&&V<fxAdd(hoy,-10)) return;                  // contrato antiguo: solo el ciclo actual
     const c=v4Ciclo(co,mes), pag=v4Pagado(co,mes), enPlazo=v4OrdenEnPlazo(co,mes), renta=v4RentaMes(co,mes);
-    const ini=fxAdd(V,-5)<F?F:fxAdd(V,-5), lim=fxAdd(V,-3)<F?F:fxAdd(V,-3);
+    const finMesF=v5Nuevo(co)&&mes===v4MesSig(F.slice(0,7))&&v5FirmaFinMes(F);
+    const ini=finMesF?F:(fxAdd(V,-5)<F?F:fxAdd(V,-5)), lim=finMesF?fxAdd(F,1):(fxAdd(V,-3)<F?F:fxAdd(V,-3));
     const ex={mes, V};
-    A('pm:'+mes+':email',lim,'Enviar el email mensual de '+v4MesNom(mes)+' y el WhatsApp · '+lugar,'Pago de '+v4MesNom(mes)+' (renta '+v4E2(renta)+' € + suministros pendientes), que vence el '+v4F2(V)+'. Envíalo entre el '+v4F2(ini)+' y el '+v4F2(lim)+': los 5 € de descuento se cuentan desde el envío (cláusula «Bonificación por rapidez»).',{desde:ini,tpl:['1','10'],tipo:'Obligatorio',auto:!!c.email||pag,nivel:'alto',extra:ex});
+    A('pm:'+mes+':email',lim,'Enviar el email mensual de '+v4MesNom(mes)+' y el WhatsApp · '+lugar,'Pago de '+v4MesNom(mes)+' (renta '+v4E2(renta)+' € + suministros pendientes), que vence el '+v4F2(V)+(v5Nuevo(co)?' (día 1)':'')+'. '+(finMesF?'Como se firmó en los 3 últimos días del mes, envíalo el día de la firma o el siguiente ('+v4F2(ini)+' o '+v4F2(lim)+')':'Envíalo entre el '+v4F2(ini)+' y el '+v4F2(lim)+' (de 5 a 3 días antes del vencimiento)')+', con la renta, cada suministro y las demás cantidades por separado (art. 17.4 LAU): los 5 € de descuento se cuentan desde el envío (cláusula «Bonificación por rapidez»).',{desde:ini,tpl:['1','10'],tipo:'Obligatorio',auto:!!c.email||pag,nivel:'alto',extra:ex});
     if(c.email&&!pag){ const fd=new Date(v4DT(c.email).getTime()+864e5); A('pm:'+mes+':dto',fxIso(fd),'Fin del descuento de 5 € a las '+v4HM(fd)+' · '+lugar,'Si '+nom+' ordena el pago antes del '+v4F2(fxIso(fd))+' a las '+v4HM(fd)+' (24 h desde el email), paga 5 € menos.',{desde:c.email.slice(0,10),tipo:'Automático',nivel:'info',caduca:fxIso(fd),extra:ex}); }
-    A('pm:'+mes+':rec',V,'Recordatorio del último día de pago · '+lugar,'Hoy es el último día para ordenar el pago de '+v4MesNom(mes)+'. Mándalo por la mañana solo si '+nom+' no ha enviado el justificante.',{tpl:['7'],tipo:'Recomendado',auto:pag||!!c.justif,extra:ex});
+    A('pm:'+mes+':rec',V,'Recordatorio del último día de pago · '+lugar,'Hoy'+(v5Nuevo(co)?', día 1,':'')+' es el último día para ordenar el pago de '+v4MesNom(mes)+'. Mándalo por la mañana solo si '+nom+' no ha enviado el justificante.',{tpl:['7'],tipo:'Recomendado',auto:pag||!!c.justif,extra:ex});
     if(!enPlazo) A('pm:'+mes+':tarde',fxAdd(V,1),'Pago fuera de plazo: WhatsApp y penalización de 20 € · '+lugar,'No consta el pago de '+v4MesNom(mes)+' ordenado como máximo el '+v4F2(V)+'. Manda el WhatsApp de pago fuera de plazo y suma 20 € (se pierde el descuento de 5 €).',{tpl:['4'],tipo:'Recomendado',auto:!!c.pen20,nivel:'alto',extra:ex});
     if(!pag) A('pm:'+mes+':req',fxAdd(V,6),'Preparar y enviar el requerimiento de pago · '+lugar,'5 días sin pagar '+v4MesNom(mes)+'. Envía el requerimiento por burofax o email certificado (Requerimiento_de_pago). Desde que lo reciba: 10 días para pagar y 30 días antes de poder demandar.',{tpl:['req'],tipo:'Recomendado',auto:(co.requerimientos||[]).some(r=>(r.envio||r.R||'')>=V),nivel:'alto',extra:ex});
   });
   // ── Final del contrato ──
-  const sv=v4SalidaValida(co), anticipada=!!(sv&&sv.anticipada), extCausa=!!(co.causaExt&&co.causaExt.R&&fxAdd(co.causaExt.R,30)<E), resol=!!(co.resolucion&&co.resolucion.R&&fxAdd(co.resolucion.R,7)<E);
+  const sv=v4SalidaValida(co), anticipada=!!(sv&&sv.anticipada), extCausa=v5ExtActivaAntes(co), resol=!!(co.resolucion&&co.resolucion.R&&fxAdd(co.resolucion.R,7)<E);
   if(!anticipada&&!extCausa&&!resol){
     const pr=v4PuedeCambio(co);
     A('E-30',fxAdd(E,-30),'Recordatorio de fin de contrato ('+v4F2(E)+') · '+lugar,'No hay preaviso legal, pero conviene recordarlo. Si pide prórroga: solo una, por escrito antes del '+v4F2(E)+', si la causa sigue y no ha habido anexo. '+pr.t,{tpl:['3'],tipo:'Recomendado',auto:!!L});
+    { const mE=E.slice(0,7), Ve=v4Venc(co,mE); if(Ve&&mE!==F.slice(0,7)&&E!==v4FinMes(E)) A('E-mes',Ve,'El pago mensual de '+v4MesNom(mE)+' solo incluye la renta hasta el '+v4F2(E)+' · '+lugar,'Fin del contrato. Renta proporcional: '+v4E2(v4RentaMes(co,mE))+' € (renta ÷ días del mes × días).',{desde:fxAdd(Ve,-5),tpl:['1'],tipo:'Obligatorio',auto:!!v4Ciclo(co,mE).email}); }
     A('E-15',fxAdd(E,-15),'Desde hoy se puede enseñar la habitación · '+lugar,'Visitas con aviso escrito de 24 h, de 11:00 a 20:00 y como máximo 1 hora al día.',{tipo:'Según contrato',nivel:'info',caduca:E});
     A('E-3',fxAdd(E,-3),'Email y WhatsApp de liquidación de la fianza · '+lugar,'El contrato termina el '+v4F2(E)+'. Manda el cálculo de la liquidación de la fianza y la garantía (las cifras se copian luego en el Anexo II).',{tpl:['2','12'],tipo:'Recomendado',auto:!!L});
     A('E-1',fxAdd(E,-1),'Confirmar día y hora de la entrega de llaves · '+lugar,'Con al menos 24 h de antelación.',{tipo:'Obligatorio',auto:!!L,nivel:'alto'});
@@ -12230,6 +12243,7 @@ function v4AlertasContrato(co,hoy){
     const S=sv.S, Sv=sv.valida;
     A('A',sv.A||S,'Confirmar por escrito el aviso de salida · '+lugar,nom+' avisó el '+v4F2(sv.A)+' de que se va el '+v4F2(S)+'.'+(sv.ok?' El aviso cumple los 10 días y el primer mes.':' ⚠️ No cumple: '+sv.motivos.join('; ')+'. La renta y los suministros se cobran hasta el '+v4F2(Sv)+'.')+' Desde hoy se puede enseñar la habitación (aviso de 24 h).',{tpl:['8'],tipo:'Recomendado'});
     const mS=Sv.slice(0,7), Vs=v4Venc(co,mS);
+    if(Vs&&mS!==F.slice(0,7)&&sv.A&&sv.A>Vs&&Sv!==v4FinMes(Sv)) A('S-dev',sv.A,'Ese mes ya estaba pagado entero: devolver en la entrega de llaves la renta posterior al '+v4F2(Sv)+' · '+lugar,'El aviso ('+v4F2(sv.A)+') llegó después del vencimiento del pago de '+v4MesNom(mS)+' ('+v4F2(Vs)+'). Devuelve en L la renta de los días posteriores a la salida: '+v4E2(Math.max(0,Math.round((v4RentaMes(Object.assign({},co,{salida:null}),mS)-v4RentaMes(co,mS))*100)/100))+' €.',{tipo:'Obligatorio',nivel:'alto',auto:!!L});
     if(Vs&&mS!==F.slice(0,7)&&(!sv.A||Vs>=sv.A)) A('S-mes',Vs,'El pago mensual de '+v4MesNom(mS)+' solo incluye la renta hasta el '+v4F2(Sv)+' · '+lugar,'Renta proporcional: '+v4E2(v4RentaMes(co,mS))+' € (renta ÷ días del mes × días).',{desde:fxAdd(Vs,-5),tpl:['1'],tipo:'Obligatorio',auto:!!v4Ciclo(co,mS).email});
     A('S-3',fxAdd(S,-3),'Email y WhatsApp de liquidación (salida el '+v4F2(S)+') · '+lugar,'Cálculo de la liquidación de la fianza y la garantía.'+(Sv>S?' Se cobra renta hasta el '+v4F2(Sv)+'.':''),{tpl:['2','12'],tipo:'Recomendado',auto:!!L});
     A('S-1',fxAdd(S,-1),'Confirmar la hora de entrega de llaves · '+lugar,'Con al menos 24 h de antelación.',{tipo:'Obligatorio',auto:!!L,nivel:'alto'});
@@ -12238,13 +12252,26 @@ function v4AlertasContrato(co,hoy){
     if(!L) A('S+1',fxAdd(S,1),'URGENTE: '+nom+' no ha entregado las llaves · '+lugar,'Exige por escrito la entrega. La ocupación sin título cuenta a '+v4E2(v4OcupIndebidaDia(co))+' €/día.',{tipo:'Urgente',nivel:'urgente'});
     if(!L&&!H['S+1']) A('S+14',fxAdd(Sv,14),'ÚLTIMO DÍA: exige por escrito a '+nom+' que deje la habitación · '+lugar,'Mañana se cumplen 15 días desde el último día cobrado ('+v4F2(Sv)+'). Si sigue dentro sin que conste tu oposición por escrito, se entiende renovado por tácita reconducción (art. 1.566 CC). Envía hoy el requerimiento por burofax o email certificado.',{tipo:'Urgente',nivel:'urgente'});
   }
-  // ── Fin de la causa antes de la fecha de fin ──
-  const C=v4C(co);
+  // ── Fin de la causa antes de la fecha de fin: extinción en max(K + 30, F + 1 mes) (contrato v20261102) ──
+  const C=v4C(co), xk=v5ExtCausa(co);
   if(C&&C<E){
-    A('C-7',fxAdd(C,-7),'Pedir documentación actualizada de la causa · '+lugar,'La causa de '+nom+' termina el '+v4F2(C)+', antes que el contrato ('+v4F2(E)+'). El inquilino debe avisar en 7 días de cualquier cambio en su causa o su domicilio habitual.',{tipo:'Recomendado'});
-    A('C',C,'Fin de la causa de '+nom+' · '+lugar,'Si consta que la causa ha terminado, puedes enviar la comunicación de extinción por burofax o email certificado (plantilla pendiente de hacer). Desde que la reciba, tiene 30 días para dejar la habitación.',{tipo:'Opcional',nivel:'info',auto:!!(co.causaExt&&co.causaExt.R)});
+    A('C-7',fxAdd(C,-7),'Pedir documentación actualizada de la causa · '+lugar,'La causa de '+nom+' termina el '+v4F2(C)+', antes que el contrato ('+v4F2(E)+'). El inquilino debe avisar por escrito en 7 días de cualquier cambio en su causa o su domicilio habitual; si avisa del fin de la causa, esa fecha es K.',{tipo:'Recomendado'});
+    A('C',C,'Fin previsto de la causa de '+nom+' · '+lugar,'Si no avisa y te consta que la causa ha terminado, envíale una comunicación escrita con los hechos por burofax o email certificado: su recepción (R) será K. El contrato se extingue en max(K + 30 días, F + 1 mes)'+(co.inqId2?'; en una doble, solo cuando hayan terminado las causas de los dos':'')+'. Regístralo en «🎓 Causa».',{tipo:'Opcional',nivel:'info',auto:!!xk});
   }
-  if(co.causaExt&&co.causaExt.R){ const R30=fxAdd(co.causaExt.R,30); A('Rext',R30,'Fin de la causa: '+nom+' debe dejar la habitación · '+lugar,'Recibió la comunicación de extinción el '+v4F2(co.causaExt.R)+'. Hoy debe irse; devuelve la renta pagada de los días posteriores.',{tipo:'Según contrato',auto:!!L,nivel:'alto'}); }
+  if(xk){
+    const ext=xk.fecha, antes=xk.activa&&ext<E;
+    A('K',xk.K,(antes?'Fin anticipado de la causa: el contrato se extingue el '+v4F2(ext):xk.acredita?'La causa sigue: el contrato continúa':'Fin anticipado de la causa comunicado')+' · '+lugar,(xk.quien==='fran'?'Recibió tu comunicación el '+v4F2(xk.K)+'. ':'Avisó el '+v4F2(xk.K)+'. ')+(antes?'Extinción = max(K + 30 = '+v4F2(fxAdd(xk.K,30))+', F + 1 mes = '+v4F2(v4AddM(F,1))+'). Desde hoy se puede enseñar la habitación (aviso de 24 h).'+(xk.quien==='fran'?' Tiene hasta el '+v4F2(xk.R10)+' (R + 10) para acreditar por escrito que la causa sigue.':''):xk.acredita?'Acreditó que la causa sigue'+(xk.acreditaFecha?' el '+v4F2(xk.acreditaFecha):'')+': se anula la extinción.':xk.doble&&!xk.ambas?'En una doble, el contrato solo se extingue cuando hayan terminado las causas de los dos.':'La extinción caería en E o después: el contrato termina en E.'),{tipo:'Según contrato',nivel:antes?'alto':'info',caduca:antes?'':fxAdd(xk.K,7)});
+    if(xk.quien==='fran'&&!xk.acredita) A('K-R10',xk.R10,'Fin del plazo para que '+nom+' acredite que la causa sigue · '+lugar,'Tenía hasta hoy (R + 10) para acreditar por escrito que la causa sigue. Si lo ha hecho, márcalo en «🎓 Causa» y se anula la extinción'+(antes?'; si no, el contrato se extingue el '+v4F2(ext):'')+'.',{tipo:'Obligatorio comprobar',nivel:'alto'});
+    if(antes){
+      const mX=ext.slice(0,7), Vx=v4Venc(co,mX);
+      if(Vx&&mX!==F.slice(0,7)&&ext!==v4FinMes(ext)&&Vx>=xk.K) A('K-mes',Vx,'El pago mensual de '+v4MesNom(mX)+' solo incluye la renta hasta el '+v4F2(ext)+' · '+lugar,'Extinción por fin de la causa. Renta proporcional: '+v4E2(v4RentaMes(co,mX))+' € (renta ÷ días del mes × días).',{desde:fxAdd(Vx,-5),tpl:['1'],tipo:'Obligatorio',auto:!!v4Ciclo(co,mX).email});
+      A('K-3',fxAdd(ext,-3),'Email y WhatsApp de liquidación (extinción el '+v4F2(ext)+') · '+lugar,'Cálculo de la liquidación de la fianza y la garantía.',{tpl:['2','12'],tipo:'Según contrato',auto:!!L});
+      A('K-1',fxAdd(ext,-1),'Confirmar la hora de entrega de llaves · '+lugar,'Con al menos 24 h de antelación.',{tipo:'Obligatorio',auto:!!L,nivel:'alto'});
+      const devK=v4DevolverRenta(co);
+      A('K-ext',ext,'HOY SE EXTINGUE EL CONTRATO POR FIN DE LA CAUSA · '+lugar+' ('+nom+')','Llaves, Anexo II y devolución de la fianza menos los descuentos y la retención.'+(devK>0?' Devuelve '+v4E2(devK)+' € de renta pagada de los días posteriores.':' Si ya pagó el mes completo, devuelve la renta de los días posteriores.'),{tpl:['anexo2'],tipo:'Obligatorio',auto:!!L,nivel:'alto'});
+      if(!L) A('K+1',fxAdd(ext,1),'URGENTE: '+nom+' sigue en la habitación tras la extinción · '+lugar,'Exige por escrito que se vaya. Desde hoy cuenta la indemnización por ocupación indebida ('+v4E2(v4OcupIndebidaDia(co))+' €/día). No dejes pasar 15 días (art. 1.566 CC).',{tipo:'Urgente',nivel:'urgente'});
+    }
+  }
   // ── Después de la entrega de llaves ──
   if(L){
     A('L24',L,'Último momento para comunicar daños con fotos (24 h) · '+lugar,'Los daños vistos después de la entrega solo se pueden cobrar si se comunican por escrito y con fotos antes del '+v4F2(fxAdd(L,1))+' a la misma hora. Si no vino a la entrega, mándale las fotos o el vídeo.',{tipo:'Obligatorio',caduca:fxAdd(L,1)});
@@ -12261,9 +12288,9 @@ function v4AlertasContrato(co,hoy){
   if(co.resolucion&&co.resolucion.R) A('res7',fxAdd(co.resolucion.R,7),'Resolución: '+nom+' debe dejar la habitación · '+lugar,'Recibió la resolución el '+v4F2(co.resolucion.R)+'. Si no se va, desahucio e indemnización por ocupación indebida ('+v4E2(v4OcupIndebidaDia(co))+' €/día).',{tipo:'Según contrato',auto:!!L,nivel:'urgente'});
   if(co.resolucion&&co.resolucion.R&&!L){ const R7=fxAdd(co.resolucion.R,7); A('res8',fxAdd(R7,1),'URGENTE: '+nom+' no ha dejado la habitación tras la resolución · '+lugar,'Debía irse el '+v4F2(R7)+'. Prepara con tu abogado la demanda de desahucio; la ocupación indebida cuenta a '+v4E2(v4OcupIndebidaDia(co))+' €/día. Nunca cambies la cerradura ni cortes los suministros.',{tipo:'Urgente',nivel:'urgente'}); }
   (co.entradas||[]).forEach((e,i)=>{ if(!e.fecha||!e.hora) return; const t=new Date(e.fecha+'T'+e.hora), h=e.tipo==='comunes'?12:24, lim=new Date(t.getTime()-h*36e5);
-    A('ent'+i,fxIso(lim),'Avisar por escrito de la entrada '+(e.tipo==='comunes'?'en zonas comunes':'en la habitación')+' · '+lugar,'Entrada el '+v4F2(e.fecha)+' de '+e.hora+' a '+(e.horaFin||'?')+(e.motivo?' ('+e.motivo+')':'')+'. El aviso tiene que llegar antes del '+v4F2(fxIso(lim))+' a las '+v4HM(lim)+' ('+h+' h antes)'+(e.tipo==='comunes'?', de 9:00 a 21:00':', con motivo, día y franja de 3 h como máximo, de 9:00 a 21:00')+', salvo urgencia.',{desde:fxAdd(fxIso(lim),-2),tipo:'Obligatorio',auto:!!e.avisado}); });
+    A('ent'+i,fxIso(lim),'Avisar por escrito de la entrada '+(e.tipo==='comunes'?'en zonas comunes':'en la habitación')+' · '+lugar,'Entrada el '+v4F2(e.fecha)+' de '+e.hora+' a '+(e.horaFin||'?')+(e.motivo?' ('+e.motivo+')':'')+'. El aviso tiene que llegar antes del '+v4F2(fxIso(lim))+' a las '+v4HM(lim)+' ('+h+' h antes)'+(e.tipo==='comunes'?', de 9:00 a 21:00':', con motivo, día y franja de 3 h como máximo, de 9:00 a 21:00')+', salvo urgencia.'+(e.revocado?' Revocó su consentimiento: se entra en su presencia. Puede proponer otra franja en 24 h desde tu aviso, como mucho 2 días después.':''),{desde:fxAdd(fxIso(lim),-2),tipo:'Obligatorio',auto:!!e.avisado}); });
   // Con las llaves entregadas, los recordatorios anteriores ya no tienen objeto
-  if(L) out.forEach(a=>{ if(!a.hecho&&a.fecha<=L&&['itp-25','itp-30','F-firma','E-30','E-3','A','S-mes','S-3','C-7','C','F1m'].includes(a.k)){ a.hecho=true; a.auto=true; } });
+  if(L) out.forEach(a=>{ if(!a.hecho&&a.fecha<=L&&['itp-25','itp-30','F-firma','E-30','E-3','E-mes','A','S-mes','S-3','C-7','C','F1m','K','K-R10','K-mes','K-3','K-1'].includes(a.k)){ a.hecho=true; a.auto=true; } });
   return out;
 }
 // Averías comunicadas por el inquilino (Incidencias): respuesta en 5 días hábiles (art. 21 bis LAU)
@@ -12344,19 +12371,19 @@ function v4TxtWAMensual(co,mes){
   return 'Hola '+v4Nombres(co)+'. Acabo de enviar por email el cálculo del pago mensual de la habitación '+hab+', con las facturas: renta de '+v4MesNom(mes)+' '+v4E2(c.renta)+' euros + suministros '+v4E2(c.sSum+c.sOtras)+' euros = '+v4E2(c.total)+' euros, a pagar como máximo el '+Vd.getDate()+' de '+V4_MESES[Vd.getMonth()]+'. Si el pago se ordena antes de mañana a las '+hora+' (24 horas desde el envío del email), se pueden descontar 5 euros y quedan '+v4E2(c.total-5)+' euros. Cuando esté hecho, necesito por aquí la foto o captura del justificante. Para cualquier duda o aclaración, aquí estoy. ¡Un abrazo y gracias por todo! :-)';
 }
 function v4TotalCiclo(co,mes){ const cic=v4Ciclo(co,mes); return parseFloat(cic.total)>0?parseFloat(cic.total):v4CalculoMensual(co,mes).total; }
-function v4TxtRecordatorio(co,mes){ const cic=v4Ciclo(co,mes), V=v4Venc(co,mes); return 'Buenos días '+v4Nombres(co)+'. Solo recordar que hoy, '+v4FL(V)+', es el último día para ordenar el pago mensual de la habitación '+v4Hab(co)+': '+v4E2(v4TotalCiclo(co,mes))+' euros, según el email del '+(cic.email?v4F2(cic.email.slice(0,10)):'[FECHA DEL EMAIL]')+'. En cuanto esté hecho el Bizum, ingreso o transferencia, necesito por aquí una foto o captura del justificante. A partir de mañana se aplicaría la penalización de 20 euros prevista en el contrato. Un saludo y gracias por todo.'; }
-function v4TxtFueraPlazo(co,mes){ const V=v4Venc(co,mes), dc=v4DatosCobro(co), t=v4TotalCiclo(co,mes); return 'Hola '+v4Nombres(co)+'. El plazo para ordenar el pago mensual de la habitación '+v4Hab(co)+' terminó ayer, '+v4FL(V)+', y no me consta el pago ni el justificante. Según el contrato, el retraso supone una penalización de 20 euros, que hay que incluir en el mismo pago, así que el total queda en '+v4E2(t)+' + 20 = '+v4E2(t+20)+' euros, por Bizum al '+dc.bizum+' o transferencia a '+dc.iban+'. Por favor, que el pago se haga hoy y me llegue el justificante por aquí. Recuerdo que el pago en plazo es una obligación esencial del contrato y que su incumplimiento permite resolverlo (art. 27.2.a de la Ley de Arrendamientos Urbanos). Si hay algún problema, mejor hablarlo hoy. Gracias.'; }
+function v4TxtRecordatorio(co,mes){ const cic=v4Ciclo(co,mes), V=v4Venc(co,mes); return 'Buenos días '+v4Nombres(co)+'. Solo recordar que hoy, '+(v5Nuevo(co)?'día 1':v4FL(V))+', es el último día para ordenar el pago mensual de '+v4MesNom(mes)+' de la habitación '+v4Hab(co)+': '+v4E2(v4TotalCiclo(co,mes))+' euros, según el email del '+(cic.email?v4F2(cic.email.slice(0,10)):'[FECHA DEL EMAIL]')+'. En cuanto esté hecho el Bizum, ingreso o transferencia, necesito por aquí una foto o captura del justificante. A partir de mañana se aplicaría la penalización de 20 euros prevista en el contrato. Un saludo y gracias por todo.'; }
+function v4TxtFueraPlazo(co,mes){ const V=v4Venc(co,mes), dc=v4DatosCobro(co), t=v4TotalCiclo(co,mes); return 'Hola '+v4Nombres(co)+'. El plazo para ordenar el pago mensual de '+v4MesNom(mes)+' de la habitación '+v4Hab(co)+' terminó ayer, '+(v5Nuevo(co)?'día 1':v4FL(V))+', y no me consta el pago ni el justificante. Según el contrato, el retraso supone una penalización de 20 euros, que hay que incluir en el mismo pago, así que el total queda en '+v4E2(t)+' + 20 = '+v4E2(t+20)+' euros, por Bizum al '+dc.bizum+' o transferencia a '+dc.iban+'. Por favor, que el pago se haga hoy y me llegue el justificante por aquí. Recuerdo que el pago en plazo es una obligación esencial del contrato y que su incumplimiento permite resolverlo (art. 27.2.a de la Ley de Arrendamientos Urbanos). Si hay algún problema, mejor hablarlo hoy. Gracias.'; }
 
 // ══ Fin de contrato y salida: recordatorio (3), aviso de salida (8), liquidación (2 y 12), retención (11 y 5) ══
-function v4TxtRecordatorioFin(co){ const E=v4E(co); return 'Hola '+v4Nombres(co)+'. Te recuerdo que tu contrato de la habitación '+v4Hab(co)+' termina el '+v4FL(E)+' y no se prorroga automáticamente, así que ese día hay que dejar la habitación vacía y limpia y entregar todas las llaves. Dime qué hora te va bien ese día para la entrega; revisaremos juntos la habitación y firmaremos el documento de finalización. Desde el '+v4FL(fxAdd(E,-15))+' enseñaré la habitación a posibles inquilinos, siempre avisándote con 24 horas de antelación. Unos días antes te mandaré por email el cálculo de la liquidación de la fianza. Cualquier duda, me dices. ¡Gracias!'; }
+function v4TxtRecordatorioFin(co){ const E=v4E(co); return 'Hola '+v4Nombres(co)+'. Te recuerdo que tu contrato de la habitación '+v4Hab(co)+' termina el '+v4FL(E)+' y no se prorroga automáticamente, así que ese día hay que dejar la habitación vacía y limpia y entregar todas las llaves.'+v5TxtPagoFin(co,E)+' Dime qué hora te va bien ese día para la entrega; revisaremos juntos la habitación y firmaremos el documento de finalización. Desde el '+v4FL(fxAdd(E,-15))+' enseñaré la habitación a posibles inquilinos, siempre avisándote con 24 horas de antelación. Unos días antes te mandaré por email el cálculo de la liquidación de la fianza. Cualquier duda, me dices. ¡Gracias!'; }
 function v4TxtAvisoSalida(co){
   const sv=v4SalidaValida(co)||{}, S=sv.S||'[FECHA DE SALIDA]', ret=(parseFloat(co.ret)||100)*v4NumPersonas(co,sv.S), hab=v4Hab(co);
-  const p1=sv.ok!==false?'1) Renta y suministros. Se pagan hasta el '+v4FL(S)+', inclusive, aunque entregues las llaves antes. En el próximo pago mensual solo se incluirá la renta hasta esa fecha; si ya pagaste el mes completo, te devuelvo la parte de los días siguientes el día de la entrega de llaves. La última renta se paga como cualquier otro mes: no se puede descontar de la fianza.'
-    :'1) Renta y suministros. El contrato exige avisar con al menos 10 días de antelación y haber pasado un mes desde la firma, así que la renta y los suministros se pagan hasta el '+v4FL(sv.valida)+', aunque te vayas antes. La última renta se paga como cualquier otro mes: no se puede descontar de la fianza.';
+  const p1=sv.ok!==false?'1) Renta y suministros. Se pagan hasta el '+v4FL(S)+', inclusive, aunque entregues las llaves antes.'+v5TxtPagoSalida(co,S,sv.A)+' La última renta se paga como cualquier otro mes: no se puede descontar de la fianza.'
+    :'1) Renta y suministros. El contrato exige avisar con al menos 10 días de antelación y haber pasado un mes desde la firma, así que la renta y los suministros se pagan hasta el '+v4FL(sv.valida)+', aunque te vayas antes (si la habitación se alquila antes a otra persona, solo hasta el día anterior al nuevo contrato). La última renta se paga como cualquier otro mes: no se puede descontar de la fianza.';
   return 'Hola '+v4Nombres(co)+'. Recibido tu aviso del '+v4FL(sv.A||S)+': dejas la habitación '+hab+' el '+v4FL(S)+'. Te recuerdo algunos puntos importantes del contrato sobre la salida:\n\n'+p1+'\n\n2) Visitas. Desde ahora empezaré a enseñar tu habitación a posibles inquilinos, como prevé el contrato. Te avisaré por escrito con al menos 24 horas de antelación, siempre entre las 11:00 y las 20:00 y como máximo una hora al día. No hace falta que estés, y me responsabilizo de que nadie toque nada. Por favor, mantén la habitación especialmente limpia y ordenada estos días, si eres tan amable.\n\n3) Entrega de llaves y fianza. Quedamos el '+v4FL(S)+' a las [HORA] (si te va mejor otra hora, dímelo con al menos 24 horas de antelación). Ese día revisaremos juntos la habitación y las zonas comunes, me entregarás todas las llaves, también las copias, y firmaremos el documento de finalización. Unos días antes te mandaré por email el cálculo de la liquidación de la fianza y la garantía: se descuentan las facturas ya llegadas que no se hayan cobrado y se retienen '+v4E2(ret)+' euros para las que falten por llegar. El resto te lo devuelvo ese mismo día, y el sobrante de la retención, como máximo un mes después, cuando lleguen las facturas.\n\n4) Inventario y limpieza. Revisa que todo lo del inventario esté bien. Si algo falta o se ha roto (no cuenta el desgaste normal por el uso), arréglalo o sustitúyelo antes de la salida, para no tener que descontarlo de la fianza. Y déjame la habitación vacía y limpia, con las fundas del colchón y de la almohada lavadas, secas y puestas, si eres tan amable.\n\n5) Padrón. Si estás empadronado en la vivienda, tienes que solicitar el cambio de empadronamiento al irte.\n\nAnte cualquier duda, dime. Muchas gracias por todo :-)';
 }
 function v4Liquidacion(co){
-  const fin=v4FinCobro(co), sv=v4SalidaValida(co), salida=(sv&&sv.anticipada)?sv.S:(co.causaExt&&co.causaExt.R?fin:v4E(co));
+  const fin=v4FinCobro(co), sv=v4SalidaValida(co), salida=(sv&&sv.anticipada)?sv.S:(v5ExtActivaAntes(co)?fin:v4E(co));
   const gar=Math.round(((parseFloat(co.f)||0)+(parseFloat(co.g)||0))*100)/100;
   const ids=[co.inqId,co.inqId2].filter(Boolean);
   const pend=(D.pagos||[]).filter(p=>ids.includes(p.inqId)&&p.estado!=='pagado'&&(!p.rep||!p.rep.coId||p.rep.coId===co.id));
@@ -12369,6 +12396,7 @@ function v4TxtLiquidacionEmail(co){
   const q=v4Liquidacion(co), p=v4Prop(co), hab=v4Hab(co), sv=v4SalidaValida(co), L=[];
   L.push('Asunto: Salida y liquidación de la fianza – habitación '+hab+' – '+(p?p.nom:''),'','Hola '+v4Nombres(co)+':','');
   if(sv&&sv.anticipada) L.push('Tal como se comunicó por escrito el '+v4FL(sv.A)+', la salida de la habitación '+hab+' será el '+v4FL(q.salida)+'. La renta y los suministros se pagan hasta '+(q.finCobro>q.salida?'el '+v4FL(q.finCobro)+' (fecha en que el desistimiento es válido)':'ese día')+', inclusive, aunque las llaves se entreguen antes.');
+  else if(v5ExtActivaAntes(co)) L.push('Como la causa de la temporalidad ha terminado, el contrato se extingue el '+v4FL(q.salida)+' (cláusula «Extinción anticipada por finalización de la causa»). La renta y los suministros se pagan hasta ese día, inclusive, aunque las llaves se entreguen antes.');
   else L.push('Tal como prevé el contrato, la salida de la habitación '+hab+' será el '+v4FL(q.salida)+', fecha de fin del contrato. La renta y los suministros se pagan hasta ese día, inclusive, aunque las llaves se entreguen antes.');
   L.push('','Entrega de llaves: propongo el '+v4FL(q.salida)+' a las [HORA]; si no va bien, hay que acordar otro momento con al menos 24 horas de antelación. Ese día revisaremos juntos la habitación y las zonas comunes, se entregarán todas las llaves (también las copias que se hayan hecho) y firmaremos el documento de finalización (Anexo II del contrato). La habitación tiene que quedar vacía y limpia.','',
     'Este es el cálculo previsto de la liquidación de la fianza y la garantía adicional (adjunto las facturas):','',
@@ -12487,7 +12515,7 @@ function v4AvisoSalida(coId){
 function v4PrevSalida(coId){ const co=v4Co(coId), A=gi('v4s-a'), S=gi('v4s-s'); if(!S){ v4Msg('v4s-msg','Indica la fecha de salida.'); return; }
   const tmp=Object.assign({},co,{salida:{A,S}}), sv=v4SalidaValida(tmp), E=v4E(co);
   if(S>=E){ v4Msg('v4s-msg','La salida es en la fecha de fin del contrato o después: no es un desistimiento. Usa el recordatorio de fin de contrato (plantilla 3).'); return; }
-  v4Msg('v4s-msg',sv.ok?'✓ El aviso es válido: al menos 10 días de antelación y pasado el primer mes. Renta y suministros hasta el <strong>'+v4F2(S)+'</strong> ('+v4E2(v4RentaMes(tmp,S.slice(0,7)))+' € de renta de '+v4MesNom(S.slice(0,7))+').':'⚠️ No cumple: '+sv.motivos.join('; ')+'. La renta y los suministros se cobran hasta el <strong>'+v4F2(sv.valida)+'</strong>, primera fecha válida.',sv.ok?'g':'y'); }
+  v4Msg('v4s-msg',sv.ok?'✓ El aviso es válido: S ≥ A + 10 días y S ≥ F + 1 mes (el aviso puede darse dentro del primer mes). Renta y suministros hasta el <strong>'+v4F2(S)+'</strong> ('+v4E2(v4RentaMes(tmp,S.slice(0,7)))+' € de renta de '+v4MesNom(S.slice(0,7))+').':'⚠️ No cumple: '+sv.motivos.join('; ')+'. La renta y los suministros se cobran hasta el <strong>'+v4F2(sv.valida)+'</strong>, primera fecha válida, o hasta el día anterior a un nuevo contrato de esta habitación si es antes.',sv.ok?'g':'y'); }
 function v4GuardarSalida(coId){ const co=v4Co(coId), A=gi('v4s-a'), S=gi('v4s-s'); if(!A||!S){ toast('Indica el aviso y la fecha de salida',false); return; } if(S<A){ toast('La salida no puede ser anterior al aviso',false); return; } co.salida={A,S}; v4ActualizarRentasPendientes(co); v4Guardar(co,'Aviso de salida registrado'); closeM('m-v4'); }
 
 // ── Entrega de llaves (L) y Anexo II ──
@@ -12562,8 +12590,8 @@ function v4AddResolucion(coId){ const co=v4Co(coId), m=gi('v4z-m'), n=gi('v4z-n'
 
 // ── Entradas del arrendador ──
 function v4Entradas(coId){ const co=v4Co(coId), arr=co.entradas||[];
-  v4Modal('🚪 Entradas en la habitación o en zonas comunes',(arr.length?arr.map((e,i)=>'<div style="font-size:12px;">'+v4F2(e.fecha)+' '+e.hora+'–'+(e.horaFin||'')+' · '+(e.tipo==='comunes'?'zonas comunes':'habitación')+(e.motivo?' · '+v4Esc(e.motivo):'')+(e.avisado?' · ✓ avisado':'')+' <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.entradas['+i+'].avisado=!co.entradas['+i+'].avisado;v4Guardar(co);v4Entradas(\''+coId+'\');})()">'+(e.avisado?'Desmarcar':'Avisado')+'</button> <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.entradas.splice('+i+',1);v4Guardar(co);v4Entradas(\''+coId+'\');})()">✕</button></div>').join(''):'')
-   +'<div class="fg" style="margin-top:8px;"><div class="fgrp"><label>Dónde</label><select id="v4e-t"><option value="hab">Habitación (aviso 24 h, franja máx. 3 h)</option><option value="comunes">Zonas comunes o habitación libre (aviso 12 h)</option></select></div><div class="fgrp"><label>Día</label><input type="date" id="v4e-f"></div><div class="fgrp"><label>Desde</label><input type="time" id="v4e-h" value="10:00"></div><div class="fgrp"><label>Hasta</label><input type="time" id="v4e-hf" value="12:00"></div><div class="fgrp fgf"><label>Motivo</label><input id="v4e-m"></div><div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="v4e-u" style="width:auto;"> Urgencia (sin aviso previo)</label></div></div><div id="v4e-msg"></div>',
+  v4Modal('🚪 Entradas en la habitación o en zonas comunes',(arr.length?arr.map((e,i)=>'<div style="font-size:12px;">'+v4F2(e.fecha)+' '+e.hora+'–'+(e.horaFin||'')+' · '+(e.tipo==='comunes'?'zonas comunes':'habitación')+(e.motivo?' · '+v4Esc(e.motivo):'')+(e.revocado?' · en su presencia':'')+(e.avisado?' · ✓ avisado':'')+' <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.entradas['+i+'].avisado=!co.entradas['+i+'].avisado;v4Guardar(co);v4Entradas(\''+coId+'\');})()">'+(e.avisado?'Desmarcar':'Avisado')+'</button> <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.entradas.splice('+i+',1);v4Guardar(co);v4Entradas(\''+coId+'\');})()">✕</button></div>').join(''):'')
+   +'<div class="fg" style="margin-top:8px;"><div class="fgrp"><label>Dónde</label><select id="v4e-t"><option value="hab">Habitación (aviso 24 h, franja máx. 3 h)</option><option value="comunes">Zonas comunes o habitación libre (aviso 12 h)</option></select></div><div class="fgrp"><label>Día</label><input type="date" id="v4e-f"></div><div class="fgrp"><label>Desde</label><input type="time" id="v4e-h" value="10:00"></div><div class="fgrp"><label>Hasta</label><input type="time" id="v4e-hf" value="12:00"></div><div class="fgrp fgf"><label>Motivo</label><input id="v4e-m"></div><div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="v4e-u" style="width:auto;"> Urgencia (sin aviso previo)</label></div><div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="v4e-rv" style="width:auto;"> Ha revocado su consentimiento: se entra en su presencia (puede proponer otra franja en 24 h, como mucho 2 días después)</label></div></div><div id="v4e-msg"></div>',
    '<button class="btn btn-primary" onclick="v4AddEntrada(\''+coId+'\')">+ Programar entrada</button>'); }
 function v4AddEntrada(coId){ const co=v4Co(coId), t=gi('v4e-t'), f=gi('v4e-f'), h=gi('v4e-h'), hf=gi('v4e-hf'), u=$i('v4e-u').checked;
   if(!f||!h||!hf){ v4Msg('v4e-msg','Indica el día y la franja.','r'); return; }
@@ -12571,9 +12599,9 @@ function v4AddEntrada(coId){ const co=v4Co(coId), t=gi('v4e-t'), f=gi('v4e-f'), 
     if(t==='hab'){ const dur=(new Date('2000-01-01T'+hf)-new Date('2000-01-01T'+h))/36e5; if(dur>3) err.push('En la habitación, la franja es de 3 horas como máximo.'); }
     const lim=new Date(new Date(f+'T'+h).getTime()-(t==='comunes'?12:24)*36e5); if(lim<new Date()) err.push('Ya no da tiempo a avisar con '+(t==='comunes'?'12':'24')+' h de antelación (límite: '+v4F2(fxIso(lim))+' '+v4HM(lim)+').');
     if(err.length){ v4Msg('v4e-msg',err.join('<br>'),'r'); return; } }
-  co.entradas=(co.entradas||[]).concat([{tipo:t,fecha:f,hora:h,horaFin:hf,motivo:gi('v4e-m'),urgente:u,avisado:u}]); v4Guardar(co,'Entrada programada'); v4Entradas(coId); }
+  co.entradas=(co.entradas||[]).concat([{tipo:t,fecha:f,hora:h,horaFin:hf,motivo:gi('v4e-m'),urgente:u,avisado:u,revocado:!!($i('v4e-rv')&&$i('v4e-rv').checked)}]); v4Guardar(co,'Entrada programada'); v4Entradas(coId); }
 
-// ══ Pagos: generación por contrato (renta proporcional) y vencimiento el último día del mes anterior ══
+// ══ Pagos: generación por contrato (renta proporcional) y vencimiento el día 1 de cada mes ══
 function v4ImporteAlquiler(inq,mes){
   const co=v4CoDeInq(inq.id,mes);
   if(co&&v4EsTemporal(co)&&v4F(co)){ if(co.inqId!=inq.id) return 0; return v4RentaMes(co,mes); }
@@ -12611,7 +12639,7 @@ function toggleCobroConcepto(inqId,mes,con){
   const hoy=v4Hoy(); if(p.estado==='pagado'){ p.estado='pendiente'; p.fecha=''; } else { p.estado='pagado'; p.fecha=hoy; }
   saveAndSync(); rTableroPagos();
 }
-// Vencimiento del pago de un mes: último día del mes anterior (contrato v20261025-2), con las excepciones del contrato
+// Vencimiento del pago de un mes: día 1 de ese mes (contrato v20261102); redefinido en el bloque v4.6
 function v4VencInq(inqId,mes){ const co=v4CoDeInq(inqId,mes); if(co&&v4EsTemporal(co)&&v4F(co)){ const v=v4Venc(co,mes); if(v) return v; } return v4FinMes(v4MesSig(mes,-1)); }
 function estadoCobroInquilino(inqId,mes){
   const pagos=D.pagos.filter(p=>p.inqId==inqId&&p.mes===mes);
@@ -12642,8 +12670,9 @@ function v4SincronizarInqs(co){
 // ══ Formulario del contrato ══
 function v4ContReset(){
   ['co-cfin1','co-cfin2','co-emerg1','co-emerg2','co-bizum','co-inet','co-itpf','co-edit-id','co-anx-data','co-anx-name','co-itpop','co-itppres','co-itpimp','co-resid'].forEach(i=>{ const e=$i(i); if(e) e.value=''; });
-  ['co-wifi1','co-wifi2','co-itp','co-anx-c1','co-anx-d1','co-anx-c2','co-anx-d2','co-mayor1','co-mayor2','co-ceeent','co-igual'].forEach(i=>{ const e=$i(i); if(e) e.checked=false; });
-  if($i('co-ret')) $i('co-ret').value='100'; if($i('co-prev')) $i('co-prev').value='0';
+  ['co-wifi1','co-wifi2','co-itp','co-anx-c1','co-anx-d1','co-anx-c2','co-anx-d2','co-mayor1','co-mayor2','co-ceeent','co-igual','co-fue1','co-fue2','co-otro1','co-otro2','co-vol1','co-vol2'].forEach(i=>{ const e=$i(i); if(e) e.checked=false; });
+  ['co-ct1','co-ct2','co-fuet1','co-fuet2','co-fues1','co-fues2'].forEach(i=>{ const e=$i(i); if(e) e.value=''; });
+  if($i('co-ret')) $i('co-ret').value='100'; if($i('co-prev')) $i('co-prev').value='0'; if($i('co-modelo')) $i('co-modelo').value='v20261102';
   if($i('co-i2')) $i('co-i2').innerHTML='<option value="">— Sin segundo arrendatario —</option>'+(D.inqs||[]).map(i=>'<option value="'+i.id+'">'+v4Esc(i.nom+' '+(i.ap||''))+' ('+i.estado+')</option>').join('');
   if($i('co-cta')) $i('co-cta').innerHTML='<option value="">— Cuenta del titular —</option>'+(D.ctasBanc||[]).filter(c=>c.tipo!=='tarjeta').map(c=>'<option value="'+c.id+'">'+v4Esc(c.nom+(c.titularId?' · '+nombreC(c.titularId):''))+'</option>').join('');
   try{ clearPdfZone('co-anx-zone','co-anx-data'); }catch(e){}
@@ -12651,21 +12680,21 @@ function v4ContReset(){
   if($i('co-val')) $i('co-val').innerHTML='';
 }
 function v4ContRead(){ const ch=i=>!!($i(i)&&$i(i).checked);
-  return {inqId2:gi('co-i2'), cFin1:gi('co-cfin1'), cFin2:gi('co-cfin2'), emerg1:gi('co-emerg1'), emerg2:gi('co-emerg2'), ret:gn('co-ret')||100, wifi1:ch('co-wifi1'), wifi2:ch('co-wifi2'), internetAnual:gn('co-inet'), ctaId:gi('co-cta'), bizum:gi('co-bizum'), itpOk:ch('co-itp'), itpFecha:gi('co-itpf'), prevSeguidos:parseInt(gi('co-prev'))||0, anexoIData:gi('co-anx-data'), anexoIName:gi('co-anx-name'), anexoICausa1:ch('co-anx-c1'), anexoIDom1:ch('co-anx-d1'), anexoICausa2:ch('co-anx-c2'), anexoIDom2:ch('co-anx-d2'), itpOpcion:gi('co-itpop'), itpPres:gi('co-itppres'), itpImp:gn('co-itpimp'), mayor1:ch('co-mayor1'), mayor2:ch('co-mayor2'), ceeEntregada:ch('co-ceeent'), resId:gi('co-resid'), igualModelo:ch('co-igual')}; }
+  return Object.assign(v5LeerAntecedentes(),{inqId2:gi('co-i2'), cFin1:gi('co-cfin1'), cFin2:gi('co-cfin2'), emerg1:gi('co-emerg1'), emerg2:gi('co-emerg2'), ret:gn('co-ret')||100, wifi1:ch('co-wifi1'), wifi2:ch('co-wifi2'), internetAnual:gn('co-inet'), ctaId:gi('co-cta'), bizum:gi('co-bizum'), itpOk:ch('co-itp'), itpFecha:gi('co-itpf'), prevSeguidos:parseInt(gi('co-prev'))||0, anexoIData:gi('co-anx-data'), anexoIName:gi('co-anx-name'), anexoICausa1:ch('co-anx-c1'), anexoIDom1:ch('co-anx-d1'), anexoICausa2:ch('co-anx-c2'), anexoIDom2:ch('co-anx-d2'), itpOpcion:gi('co-itpop'), itpPres:gi('co-itppres'), itpImp:gn('co-itpimp'), mayor1:ch('co-mayor1'), mayor2:ch('co-mayor2'), ceeEntregada:ch('co-ceeent'), resId:gi('co-resid'), igualModelo:ch('co-igual')}); }
 function v4LeerFormCont(){
   const id=gi('co-edit-id'), prev=id?v4Co(id):null;
   const co=Object.assign({}, prev||{}, v2ContRead(), v4ContRead(), {id:id||'', inqId:gi('co-i'), propId:gi('co-prop'), hab:gi('co-hab'), ini:gi('co-ini'), fin:gi('co-fin'), r:gn('co-r'), f:gn('co-f'), g:gn('co-g'), n:gi('co-n')});
   if(!co.firma) co.firma=co.ini;
   if(!co.anexoIData&&prev&&prev.anexoIData){ co.anexoIData=prev.anexoIData; co.anexoIName=prev.anexoIName; }
-  if(!co.inqId2){ co.cFin2=''; co.emerg2=''; co.wifi2=false; co.anexoICausa2=false; co.anexoIDom2=false; co.mayor2=false; }
+  if(!co.inqId2){ co.cFin2=''; co.emerg2=''; co.wifi2=false; co.anexoICausa2=false; co.anexoIDom2=false; co.mayor2=false; co.causaTipo2=''; co.fueInq2=false; co.fueTipo2=''; co.fueSal2=''; co.otroTit2=false; co.vol2=false; }
   if(!co.resId){ const rs=v4ResDeContrato(co); if(rs) co.resId=rs.id; }
   return co;
 }
 function v4ValidarFormCont(){
-  const box=$i('co-val'); if(!box) return;
+  const box=$i('co-val'); if(!box) return; try{ v5FormAntecedentes(); }catch(e){}
   const co=v4LeerFormCont(), v=v4ValidarContrato(co);
   const F=v4F(co), E=v4E(co);
-  const resumen=(F&&E)?'<div style="font-size:11px;color:var(--ink2);margin-bottom:6px;">F '+v4F2(F)+' → E '+v4F2(E)+' · '+v4Diff(F,E)+' días · máximo '+v4F2(v4AddM(F,12))+(v4C(co)?' · fin de la causa '+v4F2(v4C(co)):'')+(F===v4FinMes(F)?' · <strong>firma el último día del mes: el primer pago mensual vence el día 5</strong>':'')+'</div>':'';
+  const resumen=(F&&E)?'<div style="font-size:11px;color:var(--ink2);margin-bottom:6px;">F '+v4F2(F)+' → E '+v4F2(E)+' · '+v4Diff(F,E)+' días · máximo '+v4F2(v4AddM(F,12))+(v4C(co)?' · fin de la causa '+v4F2(v4C(co)):'')+(!v5Nuevo(co)?' · modelo '+v5Modelo(co)+': pago el último día del mes anterior'+(F===v4FinMes(F)?' (<strong>firma el último día del mes: el primer pago vence el día 5</strong>)':''):' · primer pago mensual: 1 de '+v4MesNom(v4MesSig(F.slice(0,7)))+(v5FirmaFinMes(F)?' (<strong>firma en los 3 últimos días del mes: el email del primer pago se envía en F o al día siguiente</strong>)':''))+'</div>':'';
   box.innerHTML=resumen+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ No se puede guardar:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas del contrato temporal.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':'');
   const tit=v4TitularCobro(co), ti=$i('co-titular'); if(ti) ti.textContent=tit?('Cobra: '+nombreC(tit)+' (titular de las rentas del piso en la fecha de firma)'):'';
   try{ v4InfoExtraCont(co); }catch(e){ console.warn(e); }
@@ -12684,6 +12713,8 @@ function editCont(id){
   ch('co-primer',co.primer); ch('co-indice',co.rentaInfIndice); ch('co-pj',co.arrPJ); ch('co-entero',co.pisoEntero); ch('co-tacita',co.prorrogaTacita); ch('co-subsiste',co.causaSubsiste);
   s('co-cfin1',co.cFin1); s('co-cfin2',co.cFin2); s('co-emerg1',co.emerg1); s('co-emerg2',co.emerg2); s('co-ret',co.ret||100); ch('co-wifi1',co.wifi1); ch('co-wifi2',co.wifi2); s('co-inet',co.internetAnual); s('co-cta',co.ctaId); s('co-bizum',co.bizum); ch('co-itp',co.itpOk); s('co-itpf',co.itpFecha); s('co-prev',co.prevSeguidos||0);
   ch('co-anx-c1',co.anexoICausa1); ch('co-anx-d1',co.anexoIDom1); s('co-itpop',co.itpOpcion); s('co-itppres',co.itpPres); s('co-itpimp',co.itpImp); ch('co-mayor1',co.mayor1); ch('co-mayor2',co.mayor2); ch('co-ceeent',co.ceeEntregada); s('co-resid',co.resId); ch('co-igual',co.igualModelo); ch('co-anx-c2',co.anexoICausa2); ch('co-anx-d2',co.anexoIDom2);
+  s('co-modelo',v5Modelo(co)==='antiguo'?'v20261025-2':v5Modelo(co));
+  [1,2].forEach(n=>{ s('co-ct'+n,co['causaTipo'+n]); ch('co-fue'+n,co['fueInq'+n]); s('co-fuet'+n,co['fueTipo'+n]); s('co-fues'+n,co['fueSal'+n]); ch('co-otro'+n,co['otroTit'+n]); ch('co-vol'+n,co['vol'+n]); });
   if(co.anexoIData){ s('co-anx-data',co.anexoIData); s('co-anx-name',co.anexoIName); const z=$i('co-anx-zone'); if(z){ z.classList.add('has-file'); const l=z.querySelector('.pdf-upload-label'); if(l) l.textContent='✓ '+(co.anexoIName||'Anexo I adjunto'); } }
   _fotosContrato={entrada:[...(co.fotosEntrada||[])],salida:[...(co.fotosSalida||[])]}; pintarFotosContrato();
   const h=document.querySelector('#m-co h2'); if(h) h.textContent='📄 Editar contrato';
@@ -12700,6 +12731,7 @@ function addCont(){
   if(v4EsTemporal(co)) co.v4=true;
   let msg='Contrato guardado';
   if(co.inqId2&&co.propId&&co.hab){ const pr=(D.props||[]).find(p=>p.id==co.propId); if(pr){ const cf=Object.assign({tipo:'individual',plazas:1,precio:0},(pr.habsConfig||{})[co.hab]||{}); if(cf.tipo!=='doble'){ pr.habsConfig=Object.assign({},pr.habsConfig||{}); cf.tipo='doble'; cf.plazas=2; pr.habsConfig[co.hab]=cf; msg+=' · hab. '+co.hab+' marcada como doble'; } } }
+  if(v4EsTemporal(co)&&v4F(co)){ const iv=v5IravVigente(v4F(co)); co.iravF=iv?iv.valor:''; co.iravFecha=iv?iv.fecha:''; }
   if(co.id){ const i=D.conts.findIndex(x=>x.id===co.id); if(i>=0) D.conts[i]=co; msg=msg.replace('Contrato guardado','Contrato actualizado'); } else { co.id=uid(); D.conts.push(co); }
   if(co.itpOpcion==='fran'&&co.itpPres){ co.itpOk=true; co.itpFecha=co.itpPres; }
   if(co.resId){ const rs=v4Res(co.resId); if(rs){ rs.coId=co.id; const vv=rs.visitaId&&(D.visitas||[]).find(x=>x.id==rs.visitaId); if(vv) vv.est='alquilado'; (D.anuncios||[]).forEach(a=>{ if(a.pausaRes===rs.id) delete a.pausaRes; }); } }
@@ -12712,6 +12744,7 @@ function v4Fin12m(){ const F=gi('co-ini'); if(!F){ toast('Pon primero la fecha d
 
 // ══ Lista de contratos ══
 function rConts(){
+  try{ v5PintarNormativa(); }catch(e){ console.warn('Normativa',e); }
   try{ v4PintarReservas(); }catch(e){ console.warn('Reservas',e); }
   const div=$i('co-list'), fil=gi('cof'), propF=gi('co-prop-f'), q=gi('co-q').toLowerCase(), hoy=v4Hoy(); if(!div) return;
   let list=(D.conts||[]).slice().sort((a,b)=>(v4E(a)||'9').localeCompare(v4E(b)||'9'));
@@ -12752,7 +12785,7 @@ function v4Gestionar(coId){
   $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">⚙️ '+v4Esc(v4Lugar(co))+'</div><div style="font-size:12px;color:var(--ink3);margin-top:3px;">'+v4Esc(v4NombresCompletos(co))+'</div></div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'
    +'<div style="margin-bottom:10px;">'+v4HtmlPasoCo(co)+'</div>'
    +'<div class="card" style="padding:12px;margin-bottom:12px;">'
-   +fila('Firma (F)',v4F2(F))+fila('Fin del contrato (E)',v4F2(E)+(v4Prorroga(co)?' (prorrogado)':''))+fila('Fin de la causa (C)',C?v4F2(C):'—')+fila('Se cobra hasta',v4F2(fin))
+   +fila('Firma (F)',v4F2(F))+fila('Fin del contrato (E)',v4F2(E)+(v4Prorroga(co)?' (prorrogado)':''))+fila('Fin de la causa (C)',C?v4F2(C):'—')+(v5ExtCausa(co)?fila('Fin anticipado (K)',v5TxtExtFila(co)):'')+fila('Se cobra hasta',v4F2(fin))
    +fila('Renta · fianza · garantía',v4E2(co.r)+' € · '+v4E2(co.f)+' € · '+v4E2(co.g)+' €')+fila('Retención a la salida',v4E2((parseFloat(co.ret)||100)*v4NumPersonas(co,fin))+' € ('+v4E2(parseFloat(co.ret)||100)+' €/persona)')
    +fila('Cobra',v4Esc(dc.titular)+' · '+v4Esc(dc.iban)+(co.bizum?' · Bizum '+v4Esc(co.bizum):''))+fila('Wifi',(co.wifi1?'Arr. 1 sí':'Arr. 1 no')+(co.inqId2?(co.wifi2?' · arr. 2 sí':' · arr. 2 no'):'')+((co.wifiCambios||[]).length?' · '+co.wifiCambios.length+' cambio(s)':'')+(parseFloat(co.internetAnual)>0?' · tope anual '+v4E2(co.internetAnual)+' €':''))
    +fila('ITP',v4TxtItpFila(co))+fila('Prórroga o anexo',(co.cambios||[]).length?v4Esc(V4_CAMBIO_TXT[co.cambios[0].tipo])+' ('+v4F2(co.cambios[0].fecha)+')':(pc.ok?'Admite uno':'<span style="color:var(--rd);">No admite</span>'))
@@ -12762,7 +12795,7 @@ function v4Gestionar(coId){
    +fila('Ocupación indebida',v4E2(v4OcupIndebidaDia(co))+' €/día'+(()=>{ const o=v4OcupIndebida(co,hoy); if(!o) return ''; return '<br><span style="color:var(--rd);">'+o.diasTotal+' día'+(o.diasTotal===1?'':'s')+' desde el '+v4F2(fxAdd(o.fin,1))+' = '+v4E2(o.totalDesdeFin)+' €</span>'+(o.dias?' <button class="btn btn-danger btn-xs" onclick="v4AnotarOcupacion(\''+co.id+'\')">Anotar '+o.dias+' día'+(o.dias===1?'':'s')+' ('+v4E2(o.total)+' €)</button>':' (anotado hasta el '+v4F2(co.ocupHasta)+')'); })())+'</div>'
    +'<div class="form-section">Registrar</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
    +btn('💶 Pago mensual','v4AbrirCiclo(\''+co.id+'\')')+btn('🧾 ITP','v4ITP(\''+co.id+'\')')+btn('🚪 Aviso de salida','v4AvisoSalida(\''+co.id+'\')')+btn('🔑 Entrega de llaves','v4Llaves(\''+co.id+'\')')
-   +btn('💶 Retención','v4Retencion(\''+co.id+'\')')+btn('🔁 Prórroga o anexo','v4Cambio(\''+co.id+'\')')+btn('📶 Wifi','v4Wifi(\''+co.id+'\')')+btn('🎓 Causa','v4Causa(\''+co.id+'\')')
+   +btn('💶 Retención','v4Retencion(\''+co.id+'\')')+btn('🔁 Prórroga o anexo','v4Cambio(\''+co.id+'\')')+btn('📶 Wifi','v4Wifi(\''+co.id+'\')')+btn('🎓 Causa','v4Causa(\''+co.id+'\')')+btn('🏚 Inhabitabilidad, abandono…','v5Situaciones(\''+co.id+'\')')
    +btn('⚠️ Incumplimientos e impagos','v4Incumplimientos(\''+co.id+'\')')+btn('🚪 Entradas','v4Entradas(\''+co.id+'\')')+btn('➕ Penalizaciones','v4Penalizacion(\''+co.id+'\')')+btn('✏️ Editar contrato','closeDrw();editCont(\''+co.id+'\')')+'</div>'
    +'<div class="form-section">Plantillas</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
    +[['3','Fin de contrato'],['8','Aviso de salida'],['2','Liquidación (email)'],['12','Liquidación (WhatsApp)'],['11','Retención (email)'],['5','Retención (WhatsApp)'],['anexo2','Anexo II'],['req','Requerimiento']].map(([t,n])=>'<button class="btn btn-ghost btn-sm" onclick="v4VerPlantilla(\''+t+'\',\''+co.id+'\')">📋 '+n+'</button>').join('')+'</div>'
@@ -12880,6 +12913,7 @@ function generarCobrosReparto(){
 function v4Migrar(){
   D.cfg=D.cfg||{}; let cambio=false;
   if(!D.cfg.migV4Exig){ if(D.cfg.diaExig===undefined||D.cfg.diaExig===''||parseInt(D.cfg.diaExig)===15) D.cfg.diaExig=31; D.cfg.migV4Exig=true; cambio=true; }
+  if(!D.cfg.migV46Exig){ if(D.cfg.diaExig===undefined||D.cfg.diaExig===''||parseInt(D.cfg.diaExig)===31||parseInt(D.cfg.diaExig)===15){ D.cfg.diaExig=1; D.cfg.exigMesAnt=false; } D.cfg.migV46Exig=true; cambio=true; }
   (D.conts||[]).forEach(co=>{ if(v4EsTemporal(co)&&v4F(co)){ const antes=JSON.stringify(v4InqsCo(co).map(i=>[i.estado,i.ini,i.fin,i.alq])); v4SincronizarInqs(co); if(JSON.stringify(v4InqsCo(co).map(i=>[i.estado,i.ini,i.fin,i.alq]))!==antes) cambio=true; } });
   if(cambio) saveAndSync();
 }
@@ -13285,8 +13319,8 @@ function v4AvisoCorreccion(res){
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// v4.3 · Alertas del 26/10/2026 (contrato v20261025-2, oferta y reserva v20261026-3,
-// justificante de devolución de reserva v20261026-2): reserva (O, M, P), ITP con dos
+// v4.3 · Alertas del 26/10/2026 (contrato v20261102, oferta y reserva v20261102,
+// justificante de devolución de reserva v20261031): reserva (O, M, P), ITP con dos
 // opciones, certificado energético por piso, conservación de datos y validaciones nuevas
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -13467,12 +13501,13 @@ function v4ValidarReserva(r){
     if(P){ const occ=v4OcupHab(r.propId,r.hab,P).filter(c=>!(r.coId&&c.id===r.coId)); if(occ.length){ const fc=v4FinCobro(occ[0])||v4E(occ[0]), lib=fc?fxAdd(fc,1):''; err.push('El '+v4F2(P)+' la habitación sigue alquilada a '+v4Nombres(occ[0])+' (hasta el '+v4F2(fc)+'): no se podría entregar en P.'+(lib?' Queda libre el '+v4F2(lib)+': como la reserva dura 15 días como máximo, la oferta se puede firmar como pronto el '+v4F2(fxAdd(lib,-15))+'.':'')); } }
   }
   const tipo=v4CfgHab(r.propId,r.hab).tipo||'individual';
-  if(r.inqId2&&tipo!=='doble') av.push('La habitación '+r.hab+' está configurada como individual y la reservan dos personas: en la oferta se marca «doble» (manifiesta 2) y al firmar el contrato quedará como doble.');
+  if(r.inqId2&&tipo!=='doble'&&v5CapHab(r.propId,r.hab).cap>=2) av.push('La habitación '+r.hab+' está configurada como individual y la reservan dos personas: en la oferta se marca «doble» (manifiesta 2) y al firmar el contrato quedará como doble.');
   if(r.modo==='visita'&&r.visitaId&&r.O){ const vv=(D.visitas||[]).find(x=>x.id==r.visitaId); if(vv&&vv.fecha&&vv.fecha>r.O) av.push('La visita enlazada es del '+v4F2(vv.fecha)+', después de la firma de la oferta ('+v4F2(r.O)+'): el manifiesta 3 dice que ya ha visitado la habitación.'); }
-  if(r.modo==='distancia') av.push('Reserva sin visita: el manifiesta 3 de la oferta v20261026-3 dice que el interesado ha visitado la vivienda y la habitación. Sin visita, ese punto no sería cierto: adapta la oferta (por ejemplo, «ha visto la vivienda y la habitación por fotos y videollamada») y mándale la calificación y la etiqueta energética antes de que pague.');
+  if(r.modo==='distancia') av.push('Reserva sin visita: el manifiesta 3 de la oferta v20261102 dice que el interesado ha visitado la vivienda y la habitación. Sin visita, ese punto no sería cierto: adapta la oferta (por ejemplo, «ha visto la vivienda y la habitación por fotos y videollamada») y mándale la calificación y la etiqueta energética antes de que pague.');
   if(!r.ceeDicha) av.push(r.modo==='distancia'?'Antes de que pague, hay que informarle de la calificación energética y mandarle la etiqueta (manifiesta 3): marca la casilla cuando lo hayas hecho.':'En la visita hay que decir la calificación energética y enseñar la etiqueta (manifiesta 3): marca la casilla cuando lo hayas hecho.');
   if(!r.info31) av.push('Antes de pagar, el interesado ha podido pedir la información del art. 31 de la Ley 12/2023 (manifiesta 3): marca la casilla.');
   try{ const i1=r.inqId&&r.inqId!=='__nuevo'?v4Inq(r.inqId):(r._nuevo||{}); const vt=buscarVetado(i1.nom||'',i1.ap||'',r.dni1||'',i1.email||'',i1.tel||''); if(vt&&vt.id!==r.inqId) av.push('🚫 Coincide con una persona de tu lista negra ('+((vt.nom||'')+' '+(vt.ap||'')).trim()+(vt.aptoMotivo?': '+vt.aptoMotivo:'')+').'); }catch(e){}
+  { const x=v5ValidarReservaV1102(r); x.err.forEach(e=>err.push(e)); x.av.forEach(a=>av.push(a)); }
   if(r.asnef&&r.asnef.resultado==='figura') av.push('Figura en ASNEF o BADEXCUG con deudas: la reserva termina y se devuelve la señal íntegra («Terminar sin contrato»).');
   if(r.rechazo&&r.M){ const lim=v4LimRechazo(r); av.push(v4DT(r.rechazo)<=lim?'Rechazó el modelo dentro del plazo: la reserva termina y se devuelve la señal íntegra.':'Rechazó el modelo fuera de plazo ('+v4FmtDT(lim)+'): si no firma, pierde la señal.'); }
   return {err,av,ok:!err.length};
@@ -13500,14 +13535,14 @@ function v4FormReserva(id,pre){
    +'<div class="fgrp fgf" id="rs-nuevo"><div class="fg">'+I('Nombre *','rs-nom',np.nom)+I('Apellidos','rs-ap',np.ap)+I('Teléfono (WhatsApp)','rs-tel',np.tel)+I('Email','rs-email',np.email,'email')+'</div></div>'
    +I('DNI, NIE o pasaporte *','rs-dni1',r.dni1||i1.dni||'')+I('Nacionalidad','rs-nac1',r.nac1||i1.nac||'')
    +I('Domicilio habitual (calle, número, localidad y provincia o país) *','rs-dom1',r.vivHab1||'','text',{full:true})
-   +S('Causa de temporalidad *','rs-ct1',optC(r.causaTipo1))+I('Detalle (empresa, centro…)','rs-cd1',r.causaDet1||'')+I('Fecha prevista de fin de la causa *','rs-cf1',r.cFin1||'','date')
+   +S('Causa de temporalidad *','rs-ct1',optC(r.causaTipo1))+I('Detalle (empresa, centro…)','rs-cd1',r.causaDet1||'')+I('Fecha prevista de fin de la causa *','rs-cf1',r.cFin1||'','date')+v5HtmlDeclRes(1,r)
    +'<div class="fgrp fgf"><div class="form-section">Segundo interesado (solo habitación doble)</div></div>'
    +S('Segundo interesado','rs-inq2',v4OptsInqsRes(r.inqId2||'',true))
    +'<div class="fgrp fgf" data-i2="1"><div class="fg">'
      +'<div class="fgrp fgf" id="rs-nuevo2"><div class="fg">'+I('Nombre *','rs-nom2',np2.nom)+I('Apellidos','rs-ap2',np2.ap)+I('Teléfono (WhatsApp)','rs-tel2',np2.tel)+I('Email','rs-email2',np2.email,'email')+'</div></div>'
      +I('DNI, NIE o pasaporte *','rs-dni2',r.dni2||i2.dni||'')+I('Nacionalidad','rs-nac2',r.nac2||i2.nac||'')
      +I('Domicilio habitual *','rs-dom2',r.vivHab2||'','text',{full:true})
-     +S('Causa de temporalidad *','rs-ct2',optC(r.causaTipo2))+I('Detalle','rs-cd2',r.causaDet2||'')+I('Fecha prevista de fin de la causa *','rs-cf2',r.cFin2||'','date')
+     +S('Causa de temporalidad *','rs-ct2',optC(r.causaTipo2))+I('Detalle','rs-cd2',r.causaDet2||'')+I('Fecha prevista de fin de la causa *','rs-cf2',r.cFin2||'','date')+v5HtmlDeclRes(2,r)
    +'</div></div>'
    +'<div class="fgrp fgf"><div class="form-section">Habitación</div></div>'
    +S('Piso *','rs-prop','<option value="">— Piso —</option>'+(D.props||[]).map(p=>'<option value="'+p.id+'"'+(p.id==r.propId?' selected':'')+'>'+v4Esc(p.nom)+'</option>').join(''))
@@ -13551,13 +13586,14 @@ function v4LeerFormRes(){
   const r=Object.assign({}, prev||{}, {id:id||'', modo:gi('rs-modo')||'visita', visitaId:gi('rs-modo')==='visita'?gi('rs-vis'):'', inqId:gi('rs-inq'), inqId2:gi('rs-inq2'), propId:gi('rs-prop'), hab:gi('rs-hab'), renta:gn('rs-renta'), internetAnual:gn('rs-inet'),
     dni1:gi('rs-dni1'), nac1:gi('rs-nac1'), vivHab1:gi('rs-dom1'), causaTipo1:gi('rs-ct1'), causaDet1:gi('rs-cd1'), cFin1:gi('rs-cf1'),
     dni2:gi('rs-dni2'), nac2:gi('rs-nac2'), vivHab2:gi('rs-dom2'), causaTipo2:gi('rs-ct2'), causaDet2:gi('rs-cd2'), cFin2:gi('rs-cf2'),
+    decl1:gi('rs-decl1'), declOt1:ch('rs-declot1'), declSeg1:gi('rs-declseg1'), decl2:gi('rs-decl2'), declOt2:ch('rs-declot2'), declSeg2:gi('rs-declseg2'),
     O:gi('rs-o'), Ohora:gi('rs-oh'), P:(prev&&(prev.prorrogas||[]).length)?prev.P:gi('rs-p'), Phora:gi('rs-ph'), E:gi('rs-e'), senal:gn('rs-sen'), medio:gi('rs-medio'), ctaId:gi('rs-cta'), bizum:gi('rs-biz'), efectivoExc:ch('rs-efe'),
     multiplo:gn('rs-mult'), ceeDicha:ch('rs-cee'), info31:ch('rs-i31'), M:gi('rs-m')?(gi('rs-m')+'T'+(gi('rs-mh')||'00:00')):'', asnef:{pedida:gi('rs-asp'), resultado:gi('rs-asr'), fecha:gi('rs-asf')},
     ingresosPedidos:gi('rs-ingp'), copiaIngresos:ch('rs-copia'), falsedad:ch('rs-fals'), falsedadFecha:gi('rs-falsf'), rechazo:gi('rs-rech')?(gi('rs-rech')+'T'+(gi('rs-rechh')||'00:00')):'', autRetirada:gi('rs-aut'), reclamacion:ch('rs-recl')});
   if(r.inqId==='__nuevo') r._nuevo={nom:gi('rs-nom'),ap:gi('rs-ap'),tel:gi('rs-tel'),email:gi('rs-email')};
   if(r.inqId2==='__nuevo') r._nuevo2={nom:gi('rs-nom2'),ap:gi('rs-ap2'),tel:gi('rs-tel2'),email:gi('rs-email2')};
   if(r.inqId2&&r.inqId2!=='__nuevo'&&r.inqId2===r.inqId) r.inqId2='';
-  if(!r.inqId2){ ['dni2','nac2','vivHab2','causaTipo2','causaDet2','cFin2'].forEach(k=>{ r[k]=''; }); }
+  if(!r.inqId2){ ['dni2','nac2','vivHab2','causaTipo2','causaDet2','cFin2','decl2','declOt2','declSeg2'].forEach(k=>{ r[k]=''; }); }
   return r;
 }
 function v4ValidarFormRes(){
@@ -13576,6 +13612,7 @@ function v4ValidarFormRes(){
   document.querySelectorAll('#m-v4-c [data-i2]').forEach(e=>{ e.style.display=gi('rs-inq2')?'':'none'; });
   document.querySelectorAll('#m-v4-c [data-m]').forEach(e=>{ e.style.display=e.dataset.m===gi('rs-medio')?'':'none'; });
   document.querySelectorAll('#m-v4-c [data-modo]').forEach(e=>{ e.style.display=e.dataset.modo===gi('rs-modo')?'':'none'; });
+  document.querySelectorAll('#m-v4-c [data-decl]').forEach(e=>{ e.style.display=gi('rs-decl'+e.dataset.decl)==='si'?'':'none'; });
   const P=v4ResP(r), info=(r.O&&P)?'<div style="font-size:11px;color:var(--ink2);margin-bottom:6px;line-height:1.55;">O '+v4F2(r.O)+' → P '+v4F2(P)+' (máximo '+v4F2(fxAdd(r.O,15))+') · modelo de contrato como máximo el '+v4FmtDT(new Date(v4DTde(r.O,r.Ohora||'00:00').getTime()+864e5))+(r.M?' · puede rechazarlo hasta el '+v4FmtDT(v4LimRechazo(r)):'')+(r.renta>0?'<br>Pago en la firma: '+v4E2(v4PagoFirmaRes(r))+' € (renta proporcional + fianza + garantía − señal)':'')+'</div>':'';
   box.innerHTML=info+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ No se puede guardar:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas de la oferta y reserva.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':'');
 }
@@ -13630,6 +13667,9 @@ function v4ChequeoTerminar(r,k,f){
   if(k==='rechazo'){ const lim=v4LimRechazo(r); if(!r.M) av.push('No consta cuándo recibió el modelo de contrato (M): anótalo en la reserva.'); if(!r.rechazo) av.push('Anota en la reserva la fecha y hora en que rechazó el modelo.'); else if(lim&&v4DT(r.rechazo)>lim) err.push('El rechazo ('+v4FmtDT(v4DT(r.rechazo))+') fue después del plazo ('+v4FmtDT(lim)+'): no es este caso. Si no firma, pierde la señal («El interesado desiste…»).'); }
   if(k==='asnef'&&!(r.asnef&&r.asnef.resultado==='figura')) av.push('Anota en la reserva que figura en ASNEF o BADEXCUG (solo el resultado).');
   if(k==='sinrespuesta'){ if(r.asnef&&r.asnef.resultado) err.push('En la reserva consta la respuesta de ASNEF: no es este caso.'); else if(!(r.asnef&&r.asnef.pedida)) av.push('No consta que se pidiera el acceso a ASNEF y BADEXCUG: anota la fecha en la reserva.'); if(f&&v4ResP(r)&&f<v4ResP(r)) av.push('Este caso se da en la fecha prevista de firma ('+v4F2(v4ResP(r))+'), no antes.'); }
+  if((k==='modelo'||k==='rdl')&&!v5OfertaNueva(r)) err.push('La oferta firmada (anterior a la v20261102) no prevé este caso: si los dos estáis de acuerdo en anularla, usa «Causa no imputable a nadie, o mutuo acuerdo».');
+  if(k==='modelo'){ const O24=new Date(v4DTde(r.O,r.Ohora||'00:00').getTime()+864e5); if(r.M&&v4DT(r.M)<=O24) err.push('El modelo se recibió dentro de las 24 h ('+v4FmtDT(v4DT(r.M))+'): no es este caso.'); }
+  if(k==='rdl'){ const st=v5Rdl(); if(st==='convalidado') err.push('El RDL 29/2026 consta como convalidado: no es este caso.'); else if(st==='pendiente'&&f&&v4ResP(r)&&f<v4ResP(r)) av.push('El RDL 29/2026 sigue pendiente: este caso solo se da si no se convalida antes de la firma ('+v4F2(v4ResP(r))+').'); }
   if(k==='autorizacion'&&r.asnef&&r.asnef.resultado) err.push('La autorización se retiró después de llegar la respuesta de ASNEF: no es este caso.');
   if(k==='ingresos'&&!r.ingresosPedidos) av.push('No consta que se pidieran los justificantes de ingresos por escrito.');
   if(k==='interesado'&&f&&v4ResP(r)&&f<v4ResP(r)) av.push('Antes de la fecha prevista de firma, solo si el interesado ha desistido por escrito, no ha aportado en plazo lo que se le pidió o ha dado datos falsos.');
@@ -13666,7 +13706,7 @@ function v4Txt14(r,ahora){
 }
 function v4TxtJustDev(r){
   const p=(D.props||[]).find(x=>x.id==r.propId), c=r.fin?V4_RES_CASOS[r.fin.caso]:null, imp=v4ResImporteDev(r), i1=v4Inq(r.inqId)||{};
-  return 'Datos para el justificante de devolución de la reserva (documento v20261026-2):\n'
+  return 'Datos para el justificante de devolución de la reserva (documento v20261031):\n'
    +'- Interesado: '+v4NomRes(r)+(i1.dni?' ('+i1.dni+')':'')+'\n'
    +'- Habitación '+r.hab+' de '+(p?p.nom+(p.dir?', '+p.dir:''):'')+'\n'
    +'- Oferta y reserva firmada el '+v4F2(r.O)+'; señal de '+v4E2(r.senal)+' euros cobrada por '+v4MedioRes(r)+'\n'
@@ -13694,7 +13734,7 @@ function v4TxtDatosOferta(r){
     :'⚠️ No consta quién es el titular del piso el '+v4F2(r.O||v4Hoy())+': revisa la titularidad en la ficha del piso.';
   const per=n=>{ const iid=n===1?r.inqId:r.inqId2, i=v4Inq(iid)||{}; return ((i.nom||'')+' '+(i.ap||'')).trim()+' · nacionalidad '+(r['nac'+n]||'[NACIONALIDAD]')+' · '+(r['dni'+n]||'[DOCUMENTO]')+' · domicilio habitual: '+(r['vivHab'+n]||'[DOMICILIO]')+' · email '+(i.email||'[EMAIL]')+' · WhatsApp '+(i.wa||i.tel||'[TELÉFONO]'); };
   const L=[];
-  L.push('Datos para rellenar la «Oferta y reserva de habitación» (versión 20261026-3), en el orden del documento:');
+  L.push('Datos para rellenar la «Oferta y reserva de habitación» (versión 20261102), en el orden del documento:');
   L.push('- Ubicación de la vivienda: '+([p.dir,[p.cp,p.ciu].filter(Boolean).join(' ')].filter(Boolean).join(', ')||'[DIRECCIÓN]')+'. Ref. catastral: '+(p.refCat||'[REF. CATASTRAL]')+'.');
   L.push('- En '+(p.ciu||'[LOCALIDAD]')+', a '+v4FL(r.O)+'.');
   L.push('- Parte arrendadora: '+arr+' Contacto: email '+(fr.email||'[EMAIL]')+' y WhatsApp '+(fr.tel||'[TELÉFONO]')+'.');
@@ -13705,6 +13745,7 @@ function v4TxtDatosOferta(r){
   L.push('- Cláusula 2: firma del contrato y entrada el '+v4FL(P)+' (no puede ser más tarde del '+v4FL(fxAdd(r.O,15))+').');
   L.push('- Cláusula 3, interesado: '+(V4_CAUSAS[r.causaTipo1]||'[CAUSA]')+'. Detalle: '+(r.causaDet1||'—')+'. Fin previsto de la causa: '+v4FL(r.cFin1)+'.');
   if(r.inqId2) L.push('- Cláusula 3, segundo interesado: '+(V4_CAUSAS[r.causaTipo2]||'[CAUSA]')+'. Detalle: '+(r.causaDet2||'—')+'. Fin previsto de la causa: '+v4FL(r.cFin2)+'.');
+  [1,2].forEach(n=>{ if(n===2&&!r.inqId2) return; const x=v5DeclRes(r,n); L.push('- Cláusula 3, declaración de arrendamientos anteriores'+(n===2?' (segundo interesado)':'')+': '+(x.d==='no'?'no ha sido arrendatario de este piso':x.d==='si'?'sí ha sido arrendatario de este piso; otro título en los 3 meses anteriores: '+(x.ot?'sí':'no')+'; contratos temporales seguidos anteriores: '+(x.seg>=2?'2 o más':x.seg):'[SIN RELLENAR]')+'.'); });
   L.push('- Cláusula 3: fin previsto del contrato el '+v4FL(r.E)+(P&&r.E?' ('+v4Diff(P,r.E)+' días)':'')+'.');
   L.push('- Cláusula 4: '+v4EurosDoc(r.senal)+', por '+(r.medio==='bizum'?'Bizum al número '+(r.bizum||'[NÚMERO]'):r.medio==='transferencia'?'transferencia a la cuenta IBAN '+(((D.ctasBanc||[]).find(c=>c.id==r.ctaId)||{}).num||'[IBAN]'):'metálico (excepción del art. 17.3 LAU)')+'.');
   L.push('- Cláusula 5: renta mensual '+v4EurosDoc(ren)+'; internet, importe anual máximo '+v4EurosDoc(r.internetAnual||0)+'; fianza '+v4EurosDoc(ren)+'; garantía adicional '+v4EurosDoc(ren)+'; en la firma '+v4EurosDoc(v4PagoFirmaRes(r))+' (renta proporcional '+v4E2(v4RentaPropRes(r))+' € + fianza + garantía − señal).');
@@ -13715,10 +13756,10 @@ function v4TxtDatosOferta(r){
 }
 function v4VerPlantillaReserva(tpl,id){
   const r=v4Res(id); if(!r){ toast('Reserva no encontrada',false); return; } const i1=v4Inq(r.inqId)||{}, tel=String(i1.wa||i1.tel||'').replace(/\D/g,''), em=i1.email||'', t=String(tpl);
-  const conf={'14':{tit:'Plantilla 14 · Envío del modelo de contrato',nota:'Adjunta el PDF del modelo de contrato vigente (v20261025-2), sin rellenar. La hora límite se calcula desde ahora: si lo envías más tarde, ajústala (48 h desde que lo recibe, o la firma si es antes). Después anota en la reserva la fecha y hora de recepción (M) y guarda el chat.',txt:()=>v4Txt14(r),wa:true,rows:9},
+  const conf={'14':{tit:'Plantilla 14 · Envío del modelo de contrato',nota:'Adjunta el PDF del modelo de contrato vigente (v20261102), sin rellenar. La hora límite se calcula desde ahora: si lo envías más tarde, ajústala (48 h desde que lo recibe, o la firma si es antes). Después anota en la reserva la fecha y hora de recepción (M) y guarda el chat.',txt:()=>v4Txt14(r),wa:true,rows:9},
     finres:{tit:'Comunicación del fin de la reserva',nota:'Por email o WhatsApp (cláusula 12). Si se queda con la señal, mejor por comunicación electrónica certificada, para tener prueba fehaciente. Revisa el texto entre corchetes.',txt:()=>v4TxtFinRes(r),wa:true,rows:8},
-    justdev:{tit:'Justificante de devolución de la reserva',nota:'Usa el documento «Justificante de devolución de reserva v20261026-2» con estos datos.',txt:()=>v4TxtJustDev(r),rows:11},
-    oferta:{tit:'Datos para rellenar la oferta y reserva',nota:'Cópialos en el documento «Oferta y reserva de habitación» v20261026-3. Revisa lo que esté entre corchetes.',txt:()=>v4TxtDatosOferta(r),rows:18}}[t];
+    justdev:{tit:'Justificante de devolución de la reserva',nota:'Usa el documento «Justificante de devolución de reserva v20261031» con estos datos.',txt:()=>v4TxtJustDev(r),rows:11},
+    oferta:{tit:'Datos para rellenar la oferta y reserva',nota:'Cópialos en el documento «Oferta y reserva de habitación» v20261102. Revisa lo que esté entre corchetes.',txt:()=>v4TxtDatosOferta(r),rows:18}}[t];
   if(!conf) return;
   $i('m-v4tpl-c').innerHTML='<h2>📋 '+conf.tit+'</h2><div style="font-size:11.5px;color:var(--ink3);margin-bottom:6px;">'+conf.nota+'</div>'
    +'<textarea id="v4t-txt" rows="'+conf.rows+'" style="width:100%;font-size:12px;line-height:1.5;font-family:inherit;padding:10px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);">'+v4Esc(conf.txt())+'</textarea>'
@@ -13755,6 +13796,7 @@ function v4AlertasReservas(hoy){
     if(vt.length) A('r-visitas',r.O,'Cancelar '+vt.length+' visita'+(vt.length>1?'s':'')+' de otras personas a la habitación','Está reservada hasta el '+v4F2(P)+' y no se puede ofrecer a terceros (cláusula 1): '+vt.map(v=>(v.nom||'')+' ('+v4F2(v.fecha)+' '+(v.hora||'')+')').join(', ')+'. Avísales y márcalas como descartadas.',{nivel:'alto',caduca:P||''});
     const O24=new Date(v4DTde(r.O,r.Ohora||'00:00').getTime()+864e5);
     A('r-modelo',fxIso(O24),'Enviar a '+nom+' el modelo de contrato en blanco (plantilla 14)','Por WhatsApp o email, en PDF y sin rellenar, como máximo el '+v4FmtDT(O24)+' (24 h desde la reserva; cláusula 10). El mensaje lleva la fecha y hora límite para rechazarlo: 48 h desde que lo recibe, o la firma si es antes. Después anota en la reserva cuándo lo recibió (M).',{desde:r.O,tpl:['14'],auto:!!r.M,caduca:P||''});
+    v5AlertasResV1102(r,hoy,P,A,O24);
     if(r.M){ const lr=v4LimRechazo(r); A('r-rechazo',fxIso(lr),'Fin del plazo de '+nom+' para rechazar el contrato sin dar motivos','Hasta el '+v4FmtDT(lr)+' puede decir por escrito que no acepta el modelo de contrato, y se le devuelve la señal íntegra en 3 días hábiles. Después, si no firma, pierde la señal.',{tipo:'Según oferta',nivel:'info',caduca:fxAdd(fxIso(lr),1),desde:r.M.slice(0,10)}); }
     if(r.asnef&&r.asnef.resultado==='figura') A('r-asnef-mal',r.asnef.fecha||hoy,'Figura en ASNEF o BADEXCUG: terminar la reserva y devolver la señal','Con deudas pendientes no se firma (condición i): registra «Terminar sin contrato», devuelve la señal íntegra en 3 días hábiles e infórmale (cláusula 13).',{nivel:'urgente'});
     if(r.rechazo&&r.M&&v4DT(r.rechazo)<=v4LimRechazo(r)) A('r-rech-ok',r.rechazo.slice(0,10),'Ha rechazado el modelo a tiempo: terminar la reserva y devolver la señal','Rechazó el '+v4FmtDT(v4DT(r.rechazo))+', dentro del plazo: registra «Terminar sin contrato» y devuelve la señal íntegra en 3 días hábiles.',{nivel:'urgente'});
@@ -13763,7 +13805,7 @@ function v4AlertasReservas(hoy){
       A('r-ingresos',p3,'Último día para pedir a '+nom+' justificantes de ingresos (si se piden)','Por escrito y con un plazo de al menos 3 días hábiles para aportarlos (condición ii y cláusula 9). Múltiplo exigido: '+(r.multiplo?String(r.multiplo).replace('.',','):'—')+' veces la renta. Solo si algo no cuadra.',{tipo:'Solo si se piden',nivel:'info',caduca:fxAdd(p3,1),auto:!!r.ingresosPedidos});
       A('r-vence',fxAdd(P,-2),'La reserva de '+nom+' vence el '+v4F2(P)+': confirmar la firma','Si ese día no se firma, la reserva queda sin efecto (cláusula 2). Recuérdale que traiga el documento de identidad en vigor y los justificantes de la causa y del domicilio habitual (condición iii): si no los aporta, se considera que desiste y pierde la señal (cláusula 9).',{tipo:'Recomendado',nivel:'normal',desde:fxAdd(P,-3),caduca:P});
       if(!(r.asnef&&r.asnef.resultado)) A('r-P-asnef',P,'Sin respuesta de ASNEF o BADEXCUG de '+nom+': prorrogar o devolver','Si en la fecha prevista de firma no ha llegado la respuesta: prorroga la reserva por escrito (nueva P; es el único caso en que cabe, cláusula 9) o devuelve la señal íntegra con el justificante de devolución.',{desde:fxAdd(P,-2),caduca:P});
-      A('r-firma',P,'Firma del contrato con '+nom+(r.Phora?' a las '+r.Phora:''),'P pasa a ser F. Pago en la firma: '+v4E2(v4PagoFirmaRes(r))+' € (renta proporcional '+v4E2(v4RentaPropRes(r))+' € + fianza '+v4E2(r.renta)+' € + garantía '+v4E2(r.renta)+' € − señal '+v4E2(sen)+' €). El contrato tiene que ser el modelo enviado, con las condiciones de la oferta: si cambia algo, puede no firmar y habría que devolverle el doble.',{desde:fxAdd(P,-3),caduca:P});
+      A('r-firma',P,'Firma del contrato con '+nom+(r.Phora?' a las '+r.Phora:''),'P pasa a ser F. Pago en la firma: '+v4E2(v4PagoFirmaRes(r))+' € (renta proporcional '+v4E2(v4RentaPropRes(r))+' € + fianza '+v4E2(r.renta)+' € + garantía '+v4E2(r.renta)+' € − señal '+v4E2(sen)+' €). El contrato tiene que ser el modelo enviado, con las condiciones de la oferta: si cambia algo, puede no firmar y habría que devolverle el doble. Exige los documentos de la causa y del domicilio y, si ya fue inquilino del piso, el volante individual de empadronamiento.',{desde:fxAdd(P,-3),caduca:P});
       if(hoy>P) A('r-caduca',fxAdd(P,1),'La reserva de '+nom+' ha quedado sin efecto: comunicárselo','El '+v4F2(P)+((r.prorrogas||[]).length?' (fecha prorrogada por escrito)':'')+' no se firmó el contrato, así que la reserva ha quedado sin efecto (cláusula 2 de la oferta; como máximo dura 15 días desde la firma de la oferta, salvo prórroga). Registra cómo termina («Terminar sin contrato») para saber qué pasa con la señal: la pierde si no firmó por causa suya; se devuelve íntegra si no llegó la respuesta de ASNEF y no se prorrogó, o por otra causa no imputable; el doble si fue por causa tuya. Después, comunícaselo por escrito: la habitación vuelve a estar libre.',{nivel:'urgente'});
     }
   });
@@ -13845,7 +13887,7 @@ function v4PintarReservas(){
   const card=r=>{ const p=(D.props||[]).find(x=>x.id==r.propId), a=v4ResActiva(r)||r.fin?v4PasoDe(v4AlertasCache(hoy).filter(x=>x.resId===r.id),hoy):null;
     return '<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start;"><div style="min-width:0;flex:1;"><div style="font-weight:700;font-size:13px;">'+v4Esc(v4NomRes(r))+' '+v4EstadoRes(r)+'</div><div style="font-size:11px;color:var(--ink3);margin-top:3px;">Hab. '+v4Esc(r.hab)+' · '+v4Esc(p?p.nom:'')+' · O '+v4F2(r.O)+' → P '+v4F2(v4ResP(r))+((r.prorrogas||[]).length?' (prorrogada)':'')+' · señal '+v4E2(r.senal)+' € · renta '+v4E2(r.renta)+' €</div>'+(a?'<div style="margin-top:6px;max-width:620px;">'+v4ChipPaso(a,hoy)+'</div>':'')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-primary btn-sm" onclick="v4GestionarReserva(\''+r.id+'\')">⚙️ Gestionar</button>'+(v4ResActiva(r)?'<button class="btn btn-success btn-sm" onclick="v4ContratoDesdeReserva(\''+r.id+'\')">📄 Firmar contrato</button>':'')+'</div></div></div>'; };
   box.innerHTML='<div class="card mb"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;"><div class="card-title" style="margin:0;">📝 Reservas ('+act.length+' en curso)</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><label style="font-size:11px;color:var(--ink3);display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;">Múltiplo de ingresos, igual para todos: <input type="number" step="0.1" id="res-mult" value="'+v4Esc((D.cfg||{}).multiploIngresos||'')+'" style="width:64px;padding:4px 6px;" onchange="v4GuardarMultiplo()"> veces la renta</label><button class="btn btn-primary btn-sm" onclick="v4FormReserva()">+ Nueva reserva</button></div></div>'
-   +(act.length?act.map(card).join(''):'<div style="font-size:12px;color:var(--ink3);margin-top:8px;">No hay reservas en curso. La reserva bloquea la habitación como máximo 15 días hasta la firma (oferta v20261026-3).</div>')
+   +(act.length?act.map(card).join(''):'<div style="font-size:12px;color:var(--ink3);margin-top:8px;">No hay reservas en curso. La reserva bloquea la habitación como máximo 15 días hasta la firma (oferta v20261102).</div>')
    +(otras.length?'<details style="margin-top:10px;"><summary style="font-size:12px;cursor:pointer;color:var(--ink3);">Reservas terminadas o firmadas ('+otras.length+')</summary>'+otras.map(card).join('')+'</details>':'')+'</div>';
 }
 function v4GestionarReserva(id){
@@ -14114,6 +14156,472 @@ function delCuota(hipId, cuId){
 function v5TxtTipoLista(h,cu){ const t=v5TipoDeCuota(h,cu), a=v5AntesCuota(h,cu); return (t!=null?' · TIN '+v5PctTxt(t):'')+(a?' · capital antes '+eur(a,2):'')+(cu.estimado?' · desglose estimado, falta el del recibo':''); }
 function v5HtmlUltimoTipo(h,t){ const u=v5UltimaCuota(h); if(!u) return ''; const tc=v5TipoDeCuota(h,u); if(tc==null) return ''; const dif=t>0&&!u.estimado&&Math.abs(tc-t)>0.05;
   return '<div style="font-size:9px;color:'+(dif?'var(--ye)':'var(--ink3)')+';" title="Intereses ÷ capital pendiente antes de la cuota × 12">última cuota ('+v4Esc(u.mes||'')+'): '+v5PctTxt(tc,2)+(dif?' ⚠️ distinto de la ficha':'')+'</div>'; }
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// v4.6 · 02/11/2026 · contrato v20261102, oferta y reserva v20261102, justificante de devolución v20261031
+// Pago el día 1, contratos seguidos y otros títulos, capacidad, piso entero, fianza y garantía, renta por
+// habitación con el IRAV vigente en F, fin anticipado de la causa en max(K + 30, F + 1 mes), salida sin aviso
+// válido cortada por un contrato nuevo, reparaciones, inhabitabilidad, abandono, objetos, fallecimiento,
+// ASNEF, limpieza, reserva (declaración, modelo en 24 h, RDL 29/2026) y avisos generales
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── Normativa: estado del RDL 29/2026 e IRAV publicado ──
+const V5_RDL_VOTO='2026-11-12', V5_RDL_VIGOR='2026-10-08';
+const V5_RDL_TXT={pendiente:'pendiente de convalidación', convalidado:'convalidado', derogado:'derogado (no convalidado)'};
+function v5Rdl(){ const s=(D.cfg||{}).rdl29; return V5_RDL_TXT[s]?s:'pendiente'; }
+function v5IravLista(){ return ((D.cfg||{}).iravs||[]).filter(x=>x&&x.fecha&&!isNaN(parseFloat(x.valor))).slice().sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha))); }
+// IRAV vigente en una fecha: el último publicado hasta ese día (si no hay ninguno anotado, el del criterio fiscal antiguo)
+function v5IravVigente(iso){
+  const l=v5IravLista().filter(x=>x.fecha<=iso); if(l.length){ const x=l[l.length-1]; return {valor:parseFloat(x.valor), fecha:x.fecha, ref:x.ref||''}; }
+  const c=parseFloat((D.cfg||{}).irav); return c>0?{valor:c, fecha:'', ref:'', legado:true}:null;
+}
+function v5PctIrav(x){ return String(Math.round(x*1000)/1000).replace('.',','); }
+function v5SetRdl(s){ D.cfg=D.cfg||{}; D.cfg.rdl29=s; D.cfg.rdl29Fecha=v4Hoy(); D.cfg._cfgUpd=Date.now(); D.cfg.hechosGlob=Object.assign({},D.cfg.hechosGlob||{}); if(s!=='pendiente') D.cfg.hechosGlob['rdl-voto']=new Date().toISOString(); saveAndSync(); v4RefrescarAvisos(); try{ v5PintarNormativa(); }catch(e){} toast('RDL 29/2026: '+V5_RDL_TXT[s]); }
+function v5AddIrav(){ const f=gi('irv-f'), v=gi('irv-v'), ref=gi('irv-r'); if(!f||v===''||isNaN(parseFloat(v))){ toast('Indica la fecha de publicación y el valor del IRAV',false); return; }
+  D.cfg=D.cfg||{}; D.cfg.iravs=(D.cfg.iravs||[]).filter(x=>x.fecha!==f).concat([{fecha:f, valor:parseFloat(String(v).replace(',','.')), ref}]); D.cfg._cfgUpd=Date.now(); saveAndSync(); v4RefrescarAvisos(); v5PintarNormativa(); toast('IRAV anotado'); }
+function v5DelIrav(f){ D.cfg.iravs=(D.cfg.iravs||[]).filter(x=>x.fecha!==f); D.cfg._cfgUpd=Date.now(); saveAndSync(); v4RefrescarAvisos(); v5PintarNormativa(); }
+function v5PintarNormativa(){
+  const box=$i('norm-box'); if(!box) return; const s=v5Rdl(), l=v5IravLista(), vig=v5IravVigente(v4Hoy());
+  const col=s==='convalidado'?'var(--gn)':s==='derogado'?'var(--rd)':'var(--ye)';
+  box.innerHTML='<div class="card mb"><div class="card-title" style="margin-bottom:8px;">⚖️ Normativa de los contratos</div>'
+   +'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:12px;"><span>RDL 29/2026: <strong style="color:'+col+';">'+V5_RDL_TXT[s]+'</strong>'+(s==='pendiente'?' · votación prevista el '+v4F2(V5_RDL_VOTO):((D.cfg||{}).rdl29Fecha?' · anotado el '+v4F2(D.cfg.rdl29Fecha):''))+'</span>'
+   +'<select onchange="v5SetRdl(this.value)" style="padding:4px 8px;font-size:12px;">'+Object.entries(V5_RDL_TXT).map(([k,t])=>'<option value="'+k+'"'+(k===s?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'
+   +(s==='derogado'?'<div class="alert alert-r" style="font-size:11.5px;margin-top:8px;">No se pueden guardar contratos temporales nuevos con este modelo: hay que revisarlo antes de firmar más. Las reservas en curso pueden anularse con devolución íntegra de la señal.</div>':'')
+   +'<div style="margin-top:12px;font-size:12px;"><strong>IRAV</strong> (límite de subida de la renta entre contratos de una habitación, art. 17.8 LAU) · vigente hoy: '+(vig?'<strong>'+v5PctIrav(vig.valor)+' %</strong>'+(vig.fecha?' (publicado el '+v4F2(vig.fecha)+(vig.ref?', '+v4Esc(vig.ref):'')+')':' (criterio fiscal antiguo)'):'<span style="color:var(--ye);">sin anotar</span>')+'</div>'
+   +(l.length?'<div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.6;">'+l.slice(-6).reverse().map(x=>v4F2(x.fecha)+': '+v5PctIrav(parseFloat(x.valor))+' %'+(x.ref?' ('+v4Esc(x.ref)+')':'')+' <a href="#" onclick="event.preventDefault();v5DelIrav(\''+x.fecha+'\')" style="color:var(--ink3);">✕</a>').join(' · ')+'</div>':'')
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px;"><label style="font-size:10.5px;">Publicado el<br><input type="date" id="irv-f" value="'+v4Hoy()+'" style="padding:4px;"></label><label style="font-size:10.5px;">Valor (%)<br><input type="number" step="0.001" id="irv-v" style="width:80px;padding:4px;"></label><label style="font-size:10.5px;">Mes de referencia<br><input id="irv-r" placeholder="septiembre 2026" style="width:130px;padding:4px;"></label><button class="btn btn-secondary btn-sm" onclick="v5AddIrav()">+ Anotar IRAV</button></div></div>';
+}
+
+// ── Pago mensual: vence el día 1 de cada mes por la renta de ese mes (la del mes de F se paga al firmar) ──
+// Modelo firmado: los contratos con el modelo v20261025-2 o anterior conservan su vencimiento (último día del mes anterior)
+const V5_MODELO_NUEVO='v20261102', V5_FECHA_MODELO='2026-11-02';
+const V5_MODELOS={v20261102:'v20261102 · pago el día 1 de cada mes', 'v20261025-2':'v20261025-2 o anterior · pago el último día del mes anterior'};
+function v5Modelo(co){ if(co&&V5_MODELOS[co.modelo]) return co.modelo; if(!co||v4EsLegado(co)) return 'antiguo'; const F=v4F(co); return F&&F>=V5_FECHA_MODELO?V5_MODELO_NUEVO:'v20261025-2'; }
+function v5Nuevo(co){ return v5Modelo(co)===V5_MODELO_NUEVO; }
+function v5OfertaNueva(r){ if(r&&r.oferta) return r.oferta===V5_MODELO_NUEVO; return !!(r&&r.O&&r.O>=V5_FECHA_MODELO); }
+function v4Venc(co,mes){ const F=v4F(co); if(!F) return null; const mF=F.slice(0,7); if(mes<mF) return null; if(mes===mF) return F;
+  if(v5Nuevo(co)) return mes+'-01';
+  const prev=v4FinMes(v4MesSig(mes,-1)); if(prev===F) return mes+'-05'; return prev; }
+function v4VencInq(inqId,mes){ const co=v4CoDeInq(inqId,mes); if(co&&v4EsTemporal(co)&&v4F(co)){ const v=v4Venc(co,mes); if(v) return v; } return mes+'-01'; }
+// Si F cae en los 3 últimos días del mes, el email del primer pago se envía en F o al día siguiente
+function v5FirmaFinMes(F){ return !!F&&fxAdd(v4FinMes(F),-2)<=F; }
+function v5TxtVenc(co,mes){ const V=v4Venc(co,mes); if(!V) return ''; return v5Nuevo(co)?'día 1':v4FL(V); }
+
+// ── Último día que se cobra: E, salida (cortada por un contrato nuevo), extinción por la causa, resolución o fallecimiento ──
+function v5SiguienteContrato(co,desde){ const hab=String(v4Hab(co)); const fs=(D.conts||[]).filter(x=>x.id!==co.id&&x.propId==co.propId&&String(v4Hab(x))===hab&&v4F(x)&&v4F(x)>desde).map(v4F).sort(); return fs[0]||''; }
+function v4FinCobro(co){
+  let f=v4E(co); if(!f) return '';
+  const sv=v4SalidaValida(co);
+  if(sv){ let v=sv.valida; if(!sv.ok){ const nx=v5SiguienteContrato(co,sv.S); if(nx){ const c=fxAdd(nx,-1); if(c<v) v=c<sv.S?sv.S:c; } } if(v<f) f=v; }
+  const x=v5ExtCausa(co); if(x&&x.activa&&x.fecha<f) f=x.fecha;
+  if(co.resolucion&&co.resolucion.R){ const r=fxAdd(co.resolucion.R,7); if(r<f) f=r; }
+  const fa=v5FinFallec(co); if(fa&&fa<f) f=fa;
+  return f;
+}
+// Fin anticipado de la causa: K = aviso del inquilino o, si comunica Fran, recepción R de su comunicación.
+// Extinción en max(K + 30, F + 1 mes); si comunica Fran, hasta R + 10 para acreditar que sigue; en doble, solo si acabaron las dos.
+function v5ExtCausa(co){
+  const e=co&&co.causaExt; if(!e) return null; const K=e.K||e.R; if(!K) return null;
+  const nuevo=v5Nuevo(co), quien=e.quien||(e.K?'inquilino':'fran'), F=v4F(co), E=v4E(co), k30=fxAdd(K,30), m1=F&&nuevo?v4AddM(F,1):k30;
+  // Contratos v20261025-2 o anteriores: extinción en R + 30 (sin el mínimo de F + 1 mes ni el plazo de R + 10)
+  let fecha=k30>m1?k30:m1; if(E&&fecha>E) fecha=E;
+  if(!nuevo) return {K, quien, fecha, R10:'', acredita:!!e.acredita, acreditaFecha:e.acreditaFecha||'', doble:false, ambas:true, activa:!e.acredita, antiguo:true};
+  const doble=!!co.inqId2&&!(co.hasta2&&co.hasta2<=K)&&!(co.hasta1&&co.hasta1<=K);
+  return {K, quien, fecha, R10:quien==='fran'?fxAdd(K,10):'', acredita:!!e.acredita, acreditaFecha:e.acreditaFecha||'', doble, ambas:!!e.ambas, activa:!e.acredita&&(!doble||!!e.ambas)};
+}
+// Fallecimiento: la renta corre hasta que los herederos retiran sus cosas, como máximo 30 días desde la comunicación
+function v5FinFallec(co){ const x=co&&co.fallec; if(!x||!x.D) return ''; if(x.retirada) return x.retirada; return x.com?fxAdd(x.com,30):''; }
+
+// ── Causa: fin previsto (C) y fin anticipado (K) ──
+function v4Causa(coId){ const co=v4Co(coId), e=co.causaExt||{};
+  v4Modal('🎓 Causa de la temporalidad','<div class="fg"><div class="fgrp"><label>Fin previsto de la causa (C) del arrendatario 1</label><input type="date" id="v4k-1" value="'+(co.cFin1||'')+'"></div>'+(co.inqId2?'<div class="fgrp"><label>Fin previsto de la causa (C) del arrendatario 2</label><input type="date" id="v4k-2" value="'+(co.cFin2||'')+'"></div>':'')
+   +'<div class="fgrp fgf"><div class="form-section" style="margin-top:4px;">Fin anticipado de la causa (cláusula «Extinción anticipada por finalización de la causa»)</div></div>'
+   +'<div class="fgrp"><label>Quién lo comunica</label><select id="v4k-q" onchange="v5PrevCausa(\''+coId+'\')"><option value="inquilino"'+((e.quien||(e.K?'inquilino':''))==='inquilino'?' selected':'')+'>El inquilino avisa por escrito</option><option value="fran"'+((e.quien==='fran'||(!e.K&&e.R))?' selected':'')+'>Fran le comunica los hechos (burofax o email certificado)</option></select></div>'
+   +'<div class="fgrp"><label>K · fecha del aviso o, si comunica Fran, de su recepción (R)</label><input type="date" id="v4k-k" value="'+(e.K||e.R||'')+'" oninput="v5PrevCausa(\''+coId+'\')"></div>'
+   +(co.inqId2?'<div class="fgrp fgf">'+v4Chk('v4k-a','Han terminado las causas de los dos arrendatarios (en una doble, si no, el contrato sigue)',e.ambas,'v5PrevCausa(\''+coId+'\')')+'</div>':'')
+   +'<div class="fgrp fgf">'+v4Chk('v4k-ac','El inquilino ha acreditado por escrito que la causa sigue (se anula la extinción)',e.acredita,'v5PrevCausa(\''+coId+'\')')+'</div>'
+   +'<div class="fgrp"><label>Fecha de la acreditación</label><input type="date" id="v4k-acf" value="'+(e.acreditaFecha||'')+'" oninput="v5PrevCausa(\''+coId+'\')"></div></div><div id="v4k-msg"></div>'
+   +'<div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-top:6px;">El inquilino debe avisar por escrito en 7 días de cualquier cambio en su causa o su domicilio habitual. Las partes pueden acordar por escrito otra fecha de salida, nunca posterior a E, y el inquilino siempre puede irse antes con el aviso de 10 días.</div>',
+   (e.K||e.R?'<button class="btn btn-danger" onclick="(function(){const co=v4Co(\''+coId+'\');co.causaExt=null;v4ActualizarRentasPendientes(co);v4Guardar(co,\'Fin anticipado de la causa quitado\');closeM(\'m-v4\');})()">Quitar el fin anticipado</button>':'')+'<button class="btn btn-primary" onclick="v5GuardarCausa(\''+coId+'\')">Guardar</button>');
+  v5PrevCausa(coId);
+}
+function v5LeerCausa(){ const K=gi('v4k-k'); if(!K) return null; return {K, quien:gi('v4k-q')||'inquilino', ambas:!!($i('v4k-a')&&$i('v4k-a').checked), acredita:!!($i('v4k-ac')&&$i('v4k-ac').checked), acreditaFecha:gi('v4k-acf')}; }
+function v5PrevCausa(coId){ const co=v4Co(coId), e=v5LeerCausa(); if(!e){ v4Msg('v4k-msg','Sin fin anticipado: el contrato termina en E ('+v4F2(v4E(co))+').','g'); return; }
+  const x=v5ExtCausa(Object.assign({},co,{causaExt:e})), E=v4E(co), av=[];
+  if(e.quien==='fran'&&e.acredita&&e.acreditaFecha&&e.acreditaFecha>x.R10) av.push('La acreditación ('+v4F2(e.acreditaFecha)+') es posterior a R + 10 ('+v4F2(x.R10)+'): fuera de plazo.');
+  if(v4F(co)&&e.K<v4F(co)) av.push('K es anterior a la firma.');
+  if(x.antiguo){ v4Msg('v4k-msg','<span>Contrato '+v5Modelo(co)+': el contrato se extingue en R + 30 días = <strong>'+v4F2(x.fecha)+'</strong> desde que recibe tu comunicación del fin de la causa (sin el mínimo de F + 1 mes ni el plazo de R + 10 del modelo v20261102).'+(av.length?'<br>⚠️ '+av.join('<br>⚠️ '):'')+'</span>','g'); return; }
+  const t=x.acredita?'El inquilino acreditó que la causa sigue: el contrato continúa hasta E ('+v4F2(E)+').':!x.activa?'Es una habitación doble: hasta que no terminen las causas de los dos, el contrato sigue.':x.fecha>=E?'max(K + 30, F + 1 mes) cae en E o después: el contrato termina en E ('+v4F2(E)+').':'El contrato se extingue el <strong>'+v4F2(x.fecha)+'</strong> = max(K + 30 = '+v4F2(fxAdd(e.K,30))+', F + 1 mes = '+v4F2(v4AddM(v4F(co),1))+'). Desde K se puede enseñar la habitación (aviso de 24 h).'+(x.quien==='fran'?' Tiene hasta el '+v4F2(x.R10)+' (R + 10) para acreditar por escrito que la causa sigue.':'');
+  v4Msg('v4k-msg','<span>'+t+(av.length?'<br>⚠️ '+av.join('<br>⚠️ '):'')+'</span>',av.length?'y':'g'); }
+function v5GuardarCausa(coId){ const co=v4Co(coId); co.cFin1=gi('v4k-1'); if($i('v4k-2')) co.cFin2=gi('v4k-2'); const e=v5LeerCausa();
+  if(e&&v4F(co)&&e.K<v4F(co)){ toast('K no puede ser anterior a la firma',false); return; }
+  co.causaExt=e; v4ActualizarRentasPendientes(co); v4Guardar(co,'Causa actualizada'); closeM('m-v4'); }
+
+// ── Contratos seguidos (art. 9 bis.2 LAU y cláusula 3) ──
+// Seguido: temporal con esa persona en ese piso, en cualquier habitación y con cualquier titular, vigente o terminado
+// en los 3 meses anteriores a F, más los encadenados a él del mismo modo. Cuenta: contratos + sus prórrogas o anexos.
+function v5FinOcupacion(x){ const a=v4FinCobro(x)||v4E(x)||'', L=x.llaves&&x.llaves.L; return (L&&L>a)?L:a; }
+function v5EsTemporalNuevo(x){ return v4EsTemporal(x)&&!v4EsLegado(x); }
+function v4Anteriores(co){
+  const F=v4F(co); if(!F) return [];
+  const ids=[co.inqId,co.inqId2].filter(Boolean);
+  const cands=(D.conts||[]).filter(x=>x.id!==co.id&&v5EsTemporalNuevo(x)&&x.propId==co.propId&&[x.inqId,x.inqId2].some(i=>i&&ids.includes(i))&&v4F(x)&&v4F(x)<F);
+  const cadena=[], usados=new Set(), refs=[F]; let cambio=true, g=0;
+  while(cambio&&g<50){ cambio=false; g++;
+    cands.forEach(x=>{ if(usados.has(x.id)) return; const fx=v5FinOcupacion(x);
+      if(refs.some(r=>v4F(x)<r&&(!fx||fx>=v4AddM(r,-3)))){ usados.add(x.id); cadena.push(x); refs.push(v4F(x)); cambio=true; } }); }
+  return cadena.sort((a,b)=>v4F(b).localeCompare(v4F(a)));
+}
+function v4NovacionesPrevias(co){
+  const cad=v4Anteriores(co); let n=cad.length; cad.forEach(c=>{ n+=(c.cambios||[]).length; });
+  const manual=parseInt(co.prevSeguidos)||0, F=v4F(co);
+  // Declarados en el contrato (anteriores con el titular anterior o no registrados): temporal terminado en los 3 meses anteriores a F
+  let decl=0; [1,2].forEach(k=>{ if(k===2&&!co.inqId2) return; if(co['fueInq'+k]&&co['fueTipo'+k]==='temporal'&&F&&(!co['fueSal'+k]||co['fueSal'+k]>=v4AddM(F,-3))) decl=Math.max(decl,1); });
+  return {n:Math.max(n,manual,decl), auto:n, manual, decl, cadena:cad};
+}
+// Ocupación de una habitación del piso por otro título (vivienda habitual, Código Civil u otro) en los 3 meses anteriores a F
+const V5_FUE_TIPO={temporal:'temporal (vivienda temporal)', habitual:'vivienda habitual', cc:'Código Civil (habitación antes del 08/10/2026)', otro:'otro título'};
+function v5OtrosTitulos(co){
+  const F=v4F(co); if(!F) return []; const ids=[co.inqId,co.inqId2].filter(Boolean), lim=v4AddM(F,-3);
+  return (D.conts||[]).filter(x=>x.id!==co.id&&x.propId==co.propId&&[x.inqId,x.inqId2].some(i=>i&&ids.includes(i))&&!v5EsTemporalNuevo(x)&&(x.ini||x.firma||v4F(x))&&(x.ini||x.firma||v4F(x))<F&&(()=>{ const f=v5FinOcupacion(x)||x.fin||''; return !f||f>=lim; })());
+}
+// ¿Fue antes inquilino del piso? (contratos registrados o declaración)
+function v5FueInquilino(co,k){ const iid=k===2?co.inqId2:co.inqId; if(!iid) return false; if(co['fueInq'+k]) return true;
+  return (D.conts||[]).some(x=>x.id!==co.id&&x.propId==co.propId&&(x.inqId==iid||x.inqId2==iid)&&(v4F(x)||x.ini)&&(v4F(x)||x.ini)<(v4F(co)||'9999')); }
+// Capacidad máxima de la habitación (nº de personas)
+function v5CapHab(propId,hab){ const c=v4CfgHab(propId,hab), cap=parseInt(c.cap); return cap>0?{cap, explicita:true}:{cap:c.tipo==='doble'?2:1, explicita:false, tipo:c.tipo||'individual'}; }
+// Contrato temporal anterior de la habitación (base del art. 17.8 LAU)
+function v5AnteriorHab(co){ const F=v4F(co); if(!F) return null; return (D.conts||[]).filter(x=>x.id!==co.id&&v5EsTemporalNuevo(x)&&x.propId==co.propId&&String(x.hab||'')===String(co.hab||'')&&v4F(x)&&v4F(x)<F&&parseFloat(x.r)>0).sort((a,b)=>v4F(b).localeCompare(v4F(a)))[0]||null; }
+function v5ContratoExistente(co){ return !!(co&&co.id&&(D.conts||[]).some(x=>x.id===co.id)); }
+function v5PrimerContratoPiso(co){ return !(D.conts||[]).some(x=>x.id!==co.id&&x.propId==co.propId&&v5EsTemporalNuevo(x)); }
+// Reglas del contrato v20261102 (se añaden a v4ValidarContrato)
+function v5ValidarV1102(co){
+  const err=[], av=[]; const F=v4F(co), p=(D.props||[]).find(x=>x.id==co.propId), r=parseFloat(co.r)||0;
+  // Modelo firmado
+  if(!v5Nuevo(co)&&F&&F>=V5_FECHA_MODELO&&!v5ContratoExistente(co)){ const rs=co.resId?v4Res(co.resId):null; if(!(rs&&!v5OfertaNueva(rs))) av.push('Desde el '+v4F2(V5_FECHA_MODELO)+' el modelo vigente es el v20261102 (pago el día 1). Marca el modelo que se firma de verdad.'); }
+  // Estado del RDL 29/2026
+  if(v5Rdl()==='derogado'&&!v5ContratoExistente(co)) err.push('El RDL 29/2026 consta como derogado: no se pueden firmar contratos nuevos con este modelo hasta revisarlo.');
+  // Tipo de causa de cada arrendatario
+  if(!co.causaTipo1) err.push('Marca el tipo de causa del arrendatario 1 (trabajo, estudios, tratamiento médico u obras o inhabitabilidad de su vivienda; cláusula 3 y Anexo I).');
+  if(co.inqId2&&!co.causaTipo2) err.push('Marca el tipo de causa del arrendatario 2 (cláusula 3 y Anexo I).');
+  // Otro título en los 3 meses anteriores a F
+  const ot=v5OtrosTitulos(co);
+  ot.forEach(x=>err.push('Con '+v4Nombres(x)+' hubo un contrato de otro tipo en este piso ('+(v4EsLegado(x)?'anterior al modelo temporal, Código Civil':(x.tipoContrato||'otro'))+', '+v4F2(x.ini||v4F(x))+' → '+v4F2(v5FinOcupacion(x)||x.fin)+'), terminado hace menos de 3 meses: no se puede firmar un temporal (cláusula 3).'));
+  [1,2].forEach(k=>{ if(k===2&&!co.inqId2) return; const q='el arrendatario '+k;
+    if(co['otroTit'+k]) err.push('Has marcado que '+q+' ocupó una habitación del piso con otro título en los 3 meses anteriores a F: no se puede firmar un temporal (cláusula 3).');
+    if(co['fueInq'+k]&&co['fueTipo'+k]&&co['fueTipo'+k]!=='temporal'&&F&&co['fueSal'+k]&&co['fueSal'+k]>=v4AddM(F,-3)) err.push(q.charAt(0).toUpperCase()+q.slice(1)+' salió el '+v4F2(co['fueSal'+k])+' de un contrato de '+V5_FUE_TIPO[co['fueTipo'+k]]+', hace menos de 3 meses: no se puede firmar un temporal (cláusula 3).');
+    if(co['fueInq'+k]&&!co['fueTipo'+k]) err.push('Indica el tipo de contrato que tuvo antes '+q+' en el piso.');
+    if(co['fueInq'+k]&&!co['fueSal'+k]) err.push('Indica la fecha de salida del contrato anterior de '+q+'.');
+    if(v5FueInquilino(co,k)&&!co['vol'+k]) err.push(q.charAt(0).toUpperCase()+q.slice(1)+' ya fue inquilino del piso: el Anexo I tiene que incluir su volante o certificado individual de empadronamiento (cláusula 3). Marca la casilla cuando lo tengas.'); });
+  // Capacidad de la habitación (cláusula 1)
+  if(co.propId&&co.hab){ const n=1+(co.inqId2?1:0), c=v5CapHab(co.propId,co.hab);
+    if(n>c.cap) err.push('La habitación '+co.hab+' admite como máximo '+c.cap+' persona'+(c.cap>1?'s':'')+(c.explicita?' (capacidad en Habitaciones)':' (es individual y no tiene capacidad anotada)')+': no puede tener '+n+' arrendatarios (cláusula 1). '+(c.explicita?'':'Si caben dos, pon capacidad 2 en Habitaciones.'));
+    else if(!c.explicita) av.push('Anota en Habitaciones la capacidad máxima de la habitación '+co.hab+' (se ha supuesto '+c.cap+').'); }
+  // Un contrato por habitación: nunca el piso entero (art. 17.9 LAU)
+  if(p&&!v5ContratoExistente(co)&&(parseInt(p.habs)||0)===1) err.push('El piso solo tiene una habitación: este contrato incluiría todas las habitaciones y crearía la referencia del tope de la suma de rentas (art. 17.9 LAU).');
+  // Fianza = 1 mensualidad; garantía adicional ≤ 1 mensualidad (arts. 36.1 y 36.5 LAU)
+  if(r>0){ const f=parseFloat(co.f)||0, g=parseFloat(co.g)||0;
+    if(Math.abs(f-r)>0.004) err.push('La fianza tiene que ser de 1 mensualidad: '+v4E2(r)+' € (ahora '+v4E2(f)+' €; art. 36.1 LAU).');
+    if(g>r+0.004) err.push('La garantía adicional no puede pasar de 1 mensualidad: máximo '+v4E2(r)+' € (ahora '+v4E2(g)+' €; art. 36.5 LAU).'); }
+  // Renta por habitación: nueva ≤ anterior × (1 + IRAV vigente en F) (art. 17.8 LAU)
+  const ant=v5AnteriorHab(co);
+  if(ant&&r>0&&F){ const ra=parseFloat(ant.r), iv=v5IravVigente(F);
+    if(r>ra+0.004){
+      if(!iv) err.push('La renta ('+v4E2(r)+' €) es mayor que la del contrato temporal anterior de esta habitación ('+v4E2(ra)+' €, firmado el '+v4F2(v4F(ant))+'). Solo puede subir el IRAV vigente en la firma (art. 17.8 LAU): anótalo en Contratos → Normativa.');
+      else { const max=Math.round(ra*(1+iv.valor/100)*100)/100; if(r>max+0.004) err.push('La renta ('+v4E2(r)+' €) supera la del contrato temporal anterior de esta habitación ('+v4E2(ra)+' €) más el IRAV vigente en la firma ('+v5PctIrav(iv.valor)+' %'+(iv.fecha?', publicado el '+v4F2(iv.fecha):'')+'): máximo '+v4E2(max)+' € (art. 17.8 LAU).'); }
+      if(v4AddM(v4F(ant),12)>F) av.push('El contrato anterior de esta habitación empezó hace menos de 12 meses ('+v4F2(v4F(ant))+'): lo prudente es no subir la renta.');
+    } else if(r<ra-0.004) av.push('Bajas la renta de esta habitación ('+v4E2(ra)+' € → '+v4E2(r)+' €): la nueva renta será la base del art. 17.8 LAU y después solo podrá subir el IRAV.');
+  }
+  // Piso: ¿se alquiló entero alguna vez? (art. 17.9 LAU) y datos registrales
+  if(p){
+    if(!p.enteroAlq){ if(v5PrimerContratoPiso(co)&&!v5ContratoExistente(co)) err.push('Antes del primer contrato de '+p.nom+', comprueba con la escritura de compra si el piso se alquiló entero alguna vez y anótalo en su ficha (art. 17.9 LAU).'); else av.push('Falta anotar en la ficha de '+p.nom+' si el piso se alquiló entero alguna vez (art. 17.9 LAU).'); }
+    else if(p.enteroAlq==='si'&&F){ const ref=parseFloat(p.rentaUnit)||0;
+      const sim=(D.conts||[]).filter(x=>x.id!==co.id&&x.propId==co.propId&&v5EsTemporalNuevo(x)&&v4F(x)&&v4F(x)<=F&&(v4FinCobro(x)||v4E(x))>=F).reduce((s,x)=>s+(v4RentaDia(x,F)||parseFloat(x.r)||0),0)+r;
+      if(!(ref>0)) av.push('El piso se alquiló entero: anota en su ficha la renta de ese contrato para controlar el tope de la suma de rentas (art. 17.9 LAU).');
+      else if(sim>ref+0.004) av.push('La suma de las rentas de las habitaciones alquiladas a la vez ('+v4E2(sim)+' €) supera la renta del contrato del piso entero ('+v4E2(ref)+' €'+(p.enteroFin?', terminado el '+v4F2(p.enteroFin):'')+'): con la lectura más probable del art. 17.9 LAU sería el tope. Consúltalo antes de fijar precios.'); }
+    if(!(p.regRegistro&&p.regFinca)) av.push('Faltan los datos registrales de '+p.nom+' (Registro, finca, tomo, libro y folio) para la cabecera del contrato.');
+  }
+  return {err,av};
+}
+
+// ── Avisos nuevos del contrato: inhabitabilidad, abandono, objetos, fallecimiento e inclusión en ASNEF ──
+function v5DiasCompletos(I,fin){ if(!I||!fin) return []; const a=new Date(I), b=new Date(fin); if(!(b>a)) return []; const out=[]; let d=fxIso(a); if(new Date(d+'T00:00:00')<a) d=fxAdd(d,1);
+  for(let g=0; g<400; g++){ const s=new Date(d+'T00:00:00'), e=new Date(fxAdd(d,1)+'T00:00:00'); if(e>b) break; if(s>=a) out.push(d); d=fxAdd(d,1); } return out; }
+function v5DescuentoInhab(co,x){ const F=v4F(co), fc=v4FinCobro(co)||'9999-12-31', ds=v5DiasCompletos(x.I,x.fin||v4LocalDT(new Date())).filter(d=>(!F||d>=F)&&d<=fc); return {dias:ds.length, imp:Math.round(ds.reduce((s,d)=>s+v4RentaDia(co,d)/v4DiasMes(d.slice(0,7)),0)*100)/100}; }
+function v5AlertasSituaciones(co,hoy){
+  const out=[]; if(!co||!v4EsTemporal(co)) return out; hoy=hoy||v4Hoy();
+  const H=co.hechos||{}, lugar=v4Lugar(co), nom=v4Nombres(co);
+  const A=(k,fecha,titulo,det,o)=>{ o=o||{}; if(!fecha) return; out.push(Object.assign({k, coId:co.id, fecha, desde:o.desde||fecha, titulo:titulo+' · '+lugar, det, tpl:o.tpl||[], tipo:o.tipo||'Según contrato', nivel:o.nivel||'normal', caduca:o.caduca||'', auto:!!o.auto, hecho:!!(o.auto||H[k]), hechoEl:H[k]||'', lugar, nom, propId:co.propId, hab:String(v4Hab(co))}, o.extra||{})); };
+  (co.inhab||[]).forEach((x,i)=>{ if(!x.I) return; const I=new Date(x.I), i72=new Date(I.getTime()+72*36e5), i30=fxAdd(fxIso(I),30), d=v5DescuentoInhab(co,x);
+    const durH=((x.fin?new Date(x.fin):new Date())-I)/36e5;
+    if(!x.acepta&&(!x.fin||durH>=72)) A('inh'+i+':72',fxIso(i72),'Inhabitabilidad de más de 72 h: descontar la renta de los días completos','Desde el '+v4FmtDT(I)+(x.fin?' hasta el '+v4FmtDT(new Date(x.fin)):' (sigue)')+': '+d.dias+' día'+(d.dias===1?'':'s')+' completo'+(d.dias===1?'':'s')+' sin poder usar la habitación = '+v4E2(d.imp)+' € (renta ÷ días del mes × días). Se descuenta salvo que acepte otra habitación parecida del piso (cláusula «Inhabitabilidad temporal»).'+(x.fin?'':' Cuando termine, anota la fecha de fin.'),{tipo:'Obligatorio',nivel:'alto',auto:!!x.descontado,extra:{inhab:i}});
+    if(!x.fin||x.fin.slice(0,10)>i30) A('inh'+i+':30',i30,'30 días de inhabitabilidad: '+nom+' puede irse sin preaviso','Si se va, devuélvele la renta pagada y no disfrutada (cláusula «Inhabitabilidad temporal»).',{nivel:'alto'}); });
+  const ab=co.abandono; if(ab&&ab.inicio){ const d15=fxAdd(ab.inicio,15);
+    A('ab:15',d15,'15 días sin pagar ni constar que viva en la habitación: requerimiento por abandono','Envíale un requerimiento escrito por los medios del contrato y, además, por un medio fehaciente a su domicilio habitual (burofax). Desde que lo reciba (R) tiene 10 días para responder (cláusula «Abandono de la vivienda»). Nunca recuperes la habitación por tu cuenta.',{tipo:'Según contrato',nivel:'alto',auto:!!ab.R});
+    if(ab.R) A('ab:R10',fxAdd(ab.R,10),'Abandono: '+(ab.respuesta?'respondió al requerimiento':'sin respuesta al requerimiento')+'','Recibió el requerimiento el '+v4F2(ab.R)+'. '+(ab.respuesta?'Como ha respondido, no cabe resolver por abandono.':'Sin respuesta en 10 días se puede resolver el contrato y demandar. Nunca recuperes la habitación por tu cuenta: solo con las llaves, el abandono por escrito o una sentencia.'),{tipo:'Obligatorio',nivel:'urgente',auto:!!ab.respuesta}); }
+  const ob=co.objetos; if(ob&&ob.com) A('obj',fxAdd(ob.com,15),'Objetos: a partir de hoy se consideran abandonados','Le comunicaste el '+v4F2(ob.com)+' que podía retirarlos y han pasado 15 días (cláusula «Objetos abandonados»).',{tipo:'Según contrato',nivel:'info',caduca:fxAdd(ob.com,45)});
+  const fa=co.fallec; if(fa&&fa.D){ const tope=v4AddM(fa.D,3), fc=(fa.llaves&&fa.llaves<tope)?fa.llaves:tope;
+    A('fal:com',fc,'Fallecimiento: comunicar a los herederos que retiren sus cosas en 30 días','Desde el fallecimiento ('+v4F2(fa.D)+')'+(fa.llaves?' y la entrega de llaves de los herederos ('+v4F2(fa.llaves)+')':'')+'. Tienen 30 días para retirarlas; la renta corre hasta la retirada, con ese límite (cláusula «Fallecimiento de la parte arrendataria» y art. 16 LAU).',{tipo:'Según contrato',nivel:'alto',auto:!!fa.com,desde:fa.D});
+    if(fa.com) A('fal:30',fxAdd(fa.com,30),'Fin del plazo de los herederos para retirar las cosas','Se les comunicó el '+v4F2(fa.com)+'. Anota la fecha en que las retiren: la renta se cobra hasta ese día.',{tipo:'Según contrato',auto:!!fa.retirada}); }
+  (co.asnefInc||[]).forEach((x,i)=>{ if(!x.R) return; const ok=(parseFloat(x.deuda)||0)>=50, lim=x.venc?v4AddM(x.venc,60):'';
+    if(!x.pagado) A('asn'+i+':10',fxAdd(x.R,10),ok?'Ya se puede incluir la deuda en ASNEF o BADEXCUG si sigue sin pagar':'La deuda es menor de 50 €: no se puede incluir en ASNEF','Requerimiento recibido el '+v4F2(x.R)+' (10 días para ponerse al corriente). Deuda: '+v4E2(x.deuda)+' €. Solo deudas de 50 € o más, ciertas, vencidas y no reclamadas por el inquilino, y como máximo 5 años desde el vencimiento'+(lim?' (hasta el '+v4F2(lim)+')':'')+' (art. 20 LOPDGDD y cláusula «Protección de datos personales»).',{tipo:'Obligatorio',nivel:ok?'alto':'info',auto:!!x.incluida});
+    if(x.incluida&&lim&&!x.baja) A('asn'+i+':5a',lim,'Dar de baja la deuda en ASNEF o BADEXCUG (5 años desde el vencimiento)','Vencimiento de la deuda: '+v4F2(x.venc)+'. Si se paga antes, hay que darla de baja en cuanto se pague.',{tipo:'Obligatorio',nivel:'alto',desde:fxAdd(lim,-30)}); });
+  return out;
+}
+
+// ── Registro de situaciones del contrato ──
+function v5Situaciones(coId){ const co=v4Co(coId); if(!co) return; const inh=co.inhab||[], ab=co.abandono||{}, ob=co.objetos||{}, fa=co.fallec||{}, as=co.asnefInc||[];
+  const sec=t=>'<div class="form-section" style="margin-top:12px;">'+t+'</div>';
+  v4Modal('🏚 Inhabitabilidad, abandono, objetos, fallecimiento y ASNEF',
+   sec('Inhabitabilidad temporal (no poder dormir en la habitación ni usar el baño o la cocina)')
+   +(inh.length?inh.map((x,i)=>{ const d=v5DescuentoInhab(co,x); return '<div style="font-size:12px;">'+(i+1)+'. Desde el '+v4FmtDT(new Date(x.I))+(x.fin?' hasta el '+v4FmtDT(new Date(x.fin)):' (sigue)')+' · '+d.dias+' días completos = '+v4E2(d.imp)+' €'+(x.acepta?' · aceptó otra habitación':'')+(x.descontado?' · ✓ descontado':'')+' '+(!x.descontado&&!x.acepta&&d.imp>0&&x.fin?'<button class="btn btn-ghost btn-xs" onclick="v5AnotarDescInhab(\''+coId+'\','+i+')">Anotar el descuento</button>':'')+' <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.inhab.splice('+i+',1);v4Guardar(co);v5Situaciones(\''+coId+'\');})()">✕</button></div>'; }).join(''):'')
+   +'<div class="fg"><div class="fgrp"><label>I · inicio</label><input type="datetime-local" id="v5i-i"></div><div class="fgrp"><label>Fin (si ya terminó)</label><input type="datetime-local" id="v5i-f"></div><div class="fgrp fgf">'+v4Chk('v5i-a','Acepta otra habitación parecida del piso (no hay descuento)',false)+'</div></div><button class="btn btn-secondary btn-sm" onclick="v5AddInhab(\''+coId+'\')">+ Inhabitabilidad</button>'
+   +sec('Abandono de la vivienda (15 días seguidos sin pagar y sin constar que viva en la habitación)')
+   +'<div class="fg"><div class="fgrp"><label>Desde cuándo no paga ni consta que viva</label><input type="date" id="v5a-i" value="'+(ab.inicio||'')+'"></div><div class="fgrp"><label>R · recepción del requerimiento</label><input type="date" id="v5a-r" value="'+(ab.R||'')+'"></div><div class="fgrp fgf">'+v4Chk('v5a-s','Ha respondido al requerimiento',ab.respuesta)+'</div></div>'
+   +sec('Objetos que deje en la habitación')
+   +'<div class="fg"><div class="fgrp"><label>Comunicación para que los retire</label><input type="date" id="v5o-c" value="'+(ob.com||'')+'"></div></div>'
+   +sec('Fallecimiento de la parte arrendataria')
+   +'<div class="fg"><div class="fgrp"><label>D · fecha del fallecimiento</label><input type="date" id="v5f-d" value="'+(fa.D||'')+'"></div><div class="fgrp"><label>Entrega de llaves por los herederos</label><input type="date" id="v5f-l" value="'+(fa.llaves||'')+'"></div><div class="fgrp"><label>Comunicación a los herederos</label><input type="date" id="v5f-c" value="'+(fa.com||'')+'"></div><div class="fgrp"><label>Retirada de sus cosas</label><input type="date" id="v5f-r" value="'+(fa.retirada||'')+'"></div></div>'
+   +sec('Inclusión en ASNEF o BADEXCUG (requerimiento previo con 10 días)')
+   +(as.length?as.map((x,i)=>'<div style="font-size:12px;">'+(i+1)+'. Deuda '+v4E2(x.deuda)+' € · vence '+v4F2(x.venc)+' · requerimiento recibido '+v4F2(x.R)+(x.incluida?' · incluida el '+v4F2(x.incluida):'')+(x.pagado?' · pagada':'')+' <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');const z=co.asnefInc['+i+'];z.incluida=z.incluida?\'\':v4Hoy();v4Guardar(co);v5Situaciones(\''+coId+'\');})()">'+(x.incluida?'Quitar inclusión':'Incluida hoy')+'</button> <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');const z=co.asnefInc['+i+'];z.pagado=!z.pagado;v4Guardar(co);v5Situaciones(\''+coId+'\');})()">'+(x.pagado?'Desmarcar pagada':'Pagada')+'</button> <button class="btn btn-ghost btn-xs" onclick="(function(){const co=v4Co(\''+coId+'\');co.asnefInc.splice('+i+',1);v4Guardar(co);v5Situaciones(\''+coId+'\');})()">✕</button></div>').join(''):'')
+   +'<div class="fg"><div class="fgrp"><label>Deuda (€)</label><input type="number" step="0.01" id="v5s-d"></div><div class="fgrp"><label>Vencimiento de la deuda</label><input type="date" id="v5s-v"></div><div class="fgrp"><label>R · recepción del requerimiento</label><input type="date" id="v5s-r"></div></div><button class="btn btn-secondary btn-sm" onclick="v5AddAsnef(\''+coId+'\')">+ Requerimiento previo a ASNEF</button><div id="v5s-msg"></div>'
+   +'<div style="font-size:10.5px;color:var(--ink3);line-height:1.6;margin-top:10px;">Nunca recuperes la habitación por tu cuenta (cambiar la cerradura, sacar sus cosas o cortar suministros): solo con las llaves, el abandono por escrito o una sentencia.</div>',
+   '<button class="btn btn-primary" onclick="v5GuardarSituaciones(\''+coId+'\')">Guardar</button>'); }
+function v5AddInhab(coId){ const co=v4Co(coId), I=gi('v5i-i'), f=gi('v5i-f'); if(!I){ toast('Indica el inicio',false); return; } if(f&&f<=I){ toast('El fin tiene que ser posterior al inicio',false); return; }
+  co.inhab=(co.inhab||[]).concat([{I, fin:f, acepta:!!($i('v5i-a')&&$i('v5i-a').checked)}]); v4Guardar(co,'Inhabitabilidad registrada'); v5Situaciones(coId); }
+function v5AnotarDescInhab(coId,i){ const co=v4Co(coId), x=(co.inhab||[])[i]; if(!x) return; const d=v5DescuentoInhab(co,x); if(!(d.imp>0)) return;
+  D.pagos.push({id:uid(),inqId:v4PagadorInq(co),con:'Descuento por inhabitabilidad',mes:(x.fin||x.I).slice(0,7),imp:-d.imp,estado:'pendiente',fecha:'',notas:d.dias+' días completos sin poder usar la habitación ('+v4FmtDT(new Date(x.I))+' → '+v4FmtDT(new Date(x.fin))+'; cláusula «Inhabitabilidad temporal»)',pen:{coId,tipo:'inhab',i}});
+  x.descontado=v4Hoy(); v4Guardar(co,'Descuento de '+v4E2(d.imp)+' € anotado para el siguiente pago'); v5Situaciones(coId); }
+function v5AddAsnef(coId){ const co=v4Co(coId), d=gn('v5s-d'), v=gi('v5s-v'), R=gi('v5s-r');
+  if(!(d>0)||!v||!R){ v4Msg('v5s-msg','Indica la deuda, su vencimiento y la recepción del requerimiento.','r'); return; }
+  if(d<50){ v4Msg('v5s-msg','⛔ Solo se pueden incluir deudas de 50 € o más.','r'); return; }
+  if(v4AddM(v,60)<v4Hoy()){ v4Msg('v5s-msg','⛔ Han pasado más de 5 años desde el vencimiento: ya no se puede incluir (art. 20 LOPDGDD).','r'); return; }
+  if(R<v){ v4Msg('v5s-msg','⛔ El requerimiento tiene que ser posterior al vencimiento de la deuda.','r'); return; }
+  co.asnefInc=(co.asnefInc||[]).concat([{deuda:d, venc:v, R}]); v4Guardar(co,'Requerimiento previo a ASNEF registrado'); v5Situaciones(coId); }
+function v5GuardarSituaciones(coId){ const co=v4Co(coId);
+  const ai=gi('v5a-i'), ar=gi('v5a-r'); co.abandono=ai?{inicio:ai, R:ar, respuesta:!!($i('v5a-s')&&$i('v5a-s').checked)}:null;
+  const oc=gi('v5o-c'); co.objetos=oc?{com:oc}:null;
+  const fd=gi('v5f-d'); co.fallec=fd?{D:fd, llaves:gi('v5f-l'), com:gi('v5f-c'), retirada:gi('v5f-r')}:null;
+  if(co.fallec&&co.fallec.retirada&&co.fallec.com&&co.fallec.retirada>fxAdd(co.fallec.com,30)) toast('La retirada es posterior a los 30 días: la renta se cobra solo hasta el '+v4F2(fxAdd(co.fallec.com,30)),false);
+  v4ActualizarRentasPendientes(co); v4Guardar(co,'Guardado'); closeM('m-v4'); }
+
+// ── Reparaciones: requerimiento con presupuesto (art. 21.5 LAU) y reparaciones urgentes (art. 21.3 LAU) ──
+function v4AlertasIncidencias(){
+  const out=[];
+  (D.incs||[]).forEach(inc=>{ if(!inc.fecha||!inc.propId) return; if(inc.estado==='resuelta') return;
+    const lim=v4AddHabiles(inc.fecha,5,inc.propId), p=(D.props||[]).find(x=>x.id==inc.propId), lugar=(inc.hab?'Hab. '+inc.hab+' · ':'')+(p?p.nom:''), base={incId:inc.id, lugar, propId:inc.propId, hab:inc.hab||''};
+    out.push(Object.assign({k:'inc', fecha:lim, desde:inc.fecha, titulo:'Responder a la avería: '+(inc.desc||'')+' · '+lugar, det:'Aviso del inquilino el '+v4F2(inc.fecha)+'. Límite para responder: '+v4F2(lim)+' (5 días hábiles, sin sábados, domingos ni festivos). Si no, el inquilino puede repararla y descontártela de la renta siguiente (art. 21 bis LAU).', tpl:[], tipo:'Obligatorio', nivel:'alto', auto:!!(inc.respondida||inc.estado==='proceso'), hecho:!!(inc.respondida||inc.estado==='proceso'||inc.avisoHecho), hechoEl:inc.avisoHecho||inc.respondida||''},base));
+    if(inc.presu){ const l15=fxAdd(inc.presu,15); out.push(Object.assign({k:'inc-presu', fecha:l15, desde:inc.presu, titulo:'Requerimiento con presupuesto: aceptar, proponer otra reparación o repararla · '+lugar, det:'Lo recibiste el '+v4F2(inc.presu)+'. Tienes hasta el '+v4F2(l15)+' (15 días naturales) para aceptar el presupuesto, proponer otra reparación o hacerla; si no, puede repararla y descontarla de las rentas (art. 21.5 LAU).', tpl:[], tipo:'Obligatorio', nivel:'urgente', auto:false, hecho:!!inc.presuHecho, hechoEl:inc.presuHecho||''},base)); }
+    if(inc.urgente) out.push(Object.assign({k:'inc-urg', fecha:inc.fecha, desde:inc.fecha, titulo:'Reparación urgente: '+(inc.desc||'')+' · '+lugar, det:'En una reparación urgente no hay plazo: el inquilino puede hacerla avisándote antes y pedirte el importe contra factura (art. 21.3 LAU).', tpl:[], tipo:'Informativo', nivel:'info', auto:false, hecho:false, caduca:fxAdd(inc.fecha,7)},base));
+  });
+  return out;
+}
+function v5IncPresupuesto(id){ const inc=(D.incs||[]).find(i=>i.id==id); if(!inc) return;
+  v4Modal('🔧 Avería: presupuesto o urgencia','<div style="font-size:12px;margin-bottom:8px;">'+v4Esc(inc.desc||'')+' · aviso del '+v4F2(inc.fecha)+'</div><div class="fg"><div class="fgrp"><label>Recepción de un requerimiento con presupuesto</label><input type="date" id="v5p-f" value="'+(inc.presu||'')+'"></div><div class="fgrp fgf">'+v4Chk('v5p-u','Reparación urgente (el inquilino puede hacerla avisando antes, sin plazo; art. 21.3 LAU)',inc.urgente)+'</div></div><div style="font-size:11px;color:var(--ink3);line-height:1.6;">Con presupuesto: 15 días naturales para aceptarlo, proponer otra reparación o repararla; si no, puede repararla y descontarla de las rentas (art. 21.5 LAU).</div>',
+   '<button class="btn btn-primary" onclick="(function(){const inc=(D.incs||[]).find(i=>i.id==\''+id+'\');inc.presu=gi(\'v5p-f\');inc.urgente=$i(\'v5p-u\').checked;saveAndSync();v4RefrescarAvisos();closeM(\'m-v4\');try{rIncs();}catch(e){}toast(\'Guardado\');})()">Guardar</button>'); }
+
+// ── Limpieza: 30 € por semana y habitación (no por persona), solo si se detecta en la semana siguiente ──
+function v4Penalizacion(coId){
+  v4Modal('➕ Penalizaciones del contrato','<div class="fg"><div class="fgrp"><label>Concepto</label><select id="v4p-t" onchange="v5PenCampos()"><option value="limpieza">Semana de limpieza no hecha ('+V4_PENAL.limpieza+' € por habitación)</option><option value="llaves">Llaves no devueltas ('+V4_PENAL.llaves+' €)</option></select></div>'
+   +'<div class="fgrp" data-pen="limpieza"><label>Semana del turno (primer día)</label><input type="date" id="v4p-s"></div><div class="fgrp"><label id="v4p-fl">Detectada el</label><input type="date" id="v4p-f" value="'+v4Hoy()+'"></div><div class="fgrp fgf"><label>Hechos y pruebas</label><input id="v4p-n" placeholder="Turno, fotos…"></div></div><div id="v4p-msg"></div><div style="font-size:11px;color:var(--ink3);line-height:1.6;">Limpieza: una sola cantidad por habitación y semana (no por persona), y solo si se detecta en la semana siguiente. Se suma al siguiente pago mensual o, a la salida, a la liquidación de la fianza. Los 20 € por pago retrasado se anotan desde el pago mensual.</div>',
+   '<button class="btn btn-primary" onclick="v4GuardarPenalizacion(\''+coId+'\')">Anotar</button>'); v5PenCampos(); }
+function v5PenCampos(){ const t=gi('v4p-t'); document.querySelectorAll('#m-v4-c [data-pen]').forEach(e=>{ e.style.display=e.dataset.pen===t?'':'none'; }); const l=$i('v4p-fl'); if(l) l.textContent=t==='limpieza'?'Detectada el':'Fecha'; }
+function v4GuardarPenalizacion(coId){
+  const co=v4Co(coId); if(!co) return; const t=gi('v4p-t'), f=gi('v4p-f')||v4Hoy();
+  let notas=(gi('v4p-n')?gi('v4p-n')+' · ':''), pen={coId,tipo:t,fecha:f};
+  if(t==='limpieza'){ const s=gi('v4p-s');
+    if(!s){ v4Msg('v4p-msg','Indica el primer día de la semana del turno.','r'); return; }
+    if(f<fxAdd(s,7)||f>fxAdd(s,13)){ v4Msg('v4p-msg','⛔ Solo se puede cobrar si se detecta en la semana siguiente al turno: del '+v4F2(fxAdd(s,7))+' al '+v4F2(fxAdd(s,13))+'.','r'); return; }
+    const hab=String(v4Hab(co)), ya=(D.pagos||[]).some(p=>p.pen&&p.pen.tipo==='limpieza'&&p.pen.semana===s&&(()=>{ const c=v4Co(p.pen.coId); return c&&c.propId==co.propId&&String(v4Hab(c))===hab; })());
+    if(ya){ v4Msg('v4p-msg','⛔ Ya está anotada la limpieza de esa semana para esta habitación: es una sola cantidad por habitación, no por persona.','r'); return; }
+    pen.semana=s; notas+='Semana del '+v4F2(s)+', detectada el '+v4F2(f); }
+  else notas+=v4F2(f);
+  const con=t==='llaves'?'Llaves no devueltas':'Limpieza semanal no hecha', imp=t==='llaves'?V4_PENAL.llaves:V4_PENAL.limpieza;
+  D.pagos.push({id:uid(),inqId:v4PagadorInq(co),con,mes:f.slice(0,7),imp,estado:'pendiente',fecha:'',notas:notas+' (penalización del contrato)',pen});
+  v4Guardar(co,con+': '+imp+' € anotados para el siguiente pago'); closeM('m-v4');
+}
+
+// ── Reserva: declaración de arrendamientos anteriores, modelo en 24 h y RDL 29/2026 ──
+(function(){ const c=V4_RES_CASOS, orden={}; Object.keys(c).forEach(k=>{ orden[k]=c[k]; delete c[k]; });
+  Object.keys(orden).forEach(k=>{ if(k==='fran'){ c.modelo={t:'Fran no envió el modelo de contrato en 24 h desde O y el interesado anula la reserva antes de firmar', s:'integra'}; c.rdl={t:'El RDL 29/2026 no se convalida antes de la firma y una de las partes anula la reserva por escrito', s:'integra'}; } c[k]=orden[k]; }); })();
+V4_RES_MOTIVO.modelo='porque no le envié el modelo de contrato dentro de las 24 horas siguientes a la firma de la oferta y usted ha decidido anularla (cláusula 10 de la oferta)';
+V4_RES_MOTIVO.rdl='porque el Real Decreto-ley 29/2026 no se ha convalidado antes de la fecha prevista de firma y '+'[usted ha decidido / he decidido]'+' anularla por escrito, como prevé la oferta';
+function v5DeclRes(r,n){ return {d:r['decl'+n]||'', ot:!!r['declOt'+n], seg:parseInt(r['declSeg'+n])||0}; }
+function v5ValidarReservaV1102(r){
+  const err=[], av=[], P=v4ResP(r), nueva=v5OfertaNueva(r);
+  [1,2].forEach(n=>{ if(n===2&&!r.inqId2) return; if(!nueva) return; const q=n===1?'del interesado':'del segundo interesado', x=v5DeclRes(r,n);
+    if(!x.d) err.push('Falta la declaración de arrendamientos anteriores '+q+' (cláusula 3 de la oferta).');
+    else if(x.d==='si'){ if(x.ot) err.push('Según la declaración '+q+', ocupó una habitación del piso con otro título en los 3 meses anteriores: no se puede reservar para un contrato temporal.');
+      if(x.seg>=2) err.push('Según la declaración '+q+', el contrato sería el tercero seguido (o más) en este piso: no se puede reservar como temporal (art. 9 bis.2 LAU).');
+      else if(x.seg===1) av.push('Según la declaración '+q+', hay un contrato temporal seguido anterior: el nuevo no admitirá prórroga ni anexo.'); } });
+  // Lo que consta en la app con esas personas en ese piso
+  if(r.propId&&P&&(r.inqId||r.inqId2)){ const fake={id:'__res', tipoContrato:'temporal', propId:r.propId, hab:String(r.hab||''), firma:P, ini:P, inqId:r.inqId&&r.inqId!=='__nuevo'?r.inqId:'', inqId2:r.inqId2&&r.inqId2!=='__nuevo'?r.inqId2:''};
+    if(fake.inqId||fake.inqId2){ const nv=v4NovacionesPrevias(fake); if(nv.auto>=2) err.push('Con esta persona ya hay '+nv.auto+' contratos o cambios temporales seguidos en este piso: el nuevo no podría firmarse como temporal (art. 9 bis.2 LAU).');
+      v5OtrosTitulos(fake).forEach(x=>err.push('Con '+v4Nombres(x)+' hubo un contrato de otro tipo en este piso terminado hace menos de 3 meses: no se puede reservar para un temporal (cláusula 3).')); } }
+  // Capacidad
+  if(r.propId&&r.hab){ const n=1+(r.inqId2?1:0), c=v5CapHab(r.propId,r.hab); if(n>c.cap) err.push('La habitación '+r.hab+' admite como máximo '+c.cap+' persona'+(c.cap>1?'s':'')+(c.explicita?'':' (individual, sin capacidad anotada en Habitaciones)')+': no se puede reservar para '+n+'.'); }
+  // RDL 29/2026
+  const s=v5Rdl();
+  if(s==='derogado'&&v4ResActiva(r)&&!r.id) err.push('El RDL 29/2026 consta como derogado: no se pueden hacer reservas nuevas con este modelo.');
+  if(s==='pendiente'&&P&&P<=V5_RDL_VOTO) av.push('El RDL 29/2026 está pendiente de convalidación (votación prevista el '+v4F2(V5_RDL_VOTO)+'): propón una fecha de firma posterior a la votación. Si no se convalida antes de P, cualquiera de las partes puede anular la reserva con devolución íntegra.');
+  return {err,av};
+}
+function v4TxtJustDev(r){
+  const p=(D.props||[]).find(x=>x.id==r.propId), c=r.fin?V4_RES_CASOS[r.fin.caso]:null, imp=v4ResImporteDev(r), i1=v4Inq(r.inqId)||{};
+  const marca=r.fin&&r.fin.caso==='rdl'?'«Causa no imputable a ninguna de las partes» (no convalidación del RDL 29/2026)':r.fin&&r.fin.caso==='fran'?'Causa imputable a la parte arrendadora (se devuelve el doble)':'';
+  return 'Datos para el justificante de devolución de la reserva (documento v20261031):\n'
+   +'- Interesado: '+v4NomRes(r)+(i1.dni||r.dni1?' ('+(r.dni1||i1.dni)+')':'')+'\n'
+   +'- Habitación '+r.hab+' de '+(p?p.nom+(p.dir?', '+p.dir:''):'')+'\n'
+   +'- Oferta y reserva firmada el '+v4F2(r.O)+'; señal de '+v4E2(r.senal)+' euros cobrada por '+v4MedioRes(r)+'\n'
+   +'- Motivo: '+(c?c.t:'[MOTIVO]')+(r.fin?' ('+v4F2(r.fin.fecha)+')':'')+'\n'
+   +(marca?'- Marca: '+marca+'\n':'')
+   +'- Importe que se devuelve: '+v4E2(imp)+' euros ('+(v4ResSenalRes(r)==='doble'?'el doble de la señal':'la señal íntegra')+')\n'
+   +'- Medio: el mismo por el que se cobró ('+v4MedioRes(r)+')\n'
+   +(r.fin?'- Plazo: como máximo el '+v4F2(v4AddHabilesSeg(r.fin.fecha,3))+' (3 días hábiles desde el hecho)\n':'')
+   +'Firmadlo los dos y guardad cada uno una copia.';
+}
+function v4ContratoDesdeReserva(id){ const r=v4Res(id); if(!r) return; try{ closeM('m-v4'); closeDrw(); }catch(e){}
+  v4IrA('contratos'); setTimeout(()=>{ newCont(); const s=(i,v)=>{ const e=$i(i); if(e&&v!=null&&v!=='') e.value=v; }, ch=(i,v)=>{ const e=$i(i); if(e) e.checked=!!v; };
+    s('co-i',r.inqId); s('co-i2',r.inqId2||''); s('co-prop',r.propId); s('co-hab',r.hab); s('co-ini',v4ResP(r)); s('co-r',r.renta); s('co-f',r.renta); s('co-g',r.renta); s('co-fin',r.E);
+    s('co-cfin1',r.cFin1); s('co-cfin2',r.cFin2); s('co-causa',[r.causaTipo1?v4CausaTxt(r.causaTipo1,r.causaDet1):'',r.inqId2&&r.causaTipo2?v4CausaTxt(r.causaTipo2,r.causaDet2):''].filter(Boolean).join(' · ')); s('co-vivhab',[r.vivHab1,r.inqId2?r.vivHab2:''].filter(Boolean).join(' · '));
+    s('co-ct1',r.causaTipo1); s('co-ct2',r.causaTipo2);
+    [1,2].forEach(n=>{ const x=v5DeclRes(r,n); if(x.d==='si'){ ch('co-fue'+n,true); if(x.ot) ch('co-otro'+n,true); } });
+    s('co-modelo',v5OfertaNueva(r)?V5_MODELO_NUEVO:'v20261025-2');
+    s('co-inet',r.internetAnual); if(r.medio==='transferencia') s('co-cta',r.ctaId); if(r.medio==='bizum') s('co-bizum',r.bizum); s('co-resid',r.id); try{ v5FormAntecedentes(); }catch(e){} v4ValidarFormCont(); },250); }
+
+// ── Avisos por piso y generales ──
+function v4AlertasPisos(hoy){
+  hoy=hoy||v4Hoy(); const out=[];
+  (D.props||[]).forEach(p=>{ const H=p.hechosAl||{}, base={propId:p.id, propAl:true, lugar:p.nom, hab:''};
+    const e=v4CeeEstado(p,hoy), cad=v4CeeCaduca(p);
+    if(e.falta) out.push(Object.assign({k:'cee-falta', fecha:hoy, desde:hoy, titulo:'Registrar el certificado energético · '+p.nom, det:'Falta '+e.falta.join(', ')+'. Sin certificado registrado y en vigor no se puede anunciar la calificación, ni reservar, ni anexar la etiqueta al contrato (RD 390/2021).', tpl:[], tipo:'Obligatorio', nivel:'alto', auto:false, hecho:false, soloDatos:true},base));
+    if(cad){ const f=v4AddM(cad,-3), k='cee-cad:'+cad; out.push(Object.assign({k, fecha:f, desde:fxAdd(f,-10), titulo:'Encargar un certificado energético nuevo (caduca el '+v4F2(cad)+') · '+p.nom, det:'Vale 10 años (5 si la calificación es G). Encarga uno nuevo y regístralo; sin certificado en vigor no se puede anunciar la calificación ni anexar la etiqueta al contrato (RD 390/2021).', tpl:[], tipo:'Obligatorio', nivel:'alto', auto:false, hecho:!!H[k], hechoEl:H[k]||''},base)); }
+    // Antes del primer contrato del piso: comprobar que no se alquiló entero (art. 17.9 LAU)
+    if(!p.enteroAlq&&!(D.conts||[]).some(c=>c.propId==p.id&&v5EsTemporalNuevo(c))) out.push(Object.assign({k:'entero', fecha:hoy, desde:hoy, titulo:'Antes del primer contrato: comprobar que '+p.nom+' no se alquiló entero', det:'Con la escritura de compra'+(p.fcompra&&p.fcompra>v4AddM(hoy,-60)?' y preguntando al vendedor o a la agencia (se compró hace menos de 5 años)':'')+'. Anótalo en la ficha del piso; si se alquiló, anota la renta y la fecha de fin de ese contrato antes de poner precios (art. 17.9 LAU).', tpl:[], tipo:'Obligatorio', nivel:'alto', auto:false, hecho:false, soloDatos:true},base));
+  });
+  return out;
+}
+function v4AlertasGlobales(hoy){
+  hoy=hoy||v4Hoy(); const H=(D.cfg||{}).hechosGlob||{}, s=v5Rdl(), out=[];
+  const G=(k,fecha,titulo,det,o)=>{ o=o||{}; out.push(Object.assign({k, glob:true, fecha, desde:o.desde||fecha, titulo, det, tpl:[], tipo:o.tipo||'Informativo', nivel:o.nivel||'info', caduca:o.caduca||'', auto:!!o.auto, hecho:!!(o.auto||H[k]), hechoEl:H[k]||'', lugar:'General', propId:''},o.extra||{})); };
+  G('rdl-voto',V5_RDL_VOTO,'Votación del RDL 29/2026: comprobar en el BOE si se ha convalidado','Votación prevista de la Diputación Permanente. Actualiza su estado en Contratos → Normativa. Si se convalida, firma las reservas pendientes en 24–48 h. Si no, no se pueden firmar contratos nuevos con este modelo y las reservas en curso pueden anularse con devolución íntegra.',{desde:fxAdd(V5_RDL_VOTO,-6),tipo:'Obligatorio, una sola vez',nivel:'alto',auto:s!=='pendiente',extra:{rdlBtns:true}});
+  if(s==='derogado') G('rdl-derog',(D.cfg||{}).rdl29Fecha||hoy,'RDL 29/2026 derogado: no firmar contratos nuevos con este modelo','Revisa el contrato y la oferta antes de firmar más. Ofrece a las reservas en curso la anulación con devolución íntegra de la señal (en el justificante, «causa no imputable a ninguna de las partes»).',{tipo:'Obligatorio',nivel:'urgente'});
+  G('iva-2026','2026-12-01','Desde hoy paga IVA el alquiler amueblado con servicios hoteleros o de 30 noches o menos','No ofrezcas limpieza, lavado de ropa ni comidas. Los contratos de 31 días o menos ya están bloqueados.',{desde:'2026-11-24',caduca:'2026-12-08'});
+  G('tope2-2027','2027-12-31','Fin del tope del 2 % a las actualizaciones de renta (DF 6.ª del RDL 29/2026)','Solo afecta a contratos que pasen de 12 meses.',{desde:'2027-12-21',caduca:'2028-01-07'});
+  // IRAV de cada mes, cuando lo publique el INE
+  const mes=hoy.slice(0,7), anotado=v5IravLista().some(x=>x.fecha.slice(0,7)===mes);
+  if(hoy>=V5_RDL_VIGOR) G('irav:'+mes,mes+'-01','Anotar el IRAV de '+v4MesNom(mes)+' cuando lo publique el INE','Es el límite de subida de la renta entre contratos de una habitación (art. 17.8 LAU). Anótalo en Contratos → Normativa con su fecha de publicación.',{tipo:'Automático',auto:anotado,caduca:v4FinMes(mes+'-01')});
+  return out;
+}
+
+// ── Motor de avisos (añade los nuevos) ──
+function v4Alertas(hoy){
+  hoy=hoy||v4Hoy();
+  let out=[]; (D.conts||[]).forEach(co=>{ try{ out=out.concat(v4AlertasContrato(co,hoy)); }catch(e){ console.warn('Avisos del contrato',co.id,e); } try{ out=out.concat(v5AlertasSituaciones(co,hoy)); }catch(e){ console.warn(e); } });
+  [()=>v4AlertasIncidencias(),()=>v4AlertasVisitas(hoy),()=>v4AlertasVisitasCee(hoy),()=>v4AlertasReservas(hoy),()=>v4AlertasPisos(hoy),()=>v4AlertasGlobales(hoy),()=>v4AlertasDatos(hoy)].forEach(f=>{ try{ out=out.concat(f()); }catch(e){ console.warn(e); } });
+  out.forEach(a=>{ a.dias=v4Diff(hoy,a.fecha); a.vencido=!a.hecho&&a.fecha<hoy&&!(a.caduca&&a.caduca<hoy)&&a.nivel!=='info'; a.visible=!a.hecho&&a.desde<=fxAdd(hoy,10)&&!(a.caduca&&a.caduca<hoy); });
+  return out.sort((a,b)=>a.fecha.localeCompare(b.fecha)||((b.nivel==='urgente')-(a.nivel==='urgente')));
+}
+function v4MarcarHecho(ref,k,on){
+  const ts=on?new Date().toISOString():'';
+  if(ref.startsWith('inc:')){ const inc=(D.incs||[]).find(i=>i.id==ref.slice(4)); if(!inc) return; if(k==='inc-presu') inc.presuHecho=ts; else { inc.avisoHecho=ts; if(on&&!inc.respondida) inc.respondida=v4Hoy(); } }
+  else if(ref.startsWith('vis:')){ const v=(D.visitas||[]).find(x=>x.id==ref.slice(4)); if(!v) return; if(k==='vis-cee') v.ceeDicha=ts; else v[k==='vis-com'?'avisoCom':'avisoHab']=ts; }
+  else if(ref.startsWith('res:')){ const r=v4Res(ref.slice(4)); if(!r) return; r.hechos=Object.assign({},r.hechos||{}); if(on) r.hechos[k]=ts; else delete r.hechos[k]; }
+  else if(ref.startsWith('prop:')){ const p=(D.props||[]).find(x=>x.id==ref.slice(5)); if(!p) return; p.hechosAl=Object.assign({},p.hechosAl||{}); if(on) p.hechosAl[k]=ts; else delete p.hechosAl[k]; }
+  else if(ref==='glob'){ D.cfg=D.cfg||{}; D.cfg.hechosGlob=Object.assign({},D.cfg.hechosGlob||{}); if(on) D.cfg.hechosGlob[k]=ts; else delete D.cfg.hechosGlob[k]; D.cfg._cfgUpd=Date.now(); }
+  else { const co=(D.conts||[]).find(c=>c.id==ref); if(!co) return; co.hechos=Object.assign({},co.hechos||{}); if(on) co.hechos[k]=ts; else delete co.hechos[k]; }
+  saveAndSync(); v4RefrescarAvisos();
+}
+function v4HtmlAviso(a,hoy){
+  const ref=v4RefAviso(a), col=a.nivel==='urgente'?'var(--rd)':a.nivel==='alto'?'var(--acc)':a.nivel==='info'?'var(--bl)':'var(--ye)';
+  const nomTpl=t=>t==='req'?'Requerimiento':t==='anexo2'?'Anexo II':t==='visHab'?'Aviso de visita':t==='visCom'?'Aviso zonas comunes':t==='14'?'Plantilla 14':t==='justdev'?'Justificante de devolución':t==='finres'?'Comunicación del fin':t==='oferta'?'Datos para la oferta':'Plantilla '+t;
+  const tpls=(a.tpl||[]).map(t=>(a.resId&&V4_TPL_RES.includes(String(t)))?'<button class="btn btn-ghost btn-xs" onclick="v4VerPlantillaReserva(\''+t+'\',\''+a.resId+'\')">📋 '+nomTpl(t)+'</button>':'<button class="btn btn-ghost btn-xs" onclick="v4VerPlantilla(\''+t+'\',\''+(a.coId||'')+'\',\''+(a.visId||a.mes||'')+'\')">📋 '+nomTpl(t)+'</button>').join('');
+  const k=String(a.k);
+  let acc='';
+  if(a.coId&&k.startsWith('pm:')) acc+='<button class="btn btn-ghost btn-xs" onclick="v4AbrirCiclo(\''+a.coId+'\',\''+a.mes+'\')">💶 Pago</button>';
+  if(a.coId&&/^itp|^F-firma/.test(k)) acc+='<button class="btn btn-ghost btn-xs" onclick="v4ITP(\''+a.coId+'\')">🧾 ITP</button>';
+  if(a.coId&&/^(K|K-R10|C)$/.test(k)) acc+='<button class="btn btn-ghost btn-xs" onclick="v4Causa(\''+a.coId+'\')">🎓 Causa</button>';
+  if(a.coId&&/^(inh|ab:|obj|fal:|asn)/.test(k)) acc+='<button class="btn btn-ghost btn-xs" onclick="v5Situaciones(\''+a.coId+'\')">🏚 Registrar</button>';
+  if(a.coId&&/^inh\d+:72$/.test(k)&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v5Situaciones(\''+a.coId+'\')">💶 Anotar el descuento</button>';
+  if(a.incId&&/^inc-presu|^inc$/.test(k)) acc+='<button class="btn btn-ghost btn-xs" onclick="v5IncPresupuesto(\''+a.incId+'\')">📄 Presupuesto</button>';
+  if(a.rdlBtns&&!a.hecho) acc+='<button class="btn btn-success btn-xs" onclick="v5SetRdl(\'convalidado\')">✓ Convalidado</button><button class="btn btn-danger btn-xs" onclick="v5SetRdl(\'derogado\')">✗ Derogado</button>';
+  if(a.glob&&k.startsWith('irav:')&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="closeM(\'m-v4av\');v4IrA(\'contratos\')">⚖️ Anotar el IRAV</button>';
+  if(a.resId&&k==='r-firma'&&!a.hecho) acc+='<button class="btn btn-success btn-xs" onclick="v4ContratoDesdeReserva(\''+a.resId+'\')">📄 Firmar contrato</button>';
+  if(a.resId&&k==='r-dev'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4DevolucionReserva(\''+a.resId+'\')">💶 Devolución hecha</button>';
+  if(a.resId&&/^r-(P-asnef|caduca|P1|asnef-mal|rech-ok|modelo-tarde|rdl)$/.test(k)&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4TerminarReserva(\''+a.resId+'\')">🏁 Terminar</button>';
+  if(a.resId&&k==='r-P-asnef'&&!a.hecho&&v4ResPuedeProrrogar(v4Res(a.resId))) acc+='<button class="btn btn-ghost btn-xs" onclick="v4ProrrogarReserva(\''+a.resId+'\')">📅 Prorrogar</button>';
+  if(a.resId&&k==='r-anuncio'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4PausarAnunciosRes(\''+a.resId+'\')">⏸ Marcar pausado</button>';
+  if(a.resId&&k==='r-reanuncio'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4ReactivarAnunciosRes(\''+a.resId+'\')">▶ Reactivar anuncio</button>';
+  if(a.resId&&k==='r-visitas') acc+='<button class="btn btn-ghost btn-xs" onclick="closeM(\'m-v4av\');closeDrw();v4IrA(\'visitas\')">📅 Visitas</button>';
+  if(k==='d-bloq'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4BloquearDatosCo(\''+a.coId+'\')">🔒 Bloquear datos</button>';
+  if(k==='d-res-ya'&&!a.hecho) acc+='<button class="btn btn-ghost btn-xs" onclick="v4BloquearDatosRes(\''+a.resId+'\')">🔒 Hacerlo ahora</button>';
+  if((k==='d-sup'||k==='d-res-5')&&!a.hecho) acc+='<button class="btn btn-danger btn-xs" onclick="v4SuprimirDatos(\''+(a.coId?'co':'res')+'\',\''+(a.coId||a.resId)+'\')">🗑 Suprimir datos</button>';
+  if(a.propAl) acc+='<button class="btn btn-ghost btn-xs" onclick="closeM(\'m-v4av\');editProp(\''+a.propId+'\')">🏢 Ficha del piso</button>';
+  const sinHecho=a.auto||a.soloDatos||k==='r-caduca'||k==='r-visitas'||k==='r-anuncio'||!!a.rdlBtns||k.startsWith('irav:');
+  return '<div style="border-left:3px solid '+col+';background:var(--card);border-radius:8px;padding:9px 11px;margin:6px 0;box-shadow:0 1px 0 var(--line);">'
+   +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap;"><div style="font-size:12.5px;font-weight:700;line-height:1.35;min-width:0;flex:1;">'+v4Esc(a.titulo)+'</div><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'+v4BadgeDias(a,hoy)+'<span class="badge badge-b">'+v4Esc(a.tipo)+'</span></div></div>'
+   +'<div style="font-size:11.5px;color:var(--ink2);line-height:1.55;margin-top:4px;">'+v4Esc(a.det)+'</div>'
+   +'<div style="font-size:10.5px;color:var(--ink3);margin-top:3px;">'+v4F2(a.fecha)+(a.desde&&a.desde<a.fecha?' · desde el '+v4F2(a.desde):'')+(a.hecho&&a.hechoEl?' · hecho el '+v4F2(String(a.hechoEl).slice(0,10)):'')+(a.auto?' · completado con los datos':'')+'</div>'
+   +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">'+(sinHecho?'':'<button class="btn '+(a.hecho?'btn-ghost':'btn-success')+' btn-xs" onclick="v4MarcarHecho(\''+ref+'\',\''+a.k+'\','+(a.hecho?'false':'true')+')">'+(a.hecho?'↩ Deshacer':'✓ Hecho')+'</button>')+tpls+acc
+   +(a.coId?'<button class="btn btn-ghost btn-xs" onclick="v4Gestionar(\''+a.coId+'\')">⚙️ Contrato</button>':'')
+   +(a.resId?'<button class="btn btn-ghost btn-xs" onclick="closeM(\'m-v4av\');v4GestionarReserva(\''+a.resId+'\')">📝 Reserva</button>':'')
+   +(a.incId?'<button class="btn btn-ghost btn-xs" onclick="document.querySelector(\'.nav-item[data-s=incs]\').click()">🔧 Incidencias</button>':'')
+   +(a.visId?'<button class="btn btn-ghost btn-xs" onclick="closeM(\'m-v4av\');v4IrA(\'visitas\')">📅 Visitas</button>':'')+'</div></div>';
+}
+
+// ── Formulario del contrato: antecedentes de cada arrendatario, tipo de causa e IRAV ──
+function v5FormAntecedentes(){ [1,2].forEach(n=>{ const on=!!($i('co-fue'+n)&&$i('co-fue'+n).checked); document.querySelectorAll('#m-co [data-fue="'+n+'"]').forEach(e=>{ e.style.display=on?'':'none'; }); });
+  const d2=!!gi('co-i2'); document.querySelectorAll('#m-co [data-arr2]').forEach(e=>{ e.style.display=d2?'':'none'; });
+  const F=gi('co-ini'), iv=F?v5IravVigente(F):null, box=$i('co-irav-info'); if(box){ const co=v4LeerFormCont(), ant=v5AnteriorHab(co); box.innerHTML=F?('IRAV vigente en la firma: '+(iv?'<strong>'+v5PctIrav(iv.valor)+' %</strong>'+(iv.fecha?' (publicado el '+v4F2(iv.fecha)+')':''):'<span style="color:var(--ye);">sin anotar (Contratos → Normativa)</span>')+(ant?' · contrato temporal anterior de esta habitación: '+v4E2(ant.r)+' € (firma '+v4F2(v4F(ant))+')'+(iv?' → máximo '+v4E2(Math.round(parseFloat(ant.r)*(1+iv.valor/100)*100)/100)+' €':''):co.propId&&co.hab?' · primer contrato temporal de esta habitación: su renta será la base del art. 17.8 LAU':'')):''; } }
+function v5LeerAntecedentes(){ const ch=i=>!!($i(i)&&$i(i).checked), o={}; if($i('co-modelo')) o.modelo=gi('co-modelo');
+  [1,2].forEach(n=>{ o['causaTipo'+n]=gi('co-ct'+n); o['fueInq'+n]=ch('co-fue'+n); o['fueTipo'+n]=o['fueInq'+n]?gi('co-fuet'+n):''; o['fueSal'+n]=o['fueInq'+n]?gi('co-fues'+n):''; o['otroTit'+n]=ch('co-otro'+n); o['vol'+n]=ch('co-vol'+n); });
+  return o; }
+
+// ── Habitaciones: capacidad e historial de contratos temporales (F, renta e IRAV vigente en F) ──
+function v5HistHab(propId,hab){ const cs=(D.conts||[]).filter(c=>v5EsTemporalNuevo(c)&&c.propId==propId&&String(c.hab||'')===String(hab)&&v4F(c)).sort((a,b)=>v4F(b).localeCompare(v4F(a)));
+  if(!cs.length) return ''; return '<details style="margin-top:6px;font-size:10px;color:var(--ink3);" onclick="event.stopPropagation();"><summary style="cursor:pointer;">Historial ('+cs.length+')</summary>'+cs.map(c=>{ const iv=c.iravF!=null&&c.iravF!==''?{valor:parseFloat(c.iravF)}:v5IravVigente(v4F(c)); return '<div>'+v4F2(v4F(c))+' · '+v4E2(c.r)+' € · IRAV '+(iv?v5PctIrav(iv.valor)+' %':'—')+'</div>'; }).join('')+'</details>'; }
+
+// ── Anuncio: pago como máximo el día 1 de cada mes ──
+function copiarAnuncio(id){
+  const a=D.anuncios.find(x=>x.id==id); if(!a)return;
+  const pr=D.props.find(p=>p.id==a.propId);
+  const txt=`${a.tit}\n${'─'.repeat(40)}\n${a.desc}\n\n`+
+    (a.carac?`Características: ${a.carac}\n`:'')+
+    (a.precio?`Precio: ${a.precio} €/mes${a.gastos==='si'?' (gastos incluidos)':a.gastos==='parcial'?' (gastos parcialmente incluidos)':' + gastos'}\n`:'')+
+    'Pago como máximo el día 1 de cada mes.\n'+
+    (a.m2?`Superficie habitación: ${a.m2} m²\n`:'')+
+    (pr?`Ubicación: ${pr.dir||''}${pr.ciu?', '+pr.ciu:''}\n`:'');
+  copyT(txt,'Anuncio copiado — ya puedes pegarlo en Idealista');
+  if(/[uú]ltimo d[ií]a del mes/i.test(a.desc||'')) setTimeout(()=>toast('Ojo: la descripción dice «último día del mes». Ahora el pago es como máximo el día 1 de cada mes',false),1200);
+}
+
+// ── Textos de las plantillas 3 y 8 (pago del día 1 del mes de E o de S) ──
+function v5EsIso(x){ return /^\d{4}-\d{2}-\d{2}$/.test(String(x||'')); }
+function v5TxtPagoFin(co,E){ const F=v4F(co); if(!v5EsIso(E)||!F) return ''; const m=E.slice(0,7); if(m===F.slice(0,7)||E===v4FinMes(E)) return ''; if(!v5Nuevo(co)) return ' El último pago mensual solo incluirá la renta hasta el '+v4FL(E)+'.'; return ' El pago del 1 de '+v4MesNom(m)+' solo incluirá la renta hasta el '+v4FL(E)+'.'; }
+function v5TxtPagoSalida(co,S,A){ const F=v4F(co); if(!v5Nuevo(co)) return ' En el próximo pago mensual solo se incluirá la renta hasta esa fecha; si ya pagaste el mes completo, te devuelvo la parte de los días siguientes el día de la entrega de llaves.'; if(!v5EsIso(S)) return ' En el pago del día 1 del mes de la salida solo se incluirá la renta hasta esa fecha.'; if(!F) return ''; const m=S.slice(0,7), d1=m+'-01';
+  if(m===F.slice(0,7)||S===v4FinMes(S)) return '';
+  if(A&&A>d1) return ' El pago del 1 de '+v4MesNom(m)+' ya incluía el mes completo, así que el día de la entrega de llaves te devuelvo la renta de los días posteriores al '+v4FL(S)+'.';
+  return ' En el pago del 1 de '+v4MesNom(m)+' solo se incluirá la renta hasta el '+v4FL(S)+'.'; }
+function v5ExtActivaAntes(co){ const x=v5ExtCausa(co), E=v4E(co); return !!(x&&x.activa&&E&&x.fecha<E); }
+function v5TxtExtFila(co){ const x=v5ExtCausa(co); if(!x) return ''; return (x.quien==='fran'?'comunicado por ti, recibido el ':'aviso del inquilino el ')+v4F2(x.K)+' · '+(x.acredita?'acreditó que sigue: sin extinción':x.doble&&!x.ambas?'falta el fin de la otra causa':x.fecha<v4E(co)?'extinción el '+v4F2(x.fecha):'termina en E')+(x.quien==='fran'&&!x.acredita?' · puede acreditar hasta el '+v4F2(x.R10):''); }
+
+// ── Reserva: declaración de arrendamientos anteriores de cada interesado ──
+function v5HtmlDeclRes(n,r){ const d=r['decl'+n]||'', ot=!!r['declOt'+n], sg=parseInt(r['declSeg'+n])||0;
+  return '<div class="fgrp fgf"><label>Declaración de arrendamientos anteriores en este piso *</label><select id="rs-decl'+n+'"><option value="">— Sin rellenar —</option><option value="no"'+(d==='no'?' selected':'')+'>No ha sido arrendatario de este piso</option><option value="si"'+(d==='si'?' selected':'')+'>Sí ha sido arrendatario de este piso</option></select></div>'
+   +'<div class="fgrp fgf" data-decl="'+n+'">'+v4Chk('rs-declot'+n,'En los 3 meses anteriores ocupó una habitación del piso con otro título (vivienda habitual, Código Civil u otro)',ot)+'</div>'
+   +'<div class="fgrp" data-decl="'+n+'"><label>Contratos temporales seguidos anteriores (con sus prórrogas o anexos)</label><select id="rs-declseg'+n+'"><option value="0"'+(sg===0?' selected':'')+'>0</option><option value="1"'+(sg===1?' selected':'')+'>1</option><option value="2"'+(sg>=2?' selected':'')+'>2 o más</option></select></div>'; }
+// ── Reserva: avisos del modelo en 24 h y del RDL 29/2026 ──
+function v5AlertasResV1102(r,hoy,P,A,O24){
+  const s=v5Rdl(), nom=v4NomResCorto(r), nueva=v5OfertaNueva(r);
+  if(!r.M){ const o20=new Date(O24.getTime()-4*36e5); A('r-modelo20',fxIso(o20),'Quedan 4 horas para enviar el modelo de contrato a '+nom,'Aviso interno: el límite es el '+v4FmtDT(O24)+' (O + 24 h). Si no se envía a tiempo, el interesado puede anular la reserva hasta la firma con devolución íntegra (cláusula 10 de la oferta).',{tipo:'Recomendado',nivel:'alto',desde:r.O,caduca:fxIso(O24),tpl:['14']}); }
+  if(!nueva) return;
+  const tarde=r.M?v4DT(r.M)>O24:(hoy>fxIso(O24));
+  if(tarde) A('r-modelo-tarde',r.M?r.M.slice(0,10):fxAdd(fxIso(O24),1),'El modelo no se envió en 24 h: '+nom+' puede anular la reserva','Límite: '+v4FmtDT(O24)+(r.M?'; lo recibió el '+v4FmtDT(v4DT(r.M)):'; todavía no consta enviado')+'. Hasta la firma puede anular la reserva con devolución íntegra de la señal (cláusula 10 de la oferta). Si la anula, registra «Terminar sin contrato» y devuelve la señal en 3 días hábiles.',{tipo:'Según oferta',nivel:'alto',caduca:P||''});
+  if(s==='pendiente'&&P&&V5_RDL_VOTO<=P) A('r-rdl-voto',V5_RDL_VOTO,'Votación del RDL 29/2026 antes de la firma de '+nom,'Comprueba el resultado en el BOE y actualiza su estado en Contratos → Normativa. Si no se convalida, cualquiera de las partes puede anular la reserva por escrito y se devuelve la señal íntegra (en el justificante, «causa no imputable a ninguna de las partes»).',{tipo:'Obligatorio comprobar',nivel:'alto',desde:fxAdd(V5_RDL_VOTO,-3),caduca:P});
+  if(s==='pendiente'&&P&&hoy>=P) A('r-rdl',P,'El RDL 29/2026 sigue sin convalidar en la fecha de firma de '+nom,'Cualquiera de las partes puede anular la reserva por escrito con devolución íntegra de la señal (en el justificante, «causa no imputable a ninguna de las partes»).',{tipo:'Según oferta',nivel:'alto'});
+  if(s==='derogado') A('r-rdl',(D.cfg||{}).rdl29Fecha||hoy,'RDL 29/2026 no convalidado: la reserva de '+nom+' puede anularse','Cualquiera de las partes puede anularla por escrito con devolución íntegra de la señal (en el justificante, «causa no imputable a ninguna de las partes»). No se pueden firmar contratos nuevos con este modelo.',{tipo:'Obligatorio',nivel:'urgente'});
+}
 
 </script>
 </body>
