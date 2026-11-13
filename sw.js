@@ -1,4 +1,4 @@
-const CACHE = 'gentaury-v29';
+const CACHE = 'gentaury-v30';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
