@@ -1073,10 +1073,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- ═══════════════ PAGOS ═══════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-pagos">
   <div class="ph"><div><div class="ph-title">💳 Pagos</div>
-    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Vista rápida por piso y habitación. Verde = cobrado · Gris = pendiente · Rojo = vencido</div></div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Cobros de cada mes por piso y habitación, según los contratos. Verde = cobrado · Naranja = parcial · Rojo = vencido</div></div>
     <div class="ph-acts">
-      <button class="btn btn-success btn-sm" onclick="genPagos()">⚡ Generar mes actual</button>
-      <button class="btn btn-primary" onclick="newPago()">+ Registrar pago</button>
+      <button class="btn btn-primary" onclick="newPago()">+ Cobro o cargo suelto</button>
     </div>
   </div>
 
@@ -1085,9 +1084,10 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="periodo-fila" style="align-items:center;">
       <span class="periodo-lbl">Mes</span>
       <button class="btn btn-ghost btn-xs" onclick="cambiarMesTablero(-1)">‹ Anterior</button>
-      <input type="month" id="pa-mes-tablero" onchange="rTableroPagos()" style="padding:7px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:13px;color:var(--ink);font-weight:600;outline:none;">
+      <input type="month" id="pa-mes-tablero" onchange="v12IrMes(this.value)" style="padding:7px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:13px;color:var(--ink);font-weight:600;outline:none;">
       <button class="btn btn-ghost btn-xs" onclick="cambiarMesTablero(1)">Siguiente ›</button>
       <button class="btn btn-secondary btn-xs" onclick="irMesActualTablero()">Hoy</button>
+      <span id="pa-mes-nom" style="font-size:13px;font-weight:700;margin-left:4px;"></span>
     </div>
   </div>
 
@@ -1104,9 +1104,10 @@ td .name-link:hover{border-bottom-color:var(--acc);}
       <span id="pa-tabla-chevron" style="font-size:12px;">▼</span>
     </div>
     <div id="pa-tabla-wrap" style="display:none;">
+      <div id="pa-kpis" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;"></div>
       <div class="fb" style="margin-top:12px;">
         <div class="fi"><span class="fi-icon">🔍</span><input id="paq" placeholder="Buscar..." oninput="rPagos()"></div>
-        <select id="paef" onchange="rPagos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos</option><option value="pagado">✅ Pagados</option><option value="pendiente">⏳ Pendiente</option><option value="atrasado">🔴 Atrasado</option></select>
+        <select id="paef" onchange="rPagos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos</option><option value="pagado">✅ Cobrados</option><option value="pendiente">⏳ Pendientes en plazo</option><option value="atrasado">🔴 Vencidos</option></select>
         <select id="pamf" onchange="rPagos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:140px;outline:none;"><option value="">Todos los meses</option></select>
       </div>
       <div class="tbl-wrap"><table><thead><tr><th>Inquilino</th><th>Piso/Hab</th><th>Concepto</th><th>Mes</th><th>Importe</th><th>Estado</th><th>Fecha pago</th><th></th></tr></thead><tbody id="pa-tb"></tbody></table></div>
@@ -1837,14 +1838,16 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 <!-- PAGO -->
 <div class="modal-overlay" id="m-pa"><div class="modal">
-  <h2>💳 Registrar Pago</h2>
+  <h2>💳 Cobro o cargo suelto</h2>
+  <input type="hidden" id="pa-id">
   <div class="fg">
     <div class="fgrp fgf"><label>Inquilino</label><select id="pa-i"></select></div>
     <div class="fgrp"><label>Concepto</label><select id="pa-c"><option>Alquiler</option><option>Fianza</option><option>Garantía adicional</option><option>Suministros</option><option>Penalización</option><option>Otros</option></select></div>
     <div class="fgrp"><label>Mes correspondiente</label><input id="pa-m" type="month"></div>
-    <div class="fgrp"><label>Importe (€)</label><input id="pa-imp" type="number" placeholder="350"></div>
-    <div class="fgrp"><label>Estado</label><select id="pa-e"><option value="pagado">✅ Pagado</option><option value="pendiente">⏳ Pendiente</option><option value="atrasado">🔴 Atrasado</option></select></div>
-    <div class="fgrp"><label>Fecha de pago</label><input id="pa-f" type="date"></div>
+    <div class="fgrp"><label>Importe (€)</label><input id="pa-imp" type="number" step="0.01" inputmode="decimal" placeholder="350"></div>
+    <div class="fgrp"><label>Estado</label><select id="pa-e"><option value="pagado">✅ Cobrado</option><option value="pendiente">⏳ Pendiente de cobro</option></select></div>
+    <div class="fgrp"><label>Fecha de cobro</label><input id="pa-f" type="date"></div>
+    <div class="fgrp"><label>Cuenta donde entra</label><select id="pa-cta"></select></div>
     <div class="fgrp fgf"><label>Notas</label><input id="pa-n" placeholder="Transferencia, efectivo..."></div>
     <div class="fgrp fgf"><label>Adjuntar recibo / factura en PDF (opcional)</label>
       <div class="pdf-upload-zone" id="pa-pdf-zone" onclick="document.getElementById('pa-pdf').click()">
@@ -2792,6 +2795,8 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <div class="modal-overlay" id="m-v4av"><div class="modal modal-lg" id="m-v4av-c"></div></div>
 <div id="toast"></div>
 <script>
+// v4.12 · Día local (AAAA-MM-DD) de una fecha: sustituye al día en UTC que se sacaba de toISOString
+Object.defineProperty(Date.prototype,'v12Dia',{value:function(){ if(isNaN(this.getTime())) return this.toISOString(); return this.getFullYear()+'-'+String(this.getMonth()+1).padStart(2,'0')+'-'+String(this.getDate()).padStart(2,'0'); },enumerable:false,configurable:true,writable:true});
 // ══════════════════════════════════════════════════════════════
 // DATA LAYER
 // ══════════════════════════════════════════════════════════════
@@ -3149,7 +3154,7 @@ function abrirCostesAdq(){
   if(repararEscrituraDuplicada(p)){ saveAndSync(); toast('Se ha corregido un dato duplicado de escritura'); }
   $i('ca-prop-id').value=propId;
   $i('ca-piso-nom').textContent=p.nom;
-  $i('ca-fecha').value=p.fcompra||new Date().toISOString().split('T')[0];
+  $i('ca-fecha').value=p.fcompra||new Date().v12Dia();
   ['ca-imp','ca-notas','ca-otro-txt'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   $i('ca-concepto').value='Escritura de compraventa (con arras)';
   toggleCaOtro();
@@ -3530,7 +3535,7 @@ function addPot(){
   const inv=p-cap_h+p*(itp/100)*1.1+p*(com/100)+ref;
   const ing=alq*h*12*(1-vac/100),gop=ibi+seg+(man+c2)*12;
   const ebitda=ing-gop-cuota*12,roce=inv>0?ebitda/inv*100:0,yld=p>0?alq*h*12/p*100:0;
-  D.pots.push({id:uid(),nom,url:gi('pt-url'),p,alq,h,ref,itp,com,fi,ti,pl,ibi,seg,man,c2,vac,not:gi('pt-not'),inv,ebitda,roce,yld,fecha:new Date().toISOString().split('T')[0]});
+  D.pots.push({id:uid(),nom,url:gi('pt-url'),p,alq,h,ref,itp,com,fi,ti,pl,ibi,seg,man,c2,vac,not:gi('pt-not'),inv,ebitda,roce,yld,fecha:new Date().v12Dia()});
   saveAndSync();closeM('m-pot');rPots();toast('Piso analizado y guardado');
 }
 
@@ -3752,7 +3757,7 @@ async function subirFotosContrato(ev, tipo){
         // Sin Drive: guardar como data URI comprimida
         ref=await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(comp.blob);});
       }
-      _fotosContrato[tipo].push({ref, fecha:new Date().toISOString().split('T')[0]});
+      _fotosContrato[tipo].push({ref, fecha:new Date().v12Dia()});
     }catch(e){ console.warn('Foto no procesada',e); }
   }
   ev.target.value='';
@@ -3825,7 +3830,7 @@ function calcFinInq(mmdd){
   let anyo=minimo.getFullYear();
   let candidata=new Date(anyo, mes-1, dia);
   while(candidata < minimo){ anyo++; candidata=new Date(anyo, mes-1, dia); }
-  const iso=candidata.toISOString().split('T')[0];
+  const iso=candidata.v12Dia();
   $i('iq-fin').value=iso;
   const meses=Math.round((candidata-d)/(1000*60*60*24*30.4));
   $i('iq-fin-info').innerHTML=`✓ Hasta <strong>${fD(iso)}</strong> · ${meses} meses`;
@@ -3841,7 +3846,7 @@ function calcFinContrato(mmdd){
   let anyo=minimo.getFullYear();
   let candidata=new Date(anyo, mes-1, dia);
   while(candidata < minimo){ anyo++; candidata=new Date(anyo, mes-1, dia); }
-  const iso=candidata.toISOString().split('T')[0];
+  const iso=candidata.v12Dia();
   $i('co-fin').value=iso;
   const meses=Math.round((candidata-d)/(1000*60*60*24*30.4));
   $i('co-fin-info').innerHTML=`✓ Contrato hasta <strong>${fD(iso)}</strong> · duración aprox. ${meses} meses (1 año + ${meses-12} de ajuste)`;
@@ -3945,7 +3950,7 @@ function delCont(id){D.conts=D.conts.filter(c=>c.id!==id);saveAndSync();rConts()
 // PAGOS
 // ══════════════════════════════════════════════════════════════
 function genPagos(){
-  const mes=new Date().toISOString().slice(0,7);
+  const mes=new Date().v12Dia().slice(0,7);
   let gen=0;
   D.inqs.filter(i=>i.estado==='ACTIVO').forEach(inq=>{
     // Alquiler
@@ -3969,7 +3974,7 @@ function autoGenerarPagosPendientes(){
   const hoy=new Date();
   // A partir del día 1 de cada mes, ya se genera el mes SIGUIENTE (límite de pago: día 15 de este mes)
   const finGeneracion = new Date(hoy.getFullYear(), hoy.getMonth()+1, 1); // primer día del mes que viene
-  const mesLimite = finGeneracion.toISOString().slice(0,7);
+  const mesLimite = finGeneracion.v12Dia().slice(0,7);
   let gen=0;
   D.inqs.filter(i=>i.estado==='ACTIVO').forEach(inq=>{
     if(!inq.ini) return;
@@ -3977,7 +3982,7 @@ function autoGenerarPagosPendientes(){
     const fin=new Date(mesLimite+'-01');
     let guard=0;
     while(d<=fin && guard<80){
-      const mk=d.toISOString().slice(0,7);
+      const mk=d.v12Dia().slice(0,7);
       const conceptos=[['Alquiler',inq.alq],['Luz',inq.luz],['Agua',inq.agua]];
       conceptos.forEach(([con,imp])=>{
         if(imp>0 && !D.pagos.find(p=>p.inqId==inq.id&&p.mes===mk&&p.con===con)){
@@ -3993,7 +3998,7 @@ function autoGenerarPagosPendientes(){
 function newPago(){
   ['pa-imp','pa-fecha','pa-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   const s=$i('pa-i'); if(s)s.value='';
-  const fecha=$i('pa-fecha'); if(fecha)fecha.value=new Date().toISOString().split('T')[0];
+  const fecha=$i('pa-fecha'); if(fecha)fecha.value=new Date().v12Dia();
   clearPdfZone&&clearPdfZone('pa-pdf-zone','pa-pdf-data');
   openM('m-pa');
 }
@@ -4007,7 +4012,7 @@ function addPago(){
   clearPdfZone('pa-pdf-zone','pa-pdf-data');
   rPagos();rDash();toast('Pago registrado');
 }
-function cobrar(id){const p=D.pagos.find(x=>x.id==id);if(p){p.estado='pagado';p.fecha=new Date().toISOString().split('T')[0];}saveAndSync();rPagos();rDash();toast('Cobrado ✓');}
+function cobrar(id){const p=D.pagos.find(x=>x.id==id);if(p){p.estado='pagado';p.fecha=new Date().v12Dia();}saveAndSync();rPagos();rDash();toast('Cobrado ✓');}
 
 // ══════════════════════════════════════════════════════════════
 // TABLERO DE PAGOS POR PISO Y HABITACIÓN
@@ -4048,12 +4053,12 @@ const COL_ESTADO = {
 function cambiarMesTablero(delta){
   const [y,m]=_mesTablero.split('-').map(Number);
   const d=new Date(y,m-1+delta,1);
-  _mesTablero=d.toISOString().slice(0,7);
+  _mesTablero=d.v12Dia().slice(0,7);
   $i('pa-mes-tablero').value=_mesTablero;
   rTableroPagos();
 }
 function irMesActualTablero(){
-  _mesTablero=new Date().toISOString().slice(0,7);
+  _mesTablero=new Date().v12Dia().slice(0,7);
   $i('pa-mes-tablero').value=_mesTablero;
   rTableroPagos();
 }
@@ -4075,7 +4080,7 @@ function toggleCobroInquilino(inqId, mes){
     return;
   }
   const todosCobrados = pagos.every(p=>p.estado==='pagado');
-  const hoy=new Date().toISOString().split('T')[0];
+  const hoy=new Date().v12Dia();
   pagos.forEach(p=>{
     p.estado = todosCobrados ? 'pendiente' : 'pagado';
     p.fecha = todosCobrados ? '' : hoy;
@@ -4093,7 +4098,7 @@ function toggleCobroConcepto(inqId, mes, con){
     p={id:uid(),inqId,con,mes,imp,estado:'pendiente',fecha:'',notas:'Auto'};
     D.pagos.push(p);
   }
-  const hoy=new Date().toISOString().split('T')[0];
+  const hoy=new Date().v12Dia();
   if(p.estado==='pagado'){ p.estado='pendiente'; p.fecha=''; }
   else { p.estado='pagado'; p.fecha=hoy; }
   saveAndSync(); rTableroPagos();
@@ -4111,7 +4116,7 @@ function generarPagosInquilinoMes(inqId, mes){
 }
 
 function rTableroPagos(){
-  if(!_mesTablero){ _mesTablero=new Date().toISOString().slice(0,7); }
+  if(!_mesTablero){ _mesTablero=new Date().v12Dia().slice(0,7); }
   if($i('pa-mes-tablero') && !$i('pa-mes-tablero').value) $i('pa-mes-tablero').value=_mesTablero;
   const mes=_mesTablero;
 
@@ -4297,7 +4302,7 @@ function addFactura(){
   if(!desc||!imp||!propId){toast('Completa descripción, piso e importe',false);return;}
   const sd=getSplitData(propId,imp,tipo);
   if(!sd){toast('No hay inquilinos en este piso',false);return;}
-  const mes=fecha?fecha.slice(0,7):new Date().toISOString().slice(0,7);
+  const mes=fecha?fecha.slice(0,7):new Date().v12Dia().slice(0,7);
   const facId=uid();
   D.facturas.push({id:facId,desc,propId,imp,tipo,fecha,cat,porHab:sd.porHab,habs:sd.objetivo.length,cobros:sd.objetivo.filter(h=>h.inq).length});
   // Gasto general del piso
@@ -4314,11 +4319,11 @@ function aplicarSplit(){
   if(!propId||!imp){toast('Selecciona piso e introduce importe',false);return;}
   const sd=getSplitData(propId,imp,tipo);
   if(!sd){toast('No hay inquilinos activos',false);return;}
-  const mes=new Date().toISOString().slice(0,7);
+  const mes=new Date().v12Dia().slice(0,7);
   sd.objetivo.filter(h=>h.inq).forEach(h=>{
     D.pagos.push({id:uid(),inqId:h.inq.id,con,mes,imp:sd.porHab,estado:'pendiente',fecha:'',notas:`División automática · ${sd.objetivo.length} habs · Total: ${eur(imp,2)}`});
   });
-  D.gastos.push({id:uid(),desc:con,cat:'Suministros',imp,propId,fecha:new Date().toISOString().split('T')[0],ded:'si',prov:'',notas:'División automática'});
+  D.gastos.push({id:uid(),desc:con,cat:'Suministros',imp,propId,fecha:new Date().v12Dia(),ded:'si',prov:'',notas:'División automática'});
   saveAndSync();rSplitPreview();toast(`✓ ${sd.objetivo.filter(h=>h.inq).length} cobros registrados`);
 }
 
@@ -4529,7 +4534,7 @@ function newCompra(){
   $i('m-compra-title').textContent='🧾 Nueva Factura';
   ['cp-con','cp-emp','cp-imp','cp-hab','cp-num','cp-notas','cp-gar'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   // Fecha por defecto: dentro del mes que estés viendo
-  let fd=new Date().toISOString().split('T')[0];
+  let fd=new Date().v12Dia();
   if(cpAnyo && cpAnyo!=='TODO' && cpMes) fd=`${cpAnyo}-${cpMes}-01`;
   else if(cpAnyo && cpAnyo!=='TODO' && cpAnyo!==String(new Date().getFullYear())) fd=`${cpAnyo}-01-01`;
   $i('cp-fecha').value=fd;
@@ -4742,7 +4747,7 @@ function rCompras(){
   const total=list.reduce((s,x)=>s+parseFloat(x.imp||0),0);
   const sumaFis=k=>list.filter(x=>fiscalKey(x.ded)===k).reduce((s,x)=>s+parseFloat(x.imp||0),0);
   const ded=sumaFis('corriente'), a10=sumaFis('amort10'), a3=sumaFis('amort3'), mej=sumaFis('mejora');
-  const hoy=new Date().toISOString().split('T')[0];
+  const hoy=new Date().v12Dia();
   const conGar=list.filter(x=>x.gar&&x.gar>=hoy).length;
   const periodo = cpAnyo==='TODO' ? 'Histórico completo' : (cpMes ? MESES_L[parseInt(cpMes)-1]+' '+cpAnyo : 'Año '+cpAnyo);
   $i('cp-kpis').innerHTML=`
@@ -4875,7 +4880,7 @@ function v9SaveAnuncioBase(){
     if(a)Object.assign(a,campos);
     toast('Anuncio actualizado');
   } else {
-    D.anuncios.push(Object.assign({id:uid(),fecha:new Date().toISOString().split('T')[0]},campos));
+    D.anuncios.push(Object.assign({id:uid(),fecha:new Date().v12Dia()},campos));
     toast('Anuncio guardado');
   }
   saveAndSync(); closeM('m-anuncio'); _fotosTmp=[]; rAnuncios();
@@ -4985,9 +4990,9 @@ function calcularRepartoSuministros(inqs, fIni, fFin, importe){
     const pd=dias*personas;
     totalPD+=pd;
     detalle.push({inqId:i.id, nom:(i.nom||'')+' '+(i.ap||''), hab:i.hab, dias, personas, pd,
-                  desde:desde.toISOString().split('T')[0], hasta:hasta.toISOString().split('T')[0]});
+                  desde:desde.v12Dia(), hasta:hasta.v12Dia()});
     for(let d=new Date(desde); d<=hasta; d.setDate(d.getDate()+1)){
-      diasOcupados.add(d.toISOString().split('T')[0]);
+      diasOcupados.add(d.v12Dia());
     }
   });
 
@@ -5005,7 +5010,7 @@ function abrirReparto(propIdPre, conPre, iniPre, finPre, impPre){
   $i('rp-ini').value=iniPre||'';
   $i('rp-fin').value=finPre||'';
   $i('rp-imp').value=impPre||'';
-  $i('rp-mes').value=new Date().toISOString().slice(0,7);
+  $i('rp-mes').value=new Date().v12Dia().slice(0,7);
   calcularReparto();
   openM('m-reparto');
 }
@@ -5058,7 +5063,7 @@ function calcularReparto(){
 function generarCobrosReparto(){
   const r=window._ultimoReparto;
   if(!r||!r.detalle.length){ toast('No hay reparto que generar', false); return; }
-  const mes=gi('rp-mes')||new Date().toISOString().slice(0,7);
+  const mes=gi('rp-mes')||new Date().v12Dia().slice(0,7);
   const con=$i('rp-con').value;
   const fIni=gi('rp-ini'), fFin=gi('rp-fin');
   let n=0;
@@ -5161,14 +5166,14 @@ function colorInquilino(inqId){
 }
 function calMes(delta){
   const el=$i('cal-mes');
-  const base=el.value||new Date().toISOString().slice(0,7);
+  const base=el.value||new Date().v12Dia().slice(0,7);
   const [y,m]=base.split('-').map(Number);
   const d=new Date(y,m-1+delta,1);
-  el.value=d.toISOString().slice(0,7);
+  el.value=d.v12Dia().slice(0,7);
   rCalendarioOcupacion();
 }
 function calHoy(){
-  $i('cal-mes').value=new Date().toISOString().slice(0,7);
+  $i('cal-mes').value=new Date().v12Dia().slice(0,7);
   rCalendarioOcupacion();
 }
 
@@ -5177,9 +5182,9 @@ function rCalendarioOcupacion(){
   const selP=$i('cal-prop');
   if(selP && !selP.value && D.props.length) selP.value=D.props[0].id;
   const elMes=$i('cal-mes');
-  if(elMes && !elMes.value) elMes.value=new Date().toISOString().slice(0,7);
+  if(elMes && !elMes.value) elMes.value=new Date().v12Dia().slice(0,7);
   const propId=gi('cal-prop');
-  const mesStr=gi('cal-mes')||new Date().toISOString().slice(0,7);
+  const mesStr=gi('cal-mes')||new Date().v12Dia().slice(0,7);
   const [anyo,mes]=mesStr.split('-').map(Number);
   const cont=$i('cal-ocupacion'); if(!cont) return;
   const prop=D.props.find(p=>p.id==propId);
@@ -5190,7 +5195,7 @@ function rCalendarioOcupacion(){
   const inqs=D.inqs.filter(i=>i.propId==propId);
   const MESES_LG=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DOW=['D','L','M','X','J','V','S'];
-  const hoyStr=new Date().toISOString().split('T')[0];
+  const hoyStr=new Date().v12Dia();
 
   // ¿Qué inquilino ocupa la habitación h el día d?
   const ocupanteDia=(hab,dia)=>{
@@ -5347,7 +5352,7 @@ function newVisita(){
   $i('vi-edit-id').value=''; $i('m-vi-title').textContent='📆 Nueva visita';
   ['vi-nom','vi-tel','vi-email','vi-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   const ahora=new Date();
-  $i('vi-fecha').value=ahora.toISOString().split('T')[0];
+  $i('vi-fecha').value=ahora.v12Dia();
   $i('vi-hora').value='18:00';
   $i('vi-dur').value='30'; $i('vi-est').value='pendiente';
   $i('vi-origen').value='Idealista'; $i('vi-aviso').value='120'; $i('vi-recordado').value='no';
@@ -5473,7 +5478,7 @@ function rVisitas(){
   populateSels();
   const vs=D.visitas||[];
   const ahora=new Date();
-  const hoyStr=ahora.toISOString().split('T')[0];
+  const hoyStr=ahora.v12Dia();
 
   // ── Avisos: visitas de hoy sin recordatorio enviado ──
   const porAvisar=vs.filter(v=>{
@@ -5584,7 +5589,7 @@ function rVisitas(){
     else if(d==='Sin fecha'){ etiq='Sin fecha'; color='var(--ink3)'; }
     else {
       const dd=new Date(d+'T00:00:00');
-      const manana=new Date(ahora.getTime()+864e5).toISOString().split('T')[0];
+      const manana=new Date(ahora.getTime()+864e5).v12Dia();
       if(d===manana) etiq='MAÑANA · '+fD(d);
       else etiq=dd.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
       if(dd<new Date(hoyStr+'T00:00:00')) color='var(--ink3)';
@@ -5641,7 +5646,7 @@ function savePlantilla(){
     if(p){ Object.assign(p,campos); if(pdfData){p.pdfData=pdfData;p.pdfName=pdfName;} }
     toast('Plantilla actualizada');
   } else {
-    D.plantillas.push(Object.assign({id:uid(),pdfData,pdfName,fecha:new Date().toISOString().split('T')[0]},campos));
+    D.plantillas.push(Object.assign({id:uid(),pdfData,pdfName,fecha:new Date().v12Dia()},campos));
     toast('Plantilla guardada');
   }
   saveAndSync(); closeM('m-plantilla'); rPlantillas();
@@ -5875,7 +5880,7 @@ function amortizarHip(id){
   if(!confirm(`Registrar la cuota de este mes:\n\n• Interés (DEDUCIBLE): ${eur(interesMes,2)}\n• Amortización de capital (no deducible): ${eur(capitalMes,2)}\n• Cuota total: ${eur(h.cuota,2)}\n\nEl capital pendiente bajará a ${eur(h.pend-capitalMes,2)}. ¿Continuar?`))return;
   h.pend=Math.max(0,parseFloat(h.pend||0)-capitalMes);
   if(p)p.capital=h.pend;
-  const hoy=new Date().toISOString().split('T')[0];
+  const hoy=new Date().v12Dia();
   // Solo el INTERÉS es gasto deducible en IRPF
   if(interesMes>0){
     D.gastos.push({id:uid(),desc:'Intereses hipoteca '+(p?p.nom:''),cat:'Hipoteca',imp:interesMes,
@@ -5920,8 +5925,8 @@ function newCuota(hipId){
   $i('m-cu-title').textContent='🧾 Cuota — '+(p?p.nom:'')+' ('+(h.banco||'')+')';
   ['cu-int','cu-cap','cu-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   const hoy=new Date();
-  $i('cu-mes').value=hoy.toISOString().slice(0,7);
-  $i('cu-fecha').value=hoy.toISOString().split('T')[0];
+  $i('cu-mes').value=hoy.v12Dia().slice(0,7);
+  $i('cu-fecha').value=hoy.v12Dia();
   $i('cu-imp').value=h.cuota||'';
   $i('cu-tipo').value=tipoResultante(h).toFixed(3);
   // Sugerir desglose automático
@@ -6277,7 +6282,7 @@ function newMov(tipo){
   $i('mv-edit-id').value=''; $i('mv-tipo').value=tipo;
   $i('m-mov-title').textContent = tipo==='ingreso' ? '💚 Nuevo ingreso' : '💸 Nuevo gasto';
   ['mv-con','mv-imp','mv-notas','mv-cat-otros'].forEach(id=>{const e=$i(id);if(e)e.value='';});
-  let fd=new Date().toISOString().split('T')[0];
+  let fd=new Date().v12Dia();
   if(pmAnyo&&pmAnyo!=='TODO'&&pmMes) fd=`${pmAnyo}-${pmMes}-01`;
   $i('mv-fecha').value=fd;
   rellenarCats(tipo);
@@ -6486,7 +6491,7 @@ function newSub(){
   $i('sb-edit-id').value=''; $i('m-sub-title').textContent='🔁 Nueva suscripción';
   ['sb-nom','sb-imp','sb-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   $i('sb-per').value='mensual'; $i('sb-act').value='si';
-  $i('sb-prox').value=new Date().toISOString().split('T')[0];
+  $i('sb-prox').value=new Date().v12Dia();
   $i('sb-cat').innerHTML=CAT_GASTO.map(x=>`<option>${x}</option>`).join('');
   $i('sb-cat').value='Suscripciones';
   openM('m-sub');
@@ -6514,14 +6519,14 @@ function delSub(id){ if(!confirm('¿Eliminar suscripción?'))return; D.subs=D.su
 function cobrarSub(id){
   const s=(D.subs||[]).find(x=>x.id==id); if(!s)return;
   D.movs.push({id:uid(),tipo:'gasto',con:s.nom+' (suscripción)',imp:parseFloat(s.imp||0),
-    fecha:s.prox||new Date().toISOString().split('T')[0],cat:s.cat||'Suscripciones',
+    fecha:s.prox||new Date().v12Dia(),cat:s.cat||'Suscripciones',
     ctaId:s.ctaId||'',met:'Domiciliado',fis:'ninguno',notas:'Generado desde suscripciones'});
   // Avanzar la fecha del próximo cargo
   if(s.prox){
     const d=new Date(s.prox+'T00:00:00');
     const add={mensual:1,trimestral:3,semestral:6,anual:12}[s.per]||1;
     d.setMonth(d.getMonth()+add);
-    s.prox=d.toISOString().split('T')[0];
+    s.prox=d.v12Dia();
   }
   saveAndSync(); rSubs(); toast('Cargo registrado y fecha actualizada');
 }
@@ -6529,8 +6534,8 @@ function rSubs(){
   const ss=D.subs||[], act=ss.filter(s=>s.act!=='no');
   const mes=act.reduce((s,x)=>s+costeAnual(x)/12,0);
   const anual=act.reduce((s,x)=>s+costeAnual(x),0);
-  const hoy=new Date().toISOString().split('T')[0];
-  const prox7=act.filter(s=>s.prox&&s.prox>=hoy&&s.prox<=new Date(Date.now()+7*864e5).toISOString().split('T')[0]).length;
+  const hoy=new Date().v12Dia();
+  const prox7=act.filter(s=>s.prox&&s.prox>=hoy&&s.prox<=new Date(Date.now()+7*864e5).v12Dia()).length;
   $i('ps-kpis').innerHTML=`
     <div class="kpi" style="--kc:var(--rd);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Coste mensual medio</div><div class="kpi-value">${eur(mes)}</div><div class="kpi-sub">${act.length} activas</div></div>
     <div class="kpi" style="--kc:var(--acc);flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">Coste anual</div><div class="kpi-value">${eur(anual)}</div></div>
@@ -6541,7 +6546,7 @@ function rSubs(){
   tb.innerHTML=orden.map(s=>{
     const ct=(D.cuentas||[]).find(c=>c.id==s.ctaId);
     const venc=s.prox&&s.prox<hoy;
-    const pronto=s.prox&&s.prox>=hoy&&s.prox<=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
+    const pronto=s.prox&&s.prox>=hoy&&s.prox<=new Date(Date.now()+7*864e5).v12Dia();
     return `<tr style="${s.act==='no'?'opacity:.5;':''}">
       <td><div style="font-size:12px;font-weight:600;">${s.nom}</div>${s.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${s.notas}</div>`:''}</td>
       <td style="font-size:11px;">${icCat(s.cat)} ${s.cat||'—'}</td>
@@ -6583,7 +6588,7 @@ function savePresup(){
 }
 function delPresup(id){ if(!confirm('¿Eliminar presupuesto?'))return; D.presup=D.presup.filter(x=>x.id!==id); saveAndSync(); rPresup(); toast('Eliminado'); }
 function rPresup(){
-  if(!$i('pp-mes').value) $i('pp-mes').value=new Date().toISOString().slice(0,7);
+  if(!$i('pp-mes').value) $i('pp-mes').value=new Date().v12Dia().slice(0,7);
   const mes=$i('pp-mes').value;
   const gm=(D.movs||[]).filter(m=>m.tipo==='gasto'&&(m.fecha||'').startsWith(mes));
   const ps=D.presup||[];
@@ -6701,7 +6706,7 @@ function rMetas(){
 function newInver(){
   $i('iv-edit-id').value=''; $i('m-iv-title').textContent='📊 Nueva posición';
   ['iv-nom','iv-broker','iv-inv','iv-val','iv-apo','iv-notas'].forEach(id=>{const e=$i(id);if(e)e.value='';});
-  $i('iv-tipo').value='Fondo indexado'; $i('iv-fecha').value=new Date().toISOString().split('T')[0];
+  $i('iv-tipo').value='Fondo indexado'; $i('iv-fecha').value=new Date().v12Dia();
   openM('m-inver');
 }
 function editInver(id){
@@ -6894,7 +6899,7 @@ function saveDoc(){
   if(!id && !pdfData){toast('Adjunta el archivo',false);return;}
   const campos={nom,tipo:$i('dc-tipo').value,anyo:gi('dc-anyo'),notas:gi('dc-notas')};
   if(id){ const d=D.docs.find(x=>x.id==id); if(d){Object.assign(d,campos); if(pdfData){d.pdfData=pdfData;d.pdfName=pdfName;}} toast('Actualizado'); }
-  else { D.docs.push(Object.assign({id:uid(),pdfData,pdfName,fecha:new Date().toISOString().split('T')[0]},campos)); toast('Documento guardado'); }
+  else { D.docs.push(Object.assign({id:uid(),pdfData,pdfName,fecha:new Date().v12Dia()},campos)); toast('Documento guardado'); }
   saveAndSync(); closeM('m-doc'); rDocs();
 }
 function delDoc(id){ if(!confirm('¿Eliminar documento?'))return; D.docs=D.docs.filter(x=>x.id!==id); saveAndSync(); rDocs(); toast('Eliminado'); }
@@ -7026,7 +7031,7 @@ function nomOwnerG(id){
 // ── PANEL PERSONAL ────────────────────────────────────────────
 function rPDash(){
   if(!GEN && gToken && WS==='personal'){ cargarGentaury().then(()=>{ if(document.querySelector('.nav-item.on')?.dataset.s==='pDash') rPDash(); }); }
-  const hoy=new Date(), mesAct=hoy.toISOString().slice(0,7), hoyS=hoy.toISOString().split('T')[0];
+  const hoy=new Date(), mesAct=hoy.v12Dia().slice(0,7), hoyS=hoy.v12Dia();
   const mm=movsDe(mesAct.slice(0,4),mesAct.slice(5,7));
   const ing=sumTipo(mm,'ingreso'), gas=sumTipo(mm,'gasto'), bal=ing-gas;
   const tasa=ing>0?Math.round(bal/ing*100):0;
@@ -8542,7 +8547,7 @@ function newAgenda(){
   ['ag-t','ag-f','ag-n'].forEach(id=>{const e=$i(id);if(e)e.value='';});
   const s=$i('ag-p'); if(s)s.value='';
   const ti=$i('ag-ti'); if(ti)ti.selectedIndex=0;
-  $i('ag-f').value=new Date().toISOString().split('T')[0];
+  $i('ag-f').value=new Date().v12Dia();
   const t=$i('m-ag-title'); if(t)t.textContent='📅 Nueva tarea';
   openM('m-ag');
 }
@@ -8568,7 +8573,7 @@ function toggleAgenda(id){
 function rAgenda(){
   const pend=D.agenda.filter(a=>!a.done).sort((a,b)=>a.fecha>b.fecha?1:-1);
   const done=D.agenda.filter(a=>a.done).slice(-5).reverse();
-  const hoyS=new Date().toISOString().split('T')[0];
+  const hoyS=new Date().v12Dia();
   const rItem=(a,canDone=true)=>{const pr=D.props.find(p=>p.id==a.propId);const atr=a.fecha&&a.fecha<hoyS;return `<div class="agenda-item"><div class="agenda-dot" style="background:${atr?'var(--rd)':a.done?'var(--gn)':'var(--acc)'}"></div><div style="flex:1;"><div style="font-size:13px;font-weight:500;${a.done?'text-decoration:line-through;color:var(--ink3);':''}">${a.titulo}</div><div style="font-size:10px;color:var(--ink3);margin-top:2px;">${a.tipo}${pr?' · '+pr.nom:''}${a.fecha?' · '+fD(a.fecha):''}</div>${a.notas?`<div style="font-size:10px;color:var(--ink3);font-style:italic;">${a.notas}</div>`:''}</div><button class="btn btn-secondary btn-xs" onclick="editAgenda('${a.id}')">✏️</button>${canDone?`<button class="btn btn-success btn-xs" onclick="D.agenda.find(x=>x.id=='${a.id}').done=true;saveAndSync();rAgenda();toast('Completada')">✓</button>`:''}<button class="btn btn-danger btn-xs" onclick="D.agenda=D.agenda.filter(x=>x.id!='${a.id}');saveAndSync();rAgenda();">🗑</button></div>`;};
   $i('ag-pend').innerHTML=pend.length?pend.map(a=>rItem(a)).join(''):'<div class="empty"><p>Sin tareas pendientes 🎉</p></div>';
   $i('ag-done').innerHTML=done.length?done.map(a=>rItem(a,false)).join(''):'<div class="empty"><p>Sin tareas completadas</p></div>';
@@ -8631,7 +8636,7 @@ function deudaPisoEnFecha(p, fechaRef){
   }
   const pendHoy=parseFloat(h.pend||0);
   // Sumamos el capital amortizado DESPUÉS de la fecha de referencia
-  const mesRef=fechaRef.toISOString().slice(0,7);
+  const mesRef=fechaRef.v12Dia().slice(0,7);
   const amortPosterior=(h.cuotas||[])
     .filter(cu=>(cu.mes||'')>mesRef)
     .reduce((s,cu)=>s+parseFloat(cu.cap||0),0);
@@ -8656,7 +8661,7 @@ function serieHistoricoPatrimonio(){
       const v=valorPisoEnFecha(p, ref);
       if(v>0){ bruto+=v; deuda+=deudaPisoEnFecha(p, ref); }
     });
-    serie.push({mes:cur.toISOString().slice(0,7), bruto, neto:bruto-deuda, deuda});
+    serie.push({mes:cur.v12Dia().slice(0,7), bruto, neto:bruto-deuda, deuda});
     cur.setMonth(cur.getMonth()+1);
     guard++;
   }
@@ -8668,13 +8673,13 @@ function serieHistoricoIngresos(){
   const pagos=D.pagos||[];
   const meses=[...new Set(pagos.filter(p=>p.estado==='pagado'&&p.mes).map(p=>p.mes))].sort();
   if(!meses.length) return [];
-  const ini=meses[0], fin=new Date().toISOString().slice(0,7);
+  const ini=meses[0], fin=new Date().v12Dia().slice(0,7);
   const serie=[];
   let cur=new Date(ini+'-01T00:00:00');
   const dFin=new Date(fin+'-01T00:00:00');
   let guard=0;
   while(cur<=dFin && guard<400){
-    const mk=cur.toISOString().slice(0,7);
+    const mk=cur.v12Dia().slice(0,7);
     const ing=pagos.filter(p=>p.mes===mk&&p.estado==='pagado').reduce((s,p)=>s+parseFloat(p.imp||0),0);
     const gas=(D.gastos||[]).filter(g=>(g.fecha||'').startsWith(mk)).reduce((s,g)=>s+parseFloat(g.imp||0),0)
              +(D.compras||[]).filter(x=>(x.fecha||'').startsWith(mk)).reduce((s,x)=>s+parseFloat(x.imp||0),0);
@@ -8925,12 +8930,12 @@ function rCartera(){
 function rDash(){
   rCartera();
   rGraficas();
-  const hoy=new Date(),mesAct=hoy.toISOString().slice(0,7),hoyS=hoy.toISOString().split('T')[0];
+  const hoy=new Date(),mesAct=hoy.v12Dia().slice(0,7),hoyS=hoy.v12Dia();
   const alerts=[];
   D.inqs.filter(i=>i.estado==='ACTIVO'&&i.fin).forEach(i=>{const d=Math.round((new Date(i.fin)-hoy)/86400000);if(d<=30&&d>=0)alerts.push({t:'y',m:`⏰ Contrato de ${i.nom} ${i.ap} vence en ${d} días`});if(d<0)alerts.push({t:'r',m:`🔴 Contrato de ${i.nom} ${i.ap} expirado`});});
   D.pagos.filter(p=>p.estado==='atrasado').forEach(p=>{const inq=D.inqs.find(i=>i.id==p.inqId);alerts.push({t:'r',m:`💸 Atrasado: ${inq?inq.nom+' '+inq.ap:'?'} — ${p.con||'Alquiler'} ${eur(p.imp)}`});});
   // Cobros pendientes del mes en curso (sin marcar como cobrados)
-  const _mesAlert=new Date().toISOString().slice(0,7);
+  const _mesAlert=new Date().v12Dia().slice(0,7);
   const pendMes=D.pagos.filter(p=>p.mes===_mesAlert&&p.estado==='pendiente');
   const porInq={};
   pendMes.forEach(p=>{ const inq=D.inqs.find(i=>i.id==p.inqId); const nom=inq?inq.nom+' '+inq.ap:'?'; (porInq[nom]=porInq[nom]||[]).push(p.con||'Alquiler'); });
@@ -8938,7 +8943,7 @@ function rDash(){
     alerts.push({t:'y',m:`💰 ${nom}: pendiente ${cons.join(' + ')}`});
   });
   // Visitas de hoy
-  const hoyVi=new Date().toISOString().split('T')[0];
+  const hoyVi=new Date().v12Dia();
   (D.visitas||[]).filter(v=>v.fecha===hoyVi&&!['alquilado','descartado','noshow','realizada'].includes(v.est))
     .sort((a,b)=>(a.hora||'').localeCompare(b.hora||''))
     .slice(0,3).forEach(v=>{
@@ -8970,7 +8975,7 @@ function rDash(){
   $i('d-conts').innerHTML=contV.length?contV.map(({i,d})=>{const p=D.props.find(pr=>pr.id==i.propId);return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);"><div><div style="font-size:12px;font-weight:500;">${i.nom} ${i.ap}</div><div style="font-size:10px;color:var(--ink3);">${p?p.nom:'–'}</div></div><span class="mono" style="font-size:12px;color:${d<14?'var(--rd)':'var(--ye)'};">${d}d</span></div>`;}).join(''):'<div class="empty" style="padding:16px;"><p>Sin contratos por vencer</p></div>';
 
   // Muestra tareas de hoy + atrasadas + próximas 7 días, ordenadas
-  const en7=new Date(Date.now()+7*864e5).toISOString().split('T')[0];
+  const en7=new Date(Date.now()+7*864e5).v12Dia();
   const agH=D.agenda.filter(a=>!a.done && a.fecha && a.fecha<=en7)
     .sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   const sinFecha=D.agenda.filter(a=>!a.done && !a.fecha);
@@ -9001,7 +9006,7 @@ function expCSV(){const h=['Estado','Nombre','Apellidos','Email','Tel','WhatsApp
 function saveCfg(){D.cfg={nom:gi('cn'),irpf:gn('ci')||24,amorti:gn('ca')||3,vacancia:gn('cv')||5};saveAndSync();toast('Guardado');}
 function rCfg(){
   rTablaIPC();$i('cn').value=D.cfg.nom||'';$i('ci').value=D.cfg.irpf||24;$i('ca').value=D.cfg.amorti||3;$i('cv').value=D.cfg.vacancia||5;}
-function exportAll(){const blob=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`rentacontrol_backup_${new Date().toISOString().split('T')[0]}.json`;a.click();toast('Backup descargado');}
+function exportAll(){const blob=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`rentacontrol_backup_${new Date().v12Dia()}.json`;a.click();toast('Backup descargado');}
 function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{D=JSON.parse(ev.target.result);saveAndSync();rDash();toast('Datos importados ✓');}catch{toast('Error al importar',false);}};r.readAsText(f);}
 function clearAll(){if(!confirm('¿Borrar TODOS los datos?'))return;if(!confirm('¿Seguro? Se borrarán solo los datos del espacio '+((WS_CFG[WS]||{}).nom||'actual')+'. Sin vuelta atrás.'))return;D=def();saveAndSync();rDash();toast('Datos borrados');}
 
@@ -9029,13 +9034,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   const d=new Date();
   actualizarRelojTopbar();
   setInterval(actualizarRelojTopbar, 1000);
-  $i('hm').value=d.toISOString().slice(0,7);
-  $i('pa-m').value=d.toISOString().slice(0,7);
-  $i('pa-f').value=d.toISOString().split('T')[0];
-  $i('ga-f').value=d.toISOString().split('T')[0];
-  $i('in-f').value=d.toISOString().split('T')[0];
-  $i('ag-f').value=d.toISOString().split('T')[0];
-  $i('fac-f').value=d.toISOString().split('T')[0];
+  $i('hm').value=d.v12Dia().slice(0,7);
+  $i('pa-m').value=d.v12Dia().slice(0,7);
+  $i('pa-f').value=d.v12Dia();
+  $i('ga-f').value=d.v12Dia();
+  $i('in-f').value=d.v12Dia();
+  $i('ag-f').value=d.v12Dia();
+  $i('fac-f').value=d.v12Dia();
   populateSels();
   inicializarSnapshot();
   if(haySesion){
@@ -9045,7 +9050,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   D.inqs.filter(i=>i.estado==='ACTIVO'&&i.fin).forEach(i=>{
     const dias=Math.round((new Date(i.fin)-d)/86400000);
     if(dias<=30&&dias>=0&&!D.agenda.some(a=>!a.done&&a._autoId==i.id)){
-      D.agenda.push({id:uid(),titulo:`⏰ Gestionar contrato: ${i.nom} ${i.ap} (${dias}d)`,fecha:d.toISOString().split('T')[0],tipo:'Recordatorio',propId:i.propId,notas:'Auto-generado',done:false,_autoId:i.id});
+      D.agenda.push({id:uid(),titulo:`⏰ Gestionar contrato: ${i.nom} ${i.ap} (${dias}d)`,fecha:d.v12Dia(),tipo:'Recordatorio',propId:i.propId,notas:'Auto-generado',done:false,_autoId:i.id});
     }
   });
   saveAndSync();
@@ -9222,7 +9227,7 @@ function aplicarWS(){
   const bs=$i('ws-switch2'); if(bs) bs.style.display='block';
   // Si es Personal, precargar el patrimonio inmobiliario de Gentaury
   if(esP && gToken){ cargarGentaury(); }
-  if(WS==='gentaury'){ try{ v2Migrar(); }catch(e){ console.error('v2Migrar',e); } try{ v2MigrarTodos(); }catch(e){ console.error('v2MigrarTodos',e); } repararTodasPropiedades(); autoGenerarPagosPendientes(); _mesTablero=new Date().toISOString().slice(0,7); try{ programarAvisosVisitas(); }catch(e){} }
+  if(WS==='gentaury'){ try{ v2Migrar(); }catch(e){ console.error('v2Migrar',e); } try{ v2MigrarTodos(); }catch(e){ console.error('v2MigrarTodos',e); } repararTodasPropiedades(); autoGenerarPagosPendientes(); _mesTablero=new Date().v12Dia().slice(0,7); try{ programarAvisosVisitas(); }catch(e){} }
   // Activar la primera sección del espacio
   const primera = document.querySelector('.nav-item[data-ws="'+WS+'"]');
   if(primera) go(primera);
@@ -10346,14 +10351,14 @@ function v2CalcAnyo(y,items,bolsa,cfg){
 
   // 1. Ingresos: año por exigibilidad (art. 14.1.a LIRPF); titular por días disfrutados (art. 474 CC)
   (D.pagos||[]).forEach(pg=>{
-    if(!pg.mes||/fianza/i.test(pg.con||'')) return;
+    if(!pg.mes||/fianza|garant/i.test(pg.con||'')) return;
     if(v2ExigIso(pg.mes,cfg,pg).slice(0,4)!==String(y)) return;
     const inq=(D.inqs||[]).find(i=>i.id==pg.inqId); if(!inq||!inq.propId) return;
     const p=props.find(x=>x.id==inq.propId); if(!p) return;
     const imp=+pg.imp||0; if(!imp) return;
     const [my,mm]=pg.mes.split('-').map(Number), dm=new Date(my,mm,0).getDate(), rep={};
     for(let k=1;k<=dm;k++){ const h=titularidadDia(p.id,pg.mes+'-'+String(k).padStart(2,'0')).disfrute||p.ownerId||''; rep[h]=(rep[h]||0)+1; }
-    Object.entries(rep).forEach(([c,dd])=>{ if(!c) return; const r=P(c,p.id), v=imp*dd/dm; if(CON_H.includes(pg.con)) r.ingH+=v; else r.ingAlq+=v; });
+    Object.entries(rep).forEach(([c,dd])=>{ if(!c) return; const r=P(c,p.id), v=imp*dd/dm; if(CON_H.includes(String(pg.con||'').replace(' (resto)',''))) r.ingH+=v; else r.ingAlq+=v; });
   });
 
   // 2. Días equivalentes arrendados
@@ -10474,7 +10479,7 @@ function v2CalcAnyo(y,items,bolsa,cfg){
     if(x.neto>0&&x.ing>0) v8Reducciones(x,c,pid,y,cfg,props);
     if(false){
       const p=props.find(z=>z.id==pid), porInq={};
-      (D.pagos||[]).forEach(pg=>{ if(!pg.mes||/fianza/i.test(pg.con||'')) return; if(v2ExigIso(pg.mes,cfg,pg).slice(0,4)!==String(y)) return; const inq=(D.inqs||[]).find(i=>i.id==pg.inqId); if(!inq||inq.propId!=pid) return; porInq[inq.id]=(porInq[inq.id]||0)+(+pg.imp||0); });
+      (D.pagos||[]).forEach(pg=>{ if(!pg.mes||/fianza|garant/i.test(pg.con||'')) return; if(v2ExigIso(pg.mes,cfg,pg).slice(0,4)!==String(y)) return; const inq=(D.inqs||[]).find(i=>i.id==pg.inqId); if(!inq||inq.propId!=pid) return; porInq[inq.id]=(porInq[inq.id]||0)+(+pg.imp||0); });
       const totI=Object.values(porInq).reduce((a,b)=>a+b,0)||1;
       Object.entries(porInq).forEach(([iid,v])=>{
         const inq=(D.inqs||[]).find(i=>i.id==iid);
@@ -15887,6 +15892,417 @@ function v11ValGarRes(co,rs,av,err){
   if(gm===0) err.push('En la oferta y reserva no se pactó garantía adicional ('+cl+') y en el contrato pones '+v4E2(g)+' €.'+arr);
   else if(!(g>0)) err.push('En la oferta y reserva se pactó una garantía adicional de '+of+' ('+cl+') y en el contrato marcas «No se pacta garantía adicional».'+arr);
   else err.push('En la oferta y reserva se pactó una garantía adicional de '+of+' ('+cl+') y en el contrato pones '+v4E2(g)+' €.'+arr);
+}
+
+// ══════════════════════════════════════════════════════════════
+// v4.12 · 13/11/2026 · Pagos rehecho
+// · Meses y días en hora de España (antes se pasaban a UTC: «Siguiente» no avanzaba,
+//   «Anterior» se saltaba meses y el calendario del mes no cambiaba el tablero)
+// · Tablero por contrato y mes: renta proporcional, vencimiento del contrato, cobros parciales
+// · Registrar y deshacer cobros con fecha, importe y cuenta; descuento de 5 € y penalización de 20 €
+// ══════════════════════════════════════════════════════════════
+const V12_RESTO=' (resto)';
+function v12R2(n){ return Math.round((+n||0)*100)/100; }
+function v12MesOk(m){ return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(m||'')); }
+function v12MesHoy(){ return v4Hoy().slice(0,7); }
+function v12MesLim(){ return v4MesSig(v12MesHoy()); }   // los cobros se generan hasta el mes que viene
+function v12MesTxt(m){ if(!v12MesOk(m)) return m||''; const n=v4MesNom(m)||''; return n.charAt(0).toUpperCase()+n.slice(1)+' de '+m.slice(0,4); }
+function v12CoGest(co){ return !!(co&&v7Gest(co)&&v4F(co)); }
+function v12Pag(p){ return !!p&&p.estado==='pagado'; }
+function v12EsAlq(p){ return !!p&&(p.con==='Alquiler'||p.con==='Alquiler'+V12_RESTO); }
+function v12EsDep(p){ return /fianza|garant/i.test((p&&p.con)||''); }
+function v12NomInq(i){ return i?(((i.nom||'')+' '+(i.ap||'')).trim()||'Sin nombre'):'Inquilino borrado'; }
+function v12TieneCoGest(inqId){ return (D.conts||[]).some(c=>v12CoGest(c)&&(c.inqId==inqId||c.inqId2==inqId)); }
+
+// ── Qué contrato corresponde a cada cobro ──
+function v12RecDeCo(p,co,M){
+  if(p.coId) return p.coId===co.id;
+  if(p.rep&&p.rep.coId) return p.rep.coId===co.id;
+  if(p.pen&&p.pen.coId) return p.pen.coId===co.id;
+  if(p.inqId!=co.inqId&&p.inqId!=co.inqId2) return false;
+  const c=v4CoDeInq(p.inqId,M||p.mes); return !c||c.id===co.id;
+}
+function v12AlqRecs(co,M){ return (D.pagos||[]).filter(p=>p.mes===M&&v12EsAlq(p)&&(p.coId===co.id||p.inqId==co.inqId)&&v12RecDeCo(p,co,M)); }
+function v4PagoAlquiler(co,mes){ const a=v12AlqRecs(co,mes); return a.find(p=>p.con==='Alquiler')||a[0]; }
+function v12UnidadKey(p,M){
+  const g=id=>{ const c=id&&v4Co(id); return c&&v12CoGest(c)?'co:'+c.id:''; };
+  const k=g(p.coId)||g(p.rep&&p.rep.coId)||g(p.pen&&p.pen.coId); if(k) return k;
+  const c=v4CoDeInq(p.inqId,M); if(c&&v12CoGest(c)) return 'co:'+c.id;
+  return 'inq:'+p.inqId;
+}
+// Inquilino sin contrato gestionado que paga ese mes (con su ficha: inicio, fin y cuotas)
+function v12LegadoActivo(i,M){
+  if(!i||!i.ini||i.estado!=='ACTIVO'||i.ini.slice(0,7)>M) return false;
+  if(i.fin&&i.fin.slice(0,7)<M) return false;
+  return (parseFloat(i.alq)||0)>0||(parseFloat(i.luz)||0)>0||(parseFloat(i.agua)||0)>0;
+}
+
+// ── Generación de los cobros pendientes (hace falta para el IRPF: la renta es ingreso cuando es exigible, art. 14.1.a LIRPF) ──
+// Contratos gestionados: renta de cada mes (proporcional el primero y el último) desde la firma hasta el mes que viene.
+// Inquilinos sin contrato gestionado: las cuotas de su ficha, desde el inicio hasta el fin (si lo hay) o el mes que viene.
+// Cobros pendientes automáticos imposibles que creaba el tablero antiguo al «Cobrar todo» en un mes equivocado:
+// inquilino sin contrato gestionado, sin tocar a mano, sin cobrar y de un mes anterior a su entrada o posterior a su salida.
+function v12Limpiar(){
+  const antes=(D.pagos||[]).length;
+  D.pagos=(D.pagos||[]).filter(p=>{ if(p.estado==='pagado'||p.notas!=='Auto'||p.cicloMes||p.pdfData||!p.mes||!['Alquiler','Luz','Agua'].includes(p.con)) return true;
+    const i=v4Inq(p.inqId); if(!i||!i.ini||v12TieneCoGest(i.id)) return true;
+    return !(p.mes<i.ini.slice(0,7)||(i.fin&&p.mes>i.fin.slice(0,7))); });
+  return antes-D.pagos.length;
+}
+function v12Generar(){
+  D.pagos=D.pagos||[]; const lim=v12MesLim(), quit=v12Limpiar(); let gen=0;
+  (D.conts||[]).forEach(co=>{
+    if(!v12CoGest(co)) return; const pay=v4Inq(co.inqId); if(!pay||pay.estado==='PASADO') return;
+    const F=v4F(co), fin=v4FinCobro(co); if(!F||!fin) return;
+    const hasta=fin.slice(0,7)<lim?fin.slice(0,7):lim; let m=F.slice(0,7), g=0;
+    while(m<=hasta&&g<480){ const imp=v4RentaMes(co,m);
+      if(imp>0&&!v12AlqRecs(co,m).length){ D.pagos.push({id:uid(),inqId:co.inqId,coId:co.id,con:'Alquiler',mes:m,imp,estado:'pendiente',fecha:'',notas:'Auto',v4:true}); gen++; }
+      m=v4MesSig(m); g++; }
+  });
+  (D.inqs||[]).forEach(inq=>{
+    if(inq.estado!=='ACTIVO'||!inq.ini||v12TieneCoGest(inq.id)) return;
+    const hasta=inq.fin&&inq.fin.slice(0,7)<lim?inq.fin.slice(0,7):lim; let m=inq.ini.slice(0,7), g=0;
+    while(m<=hasta&&g<480){
+      [['Alquiler',v4ImporteAlquiler(inq,m)],['Luz',inq.luz],['Agua',inq.agua]].forEach(([con,imp])=>{ imp=v12R2(parseFloat(imp)||0);
+        if(imp>0&&!D.pagos.some(p=>p.inqId==inq.id&&p.mes===m&&(p.con===con||(con==='Alquiler'&&v12EsAlq(p))))){ D.pagos.push({id:uid(),inqId:inq.id,con,mes:m,imp,estado:'pendiente',fecha:'',notas:'Auto',v4:con==='Alquiler'}); gen++; } });
+      m=v4MesSig(m); g++; }
+  });
+  if(gen||quit) saveAndSync();
+  return gen;
+}
+function autoGenerarPagosPendientes(){ return v12Generar(); }
+function genPagos(){ const n=v12Generar(); rTableroPagos(); toast(n?n+' cobro'+(n===1?'':'s')+' pendiente'+(n===1?'':'s')+' generado'+(n===1?'':'s')+' (hasta '+v4MesNom(v12MesLim())+')':'Todos los cobros están ya generados hasta '+v12MesTxt(v12MesLim())); }
+
+// ── Cobros de cada mes por contrato (o inquilino sin contrato) ──
+function v12Lineas(u,M){
+  const L=u.recs.map(p=>({key:p.id, rec:p, con:p.con||'Alquiler', mes:p.mes, imp:v12R2(p.imp), pag:v12Pag(p), fecha:p.fecha||''}));
+  if(u.co){ const co=u.co, r=v4RentaMes(co,M); if(r>0&&!u.recs.some(p=>v12EsAlq(p))) L.push({key:'v:Alquiler', virtual:true, con:'Alquiler', mes:M, imp:r, pag:false}); }
+  else if(u.inq&&!v12TieneCoGest(u.inq.id)&&v12LegadoActivo(u.inq,M)){
+    [['Alquiler',v4ImporteAlquiler(u.inq,M)],['Luz',u.inq.luz],['Agua',u.inq.agua]].forEach(([con,imp])=>{ imp=v12R2(parseFloat(imp)||0);
+      if(imp>0&&!u.recs.some(p=>p.con===con||(con==='Alquiler'&&v12EsAlq(p)))) L.push({key:'v:'+con, virtual:true, con, mes:M, imp, pag:false}); }); }
+  const ord=l=>l.con==='Alquiler'?0:l.con==='Alquiler'+V12_RESTO?1:/bonific/i.test(l.con)?9:/penaliz/i.test(l.con)?8:v12EsDep(l)?7:5;
+  return L.sort((a,b)=>ord(a)-ord(b)||String(a.con).localeCompare(String(b.con)));
+}
+function v12Venc(u,M){ let V=u.co?v4Venc(u.co,M):null; if(!V) V=v4VencInq(u.co?u.co.inqId:u.inqId,M); return V; }
+// La fianza y la garantía son depósitos: se ven en la tarjeta, pero no cuentan como renta del mes
+function v12Estado(u,M,hoy){
+  const L=v12Lineas(u,M), R=L.filter(l=>!v12EsDep(l)), total=v12R2(R.reduce((s,l)=>s+l.imp,0)), cobrado=v12R2(R.filter(l=>l.pag).reduce((s,l)=>s+l.imp,0)), pend=v12R2(total-cobrado);
+  const pos=R.filter(l=>l.imp>0), nPag=pos.filter(l=>l.pag).length, nPend=pos.filter(l=>!l.pag).length, V=v12Venc(u,M), firma=!!(u.co&&v4F(u.co).slice(0,7)===M);
+  let estado; if(!pos.length) estado=R.length?'cobrado':'sin'; else if(!nPend) estado='cobrado'; else if(nPag) estado='parcial'; else estado=hoy>V?'vencido':'pendiente';
+  return {L, total, cobrado, pend, V, firma, estado, venc:nPend>0&&hoy>V};
+}
+function v12Unidad(k){
+  if(k.startsWith('co:')){ const co=v4Co(k.slice(3)); if(!co) return null; return {key:k, co, inqId:co.inqId, propId:co.propId, hab:String(v4Hab(co)), nom:v4NombresCompletos(co), recs:[]}; }
+  const id=k.slice(4), i=v4Inq(id); return {key:k, inq:i||null, inqId:id, propId:i?i.propId:'', hab:i?String(i.hab||''):'', nom:v12NomInq(i), recs:[]};
+}
+function v12Unidades(M){
+  const U=new Map(), hoy=v4Hoy(), get=k=>{ if(!U.has(k)){ const u=v12Unidad(k); if(!u) return null; U.set(k,u); } return U.get(k); };
+  (D.conts||[]).forEach(co=>{ if(v12CoGest(co)&&v4RentaMes(co,M)>0) get('co:'+co.id); });
+  (D.pagos||[]).forEach(p=>{ if(p.mes!==M) return; const u=get(v12UnidadKey(p,M)); if(u) u.recs.push(p); });
+  (D.inqs||[]).forEach(i=>{ if(!U.has('inq:'+i.id)&&!v12TieneCoGest(i.id)&&v12LegadoActivo(i,M)) get('inq:'+i.id); });
+  return [...U.values()].map(u=>Object.assign(u,v12Estado(u,M,hoy))).filter(u=>u.L.length);
+}
+function v12UnidadMes(key,M){ return v12Unidades(M).find(u=>u.key===key)||(()=>{ const u=v12Unidad(key); return u?Object.assign(u,v12Estado(u,M,v4Hoy())):null; })(); }
+
+// ── Navegación por meses (en hora local) ──
+function v12IrMes(m){ _mesTablero=v12MesOk(m)?m:v12MesHoy(); const e=$i('pa-mes-tablero'); if(e&&e.value!==_mesTablero) e.value=_mesTablero; rTableroPagos(); }
+function cambiarMesTablero(delta){ v12IrMes(v4MesSig(v12MesOk(_mesTablero)?_mesTablero:v12MesHoy(),delta)); }
+function irMesActualTablero(){ v12IrMes(v12MesHoy()); }
+function v12RefrescarPagos(){
+  try{ const s=$i('sec-pagos'); if(s&&s.classList.contains('on')) rTableroPagos(); else { const w=$i('pa-tabla-wrap'); if(w&&w.style.display!=='none') rPagos(); } }catch(e){ console.warn('Pagos',e); }
+}
+
+// ── Tablero ──
+const V12_COL={cobrado:{bg:'rgba(16,185,129,.10)',bd:'rgba(16,185,129,.45)',txt:'#059669',et:'Cobrado',ic:'✅'},parcial:{bg:'rgba(245,158,11,.10)',bd:'rgba(245,158,11,.5)',txt:'#b45309',et:'Parcial',ic:'⚠️'},pendiente:{bg:'var(--card)',bd:'var(--line2)',txt:'var(--ink3)',et:'Pendiente',ic:'⏳'},vencido:{bg:'rgba(239,68,68,.08)',bd:'rgba(239,68,68,.5)',txt:'#dc2626',et:'Vencido',ic:'🔴'},sin:{bg:'var(--bg)',bd:'var(--line)',txt:'var(--ink3)',et:'Sin cobros',ic:'–'}};
+function v12TxtLinea(u,l,M){
+  if(l.con==='Alquiler'&&u.co){ const co=u.co, F=v4F(co), fin=v4FinCobro(co), d1=M+'-01', dN=v4FinMes(d1), a=F>d1?F:d1, b=fin&&fin<dN?fin:dN; return (a!==d1||b!==dN)?'Renta del '+v4DM(a)+' al '+v4DM(b):'Renta'; }
+  return l.con+(l.mes&&l.mes!==M?' · '+v4MesNom(l.mes):'')+(v12EsDep(l)?' (depósito)':'');
+}
+function v12HtmlUnidad(u,M,hoy){
+  const c=V12_COL[u.estado]||V12_COL.sin, co=u.co, tipo=co?(v7EsHab(co)?'Vivienda habitual':'Temporal'):'Sin contrato en la app';
+  const vtxt=u.firma?'Se paga en la firma ('+v4F2(u.V)+')':'Vence el '+v4F2(u.V);
+  const dias=u.venc?v4Diff(u.V,hoy):0;
+  const lin=u.L.map(l=>'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:4px 7px;border-radius:6px;margin-top:3px;background:'+(l.pag?'rgba(16,185,129,.10)':'rgba(120,120,120,.07)')+';">'
+    +'<span style="font-size:11px;color:'+(l.pag?'#059669':'var(--ink2)')+';min-width:0;">'+(l.pag?'✓':'○')+' '+v4Esc(v12TxtLinea(u,l,M))+(l.pag&&l.fecha?' <span style="color:var(--ink3);">· cobrado el '+v4F2(l.fecha)+'</span>':'')+(l.virtual?' <span style="color:var(--ink3);">· previsto</span>':'')+'</span>'
+    +'<span class="mono" style="font-size:11px;white-space:nowrap;color:'+(l.pag?'#059669':'var(--ink2)')+';">'+v4E2(l.imp)+' €</span></div>').join('');
+  const abre=co?"v4Gestionar('"+co.id+"')":(u.inq?"openPerfil('"+u.inqId+"')":'');
+  return '<div class="v12-u" data-u="'+v4Esc(u.key)+'" style="background:'+c.bg+';border:1.5px solid '+c.bd+';border-radius:10px;padding:11px 12px;min-width:0;">'
+   +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;"><div style="min-width:0;flex:1;'+(abre?'cursor:pointer;':'')+'"'+(abre?' onclick="'+abre+'"':'')+'>'
+   +'<div style="font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:'+c.txt+';">Hab. '+v4Esc(u.hab||'?')+' · '+v4Esc(tipo)+'</div>'
+   +'<div style="font-size:12.5px;font-weight:700;margin-top:2px;line-height:1.25;">'+v4Esc(u.nom)+'</div></div><span style="font-size:15px;">'+c.ic+'</span></div>'
+   +'<div style="font-size:10.5px;margin-top:4px;color:'+(u.venc?'#dc2626':'var(--ink3)')+';">'+vtxt+(u.venc?' · vencido hace '+dias+' día'+(dias===1?'':'s'):'')+'</div>'
+   +'<div style="margin-top:6px;">'+lin+'</div>'
+   +'<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid '+c.bd+';">'
+   +'<span style="font-size:11px;font-weight:700;color:'+c.txt+';">'+c.et+(u.estado==='parcial'?' · faltan '+v4E2(u.pend)+' €':u.estado==='cobrado'?' · '+v4E2(u.cobrado)+' €':' · '+v4E2(u.pend)+' €')+'</span>'
+   +'<span style="display:flex;gap:5px;flex-wrap:wrap;">'+(u.L.some(l=>l.pag)?'<button class="btn btn-ghost btn-xs" onclick="v12Deshacer(\''+u.key+'\',\''+M+'\')">↩ Deshacer</button>':'')
+   +(u.pend>0.004?'<button class="btn btn-success btn-xs" onclick="v12Cobro(\''+u.key+'\',\''+M+'\')">💶 Registrar cobro</button>':'')+'</span></div></div>';
+}
+function rTableroPagos(){
+  if(!v12MesOk(_mesTablero)) _mesTablero=v12MesHoy();
+  const M=_mesTablero, inp=$i('pa-mes-tablero'); if(inp&&inp.value!==M) inp.value=M;
+  const nm=$i('pa-mes-nom'); if(nm) nm.textContent=v12MesTxt(M)+(M===v12MesHoy()?' · mes actual':'');
+  try{ v12Generar(); }catch(e){ console.warn('Generar cobros',e); }
+  const hoy=v4Hoy(), U=v12Unidades(M);
+  const S=k=>v12R2(U.reduce((s,u)=>s+k(u),0));
+  const tot=S(u=>u.total), cob=S(u=>u.cobrado), ven=S(u=>u.venc?u.pend:0), pen=S(u=>u.venc?0:u.pend);
+  const n=e=>U.filter(e).length;
+  const kpi=(col,t,v,s)=>'<div class="kpi" style="--kc:'+col+';flex:1;min-width:140px;"><div class="kpi-accent"></div><div class="kpi-label">'+t+'</div><div class="kpi-value">'+v+'</div><div class="kpi-sub">'+s+'</div></div>';
+  const r=$i('pa-resumen'); if(r) r.innerHTML=kpi('var(--ink2)','A cobrar en '+v4MesNom(M),v4E2(tot)+' €',U.length+' contrato'+(U.length===1?'':'s')+' o inquilino'+(U.length===1?'':'s'))
+    +kpi('var(--gn)','✅ Cobrado',v4E2(cob)+' €',n(u=>u.estado==='cobrado')+' al día'+(n(u=>u.estado==='parcial')?' · '+n(u=>u.estado==='parcial')+' parcial':''))
+    +kpi('var(--ye)','⏳ Pendiente en plazo',v4E2(pen)+' €',n(u=>u.pend>0.004&&!u.venc)+' por cobrar')
+    +kpi('var(--rd)','🔴 Vencido',v4E2(ven)+' €',n(u=>u.venc)+' sin pagar a tiempo');
+  const cont=$i('pa-tablero'); if(!cont) return;
+  if(!U.length){ cont.innerHTML='<div class="empty"><div class="empty-icon">💳</div><p>No hay rentas ni cobros en '+v4Esc(v12MesTxt(M))+'.</p></div>'; }
+  else {
+    const grupos=new Map(); U.forEach(u=>{ const k=u.propId||''; if(!grupos.has(k)) grupos.set(k,[]); grupos.get(k).push(u); });
+    const orden=[...(D.props||[]).map(p=>p.id),...[...grupos.keys()].filter(k=>!(D.props||[]).some(p=>p.id==k))];
+    cont.innerHTML=orden.filter(k=>grupos.has(k)).map(k=>{ const p=(D.props||[]).find(x=>x.id==k), us=grupos.get(k).sort((a,b)=>(parseInt(a.hab)||99)-(parseInt(b.hab)||99)||String(a.nom).localeCompare(String(b.nom)));
+      const t=v12R2(us.reduce((s,u)=>s+u.total,0)), c=v12R2(us.reduce((s,u)=>s+u.cobrado,0));
+      return '<div class="card mb"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:800;">🏢 '+v4Esc(p?p.nom:'Sin piso asignado')+'</div>'
+        +'<div style="font-size:11px;color:var(--ink3);">'+us.length+' cobro'+(us.length===1?'':'s')+' · cobrado '+v4E2(c)+' de '+v4E2(t)+' €</div></div>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;">'+us.map(u=>v12HtmlUnidad(u,M,hoy)).join('')+'</div></div>'; }).join('');
+  }
+  const w=$i('pa-tabla-wrap'); if(w&&w.style.display!=='none') rPagos();
+}
+// Compatibilidad con llamadas antiguas
+function estadoCobroInquilino(inqId,mes){
+  const u=v12Unidades(mes).find(x=>x.inqId==inqId||(x.co&&x.co.inqId2==inqId));
+  if(!u) return {estado:'sin',pagados:[],pendientes:[],total:0,cobrado:0};
+  return {estado:u.estado,pagados:u.L.filter(l=>l.pag).map(l=>l.con),pendientes:u.L.filter(l=>!l.pag).map(l=>l.con),total:u.total,cobrado:u.cobrado,vencido:u.venc,venc:u.V};
+}
+function toggleCobroInquilino(inqId,mes){ const u=v12Unidades(mes).find(x=>x.inqId==inqId||(x.co&&x.co.inqId2==inqId)); if(!u){ toast('No hay cobros de ese inquilino en '+v12MesTxt(mes),false); return; } if(u.pend>0.004) v12Cobro(u.key,mes); else v12Deshacer(u.key,mes); }
+
+// ── Líneas que se cobran en el pago de un mes ──
+// Contrato: la renta del mes y lo pendiente que va en el email de ese mes (suministros, otras cantidades, penalización);
+// si el email ya se envió, exactamente lo que iba en él.
+function v12PendCobroCo(co,M){
+  const out=[], cic=v4Ciclo(co,M), main=v4PagoAlquiler(co,M), renta=v4RentaMes(co,M), ids=[co.inqId,co.inqId2].filter(Boolean);
+  if(main){ if(!v12Pag(main)&&main.con==='Alquiler') out.push({key:main.id, rec:main, con:main.con, mes:M, imp:v12R2(main.imp)}); }
+  else if(renta>0) out.push({key:'v:Alquiler', virtual:{inqId:co.inqId, coId:co.id, con:'Alquiler', mes:M, imp:renta, estado:'pendiente', fecha:'', notas:'Auto', v4:true}, con:'Alquiler', mes:M, imp:renta});
+  (D.pagos||[]).forEach(p=>{
+    if(v12Pag(p)||p===main||p.con==='Alquiler'||/bonific/i.test(p.con||'')||v12EsDep(p)) return;
+    if(!(ids.includes(p.inqId)||p.coId===co.id)||!v12RecDeCo(p,co,p.mes)) return;
+    const resto=!!p.restoDe&&p.mes===M, pen=p.pen&&p.pen.coId===co.id&&p.pen.mes===M;
+    if(cic.email&&cic.emailTexto){ if(p.cicloMes!==M&&!resto&&!pen) return; }
+    else if(p.cicloMes&&p.cicloMes!==M&&!resto) return;
+    out.push({key:p.id, rec:p, con:p.con, mes:p.mes, imp:v12R2(p.imp)});
+  });
+  const ord=l=>l.con==='Alquiler'?0:l.con==='Alquiler'+V12_RESTO?1:/penaliz/i.test(l.con)?8:5;
+  return out.sort((a,b)=>ord(a)-ord(b)||String(a.mes).localeCompare(String(b.mes)));
+}
+function v12PendCobroInq(u,M){ return u.L.filter(l=>!l.pag&&l.imp!==0).map(l=>l.virtual?{key:l.key, virtual:{inqId:u.inqId, con:l.con, mes:M, imp:l.imp, estado:'pendiente', fecha:'', notas:'Auto', v4:l.con==='Alquiler'}, con:l.con, mes:M, imp:l.imp}:{key:l.key, rec:l.rec, con:l.con, mes:l.mes, imp:l.imp}); }
+
+// ── Reparto de lo cobrado entre las líneas (si falta, la línea se parte y lo que falta queda pendiente) ──
+function v12Partir(p,pagado){
+  const r=Object.assign({},p,{id:uid(), con:/ \(resto\)$/.test(p.con||'')?p.con:(p.con||'Alquiler')+V12_RESTO, imp:v12R2((+p.imp)-pagado), estado:'pendiente', fecha:'', restoDe:p.id, notas:'Parte pendiente'+(p.mes?' de '+v4MesNom(p.mes)+' '+p.mes.slice(0,4):'')});
+  ['fechaOrden','ctaId','v12Cta','cicloMes','v12Ciclo','pdfData','pdfName','_upd','v4'].forEach(k=>delete r[k]);
+  if(r.rep) r.rep=Object.assign({},r.rep,{personas:[], restoRep:true});
+  p.imp=v12R2(pagado); D.pagos.push(r); return r;
+}
+function v12Repartir(recs,importe,fecha,cta){
+  let resto=v12R2(importe); const res={falta:0, pagados:[], restos:[], sobra:0};
+  const pagar=p=>{ p.estado='pagado'; p.fecha=fecha; if(cta){ p.ctaId=cta; p.v12Cta=true; } res.pagados.push(p); };
+  recs.filter(p=>(+p.imp||0)<0).forEach(p=>{ pagar(p); resto=v12R2(resto-(+p.imp)); });
+  recs.filter(p=>(+p.imp||0)>=0).forEach(p=>{ const imp=v12R2(p.imp);
+    if(resto>=imp-0.004){ pagar(p); resto=v12R2(resto-imp); }
+    else if(resto>0.004){ const r=v12Partir(p,resto); pagar(p); res.restos.push(r); res.falta=v12R2(res.falta+r.imp); resto=0; }
+    else res.falta=v12R2(res.falta+imp); });
+  res.sobra=resto>0.004?resto:0; return res;
+}
+// Une otra vez las partes pendientes con su línea de origen cuando las dos quedan pendientes
+function v12Fusionar(){
+  for(let g=0; g<200; g++){
+    const pend=(D.pagos||[]).filter(r=>r.restoDe&&r.estado!=='pagado');
+    const r=pend.find(x=>!pend.some(y=>y.restoDe===x.id)&&(D.pagos||[]).some(o=>o.id===x.restoDe&&o.estado!=='pagado')); if(!r) break;
+    const o=D.pagos.find(p=>p.id===r.restoDe); o.imp=v12R2((+o.imp)+(+r.imp)); D.pagos=D.pagos.filter(p=>p!==r);
+  }
+}
+
+// ── Cobro de un contrato gestionado (el mismo cálculo que el ciclo del pago mensual) ──
+// o: {orden:'AAAA-MM-DDTHH:MM', email?, imp (null = todo), cta, sel (claves de las líneas)}
+function v12AplicarCobro(co,M,o){
+  const F=v4F(co), firma=M===F.slice(0,7), V=v4Venc(co,M)||F, orden=o.orden, oD=orden.slice(0,10);
+  co.ciclos=Object.assign({},co.ciclos||{}); const cic=Object.assign({},co.ciclos[M]||{});
+  if(!firma&&o.email) cic.email=o.email;
+  let lineas=v12PendCobroCo(co,M); if(o.sel) lineas=lineas.filter(l=>o.sel.includes(l.key));
+  const recs=lineas.map(l=>{ if(l.rec) return l.rec; const p=Object.assign({id:uid()},l.virtual); D.pagos.push(p); return p; });
+  const tarde=!firma&&oD>V, dEm=cic.email?(v4DT(orden)-v4DT(cic.email)):-1, rapido=!firma&&!tarde&&!!cic.email&&dEm>=0&&dEm<=864e5;
+  let pen=null, bon=null;
+  if(tarde){ pen=(D.pagos||[]).find(p=>p.con==='Penalización retraso'&&p.pen&&p.pen.coId===co.id&&p.pen.mes===M);
+    const ofrecida=!!pen&&v12PendCobroCo(co,M).some(l=>l.rec===pen);
+    if(!pen){ pen={id:uid(),inqId:v4PagadorInq(co),coId:co.id,con:'Penalización retraso',mes:M,imp:V4_PENAL.retraso,estado:'pendiente',fecha:'',notas:'Pago de '+v4MesNom(M)+' ordenado el '+v4F2(oD)+', después del '+v4F2(V)+' (cláusula penal, art. 1.152 CC)',cicloMes:M,pen:{coId:co.id,mes:M}}; D.pagos.push(pen); recs.push(pen); }
+    else if(!ofrecida&&!v12Pag(pen)&&!recs.includes(pen)) recs.push(pen);
+    cic.pen20=true; }
+  if(rapido&&!(D.pagos||[]).some(p=>p.con==='Bonificación pago rápido'&&p.cicloMes===M&&(p.coId===co.id||p.inqId==v4PagadorInq(co)))){
+    bon={id:uid(),inqId:v4PagadorInq(co),coId:co.id,con:'Bonificación pago rápido',mes:M,imp:-V4_PENAL.descuento,estado:'pendiente',fecha:'',notas:'Pago ordenado en menos de 24 h desde el email (cláusula «Bonificación por rapidez»)',cicloMes:M}; D.pagos.push(bon); recs.unshift(bon); }
+  const esperado=v12R2(recs.reduce((s,p)=>s+(+p.imp||0),0)), imp=(o.imp===null||o.imp===undefined||o.imp==='')?esperado:v12R2(o.imp);
+  const r=v12Repartir(recs,imp,oD,o.cta||'');
+  r.pagados.forEach(p=>{ if(v12EsAlq(p)&&p.mes===M) p.fechaOrden=orden; if(!p.cicloMes){ p.cicloMes=M; p.v12Ciclo=true; } });
+  cic.orden=orden; cic.importePagado=imp; cic.dto=rapido; cic.esperado=esperado; if(o.cta) cic.cta=o.cta; else delete cic.cta;
+  co.ciclos[M]=cic; v4Guardar(co);
+  return {esperado, imp, falta:r.falta, sobra:r.sobra, rapido, tarde, V, firma};
+}
+function v12AplicarCobroInq(u,M,o){
+  let lineas=v12PendCobroInq(u,M); if(o.sel) lineas=lineas.filter(l=>o.sel.includes(l.key));
+  const recs=lineas.map(l=>{ if(l.rec) return l.rec; const p=Object.assign({id:uid()},l.virtual); D.pagos.push(p); return p; });
+  const esperado=v12R2(recs.reduce((s,p)=>s+(+p.imp||0),0)), imp=(o.imp===null||o.imp===undefined||o.imp==='')?esperado:v12R2(o.imp);
+  const r=v12Repartir(recs,imp,o.fecha,o.cta||''); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){}
+  return {esperado, imp, falta:r.falta, sobra:r.sobra};
+}
+
+// ── Deshacer el cobro de un mes ──
+function v12Deshacer(key,M,sinConfirmar){
+  const u=v12UnidadMes(key,M); if(!u) return;
+  if(!sinConfirmar&&typeof confirm==='function'&&!confirm('¿Deshacer el cobro de '+v12MesTxt(M)+' de '+u.nom+'? Las líneas cobradas vuelven a quedar pendientes.')) return;
+  const volver=p=>{ p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } };
+  if(u.co){ const co=u.co, ids=[co.inqId,co.inqId2].filter(Boolean);
+    (D.pagos||[]).forEach(p=>{ if(!v12Pag(p)||v12EsDep(p)) return; const mio=(p.coId===co.id||ids.includes(p.inqId))&&v12RecDeCo(p,co,p.mes); if(!mio) return;
+      if((v12EsAlq(p)&&p.mes===M)||p.cicloMes===M||(p.pen&&p.pen.coId===co.id&&p.pen.mes===M)||(p.mes===M&&!p.cicloMes)) volver(p); });
+    // el descuento de 5 € solo existe si hay pago en 24 h: al deshacer el cobro se quita
+    D.pagos=(D.pagos||[]).filter(p=>!(p.con==='Bonificación pago rápido'&&p.estado!=='pagado'&&(p.coId===co.id||ids.includes(p.inqId))&&(p.mes===M||p.cicloMes===M)));
+    co.ciclos=Object.assign({},co.ciclos||{}); const cic=Object.assign({},co.ciclos[M]||{}); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete cic[k]); co.ciclos[M]=cic;
+    v12Fusionar(); v4Guardar(co);
+  } else { u.recs.forEach(p=>{ if(v12Pag(p)&&!v12EsDep(p)) volver(p); }); v12Fusionar(); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} }
+  v12RefrescarPagos(); toast('Cobro de '+v4MesNom(M)+' deshecho: vuelve a estar pendiente');
+}
+
+// ── Ventana «Registrar cobro» ──
+function v12OptsCtas(sel){
+  const cs=v9Ctas().filter(c=>c.tipo!=='tarjeta');
+  return '<option value="">Automática (la del contrato o la principal del titular)</option>'+cs.map(c=>'<option value="'+v4Esc(c.id)+'"'+(String(c.id)===String(sel||'')?' selected':'')+'>'+v4Esc((c.nom||'Cuenta')+(c.titularId?' · '+nombreC(c.titularId):''))+'</option>').join('');
+}
+let _v12Cobro=null;
+function v12Cobro(key,M,soloIds){
+  const u=v12UnidadMes(key,M); if(!u){ toast('No encuentro ese cobro',false); return; }
+  const co=u.co, lineas=co?v12PendCobroCo(co,M):v12PendCobroInq(u,M);
+  if(!lineas.length){ toast('No hay nada pendiente de cobrar en '+v12MesTxt(M),false); return; }
+  const F=co?v4F(co):'', firma=!!(co&&F.slice(0,7)===M), V=u.V, cic=co?v4Ciclo(co,M):{}, hoy=v4Hoy(), ahora=v4LocalDT(new Date());
+  const ordenDef=firma&&F<=hoy?F+'T12:00':ahora;
+  _v12Cobro={key,M,lineas,co:!!co,firma,V};
+  const lin=lineas.map((l,i)=>'<label style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:5px 8px;border-radius:7px;background:var(--bg);margin-top:4px;font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer;">'
+    +'<span style="display:flex;gap:7px;align-items:center;min-width:0;"><input type="checkbox" id="v12c-l'+i+'" style="width:auto;"'+(!soloIds||soloIds.includes(l.key)?' checked':'')+' onchange="v12CobroCalc()"> '+v4Esc(v12TxtLinea(u,l,M))+'</span>'
+    +'<span class="mono" style="white-space:nowrap;">'+v4E2(l.imp)+' €</span></label>').join('');
+  const ctaDef=(co&&co.ctaId)||'';
+  const html='<div style="font-size:12px;color:var(--ink3);margin-bottom:8px;">'+v4Esc(u.nom)+' · Hab. '+v4Esc(u.hab||'?')+' · '+v4Esc(((D.props||[]).find(p=>p.id==u.propId)||{}).nom||'')+'</div>'
+   +'<div style="font-size:12px;margin-bottom:6px;"><strong>'+v4Esc(v12MesTxt(M))+'</strong> · '+(firma?'se paga en la firma ('+v4F2(V)+')':'vence el '+v4F2(V)+(co?' (último día para ordenar el pago)':''))+'</div>'
+   +'<div class="form-section" style="margin-top:6px;">Qué se cobra</div>'+lin
+   +'<div class="fg" style="margin-top:10px;">'
+   +(co&&!firma?'<div class="fgrp"><label>Email del pago enviado el (para el descuento de 5 €)</label><input type="datetime-local" id="v12c-email" value="'+v4Esc(cic.email||'')+'" oninput="v12CobroCalc()"></div>':'')
+   +(co?'<div class="fgrp"><label>'+(firma?'Fecha y hora del pago en la firma':'Fecha y hora en que ORDENÓ el pago')+' *</label><input type="datetime-local" id="v12c-orden" value="'+ordenDef+'" oninput="v12CobroCalc()"></div>'
+       :'<div class="fgrp"><label>Fecha del cobro *</label><input type="date" id="v12c-fecha" value="'+hoy+'" oninput="v12CobroCalc()"></div>')
+   +'<div class="fgrp"><label>Importe recibido (€)</label><input type="number" step="0.01" inputmode="decimal" id="v12c-imp" oninput="this.dataset.manual=\'1\';v12CobroCalc()"></div>'
+   +'<div class="fgrp"><label>Cuenta donde entra</label><select id="v12c-cta">'+v12OptsCtas(ctaDef)+'</select></div></div>'
+   +'<div id="v12c-res" style="margin-top:8px;"></div>'
+   +(co&&!firma?'<div style="font-size:10.5px;color:var(--ink3);line-height:1.55;margin-top:6px;">Cuenta la fecha en que el inquilino ordena el pago, no la de llegada. Si la orden es como máximo 24 h después del email y en plazo, se descuentan 5 €; si es posterior al '+v4F2(V)+', se suman 20 € de penalización (cláusula penal).</div>':'');
+  v4Modal('💶 Registrar cobro',html,'<button class="btn btn-primary" onclick="v12GuardarCobro()">Guardar cobro</button>');
+  v12CobroCalc();
+}
+function v12CobroSel(){ const x=_v12Cobro; return x?x.lineas.filter((l,i)=>{ const c=$i('v12c-l'+i); return c&&c.checked; }):[]; }
+function v12CobroCalc(){
+  const x=_v12Cobro; if(!x) return; const sel=v12CobroSel(), S=v12R2(sel.reduce((s,l)=>s+l.imp,0));
+  let dto=0, pen=0, nota='';
+  if(x.co&&!x.firma){ const orden=gi('v12c-orden'), email=gi('v12c-email');
+    if(orden){ const tarde=orden.slice(0,10)>x.V; if(tarde){ const u=v12UnidadMes(x.key,x.M), co=u&&u.co; const ya=co&&(D.pagos||[]).some(p=>p.con==='Penalización retraso'&&p.pen&&p.pen.coId===co.id&&p.pen.mes===x.M); if(!ya){ pen=V4_PENAL.retraso; } nota='Pago ordenado después del '+v4F2(x.V)+': fuera de plazo'+(ya?' (la penalización ya está anotada)':' · se suman 20 € de penalización')+'.'; }
+      else if(email){ const d=v4DT(orden)-v4DT(email); if(d>=0&&d<=864e5){ dto=V4_PENAL.descuento; nota='Ordenado en menos de 24 h desde el email: descuento de 5 €.'; } else if(d<0) nota='⚠️ La orden no puede ser anterior al email.'; } } }
+  const esp=v12R2(S+pen-dto), imp=$i('v12c-imp'); if(imp&&imp.dataset.manual!=='1') imp.value=esp.toFixed(2);
+  const pagado=imp&&imp.value!==''?v12R2(String(imp.value).replace(',','.')):esp, dif=v12R2(pagado-esp);
+  const b=$i('v12c-res'); if(b) b.innerHTML='<div style="background:var(--bg);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.6;">Seleccionado: <strong>'+v4E2(S)+' €</strong>'+(dto?' − descuento '+v4E2(dto)+' €':'')+(pen?' + penalización '+v4E2(pen)+' €':'')+' = a cobrar <strong>'+v4E2(esp)+' €</strong>'
+    +(nota?'<br>'+v4Esc(nota):'')+(Math.abs(dif)>0.004?'<br>'+(dif<0?'<span style="color:var(--rd);">Cobro parcial: faltan <strong>'+v4E2(-dif)+' €</strong>, que quedan pendientes.</span>':'<span style="color:var(--ye);">Ha pagado '+v4E2(dif)+' € de más.</span>'):'')+'</div>';
+}
+function v12GuardarCobro(){
+  const x=_v12Cobro; if(!x) return; const sel=v12CobroSel(); if(!sel.length){ v4Msg('v12c-res','Marca al menos una línea.','r'); return; }
+  const u=v12UnidadMes(x.key,x.M); if(!u){ toast('No encuentro ese cobro',false); return; }
+  const impS=gi('v12c-imp'), imp=impS===''?null:v12R2(impS.replace(',','.')); if(imp!==null&&!(imp>=0)){ v4Msg('v12c-res','El importe no es válido.','r'); return; }
+  const cta=gi('v12c-cta'), keys=sel.map(l=>l.key); let r;
+  if(u.co){ const orden=gi('v12c-orden'), email=$i('v12c-email')?gi('v12c-email'):undefined;
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(orden)){ v4Msg('v12c-res','Indica la fecha y la hora del pago.','r'); return; }
+    if(email&&orden<email){ v4Msg('v12c-res','La orden de pago no puede ser anterior al envío del email. Revisa las fechas.','r'); return; }
+    r=v12AplicarCobro(u.co,x.M,{orden, email, imp, cta, sel:keys});
+  } else { const fecha=gi('v12c-fecha'); if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ v4Msg('v12c-res','Indica la fecha del cobro.','r'); return; }
+    r=v12AplicarCobroInq(u,x.M,{fecha, imp, cta, sel:keys}); }
+  _v12Cobro=null; closeM('m-v4'); v12RefrescarPagos();
+  toast(r.falta>0.004?'Cobro parcial guardado · faltan '+v4E2(r.falta)+' €':'Cobro guardado · '+v4E2(r.imp)+' €'+(r.rapido?' (con el descuento de 5 €)':'')+(r.tarde?' (fuera de plazo: penalización de 20 €)':'')+(r.sobra?' · '+v4E2(r.sobra)+' € de más':''));
+}
+
+// ── El ciclo del pago mensual (desde Avisos) usa el mismo cálculo ──
+function v4GuardarCiclo(coId,mes){
+  const co=v4Co(coId); if(!co) return;
+  co.ciclos=Object.assign({},co.ciclos||{}); const cic=Object.assign({},co.ciclos[mes]||{});
+  const email=gi('v4c-email'), orden=gi('v4c-orden'), impS=gi('v4c-imp'), imp=impS===''?null:v12R2(impS.replace(',','.'));
+  if(email&&!cic.email){ const c=v4CalculoMensual(co,mes); cic.email=email; cic.total=c.total; cic.emailTexto=v4TxtEmailMensual(co,mes).texto; c.sum.concat(c.otras).forEach(p=>{ p.cicloMes=mes; }); }
+  else if(email) cic.email=email;
+  cic.justif=!!($i('v4c-just')&&$i('v4c-just').checked); co.ciclos[mes]=cic;
+  if(orden){
+    if(cic.email&&orden<cic.email){ v4Msg('v4c-msg','La orden de pago no puede ser anterior al envío del email. Revisa las fechas.','r'); return; }
+    const r=v12AplicarCobro(co,mes,{orden, imp});
+    v4Msg('v4c-msg','Guardado. Importe que correspondía: <strong>'+v4E2(r.esperado)+' €</strong>'+(r.rapido?' (con el descuento de 5 €)':'')+(r.tarde?' (con la penalización de 20 €)':'')+'.'+(r.falta>0.004?' ⚠️ Faltan <strong>'+v4E2(r.falta)+' €</strong>, que quedan pendientes.':r.sobra?' Ha pagado '+v4E2(r.sobra)+' € de más.':' ✓ Cuadra.'),r.falta>0.004?'r':'g');
+    v12RefrescarPagos(); return;
+  }
+  v4Guardar(co,'Pago mensual guardado'); closeM('m-v4'); v12RefrescarPagos();
+}
+
+// ── Detalle de todos los movimientos ──
+function v12VencRec(p){ const co=v4CoDeInq(p.inqId,p.mes); let V=co&&v12CoGest(co)?v4Venc(co,p.mes):null; if(!V&&p.mes) V=v4VencInq(p.inqId,p.mes); return V||''; }
+function v12EstRec(p,hoy){ if(v12Pag(p)) return 'pagado'; const V=v12VencRec(p); return V&&hoy>V?'atrasado':'pendiente'; }
+function rPagos(){
+  const tb=$i('pa-tb'); if(!tb) return; const hoy=v4Hoy(), q=gi('paq').toLowerCase(), estF=gi('paef'), sel=$i('pamf');
+  if(sel){ const v=sel.value, ms=[...new Set((D.pagos||[]).map(p=>p.mes).filter(Boolean))].sort().reverse(); sel.innerHTML='<option value="">Todos los meses</option>'+ms.map(m=>'<option value="'+m+'">'+v4Esc(v12MesTxt(m))+'</option>').join(''); sel.value=ms.includes(v)?v:''; }
+  const mesF=sel?sel.value:'', inqN=p=>v12NomInq(v4Inq(p.inqId));
+  const list=(D.pagos||[]).filter(p=>{ if(mesF&&p.mes!==mesF) return false; if(estF&&v12EstRec(p,hoy)!==estF) return false; return !q||(inqN(p)+' '+(p.con||'')+' '+(p.notas||'')).toLowerCase().includes(q); })
+    .sort((a,b)=>String(b.mes||'').localeCompare(String(a.mes||''))||inqN(a).localeCompare(inqN(b)));
+  const sum=f=>v12R2(list.filter(f).reduce((s,p)=>s+(+p.imp||0),0));
+  const k=$i('pa-kpis'); if(k) k.innerHTML='<div class="kpi" style="--kc:var(--gn);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Cobrado</div><div class="kpi-value">'+v4E2(sum(p=>v12Pag(p)))+' €</div></div>'
+    +'<div class="kpi" style="--kc:var(--ye);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Pendiente en plazo</div><div class="kpi-value">'+v4E2(sum(p=>v12EstRec(p,hoy)==='pendiente'))+' €</div></div>'
+    +'<div class="kpi" style="--kc:var(--rd);flex:1;min-width:120px;"><div class="kpi-accent"></div><div class="kpi-label">Vencido</div><div class="kpi-value">'+v4E2(sum(p=>v12EstRec(p,hoy)==='atrasado'))+' €</div></div>';
+  if(!list.length){ tb.innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">💳</div><p>Sin movimientos</p></div></td></tr>'; return; }
+  tb.innerHTML=list.slice(0,600).map(p=>{ const inq=v4Inq(p.inqId), pr=inq?(D.props||[]).find(x=>x.id==inq.propId):null, e=v12EstRec(p,hoy);
+    const eb=e==='pagado'?'<span class="badge badge-g">✅ Cobrado</span>':e==='atrasado'?'<span class="badge badge-r">🔴 Vencido</span>':'<span class="badge badge-y">⏳ Pendiente</span>';
+    const col=e==='pagado'?'var(--gn)':e==='atrasado'?'var(--rd)':'var(--ye)';
+    return '<tr><td><div style="font-weight:600;font-size:12px;">'+v4Esc(inqN(p))+'</div></td><td style="font-size:11px;color:var(--ink3);">'+v4Esc(pr?pr.nom:'–')+'/'+v4Esc(inq?inq.hab||'?':'?')+'</td><td style="font-size:12px;">'+v4Esc(p.con||'Alquiler')+'</td>'
+     +'<td style="font-size:11px;color:var(--ink3);white-space:nowrap;">'+v4Esc(p.mes?v12MesTxt(p.mes):'–')+'</td><td class="mono" style="font-weight:700;color:'+col+';white-space:nowrap;">'+v4E2(p.imp)+' €</td><td>'+eb+'</td><td style="font-size:11px;color:var(--ink3);">'+(p.fecha?v4F2(p.fecha):'–')+'</td>'
+     +'<td style="display:flex;gap:4px;flex-wrap:wrap;">'+(e!=='pagado'&&p.mes?'<button class="btn btn-success btn-xs" onclick="cobrar(\''+p.id+'\')">💶 Cobrar</button>':'')+(e==='pagado'?'<button class="btn btn-ghost btn-xs" title="Volver a pendiente" onclick="v12DeshacerRec(\''+p.id+'\')">↩</button>':'')
+     +'<button class="btn btn-ghost btn-xs" title="Editar" onclick="newPago(\''+p.id+'\')">✏️</button>'+(p.pdfData?'<button class="pdf-badge green" onclick="openPdf(\''+p.pdfData+'\',\''+v4Esc(p.pdfName||'recibo.pdf')+'\')">📄</button>':'')
+     +'<button class="btn btn-danger btn-xs" title="Eliminar" onclick="v12BorrarRec(\''+p.id+'\')">🗑</button></td></tr>'; }).join('')+(list.length>600?'<tr><td colspan="8" style="font-size:11px;color:var(--ink3);">Se muestran 600 de '+list.length+'. Filtra por mes para ver el resto.</td></tr>':'');
+}
+function cobrar(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p||!p.mes) return; v12Cobro(v12UnidadKey(p,p.mes),p.mes,[p.id]); }
+function v12DeshacerRec(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p) return; if(p.con==='Bonificación pago rápido'){ D.pagos=D.pagos.filter(x=>x!==p); } else { p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } }
+  if(v12EsAlq(p)&&p.mes){ const co=v4CoDeInq(p.inqId,p.mes); if(co&&co.ciclos&&co.ciclos[p.mes]&&co.ciclos[p.mes].orden){ const c=Object.assign({},co.ciclos[p.mes]); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete c[k]); co.ciclos=Object.assign({},co.ciclos,{[p.mes]:c}); co._upd=Date.now(); } }
+  v12Fusionar(); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} v12RefrescarPagos(); toast('Vuelve a estar pendiente'); }
+function v12BorrarRec(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p) return; if(typeof confirm==='function'&&!confirm('¿Eliminar este movimiento ('+(p.con||'')+' · '+v4E2(p.imp)+' €)? Si es una renta de un contrato, se volverá a generar pendiente.')) return; D.pagos=D.pagos.filter(x=>x!==p); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} v12RefrescarPagos(); toast('Eliminado'); }
+
+// ── Cobro o cargo suelto (y edición de un movimiento) ──
+function newPago(id){
+  const p=id?(D.pagos||[]).find(x=>x.id==id):null; openM('m-pa');
+  const s=(i,v)=>{ const e=$i(i); if(e) e.value=(v===undefined||v===null)?'':v; };
+  s('pa-id',p?p.id:''); s('pa-i',p?p.inqId:''); s('pa-c',p?(p.con||'Alquiler'):'Alquiler'); s('pa-m',p?(p.mes||''):(v12MesOk(_mesTablero)?_mesTablero:v12MesHoy())); s('pa-imp',p?p.imp:''); s('pa-e',p?(p.estado==='pagado'?'pagado':'pendiente'):'pagado'); s('pa-f',p?(p.fecha||''):v4Hoy()); s('pa-n',p?(p.notas||''):'');
+  const c=$i('pa-c'); if(c&&p&&p.con&&![...c.options].some(o=>o.value===p.con)){ const o=document.createElement('option'); o.textContent=p.con; o.value=p.con; c.appendChild(o); c.value=p.con; }
+  const ct=$i('pa-cta'); if(ct) ct.innerHTML=v12OptsCtas(p?p.ctaId:'');
+  const h=document.querySelector('#m-pa h2'); if(h) h.textContent=p?'✏️ Editar movimiento':'💳 Cobro o cargo suelto';
+  try{ clearPdfZone('pa-pdf-zone','pa-pdf-data'); }catch(e){}
+}
+function addPago(){
+  const id=gi('pa-id'), iId=gi('pa-i'), con=gi('pa-c')||'Alquiler', mes=gi('pa-m'), imp=v12R2(String(gi('pa-imp')).replace(',','.')), est=gi('pa-e')==='pagado'?'pagado':'pendiente';
+  let fecha=gi('pa-f');
+  if(!iId){ toast('Elige el inquilino',false); return; }
+  if(!imp){ toast('Escribe el importe',false); return; }
+  if(!v12MesOk(mes)&&!/fianza|garant/i.test(con)){ toast('Elige el mes al que corresponde',false); return; }
+  if(est==='pagado'&&!fecha) fecha=v4Hoy();
+  const pdfData=$i('pa-pdf-data')?$i('pa-pdf-data').value:'', pdfName=$i('pa-pdf-name')?$i('pa-pdf-name').value:'', cta=gi('pa-cta');
+  let p=id?(D.pagos||[]).find(x=>x.id==id):null;
+  if(p){ const cambiaImp=Math.abs((+p.imp||0)-imp)>0.004||p.con!==con||p.mes!==mes; Object.assign(p,{inqId:iId, con, mes, imp, estado:est, fecha:est==='pagado'?fecha:'', notas:gi('pa-n')}); if(cambiaImp){ delete p.v4; if(p.notas==='Auto') p.notas='Editado a mano'; } }
+  else { p={id:uid(), inqId:iId, con, mes, imp, estado:est, fecha:est==='pagado'?fecha:'', notas:gi('pa-n')}; D.pagos.push(p); }
+  if(cta){ p.ctaId=cta; delete p.v12Cta; } else if(id&&!p.v12Cta) delete p.ctaId;
+  if(pdfData){ p.pdfData=pdfData; p.pdfName=pdfName; }
+  saveAndSync(); closeM('m-pa'); try{ clearPdfZone('pa-pdf-zone','pa-pdf-data'); }catch(e){} try{ v4RefrescarAvisos(); }catch(e){} v12RefrescarPagos(); try{ rDash(); }catch(e){}
+  toast(id?'Movimiento actualizado':'Movimiento registrado');
+}
+
+// Al borrar un contrato, sus rentas pendientes generadas automáticamente se quitan (no son ingresos de nadie)
+function delCont(id){
+  if(typeof confirm==='function'&&!confirm('¿Eliminar el contrato? Se perderán sus avisos y registros (pagos mensuales, llaves, anexos…). Las rentas pendientes generadas para él también se quitan; las cobradas se conservan.')) return;
+  const co=v4Co(id);
+  if(co){ const meses=v4MesesCobro(co); D.pagos=(D.pagos||[]).filter(p=>!(p.estado!=='pagado'&&p.con==='Alquiler'&&(p.notas==='Auto'||p.v4)&&meses.includes(p.mes)&&(p.coId===co.id||(!p.coId&&p.inqId==co.inqId&&(()=>{ const c=v4CoDeInq(p.inqId,p.mes); return !c||c.id===co.id; })())))); }
+  D.conts=(D.conts||[]).filter(c=>c.id!==id); saveAndSync(); try{ v12Generar(); }catch(e){} rConts(); try{ v4RefrescarAvisos(); }catch(e){} toast('Eliminado');
 }
 
 </script>
