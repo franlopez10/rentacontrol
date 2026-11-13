@@ -13728,7 +13728,7 @@ function v4ContratoDesdeReserva(id){ const r=v4Res(id); if(!r) return; try{ clos
     s('co-inet',r.internetAnual); if(r.medio==='transferencia') s('co-cta',r.ctaId); if(r.medio==='bizum') s('co-bizum',r.bizum); s('co-resid',r.id); v4ValidarFormCont(); },250); }
 
 // Plantillas de la reserva
-function v4Txt14(r,ahora){
+function v10Txt14Base(r,ahora){
   ahora=ahora||new Date(); const P=v4ResP(r), pdt=P?v4DTde(P,r.Phora||'23:59'):null, m48=new Date(ahora.getTime()+48*36e5), lim=(pdt&&pdt<m48)?pdt:m48;
   return 'Hola '+v4NomResCorto(r)+'. Como quedamos, le adjunto el modelo de contrato de la habitación '+r.hab+' que firmaremos el '+v4FL(P)+' a las '+(r.Phora||'[HORA]')+'; en la firma se completará con los datos de la reserva. Léalo con calma, por favor. Según el documento de reserva, si no está conforme con sus condiciones, tiene hasta el '+v4FL(fxIso(lim))+' a las '+v4HM(lim)+' para decírmelo por aquí, sin necesidad de explicar el motivo, y le devuelvo íntegramente la reserva. Para cualquier duda, aquí estoy. ¡Un saludo y gracias! :-)';
 }
@@ -13745,7 +13745,7 @@ function v4TxtJustDev(r){
    +'Firmadlo los dos y guardad cada uno una copia.';
 }
 const V4_RES_MOTIVO={asnef:'porque, consultados los sistemas de información crediticia, figura en ellos con deudas pendientes', ingresos:'porque la documentación aportada no acredita los ingresos o medios exigidos en la condición (ii) de la reserva', rechazo:'porque me comunicó dentro del plazo que no acepta el modelo de contrato', autorizacion:'porque retiró la autorización para consultar los ficheros de morosidad antes de recibirse la respuesta', causa:'porque su causa de temporalidad ha desaparecido por un motivo ajeno a su voluntad, que ha acreditado', sinrespuesta:'porque en la fecha prevista de firma no se había recibido la respuesta de los sistemas de información crediticia y no se ha prorrogado la reserva', nadie:'[porque así lo hemos acordado / por una causa no imputable a ninguna de las partes]'};
-function v4TxtFinRes(r){
+function v10TxtFinResBase(r){
   const p=(D.props||[]).find(x=>x.id==r.propId), s=v4ResSenalRes(r), imp=v4ResImporteDev(r), sen=parseFloat(r.senal)||0, lim=r.fin?v4AddHabilesSeg(r.fin.fecha,3):'';
   const ini='Hola '+v4NomResCorto(r)+'. Le escribo por la reserva de la habitación '+r.hab+' de '+(p?p.nom:'')+' que firmamos el '+v4F2(r.O)+'. ';
   if(!r.fin) return ini+'[Registra antes cómo termina la reserva.]';
@@ -13787,7 +13787,7 @@ function v4VerPlantillaReserva(tpl,id){
   const conf={'14':{tit:'Plantilla 14 · Envío del modelo de contrato',nota:'Adjunta el PDF del modelo de contrato vigente sin rellenar (v20261106 en temporal; VH-20261106 en vivienda habitual). La hora límite se calcula desde ahora: si lo envías más tarde, ajústala (48 h desde que lo recibe, o la firma si es antes). Después anota en la reserva la fecha y hora de recepción (M) y guarda el chat.',txt:()=>v4Txt14(r),wa:true,rows:9},
     finres:{tit:'Comunicación del fin de la reserva',nota:'Por email o WhatsApp (cláusula 12). Si se queda con la señal, mejor por comunicación electrónica certificada, para tener prueba fehaciente. Revisa el texto entre corchetes.',txt:()=>v4TxtFinRes(r),wa:true,rows:8},
     justdev:{tit:'Justificante de devolución de la reserva',nota:'Usa el documento «Justificante de devolución de reserva v20261031» con estos datos.',txt:()=>v4TxtJustDev(r),rows:11},
-    oferta:{tit:'Datos para rellenar la oferta y reserva',nota:'Cópialos en la «Oferta y reserva de habitación» de la versión firmada (v20261105 en temporal; VH-20261105 en vivienda habitual). Revisa lo que esté entre corchetes.',txt:()=>v4TxtDatosOferta(r),rows:18}}[t];
+    oferta:{tit:'Datos para rellenar la oferta y reserva',nota:'Cópialos en la «Oferta y reserva de habitación» de la versión firmada (v20261106 en temporal; VH-20261106 en vivienda habitual). Revisa lo que esté entre corchetes.',txt:()=>v4TxtDatosOferta(r),rows:18}}[t];
   if(!conf) return;
   $i('m-v4tpl-c').innerHTML='<h2>📋 '+conf.tit+'</h2><div style="font-size:11.5px;color:var(--ink3);margin-bottom:6px;">'+conf.nota+'</div>'
    +'<textarea id="v4t-txt" rows="'+conf.rows+'" style="width:100%;font-size:12px;line-height:1.5;font-family:inherit;padding:10px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);">'+v4Esc(conf.txt())+'</textarea>'
@@ -14856,9 +14856,8 @@ function v7AceptadaHab(r){ return (D.reservas||[]).find(x=>x.id!==r.id&&x.propId
 function v4AlertasReservas(hoy){
   hoy=hoy||v4Hoy(); let out=v7AlResBase(hoy);
   out=out.filter(a=>!(v7ResHab(v4Res(a.resId))&&/causa/i.test(a.titulo||''))).map(a=>{ const r=v4Res(a.resId); if(!r||!a.det) return a; let d=String(a.det);
-    if(v7ResHab(r)){ d=d.replace(/la documentación de la causa y (?:del|el) domicilio(?: habitual)?/g,'la documentación del Anexo I'); if(/^r-rdl/.test(a.k)) d+=' Comprueba que tu oferta '+(r.oferta||'VH-20261105')+' recoge esta salida: el contrato de vivienda habitual sigue valiendo aunque el RDL no se convalide (cláusula 77).'; }
-    if(r.oferta==='v20261105') d=d.replace(/cláusula (\d+) de la oferta/g,(x,n)=>'cláusula '+(+n>=2?+n+1:+n)+' de la oferta');
-    else if(r.oferta==='VH-20261105') d=d.replace(/cláusula (\d+) de la oferta/g,'cláusula correspondiente de la oferta');
+    if(v7ResHab(r)){ d=d.replace(/la documentación de la causa y (?:del|el) domicilio(?: habitual)?/g,'la documentación del Anexo I'); if(/^r-rdl/.test(a.k)) d+=(r.oferta==='VH-20261105'?' Comprueba que tu oferta VH-20261105 recoge esta salida.':'')+' El contrato de vivienda habitual sigue valiendo aunque el RDL no se convalide (cláusula 77 del contrato).'; }
+    d=v10MapCl(r,d); a.titulo=v10MapCl(r,a.titulo);
     a.det=d; return a; });
   (D.reservas||[]).forEach(r=>{
     if(r.datosSuprimidos||r.coId||r.fin) return; const sen=parseFloat(r.senal)||0, nom=v4NomResCorto(r), g=(r.garante||{}).estado||'';
@@ -14869,7 +14868,7 @@ function v4AlertasReservas(hoy){
       if(fase==='solicitud'&&acep){ const fa=acep.aceptada||acep.O||hoy;
         v7AlRes(r,out,'r-nosel',fa,'Comunicar a '+nom+' que no ha sido seleccionado y devolverle '+v4E2(sen)+' €','Por escrito; devolución íntegra por el mismo medio en 3 días hábiles (como máximo el '+v4F2(v4AddHabilesSeg(fa,3))+'). Si en 24 h pide quedar como suplente, cambia la fase a «Suplente»: conservas el dinero hasta la firma del seleccionado o su fecha prevista de firma. Si no, registra «Terminar sin contrato → No seleccionada».'); }
       if(fase==='suplente'){ const cs=acep&&acep.coId?v4Co(acep.coId):null, f=cs?v4F(cs):(acep?v4ResP(acep):v4ResP(r));
-        v7AlRes(r,out,'r-supl',f,'Devolver la cantidad al suplente '+nom+' ('+v4E2(sen)+' €)','Ya se ha firmado con el seleccionado o ha llegado su fecha prevista de firma: devuelve íntegro por el mismo medio en 3 días hábiles y registra «Terminar sin contrato → Suplente», salvo que aceptes esta solicitud porque el seleccionado no ha firmado.'); }
+        v7AlRes(r,out,'r-supl',f,'Devolver la cantidad al suplente '+nom+' ('+v4E2(sen)+' €)','Ya se ha firmado con el seleccionado o ha llegado su fecha prevista de firma: devuelve íntegro por el mismo medio en 3 días hábiles y registra «Terminar sin contrato → Suplente», salvo que aceptes esta solicitud porque el seleccionado no ha firmado. Si se firmó con el seleccionado, comunícaselo ese mismo día (cláusula 2 de la oferta).'); }
       if(fase==='aceptada'&&!r.aceptada) v7AlRes(r,out,'r-acep',hoy,'Anotar la fecha de la aceptación escrita de '+nom,'Desde la aceptación la reserva es exclusiva y la cantidad funciona como arras penitenciales (cláusula 2 de la oferta).',{nivel:'normal'});
     }
     if((v7ResHab(r)||v7OfertaMulti(r))&&r.O){
@@ -14894,6 +14893,7 @@ function v4ValidarReserva(r){
     v.err=v.err.filter(e=>!/causa|temporal|9 bis|seguid|IRAV|derogado/i.test(e)).map(e=>e.replace('domicilio habitual','domicilio anterior'));
     v.av=v.av.filter(a=>!/causa|temporal|seguid/i.test(a)).map(a=>a.replace('domicilio habitual','domicilio anterior'));
   } else v=v7ValResBase(r);
+  v.err=v.err.map(e=>v10MapCl(r,e)); v.av=v.av.map(a=>v10MapCl(r,a));
   const err=v.err, av=v.av;
   if(r.gMeses===undefined||r.gMeses===''||r.gMeses===null) err.push('Marca la garantía adicional pactada en la oferta: ninguna, 1 mensualidad'+(hab?' o 2 mensualidades':'')+'.');
   else if(!hab&&+r.gMeses>1) err.push('En alquiler temporal la garantía adicional es como máximo 1 mensualidad (art. 36.5 LAU).');
@@ -14911,7 +14911,9 @@ function v4ValidarReserva(r){
     if(r.fase==='aceptada'){ if(!r.aceptada) err.push('Indica la fecha de la aceptación escrita (desde ella la cantidad funciona como arras).');
       if((r.garante||{}).estado==='rechazada') err.push('La entidad garante no ha aprobado la operación: no se puede aceptar (condición iv).');
       if(r.asnef&&r.asnef.resultado==='figura') err.push('Figura en ASNEF o BADEXCUG: no se puede aceptar (condición i).');
-      if(!((r.garante||{}).estado==='aprobada'||(r.garante||{}).estado==='nousa')) av.push('Solo se aceptan solicitudes con la aprobación de la entidad garante (condición iv).'); }
+      if(!['aprobada','dispensada','nousa'].includes((r.garante||{}).estado||'')) av.push('Solo se aceptan solicitudes con la aprobación de la entidad garante o si das por cumplida la condición (iv) (cláusula 9 de la oferta).');
+      if(r.aceptada&&v4ResP(r)&&r.aceptada>v4ResP(r)) err.push('La aceptación es posterior a la fecha prevista de firma: en la misma comunicación hay que acordar por escrito la nueva fecha, sin pasar de 15 días desde la oferta salvo prórroga (cláusula 3 de la oferta). Cambia la fecha prevista.'); }
+  v10ValOferta(r,err,av);
     if(r.selLim&&r.O&&r.selLim>fxAdd(r.O,15)) err.push('La selección no puede prorrogarse más allá de 15 días desde la oferta ('+v4F2(fxAdd(r.O,15))+').');
   }
   if(hab){ const P=v4ResP(r); if(P&&P<V7_FECHA_HAB) av.push('Regla neutra del 03/11/2026: las firmas de vivienda habitual son a partir del 02/12/2026 para todos, salvo vacío prolongado de la habitación.'); }
@@ -14920,7 +14922,8 @@ function v4ValidarReserva(r){
 }
 function v4ChequeoTerminar(r,k,f){
   const x=v7ChTermBase(r,k,f), multi=v7OfertaMulti(r), fase=r.fase||'solicitud';
-  if(['nosel','retirasol','suplente'].includes(k)&&!multi) x.err.push('Este caso es de las ofertas con varias solicitudes (v20261105 y VH-20261105).');
+  x.err=(x.err||[]).map(e=>v10MapCl(r,e)); x.av=(x.av||[]).map(a=>v10MapCl(r,a)); if(x.txt) x.txt=v10MapCl(r,x.txt);
+  if(['nosel','retirasol','suplente'].includes(k)&&!multi) x.err.push('Este caso es de las ofertas con varias solicitudes (v20261105, v20261106, VH-20261105 y VH-20261106).');
   if(multi&&fase!=='aceptada'&&(k==='interesado'||k==='fran')) x.err.push('La solicitud no estaba aceptada: hasta la aceptación la cantidad es un depósito, sin arras, y cualquiera de las partes puede echarse atrás con devolución íntegra. Usa «Retira su solicitud» o «No seleccionada».');
   if(k==='suplente'&&fase!=='suplente') x.av.push('La reserva no está marcada como suplente.');
   if(k==='causa'&&v7ResHab(r)) x.err.push('En vivienda habitual no hay causa de temporalidad: elige otro caso.');
@@ -14931,7 +14934,7 @@ function v4ChequeoTerminar(r,k,f){
 function v4FormReserva(id,pre){ v7FormResBase(id,pre); try{ v7InyectarRes(id?v4Res(id):Object.assign({},pre||{})); }catch(e){ console.warn('Reserva v4.7',e); } v4ValidarFormRes(); }
 function v7InyectarRes(r){
   const fg=document.querySelector('#m-v4-c .fg'); if(!fg||$i('rs-tipo')) return; r=r||{};
-  const tipo=r.tipo||'temporal', legado=!!r.id&&!r.oferta, ofDef=legado?(r.O&&r.O>='2026-11-05'?'v20261105':r.O&&r.O>=V5_FECHA_MODELO?'v20261102':'antigua'):(tipo==='habitual'?'VH-20261105':'v20261105');
+  const tipo=r.tipo||'temporal', legado=!!r.id&&!r.oferta, ofDef=legado?(r.O&&r.O>='2026-11-06'?'v20261106':r.O&&r.O>='2026-11-05'?'v20261105':r.O&&r.O>=V5_FECHA_MODELO?'v20261102':'antigua'):(tipo==='habitual'?'VH-20261106':'v20261106');
   const of=r.oferta||ofDef, gm=(r.gMeses===undefined||r.gMeses===null)?(legado&&(of==='v20261102'||of==='antigua')?'1':''):String(r.gMeses), ga=r.garante||{};
   const opt=(arr,sel)=>arr.map(([v,t])=>'<option value="'+v4Esc(v)+'"'+(String(sel)===String(v)?' selected':'')+'>'+v4Esc(t)+'</option>').join('');
   const S=(lbl,id,o,ex)=>'<div class="fgrp'+(ex&&ex.full?' fgf':'')+'"'+(ex&&ex.attr?' '+ex.attr:'')+'><label>'+lbl+'</label><select id="'+id+'">'+o+'</select></div>';
@@ -14946,6 +14949,10 @@ function v7InyectarRes(r){
    +I('Selección prorrogada por escrito hasta','rs-sel',r.selLim,{attr:'data-multi="1"'})
    +S('Entidad garante (condición iv)','rs-gar',opt(Object.entries(V7_GAR),ga.estado||''))
    +I('Fecha de la respuesta de la entidad','rs-garf',ga.fecha)
+   +'<div class="fgrp"><label>Entidad garante (nombre, cláusula 9.iv)</label><input id="rs-garent" value="'+v4Esc(r.garEnt||'')+'" placeholder="SEAG u otra"></div>'
+   +'<div class="fgrp" data-h10="1"><label>Otra vivienda en el municipio · interesado (cl. 4)</label><select id="rs-otra1">'+opt([['','— Elegir —'],['no','No es titular'],['si','Sí es titular']],r.otra1||'')+'</select></div>'
+   +'<div class="fgrp" data-h10="2"><label>Otra vivienda en el municipio · segundo interesado</label><select id="rs-otra2">'+opt([['','— Elegir —'],['no','No es titular'],['si','Sí es titular']],r.otra2||'')+'</select></div>'
+   +'<div class="fgrp" data-h10="1"><label>Ahorros o ayuda familiar: meses de renta (cl. 9.ii)</label><input id="rs-meses" type="number" min="1" max="60" value="'+v4Esc(r.mesesAh||'')+'"></div>'
    +'<div class="fgrp fgf"><div class="pdf-upload-zone" id="rs-pdf-zone" onclick="document.getElementById(\'rs-pdf\').click()"><input type="file" id="rs-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload(\'rs-pdf\',\'rs-pdf-zone\',\'rs-pdf-data\');v7LeerOfertaArchivo(this)"><input type="hidden" id="rs-pdf-data"><input type="hidden" id="rs-pdf-name"><input type="hidden" id="rs-lee-json"><span class="pdf-upload-label">📎 Adjuntar la oferta y reserva firmada (PDF): la app reconoce si es de vivienda habitual o temporal</span></div><div id="rs-lee-res"></div></div>'
    +'<div class="fgrp fgf"><div id="rs-pago-info" style="font-size:11.5px;line-height:1.6;color:var(--ink2);"></div></div>');
   if(r.pdfData){ $i('rs-pdf-data').value=r.pdfData; $i('rs-pdf-name').value=r.pdfName||''; const z=$i('rs-pdf-zone'); z.classList.add('has-file'); z.querySelector('.pdf-upload-label').textContent='✓ '+(r.pdfName||'Oferta firmada adjunta'); }
@@ -14954,13 +14961,14 @@ function v7InyectarRes(r){
 }
 function v7ToggleRes(){
   if(!$i('rs-tipo')) return; const m=$i('m-v4-c'), hab=gi('rs-tipo')==='habitual', of=$i('rs-oferta');
-  if(m&&m.dataset.tipoPrev!==gi('rs-tipo')){ m.dataset.tipoPrev=gi('rs-tipo'); const o=V7_OFERTAS[of.value]; if(o&&o.hab!==hab) of.value=hab?'VH-20261105':'v20261105'; if(!hab&&gi('rs-gm')==='2') $i('rs-gm').value='1'; }
+  if(m&&m.dataset.tipoPrev!==gi('rs-tipo')){ m.dataset.tipoPrev=gi('rs-tipo'); const o=V7_OFERTAS[of.value]; if(o&&o.hab!==hab) of.value=hab?'VH-20261106':'v20261106'; if(!hab&&gi('rs-gm')==='2') $i('rs-gm').value='1'; }
   const multi=!!(V7_OFERTAS[of.value]||{}).multi;
   ['rs-ct1','rs-cd1','rs-cf1','rs-ct2','rs-cd2','rs-cf2','rs-e','rs-decl1','rs-decl2'].forEach(id=>{ const e=$i(id), g=e&&e.closest('.fgrp'); if(g) g.style.display=hab?'none':''; });
   document.querySelectorAll('#m-v4-c [data-decl]').forEach(e=>{ if(hab) e.style.display='none'; });
   document.querySelectorAll('#m-v4-c button').forEach(b=>{ const oc=b.getAttribute('onclick')||''; if(/v4ResEcausa|v4ResE12/.test(oc)) b.style.display=hab?'none':''; });
   [['rs-dom1','Domicilio habitual (calle, número, localidad y provincia o país) *','Domicilio anterior (calle, número, localidad y provincia o país) *'],['rs-dom2','Domicilio habitual *','Domicilio anterior *']].forEach(([id,a,b])=>{ const e=$i(id), l=e&&e.closest('.fgrp')&&e.closest('.fgrp').querySelector('label'); if(l) l.textContent=hab?b:a; });
   document.querySelectorAll('#m-v4-c [data-multi]').forEach(e=>{ e.style.display=multi?'':'none'; });
+  document.querySelectorAll('#m-v4-c [data-h10]').forEach(e=>{ e.style.display=hab&&(e.dataset.h10==='1'||gi('rs-inq2'))?'':'none'; });
   const o2=document.querySelector('#rs-gm option[value="2"]'); if(o2) o2.disabled=!hab;
   const pi=$i('rs-pago-info'); if(pi){ try{ const r=v4LeerFormRes(); pi.innerHTML=parseFloat(r.renta)>0&&v4ResP(r)?'💶 <strong>Pago en la firma</strong>: '+v4Esc(v7TxtPagoRes(r))+'. La reserva se descuenta de la fianza y la garantía (cláusula 8 del contrato).':''; }catch(e){ pi.innerHTML=''; } }
 }
@@ -14968,7 +14976,8 @@ function v4ValidarFormRes(){ v7ToggleRes(); v7ValFormResBase(); v7ToggleRes(); }
 function v4LeerFormRes(){
   const r=v7LeerResBase(); if(!$i('rs-tipo')) return r;
   const of=gi('rs-oferta'), multi=!!(V7_OFERTAS[of]||{}).multi;
-  Object.assign(r,{tipo:gi('rs-tipo')||'temporal', oferta:of, gMeses:gi('rs-gm')===''?'':parseInt(gi('rs-gm')), fase:multi?(gi('rs-fase')||'solicitud'):'', aceptada:multi?gi('rs-acep'):'', selLim:multi?gi('rs-sel'):'', garante:{estado:gi('rs-gar'), fecha:gi('rs-garf')}, fechaPago:gi('rs-fpago')||r.O||''});
+  Object.assign(r,{tipo:gi('rs-tipo')||'temporal', oferta:of, gMeses:gi('rs-gm')===''?'':parseInt(gi('rs-gm')), fase:multi?(gi('rs-fase')||'solicitud'):'', aceptada:multi?gi('rs-acep'):'', selLim:multi?gi('rs-sel'):'', garante:{estado:gi('rs-gar'), fecha:gi('rs-garf')}, garEnt:gi('rs-garent'), fechaPago:gi('rs-fpago')||r.O||''});
+  if(r.tipo==='habitual'){ r.otra1=gi('rs-otra1'); r.otra2=r.inqId2?gi('rs-otra2'):''; r.mesesAh=gi('rs-meses')?parseInt(gi('rs-meses')):''; } else { r.otra1=''; r.otra2=''; r.mesesAh=''; }
   const pd=gi('rs-pdf-data'); if(pd){ r.pdfData=pd; r.pdfName=gi('rs-pdf-name'); }
   const lj=gi('rs-lee-json'); if(lj){ try{ r.pdfLeido=JSON.parse(lj); }catch(e){} }
   if(r.tipo==='habitual'){ r.E=''; ['causaTipo1','causaDet1','cFin1','causaTipo2','causaDet2','cFin2','decl1','declSeg1','decl2','declSeg2'].forEach(k=>{ r[k]=''; }); r.declOt1=false; r.declOt2=false; }
@@ -14992,7 +15001,7 @@ function v4GestionarReserva(id){
 }
 
 // Datos para rellenar la oferta: garantía pactada, versión firmada y, en vivienda habitual, sin causa
-function v4TxtDatosOferta(r){
+function v7TxtDatosOferta(r){
   let s=v7TxtOfertaBase(r); const ren=parseFloat(r.renta)||0, g=v7GarRes(r), hab=v7ResHab(r), of=r.oferta||'', m=ren>0?Math.round(g/ren):0;
   s=s.replace('garantía adicional '+v4EurosDoc(ren)+';','garantía adicional '+(g>0?v4EurosDoc(g)+' (marca «'+(m===2?'dos (2)':'una (1)')+'» mensualidad'+(m===2?'es':'')+')':'ninguna (marca «ninguna»)')+';');
   if(of&&of!=='v20261102'&&of!=='antigua') s=s.replace('(versión 20261102)','(versión '+of+')');
@@ -15096,7 +15105,8 @@ function v4ContratoDesdeReserva(id){
     v7OpcionesModelo(); s('co-tipo',hab?'habitual':'temporal'); s('co-modelo',hab?V7_HAB:(v5OfertaNueva(r)?V7_TMP:'v20261025-2'));
     const gm=(r.gMeses===undefined||r.gMeses===''||r.gMeses===null)?1:(+r.gMeses||0), ren=parseFloat(r.renta)||0;
     s('co-f',ren); s('co-g',gm?Math.round(ren*gm*100)/100:0); s('co-gop',gm?'si':'no');
-    const ge=(r.garante||{}).estado; if(ge==='aprobada'){ s('co-gimp','si'); const c=$i('co-gimpok'); if(c) c.checked=true; } else if(ge==='nousa') s('co-gimp','no');
+    const ge=(r.garante||{}).estado; if(ge==='aprobada'||ge==='dispensada'){ s('co-gimp','si'); const c=$i('co-gimpok'); if(c) c.checked=ge==='aprobada'; } else if(ge==='nousa') s('co-gimp','no');
+    if(r.garEnt) s('co-gimpent',r.garEnt); if(hab){ if(r.otra1) s('co-otra1',r.otra1); if(r.inqId2&&r.otra2) s('co-otra2',r.otra2); }
     if(hab&&r.vivHab1) s('co-vivhab',r.vivHab1);
     const m=$i('m-co'); if(m) m.dataset.fManual='';
     v7AplicarTipoForm(); v4ValidarFormCont();
@@ -15630,6 +15640,135 @@ function v9BoxesCartera(lq,tr){
    +(tr.media!==null?'<div class="cartera-box" style="cursor:pointer;" onclick="v9Ir(\'anuncios\')"><div class="cb-lbl">Días hasta alquilar</div><div class="cb-val">'+v9Dias(tr.media)+'</div><div class="cb-sub">media de '+tr.habs+' habitaciones · '+tr.n+' alquileres</div></div>':'');
 }
 function v9Ir(s){ const n=document.querySelector('.nav-item[data-s="'+s+'"]'); if(n) go(n); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v4.10 · 13/11/2026 · Ofertas y reservas v20261106 (temporal) y VH-20261106 (vivienda habitual)
+// Ambas con 16 cláusulas: 1 objeto · 2 selección · 3 vigencia y fecha prevista · 4 causa (T) / destino de
+// vivienda habitual (H) · 5 cantidad · 6 condiciones económicas · 7 duración · 8 arras · 9 condiciones ·
+// 10 devolución · 11 información previa · 12 principales condiciones · 13 avisos · 14 datos · 15 ASNEF · 16 leyes
+// ═══════════════════════════════════════════════════════════════════════════
+(function(){ const n={
+  'VH-20261106':{t:'VH-20261106 · vivienda habitual (vigente)',hab:true,multi:true,v6:true},
+  'v20261106':{t:'v20261106 · temporal (vigente)',hab:false,multi:true,v6:true},
+  'VH-20261105':{t:'VH-20261105 · vivienda habitual (anterior)',hab:true,multi:true},
+  'v20261105':{t:'v20261105 · temporal (anterior)',hab:false,multi:true},
+  'v20261102':V7_OFERTAS['v20261102'], 'antigua':V7_OFERTAS['antigua']};
+  Object.keys(V7_OFERTAS).forEach(k=>delete V7_OFERTAS[k]); Object.assign(V7_OFERTAS,n); })();
+V7_GAR.dispensada='Dada por cumplida por ti (cláusula 9.iv)';
+const V10_VIGENTE={hab:'VH-20261106', tmp:'v20261106'}, V10_MK='[☒☑✓✔✗✘■▣◼●xX]';
+function v5OfertaNueva(r){ if(r&&r.oferta) return ['v20261102','v20261105','v20261106','VH-20261105','VH-20261106'].includes(r.oferta); return !!(r&&r.O&&r.O>=V5_FECHA_MODELO); }
+// Numeración: los textos heredados citan la oferta v20261102; en las ofertas con «Selección entre varias solicitudes»
+// (cláusula 2) las demás cláusulas van una posición más adelante. VH-20261105 no se ha podido cotejar.
+function v10MapCl(r,s){
+  if(s===undefined||s===null||!r) return s; const of=r.oferta||''; if(!(V7_OFERTAS[of]||{}).multi) return s;
+  const re=/\b([Cc]láusula) (\d{1,2})\b(?! del contrato| de tu contrato| del modelo de contrato)/g;
+  if(of==='VH-20261105') return String(s).replace(re,(x,c)=>c+' correspondiente');
+  return String(s).replace(re,(x,c,n)=>c+' '+(+n>=2?+n+1:+n));
+}
+function v4TxtFinRes(r){ return v10MapCl(r,v10TxtFinResBase(r)); }
+function v4Txt14(r,ahora){ return v10MapCl(r,v10Txt14Base(r,ahora)); }
+// Comprobaciones propias de las ofertas v20261106 y VH-20261106
+function v10ValOferta(r,err,av){
+  const hab=v7ResHab(r), of=V7_OFERTAS[r.oferta]||{}, g=(r.garante||{}).estado||'';
+  if(r.oferta&&!of.v6&&r.O&&r.O>='2026-11-06'&&!r.id) av.push('La oferta vigente desde el 06/11/2026 es la '+(hab?V10_VIGENTE.hab:V10_VIGENTE.tmp)+'.');
+  if(r.medio==='efectivo') av.push('Pago en metálico: solo si el interesado no tiene cuenta bancaria ni acceso a medios electrónicos de pago y lo pide (cláusula 5 de la oferta, art. 17.3 LAU).');
+  if(g!=='nousa'&&!String(r.garEnt||'').trim()&&(hab||of.multi)) av.push('Escribe el nombre de la entidad garante: va en la cláusula 9 (iv) de la oferta.');
+  if(hab&&of.multi){
+    if(!r.otra1||(r.inqId2&&!r.otra2)) av.push('Cláusula 4 de la oferta: anota si '+(r.inqId2?'cada interesado':'el interesado')+' es titular de otra vivienda en el municipio.');
+    if(!r.mesesAh) av.push('Cláusula 9 (ii) de la oferta: indica cuántos meses de renta deben cubrir los ahorros o la ayuda familiar.');
+  }
+}
+// Último contrato de un inquilino en el piso antes de una fecha (cláusula 4 de la oferta temporal)
+function v10UltCo(inqId,propId,antes){
+  const xs=(D.conts||[]).filter(c=>(c.inqId==inqId||c.inqId2==inqId)&&c.propId==propId&&v4F(c)&&v4F(c)<antes).sort((a,b)=>v4F(b).localeCompare(v4F(a)));
+  const c=xs[0]; if(!c) return null; const tp=c.tipoContrato==='habitual'?'vivienda habitual':c.tipoContrato==='temporal'||!c.tipoContrato?'vivienda temporal':c.tipoContrato==='temporadaPre'?'de temporada':c.tipoContrato;
+  const sal=(c.llaves&&c.llaves.L)||v4FinCobro(c)||v4E(c)||''; return {co:c, tipo:tp, salida:sal};
+}
+function v10TxtOferta06(r){
+  const hab=v7ResHab(r), p=(D.props||[]).find(x=>x.id==r.propId)||{}, P=v4ResP(r), t=titularidadDia(r.propId,r.O||v4Hoy()), cfg=v4CfgHab(r.propId,r.hab)||{}, ren=parseFloat(r.renta)||0, g=v7GarRes(r), gm=ren>0?Math.round(g/ren):0;
+  const fr=(D.propietarios||[]).find(o=>v4NifNorm(o.dni)==='48720635B')||{}, nifU=t.usuf?v4NifNorm(nifC(t.usuf.ownerId)):'', nifP=t.pleno?v4NifNorm(nifC(t.pleno.ownerId)):'';
+  const arr=t.usuf?(nifU==='48720635B'?'marca la 1.ª opción: Francisco José, usufructuario vitalicio (escritura de donación del 8 de octubre de 2026, protocolo 1.496).':'⚠️ el usufructuario de este piso es '+nombreC(t.usuf.ownerId)+' y el documento no trae esa opción: adáptalo antes de firmar.')
+    :nifP==='21654808D'?'marca la 2.ª opción: María de los Ángeles, propietaria, representada por Francisco José con el poder especial del 8 de octubre de 2026 (protocolo 1.497).'
+    :nifP==='48720635B'?'⚠️ este piso es tuyo en pleno dominio y el documento no trae esa opción: añade «D. Francisco José López Francés (…) en su propio nombre y derecho, en su condición de propietario de la vivienda».'
+    :'⚠️ no consta quién es el titular del piso el '+v4F2(r.O||v4Hoy())+': revisa la titularidad en la ficha del piso.';
+  const per=n=>{ const iid=n===1?r.inqId:r.inqId2, i=v4Inq(iid)||{}; return (((i.nom||'')+' '+(i.ap||'')).trim()||'[NOMBRE]')+' · DNI/NIE/pasaporte '+(r['dni'+n]||'[DOCUMENTO]')+' · domicilio '+(hab?'actual':'habitual')+': '+(r['vivHab'+n]||'[DOMICILIO]')+' · email '+(i.email||'[EMAIL]')+' · WhatsApp '+(i.wa||i.tel||'[TELÉFONO]'); };
+  const ns=r.inqId2?[1,2]:[1], quien=n=>n===1?'interesado':'segundo interesado', L=[];
+  L.push('Datos para rellenar la «Oferta y reserva de habitación en piso compartido» '+r.oferta+' ('+(hab?'vivienda habitual':'temporal')+'), en el orden del documento:');
+  L.push('- Encabezamiento: ubicación '+([p.dir,[p.cp,p.ciu].filter(Boolean).join(' ')].filter(Boolean).join(', ')||'[DIRECCIÓN]')+'; ref. catastral '+(p.refCat||'[REF. CATASTRAL]')+'; «En '+(p.ciu||'[LOCALIDAD]')+', a '+v4FL(r.O)+'». Comprueba que pone «Versión del documento: '+(hab?'VH-20261106':'20261106')+'».');
+  L.push('- Parte arrendadora: '+arr+' Contacto: email '+(fr.email||'[EMAIL]')+' y WhatsApp '+(fr.tel||'[TELÉFONO]')+'.');
+  ns.forEach(n=>L.push('- '+(n===1?'Interesado':'Segundo interesado')+': '+per(n)+'.'));
+  L.push('- Manifiesta 2: habitación número '+r.hab+'; marca «'+(r.inqId2||cfg.tipo==='doble'?'doble, para dos personas':'individual, para una persona')+'».');
+  L.push('- Manifiesta 3: calificación energética '+(p.ceeCalif||'[CALIFICACIÓN]')+'.'+(r.modo==='distancia'?' ⚠️ Reserva sin visita: adapta la frase «ha visitado la vivienda y la habitación».':''));
+  L.push('- Cláusula 3: firma y entrada el '+v4FL(P)+' (como tarde el '+v4FL(fxAdd(r.O,15))+', salvo prórroga por escrito).');
+  if(hab) ns.forEach(n=>L.push('- Cláusula 4, '+quien(n)+': marca «'+(r['otra'+n]==='si'?'es titular de otra vivienda en el municipio» y escribe cuál':r['otra'+n]==='no'?'no es titular de otra vivienda en el municipio»':'[SIN ANOTAR]»')+'.'));
+  else {
+    ns.forEach(n=>L.push('- Cláusula 4, '+quien(n)+': marca «'+(V4_CAUSAS[r['causaTipo'+n]]||'[CAUSA]')+'»; detalle: '+(r['causaDet'+n]||'—')+'; fecha prevista de fin de la causa: '+v4FL(r['cFin'+n])+'.'));
+    L.push('- Cláusula 4: fecha prevista de fin del contrato, '+v4FL(r.E)+(P&&r.E?' ('+v4Diff(P,r.E)+' días; tiene que ser más de 31 días y como máximo 12 meses, sin pasar del fin de la causa)':'')+'.');
+    ns.forEach(n=>{ const x=v5DeclRes(r,n), u=v10UltCo(n===1?r.inqId:r.inqId2,r.propId,r.O||v4Hoy());
+      L.push('- Cláusula 4, arrendamientos anteriores ('+quien(n)+'): '+(x.d==='no'?'marca «no ha sido arrendatario de ninguna habitación de esta vivienda»'+(u?' ⚠️ pero en la app consta un contrato suyo en este piso ('+v4F2(v4F(u.co))+')':''):x.d==='si'?'marca «lo ha sido» y escribe el último contrato: tipo '+(u?u.tipo:'[TIPO]')+', fecha de salida '+(u&&u.salida?v4FL(u.salida):'[FECHA]'):'[SIN RELLENAR]')+'.');
+      if(x.ot) L.push('  ⚠️ En la reserva consta otro título distinto de un temporal en los 3 meses anteriores: el documento lo niega, así que no se puede firmar como temporal.');
+      if(x.seg>=2) L.push('  ⚠️ Sería el tercer contrato temporal seguido: no puede ser temporal (art. 9 bis.2 LAU).'); });
+  }
+  L.push('- Cláusula 5: '+v4EurosDoc(r.senal)+'; marca '+(r.medio==='bizum'?'«Bizum» y escribe el número '+(r.bizum||'[NÚMERO]'):r.medio==='transferencia'?'«transferencia bancaria» y escribe el IBAN '+(((D.ctasBanc||[]).find(c=>c.id==r.ctaId)||{}).num||'[IBAN]'):'«metálico» (solo si no tiene cuenta bancaria ni medios electrónicos de pago y lo pide; art. 17.3 LAU)')+'.');
+  L.push('- Cláusula 6: renta mensual '+v4EurosDoc(ren)+'; internet, importe anual máximo para el conjunto de la vivienda '+v4EurosDoc(r.internetAnual||0)+'; fianza '+v4EurosDoc(ren)+'; garantía adicional: marca «'+(gm===2?'dos (2)':gm===1?'una (1)':'ninguna')+'»'+(g>0?' y escribe '+v4EurosDoc(g):'')+'; en la firma '+v4EurosDoc(v4PagoFirmaRes(r))+' (renta proporcional '+v4E2(v4RentaPropRes(r))+' € + fianza '+v4E2(ren)+' € + garantía '+v4E2(g)+' € − reserva '+v4E2(r.senal)+' €).');
+  L.push('- Cláusula 9 (ii): '+(r.multiplo?String(r.multiplo).replace('.',','):'____')+' veces la renta mensual'+(hab?'; ahorros o ayuda familiar para '+(r.mesesAh||'____')+' meses':'')+'.');
+  L.push('- Cláusula 9 (iv): entidad garante '+(r.garEnt||'[ENTIDAD GARANTE]')+'.');
+  L.push('- Cláusula 15: marca y firma la autorización de ASNEF y BADEXCUG '+(r.inqId2?'de cada interesado':'del interesado')+'.');
+  L.push('Firmad por duplicado, en todas las caras de las hojas, y adjuntad copia de los documentos de identidad. En las 24 horas siguientes envía el modelo de contrato (cláusula 11).');
+  return L.join('\n');
+}
+function v4TxtDatosOferta(r){ return (V7_OFERTAS[r.oferta]||{}).v6?v10TxtOferta06(r):v7TxtDatosOferta(r); }
+
+// Lectura de la oferta firmada (PDF)
+function v10Mk(t,re){ const m=t.match(re); return !!(m&&new RegExp('^'+V10_MK+'$').test(m[1])); }
+function v10AnalizarOferta(txt){
+  const a=v7AnalizarContrato(txt), t=v7Limpio(txt), c={}; let x; const eur=re=>{ const m=t.match(re); return m?v7Num(m[1]):null; };
+  c.senal=eur(/entrega en este acto la cantidad de[^(]{0,90}\(\s*([\d.,]+)\s*€\s*\)/i);
+  c.renta=eur(/La renta mensual será de[^(]{0,90}\(\s*([\d.,]+)\s*€\s*\)/i);
+  c.inet=eur(/conjunto de la vivienda de[^(]{0,90}\(\s*([\d.,]+)\s*€\s*\)/i);
+  c.total=eur(/lo que asciende a[^(]{0,90}\(\s*([\d.,]+)\s*€\s*\)/i);
+  if(x=t.match(/habitaci[oó]n n[uú]mero\s*(\d{1,2})\b/i)) c.hab=x[1];
+  if(x=t.match(/\bEn\s+([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñü .'-]{1,40}?),\s*a\s*(\d{1,2})\s*de\s*([A-Za-záéíóú]+)\s*de\s*(\d{4})/)){ const f=v7FechaTxt(x[2],x[3],x[4]); if(f) c.O=f; }
+  if(x=t.match(/realizar[aá]n el\s*(\d{1,2})\s*de\s*([A-Za-záéíóú]+)\s*de\s*(\d{4})/i)){ const f=v7FechaTxt(x[1],x[2],x[3]); if(f) c.P=f; }
+  if(x=t.match(/fecha prevista de fin del contrato ser[aá] el\s*(\d{1,2})\s*de\s*([A-Za-záéíóú]+)\s*de\s*(\d{4})/i)){ const f=v7FechaTxt(x[1],x[2],x[3]); if(f) c.E=f; }
+  const gar=t.match(/garant[ií]a adicional, de\s*(\S)\s*ninguna\s*(\S)\s*una \(1\)(?:\s*(\S)\s*dos \(2\))?/i);
+  if(gar){ const mk=s=>!!s&&new RegExp('^'+V10_MK+'$').test(s); if(mk(gar[1])) c.gMeses=0; else if(mk(gar[2])) c.gMeses=1; else if(mk(gar[3])) c.gMeses=2; }
+  if(v10Mk(t,/(\S)\s*Bizum al número/i)){ c.medio='bizum'; const b=t.match(/Bizum al número\s*([+\d][\d ]{7,15}\d)/i); if(b) c.bizum=b[1].replace(/\s/g,''); }
+  else if(v10Mk(t,/(\S)\s*transferencia bancaria a la cuenta IBAN/i)) c.medio='transferencia';
+  else if(v10Mk(t,/(\S)\s*metálico \(sólo/i)) c.medio='efectivo';
+  if(x=t.match(/al menos,?\s*(\d+(?:[.,]\d+)?)\s*veces la renta/i)) c.multiplo=v7Num(x[1]);
+  if(x=t.match(/pagar la renta de\s*(\d{1,2})\s*meses/i)) c.mesesAh=+x[1];
+  if(x=t.match(/garant[ií]a de impago de rentas,\s*([^_(]{2,80}?)\s*\(en adelante, la «entidad garante»\)/i)){ const e=x[1].trim(); if(e) c.garEnt=e; }
+  if(a.tipo==='habitual'){ if(v10Mk(t,/Interesado:\s*(\S)\s*no es titular/i)) c.otra1='no'; else if(v10Mk(t,/Interesado:\s*\S\s*no es titular de otra vivienda en el municipio\s*(\S)\s*es titular/i)) c.otra1='si'; }
+  if(a.tipo==='temporal') Object.entries(V4_CAUSAS).forEach(([k,tx])=>{ if(!c.causa1&&new RegExp('Interesado:[^.]{0,400}?'+V10_MK+'\\s*'+tx.slice(0,18).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(t)) c.causa1=k; });
+  Object.keys(c).forEach(k=>{ if(c[k]===null||c[k]===undefined) delete c[k]; });
+  return {doc:a.doc, tipo:a.tipo, version:a.version, campos:c};
+}
+const V10_LECT=[['senal','Cantidad de la reserva','rs-sen','€'],['renta','Renta mensual','rs-renta','€'],['inet','Internet anual máximo','rs-inet','€'],['hab','Habitación','rs-hab',''],['O','Fecha de la oferta','rs-o','fecha'],['P','Fecha prevista de firma','rs-p','fecha'],['E','Fin previsto del contrato','rs-e','fecha'],['gMeses','Garantía adicional (meses)','rs-gm',''],['medio','Medio de pago','rs-medio',''],['bizum','Número de Bizum','rs-biz',''],['multiplo','Múltiplo de ingresos','rs-mult',''],['mesesAh','Meses de ahorros','rs-meses',''],['garEnt','Entidad garante','rs-garent',''],['otra1','Otra vivienda en el municipio','rs-otra1',''],['causa1','Causa de temporalidad','rs-ct1','']];
+function v10AplicarLecturaOferta(a,via,forzar){
+  const box=$i('rs-lee-res'); if(!box) return;
+  if(a.doc==='contrato'){ box.innerHTML='<div class="alert alert-y" style="font-size:11.5px;">Este PDF es un contrato, no la oferta: adjúntalo en el contrato.</div>'; return; }
+  const tipo=a.tipo||(/^VH-/.test(a.version)?'habitual':''); if(!tipo){ box.innerHTML='<div class="alert alert-y" style="font-size:11.5px;">No reconozco el tipo de alquiler en la oferta ('+v4Esc(via)+'): elígelo a mano.</div>'; return; }
+  $i('rs-tipo').value=tipo; if(V7_OFERTAS[a.version]) $i('rs-oferta').value=a.version; v7ToggleRes();
+  $i('rs-lee-json').value=JSON.stringify({tipo, version:V7_OFERTAS[a.version]?a.version:'', fecha:v4Hoy()});
+  const c=a.campos, filas=[];
+  V10_LECT.forEach(([k,lbl,id,u])=>{ if(c[k]===undefined) return; if((k==='E'||k==='causa1')&&tipo!=='temporal') return; if((k==='mesesAh'||k==='otra1')&&tipo!=='habitual') return; const e=$i(id); if(!e) return;
+    const v=String(c[k]), cur=String(e.value||''); let est; if(!cur||forzar){ e.value=v; est='rellenado'; } else if(u==='€'?Math.abs((parseFloat(cur)||0)-c[k])<0.005:cur===v) est='coincide'; else est='difiere (en la app: '+cur+')';
+    filas.push('<tr><td>'+v4Esc(lbl)+'</td><td style="text-align:right;">'+v4Esc(u==='€'?v4E2(c[k])+' €':u==='fecha'?v4F2(v):v)+'</td><td>'+v4Esc(est)+'</td></tr>'); });
+  try{ v4ValidarFormRes(); }catch(e){}
+  if(c.total!==undefined){ let pf=null; try{ pf=v4PagoFirmaRes(v4LeerFormRes()); }catch(e){} filas.push('<tr><td>Total en la firma (cl. 6)</td><td style="text-align:right;">'+v4E2(c.total)+' €</td><td>'+(pf===null?'—':Math.abs(pf-c.total)<0.005?'coincide con la app':'⚠️ la app calcula '+v4E2(pf)+' €')+'</td></tr>'); }
+  const dif=filas.some(f=>f.indexOf('difiere')>=0||f.indexOf('⚠️')>=0); window._v10UltLect={a,via};
+  box.innerHTML='<div class="alert alert-g" style="font-size:11.5px;line-height:1.55;">🔎 Reconocida: <strong>oferta de '+(tipo==='habitual'?'vivienda habitual':'alquiler temporal')+'</strong>'+(a.version?' · versión '+v4Esc(a.version):'')+' ('+v4Esc(via)+').'+(a.version&&!V7_OFERTAS[a.version]?' Esa versión no está registrada en la app: elige la oferta a mano.':'')+(filas.length?'':' Los huecos están en blanco o manuscritos: rellena los datos a mano.')+'</div>'
+    +(filas.length?'<table style="width:100%;font-size:11.5px;margin-top:6px;border-collapse:collapse;"><tbody>'+filas.join('')+'</tbody></table>':'')
+    +(dif?'<button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px;" onclick="v10AplicarLecturaOferta(window._v10UltLect.a,window._v10UltLect.via,true)">Usar los datos del PDF</button>':'')
+    +'<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;">Revisa cada dato con la oferta firmada: lo escrito a mano o las casillas marcadas a bolígrafo no siempre se leen.</div>';
+}
+async function v7LeerOfertaArchivo(inp){
+  const f=inp&&inp.files&&inp.files[0], box=$i('rs-lee-res'); if(!f||!box) return;
+  box.innerHTML='<div style="font-size:11.5px;color:var(--ink3);">🔎 Leyendo la oferta…</div>';
+  try{ const {t,via}=await v7TextoArchivo(f); v10AplicarLecturaOferta(v10AnalizarOferta(t),via); }
+  catch(e){ box.innerHTML='<div class="alert alert-y" style="font-size:11.5px;">No he podido leer el texto: '+v4Esc(e.message||String(e))+'. Elige el tipo a mano.</div>'; }
+}
 
 </script>
 </body>
