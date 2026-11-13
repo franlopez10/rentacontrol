@@ -1925,9 +1925,9 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     </div>
     <div class="fgrp"><label>Renta mensual (€)</label><input id="co-r" type="number" placeholder="350"></div>
     <div class="fgrp"><label>Fianza entregada (€)</label><input id="co-f" type="number" placeholder="350"></div>
-    <div class="fgrp"><label>Garantía adicional (€)</label><input id="co-g" type="number" placeholder="0"></div>
+    <div class="fgrp"><label>Garantía adicional (€)</label><input id="co-g" type="number" step="0.01" placeholder="0" oninput="v11GCambio()"></div>
     <div class="fgrp"><label>Tipo de contrato *</label><select id="co-tipo" onchange="v7CambioTipo()"><option value="temporal">Temporal (art. 2.3 LAU · causa acreditada)</option><option value="habitual">Vivienda habitual (LAU)</option><option value="temporadaPre">Temporada firmado antes del 08/10/2026</option><option value="usoDistinto">Uso distinto de vivienda</option><option value="esal">Social / Administración o entidad sin ánimo de lucro</option></select></div>
-<div class="fgrp fgf" id="co-v7box" oninput="v4ValidarFormCont()" onchange="v4ValidarFormCont()"><div class="form-section" style="margin-top:4px;">Fianza y garantías (cláusulas 8 y 9)</div><div class="fg"><div class="fgrp"><label>Garantía adicional (cláusula 8) *</label><select id="co-gop"><option value="">— Elegir —</option><option value="no">No se pacta garantía adicional</option><option value="si">Sí, por el importe de «Garantía adicional (€)»</option></select></div><div class="fgrp"><label>Rellenar la garantía</label><div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" class="btn btn-secondary btn-sm" onclick="v7GarMeses(0)">Ninguna</button><button type="button" class="btn btn-secondary btn-sm" onclick="v7GarMeses(1)">1 mes</button><button type="button" class="btn btn-secondary btn-sm" id="co-g2btn" onclick="v7GarMeses(2)">2 meses</button></div></div><div class="fgrp fgf"><div id="co-gmax" style="font-size:10.5px;color:var(--ink3);"></div></div><div class="fgrp"><label>Garantía de impago contratada por ti (cláusula 9) *</label><select id="co-gimp"><option value="">— Elegir —</option><option value="si">Sí, con una entidad garante</option><option value="no">No contratada</option></select></div><div class="fgrp" data-gimp="si"><label>Entidad garante</label><input id="co-gimpent" placeholder="SEAG u otra"></div><div class="fgrp fgf" data-gimp="si"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-gimpok" style="width:auto;"> La entidad garante aprobó la operación antes de la firma</label></div><div class="fgrp fgf"><div id="co-v7pago"></div></div></div><div data-t7="hab" style="display:none;"><div class="form-section">Vivienda habitual (contrato VH-20261106)</div><div style="font-size:10.5px;color:var(--ink3);line-height:1.55;margin-bottom:6px;">1 año desde la firma con prórrogas anuales obligatorias hasta 5 años (art. 9.1 LAU) y después las del art. 10. El inquilino puede irse desde los 6 meses avisando con 30 días. ITP exento. La fianza no se actualiza los 5 primeros años.</div><div class="fg"><div class="fgrp"><label>Otra vivienda en el municipio · arrendatario 1 (manifiesta 4)</label><select id="co-otra1"><option value="">— Elegir —</option><option value="no">No es titular</option><option value="si">Sí es titular</option></select></div><div class="fgrp" data-i2v7="1"><label>Otra vivienda en el municipio · arrendatario 2</label><select id="co-otra2"><option value="">— Elegir —</option><option value="no">No es titular</option><option value="si">Sí es titular</option></select></div><div class="fgrp"><label>Pidió el empadronamiento el (arrendatario 1)</label><input id="co-pads1" type="date"></div><div class="fgrp"><label>Entregó el volante el (arrendatario 1)</label><input id="co-padv1" type="date"></div><div class="fgrp" data-i2v7="1"><label>Pidió el empadronamiento el (arrendatario 2)</label><input id="co-pads2" type="date"></div><div class="fgrp" data-i2v7="1"><label>Entregó el volante el (arrendatario 2)</label><input id="co-padv2" type="date"></div><div class="fgrp"><label>Necesidad de la parte arrendadora (cláusula 17) *</label><select id="co-nec"><option value="">— Elegir —</option><option value="no">No se hace constar</option><option value="si">Sí se hace constar (art. 9.3 LAU)</option></select></div><div class="fgrp"><label>Para quién (cláusula 17)</label><input id="co-necp" placeholder="Tú, un familiar de 1.er grado o tu cónyuge"></div><div class="fgrp fgf"><label>Motivo (cláusula 17)</label><input id="co-necm"></div><div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-renov" style="width:auto;"> Nuevo contrato con el mismo arrendatario al terminar los 5 años o la última prórroga (IRPF, art. 23.2.a.1.º)</label><div id="co-v8red"></div></div><div class="fgrp fgf"><label>Anexo I · documentación aportada</label><div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-hd-id" style="width:auto;"> Documento de identidad</label><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-hd-ing" style="width:auto;"> Contrato y nóminas, pensión o ingresos</label><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-hd-vl" style="width:auto;"> Vida laboral o certificado de la empresa</label><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-hd-saldo" style="width:auto;"> Saldo bancario o ayuda familiar</label></div></div></div></div><input type="hidden" id="co-lee-json"></div>
+<div class="fgrp fgf" id="co-v7box" oninput="v4ValidarFormCont()" onchange="v4ValidarFormCont()"><div class="form-section" style="margin-top:4px;">Fianza y garantías (cláusulas 8 y 9)</div><div class="fg"><div class="fgrp"><label>Garantía adicional (cláusula 8) *</label><select id="co-gop" onchange="v11GopCambio()"><option value="">— Elegir —</option><option value="no">No se pacta garantía adicional</option><option value="si">Sí, por el importe de «Garantía adicional (€)»</option></select></div><div class="fgrp"><label>Rellenar la garantía</label><div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" class="btn btn-secondary btn-sm" onclick="v7GarMeses(0)">Ninguna</button><button type="button" class="btn btn-secondary btn-sm" onclick="v7GarMeses(1)">1 mes</button><button type="button" class="btn btn-secondary btn-sm" id="co-g2btn" onclick="v7GarMeses(2)">2 meses</button></div></div><div class="fgrp fgf"><div id="co-gmax" style="font-size:10.5px;color:var(--ink3);"></div></div><div class="fgrp"><label>Garantía de impago contratada por ti (cláusula 9) *</label><select id="co-gimp"><option value="">— Elegir —</option><option value="si">Sí, con una entidad garante</option><option value="no">No contratada</option></select></div><div class="fgrp" data-gimp="si"><label>Entidad garante</label><input id="co-gimpent" placeholder="SEAG u otra"></div><div class="fgrp fgf" data-gimp="si"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-gimpok" style="width:auto;"> La entidad garante aprobó la operación antes de la firma</label></div><div class="fgrp fgf"><div id="co-v7pago"></div></div></div><div data-t7="hab" style="display:none;"><div class="form-section">Vivienda habitual (contrato VH-20261106)</div><div style="font-size:10.5px;color:var(--ink3);line-height:1.55;margin-bottom:6px;">1 año desde la firma con prórrogas anuales obligatorias hasta 5 años (art. 9.1 LAU) y después las del art. 10. El inquilino puede irse desde los 6 meses avisando con 30 días. ITP exento. La fianza no se actualiza los 5 primeros años.</div><div class="fg"><div class="fgrp"><label>Otra vivienda en el municipio · arrendatario 1 (manifiesta 4)</label><select id="co-otra1"><option value="">— Elegir —</option><option value="no">No es titular</option><option value="si">Sí es titular</option></select></div><div class="fgrp" data-i2v7="1"><label>Otra vivienda en el municipio · arrendatario 2</label><select id="co-otra2"><option value="">— Elegir —</option><option value="no">No es titular</option><option value="si">Sí es titular</option></select></div><div class="fgrp"><label>Pidió el empadronamiento el (arrendatario 1)</label><input id="co-pads1" type="date"></div><div class="fgrp"><label>Entregó el volante el (arrendatario 1)</label><input id="co-padv1" type="date"></div><div class="fgrp" data-i2v7="1"><label>Pidió el empadronamiento el (arrendatario 2)</label><input id="co-pads2" type="date"></div><div class="fgrp" data-i2v7="1"><label>Entregó el volante el (arrendatario 2)</label><input id="co-padv2" type="date"></div><div class="fgrp"><label>Necesidad de la parte arrendadora (cláusula 17) *</label><select id="co-nec"><option value="">— Elegir —</option><option value="no">No se hace constar</option><option value="si">Sí se hace constar (art. 9.3 LAU)</option></select></div><div class="fgrp"><label>Para quién (cláusula 17)</label><input id="co-necp" placeholder="Tú, un familiar de 1.er grado o tu cónyuge"></div><div class="fgrp fgf"><label>Motivo (cláusula 17)</label><input id="co-necm"></div><div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-renov" style="width:auto;"> Nuevo contrato con el mismo arrendatario al terminar los 5 años o la última prórroga (IRPF, art. 23.2.a.1.º)</label><div id="co-v8red"></div></div><div class="fgrp fgf"><label>Anexo I · documentación aportada</label><div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-hd-id" style="width:auto;"> Documento de identidad</label><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-hd-ing" style="width:auto;"> Contrato y nóminas, pensión o ingresos</label><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-hd-vl" style="width:auto;"> Vida laboral o certificado de la empresa</label><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="co-hd-saldo" style="width:auto;"> Saldo bancario o ayuda familiar</label></div></div></div></div><input type="hidden" id="co-lee-json"></div>
     <div class="fgrp" style="display:none;"><label>Fecha de firma</label><input id="co-firma" type="date"></div>
     <div class="fgrp fgf"><label>Causa de temporalidad (obligatoria en temporal)</label><input id="co-causa" placeholder="Desplazamiento por prácticas en Hospital X hasta junio"></div>
     <div class="fgrp fgf"><label>Domicilio habitual del arrendatario (del que se desplaza) *</label><input id="co-vivhab" placeholder="C/ Mayor 3, Albacete"></div>
@@ -12723,7 +12723,7 @@ function v7ValFormCoBase(){
   const co=v4LeerFormCont(), v=v4ValidarContrato(co);
   const F=v4F(co), E=v4E(co);
   const resumen=(F&&E)?'<div style="font-size:11px;color:var(--ink2);margin-bottom:6px;">F '+v4F2(F)+' → E '+v4F2(E)+' · '+v4Diff(F,E)+' días · máximo '+v4F2(v4AddM(F,12))+(v4C(co)?' · fin de la causa '+v4F2(v4C(co)):'')+(!v5Nuevo(co)?' · modelo '+v5Modelo(co)+': pago el último día del mes anterior'+(F===v4FinMes(F)?' (<strong>firma el último día del mes: el primer pago vence el día 5</strong>)':''):' · primer pago mensual: 1 de '+v4MesNom(v4MesSig(F.slice(0,7)))+(v5FirmaFinMes(F)?' (<strong>firma en los 3 últimos días del mes: el email del primer pago se envía en F o al día siguiente</strong>)':''))+'</div>':'';
-  box.innerHTML=resumen+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ No se puede guardar:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas del contrato temporal.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':'');
+  box.innerHTML=resumen+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ Reglas incumplidas · puedes guardarlo igualmente (te pediré confirmación) y seguirán marcadas en rojo:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas del contrato temporal.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':'');
   const tit=v4TitularCobro(co), ti=$i('co-titular'); if(ti) ti.textContent=tit?('Cobra: '+nombreC(tit)+' (titular de las rentas del piso en la fecha de firma)'):'';
   try{ v4InfoExtraCont(co); }catch(e){ console.warn(e); }
 }
@@ -12751,13 +12751,12 @@ function v7EditCoBase(id){
 function addCont(){
   const co=v4LeerFormCont(); if(!co.inqId){ toast('Selecciona el arrendatario',false); return; }
   const v=v4ValidarContrato(co);
-  if(!v.ok){ v4ValidarFormCont(); const b=$i('co-val'); if(b&&b.scrollIntoView) b.scrollIntoView({behavior:'smooth',block:'center'}); toast('No se puede guardar: revisa las reglas en rojo',false); return; }
-  if(!v7Gest(co)){ const prob=v2ChequeoTemporal(co,co.id).filter(x=>x.n==='error'); if(prob.length&&!confirm('⚠️ Problemas legales del contrato:\n\n• '+prob.map(x=>x.t).join('\n• ')+'\n\n¿Guardarlo igualmente?')) return; }
+  if(!v11ConfirmarGuardarCo(co,v)) return;
   const pdfData=$i('co-pdf-data')?.value||'', pdfName=$i('co-pdf-name')?.value||'';
   co.fotosEntrada=[..._fotosContrato.entrada]; co.fotosSalida=[..._fotosContrato.salida];
   if(pdfData){ co.pdfData=pdfData; co.pdfName=pdfName; }
   if(v7Gest(co)) co.v4=true;
-  let msg='Contrato guardado';
+  let msg='Contrato guardado'+(co.reglasForzadas?' con '+co.reglasForzadas.err.length+' regla'+(co.reglasForzadas.err.length===1?'':'s')+' en rojo · te lo recuerdo en Avisos':'');
   if(co.inqId2&&co.propId&&co.hab){ const pr=(D.props||[]).find(p=>p.id==co.propId); if(pr){ const cf=Object.assign({tipo:'individual',plazas:1,precio:0},(pr.habsConfig||{})[co.hab]||{}); if(cf.tipo!=='doble'){ pr.habsConfig=Object.assign({},pr.habsConfig||{}); cf.tipo='doble'; cf.plazas=2; pr.habsConfig[co.hab]=cf; msg+=' · hab. '+co.hab+' marcada como doble'; } } }
   if(v7Gest(co)&&v4F(co)){ const iv=v5IravVigente(v4F(co)); co.iravF=iv?iv.valor:''; co.iravFecha=iv?iv.fecha:''; }
   if(co.id){ const i=D.conts.findIndex(x=>x.id===co.id); if(i>=0) D.conts[i]=co; msg=msg.replace('Contrato guardado','Contrato actualizado'); } else { co.id=uid(); D.conts.push(co); }
@@ -12789,7 +12788,7 @@ function rConts(){
     const mios=al.filter(a=>a.coId===c.id&&a.visible), venc=mios.filter(a=>a.fecha<hoy&&a.nivel!=='info').length, hoyN=mios.filter(a=>a.fecha===hoy).length;
     const pc=v4PuedeCambio(c), sv=v4SalidaValida(c), C=v4C(c);
     return '<div class="card mb"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;"><div style="min-width:0;flex:1;">'
-     +'<div style="font-family:\'Syne\',sans-serif;font-size:14px;font-weight:700;">'+v4Esc(v4NombresCompletos(c))+' '+es+(venc?' <span class="badge badge-r">🔔 '+venc+' vencido'+(venc>1?'s':'')+'</span>':'')+(hoyN?' <span class="badge badge-y">🔔 '+hoyN+' hoy</span>':'')+'</div>'
+     +'<div style="font-family:\'Syne\',sans-serif;font-size:14px;font-weight:700;">'+v4Esc(v4NombresCompletos(c))+' '+es+(venc?' <span class="badge badge-r">🔔 '+venc+' vencido'+(venc>1?'s':'')+'</span>':'')+(hoyN?' <span class="badge badge-y">🔔 '+hoyN+' hoy</span>':'')+v11BadgeReglasCo(c)+'</div>'
      +'<div style="font-size:11px;color:var(--ink3);margin-top:4px;">F '+v4F2(F)+' → E '+v4F2(E)+(C?' · causa hasta '+v4F2(C):'')+' · '+v4E2(c.r)+' €/mes · fianza '+v4E2(c.f)+' €'+(c.g?' · garantía '+v4E2(c.g)+' €':'')+'</div>'
      +(sv&&sv.anticipada?'<div style="font-size:11px;color:var(--ye);margin-top:3px;">🚪 Aviso de salida: se va el '+v4F2(sv.S)+(sv.ok?'':' · se cobra hasta el '+v4F2(sv.valida))+'</div>':'')
      +'<div style="margin-top:6px;max-width:620px;">'+v4HtmlPasoCo(c)+'</div>'
@@ -13642,13 +13641,13 @@ function v7ValFormResBase(){
   document.querySelectorAll('#m-v4-c [data-modo]').forEach(e=>{ e.style.display=e.dataset.modo===gi('rs-modo')?'':'none'; });
   document.querySelectorAll('#m-v4-c [data-decl]').forEach(e=>{ e.style.display=gi('rs-decl'+e.dataset.decl)==='si'?'':'none'; });
   const P=v4ResP(r), info=(r.O&&P)?'<div style="font-size:11px;color:var(--ink2);margin-bottom:6px;line-height:1.55;">O '+v4F2(r.O)+' → P '+v4F2(P)+' (máximo '+v4F2(fxAdd(r.O,15))+') · modelo de contrato como máximo el '+v4FmtDT(new Date(v4DTde(r.O,r.Ohora||'00:00').getTime()+864e5))+(r.M?' · puede rechazarlo hasta el '+v4FmtDT(v4LimRechazo(r)):'')+(r.renta>0?'<br>Pago en la firma: '+v4E2(v4PagoFirmaRes(r))+' € (renta proporcional + fianza + garantía − señal)':'')+'</div>':'';
-  box.innerHTML=info+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ No se puede guardar:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas de la oferta y reserva.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':'');
+  box.innerHTML=info+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ Reglas incumplidas · puedes guardarlo igualmente (te pediré confirmación) y seguirán marcadas en rojo:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas de la oferta y reserva.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':'');
 }
 function v4PagoFirmaRes(r){ const P=v4ResP(r), ren=parseFloat(r.renta)||0; if(!P||!(ren>0)) return 0; const dm=v4DiasMes(P.slice(0,7)), d=v4Diff(P,v4FinMes(P))+1; return Math.round((ren/dm*d+2*ren-(parseFloat(r.senal)||0))*100)/100; }
 function v4RentaPropRes(r){ const P=v4ResP(r), ren=parseFloat(r.renta)||0; if(!P) return 0; const dm=v4DiasMes(P.slice(0,7)), d=v4Diff(P,v4FinMes(P))+1; return Math.round(ren/dm*d*100)/100; }
 function v4GuardarReserva(){
   const r=v4LeerFormRes(), v=v4ValidarReserva(r);
-  if(!v.ok){ v4ValidarFormRes(); toast('No se puede guardar: revisa las reglas en rojo',false); return; }
+  if(!v11ConfirmarGuardarRes(r,v)) return;
   D.reservas=D.reservas||[]; D.cfg=D.cfg||{};
   const crear=(n)=>{ const i={id:uid(), nom:n.nom, ap:n.ap, tel:n.tel, wa:n.tel, email:n.email, estado:'RESERVADO', propId:r.propId, hab:String(r.hab)}; D.inqs.push(i); return i.id; };
   if(r._nuevo) r.inqId=crear(r._nuevo); if(r._nuevo2) r.inqId2=crear(r._nuevo2);
@@ -13658,7 +13657,7 @@ function v4GuardarReserva(){
   if(r.id){ const k=D.reservas.findIndex(x=>x.id===r.id); if(k>=0) D.reservas[k]=r; } else { r.id=uid(); r.creada=new Date().toISOString(); D.reservas.push(r); }
   if(r.visitaId){ const vv=(D.visitas||[]).find(x=>x.id==r.visitaId); if(vv){ vv.resId=r.id; if(['pendiente','confirmada','realizada'].includes(vv.est||'pendiente')) vv.est='interesado'; } }
   saveAndSync(); closeM('m-v4'); v4RefrescarAvisos(); try{ v4PintarReservas(); }catch(e){} try{ const a=document.querySelector('.nav-item.on'); if(a&&a.dataset.s==='visitas') rVisitas(); }catch(e){}
-  toast('Reserva guardada · la habitación queda reservada hasta el '+v4F2(v4ResP(r)));
+  toast((r.reglasForzadas?'Reserva guardada con '+r.reglasForzadas.err.length+' regla'+(r.reglasForzadas.err.length===1?'':'s')+' en rojo · ':'Reserva guardada · ')+'la habitación queda reservada hasta el '+v4F2(v4ResP(r)));
 }
 function v4GuardarMultiplo(){ const v=gn('res-mult'); if(!(v>0)){ toast('Escribe un múltiplo válido',false); return; } D.cfg=D.cfg||{}; D.cfg.multiploIngresos=v; const dist=(D.reservas||[]).filter(r=>v4ResActiva(r)&&parseFloat(r.multiplo)!==v); saveAndSync(); toast('Múltiplo de ingresos: '+String(v).replace('.',',')+' veces la renta para todos'+(dist.length?' · ojo: '+dist.length+' reserva(s) en curso tienen otro':'')); }
 
@@ -14321,7 +14320,7 @@ function v5FueInquilino(co,k){ const iid=k===2?co.inqId2:co.inqId; if(!iid) retu
 function v5CapHab(propId,hab){ const c=v4CfgHab(propId,hab), cap=parseInt(c.cap); return cap>0?{cap, explicita:true}:{cap:c.tipo==='doble'?2:1, explicita:false, tipo:c.tipo||'individual'}; }
 // Contrato temporal anterior de la habitación (base del art. 17.8 LAU)
 function v5AnteriorHab(co){ const F=v4F(co); if(!F) return null; return (D.conts||[]).filter(x=>x.id!==co.id&&v5EsTemporalNuevo(x)&&x.propId==co.propId&&String(x.hab||'')===String(co.hab||'')&&v4F(x)&&v4F(x)<F&&parseFloat(x.r)>0).sort((a,b)=>v4F(b).localeCompare(v4F(a)))[0]||null; }
-function v5ContratoExistente(co){ return !!(co&&co.id&&(D.conts||[]).some(x=>x.id===co.id)); }
+function v11ExistenteBase(co){ return !!(co&&co.id&&(D.conts||[]).some(x=>x.id===co.id)); }
 function v5PrimerContratoPiso(co){ return !(D.conts||[]).some(x=>x.id!==co.id&&x.propId==co.propId&&v5EsTemporalNuevo(x)); }
 // Reglas del contrato v20261102 (se añaden a v4ValidarContrato)
 function v5ValidarV1102(co){
@@ -14547,7 +14546,7 @@ function v4AlertasGlobales(hoy){
 function v4Alertas(hoy){
   hoy=hoy||v4Hoy();
   let out=[]; (D.conts||[]).forEach(co=>{ try{ out=out.concat(v4AlertasContrato(co,hoy)); }catch(e){ console.warn('Avisos del contrato',co.id,e); } try{ out=out.concat(v5AlertasSituaciones(co,hoy)); }catch(e){ console.warn(e); } });
-  [()=>v4AlertasIncidencias(),()=>v4AlertasVisitas(hoy),()=>v4AlertasVisitasCee(hoy),()=>v4AlertasReservas(hoy),()=>v4AlertasPisos(hoy),()=>v4AlertasGlobales(hoy),()=>v4AlertasDatos(hoy)].forEach(f=>{ try{ out=out.concat(f()); }catch(e){ console.warn(e); } });
+  [()=>v4AlertasIncidencias(),()=>v4AlertasVisitas(hoy),()=>v4AlertasVisitasCee(hoy),()=>v4AlertasReservas(hoy),()=>v4AlertasPisos(hoy),()=>v4AlertasGlobales(hoy),()=>v4AlertasDatos(hoy),()=>v11AlertasReglas(hoy)].forEach(f=>{ try{ out=out.concat(f()); }catch(e){ console.warn(e); } });
   out.forEach(a=>{ a.dias=v4Diff(hoy,a.fecha); a.vencido=!a.hecho&&a.fecha<hoy&&!(a.caduca&&a.caduca<hoy)&&a.nivel!=='info'; a.visible=!a.hecho&&a.desde<=fxAdd(hoy,10)&&!(a.caduca&&a.caduca<hoy); });
   return out.sort((a,b)=>a.fecha.localeCompare(b.fecha)||((b.nivel==='urgente')-(a.nivel==='urgente')));
 }
@@ -14751,18 +14750,21 @@ function v7ValLectura(co,err){
   if(l.tipo&&l.tipo!==(v7EsHab(co)?'habitual':'temporal')) err.push('El PDF del contrato firmado es de '+(l.tipo==='habitual'?'vivienda habitual':'alquiler temporal')+' y en la app está marcado como '+(v7EsHab(co)?'vivienda habitual':'temporal')+'.');
   if(l.version&&V5_MODELOS[l.version]&&co.modelo&&l.version!==co.modelo) err.push('El PDF firmado es el modelo '+l.version+' y en la app está marcado el '+co.modelo+'.');
 }
-function v7ValRes(co,av){
+function v7ValRes(co,av,err){
   const rs=co.resId?v4Res(co.resId):null; if(!rs) return;
   if((rs.tipo||'temporal')!==(v7EsHab(co)?'habitual':'temporal')) av.push('La reserva es de '+(v7ResHab(rs)?'vivienda habitual':'alquiler temporal')+' y el contrato está marcado como '+(v7EsHab(co)?'vivienda habitual':'temporal')+': revisa la oferta firmada.');
+  try{ v11ValGarRes(co,rs,av,err||av); }catch(e){ console.warn(e); }
 }
 function v4ValidarContrato(co){
   if(v7EsHab(co)) return v7ValidarHab(co);
   const v=v7ValCoBase(co); if(!v4EsTemporal(co)) return v;
+  // La regla antigua «fianza y garantía de una mensualidad cada una» solo valía para la oferta v20261102: se sustituye por la de la oferta enlazada (v11ValGarRes)
+  v.err=v.err.filter(e=>!/^La oferta fija una fianza y una garantía adicional de una mensualidad cada una/.test(e));
   const mo=v5Modelo(co), F=v4F(co), ex=v5ContratoExistente(co);
   if(mo==='v20261106'||co.gOp) v7ValGop(co,v.err,1,true);
   if(V7_CL9.includes(mo)) v7ValGimp(co,v.err,v.av);
   if(!ex&&F&&F>='2026-11-06'&&mo!==V7_TMP) v.av.push('El modelo temporal vigente desde el 06/11/2026 es el v20261106.');
-  v7ValLectura(co,v.err); v7ValRes(co,v.av);
+  v7ValLectura(co,v.err); v7ValRes(co,v.av,v.err);
   v.ok=!v.err.length; return v;
 }
 function v7ValidarHab(co){
@@ -14798,7 +14800,7 @@ function v7ValidarHab(co){
   if(co.ctaId){ const c=(D.ctasBanc||[]).find(x=>x.id==co.ctaId), tit=v4TitularCobro(co); if(c&&tit&&c.titularId&&c.titularId!==tit) add('La cuenta de cobro es de '+nombreC(c.titularId)+', pero quien cobra las rentas de este piso es '+nombreC(tit)+'.'); }
   if(!co.anexoIData) warn('Adjunta el Anexo I firmado (documentación aportada y declaración de vivienda habitual).');
   if(!(co.hdId&&co.hdIng)) warn('Anexo I: marca la documentación aportada (identidad e ingresos, como mínimo).');
-  v7ValLectura(co,err); v7ValRes(co,av); try{ v8AvisosCo(co).forEach(warn); }catch(e){}
+  v7ValLectura(co,err); v7ValRes(co,av,err); try{ v8AvisosCo(co).forEach(warn); }catch(e){}
   return {err, av, ok:!err.length};
 }
 
@@ -14985,6 +14987,7 @@ function v4LeerFormRes(){
 }
 function v4GestionarReserva(id){
   v7GestionarResBase(id); const r=v4Res(id), c=$i('drw-c'); if(!r||!c) return;
+  try{ v11PintarReglasRes(r,c); }catch(e){ console.warn(e); }
   try{
     const hab=v7ResHab(r), filas=[...c.querySelectorAll('.card span')];
     filas.forEach(sp=>{ const tx=sp.textContent.trim(), val=sp.nextElementSibling; if(!val) return; const row=sp.parentElement;
@@ -15088,7 +15091,7 @@ function v4ValidarFormCont(){
   const co=v4LeerFormCont();
   if(v7EsHab(co)){ const box=$i('co-val'); if(box){ const v=v4ValidarContrato(co), F=v4F(co);
     const res=F?'<div style="font-size:11px;color:var(--ink2);margin-bottom:6px;line-height:1.55;">F '+v4F2(F)+' · 1.ª anualidad hasta el '+v4F2(v7FinAnio(co,1))+' · prórrogas anuales obligatorias hasta 5 años ('+v4F2(v7FinAnio(co,5))+') · el inquilino puede irse desde el '+v4F2(v4AddM(F,6))+' avisando con 30 días · primer pago mensual: 1 de '+v4MesNom(v4MesSig(F.slice(0,7)))+' · ITP exento</div>':'';
-    box.innerHTML=res+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ No se puede guardar:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas del contrato de vivienda habitual '+V7_HAB+'.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':''); } }
+    box.innerHTML=res+(v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;">⛔ Reglas incumplidas · puedes guardarlo igualmente (te pediré confirmación) y seguirán marcadas en rojo:<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div>':'<div class="alert alert-g" style="font-size:11.5px;">✓ Cumple las reglas del contrato de vivienda habitual '+V7_HAB+'.</div>')+(v.av.length?'<div class="alert alert-y" style="font-size:11px;line-height:1.55;margin-top:6px;">⚠️ '+v.av.map(v4Esc).join('<br>⚠️ ')+'</div>':''); } }
   v7PintarPagoFirma(co); try{ v8PintarPrevRed(co); }catch(e){ console.warn(e); }
 }
 function v7PintarPagoFirma(co){
@@ -15103,8 +15106,9 @@ function v4ContratoDesdeReserva(id){
   // La base rellena el formulario a los 250 ms: los datos del tipo de alquiler y las garantías van después
   setTimeout(()=>{ try{ const s=(i,v)=>{ const e=$i(i); if(e) e.value=v; }, hab=v7ResHab(r);
     v7OpcionesModelo(); s('co-tipo',hab?'habitual':'temporal'); s('co-modelo',hab?V7_HAB:(v5OfertaNueva(r)?V7_TMP:'v20261025-2'));
-    const gm=(r.gMeses===undefined||r.gMeses===''||r.gMeses===null)?1:(+r.gMeses||0), ren=parseFloat(r.renta)||0;
-    s('co-f',ren); s('co-g',gm?Math.round(ren*gm*100)/100:0); s('co-gop',gm?'si':'no');
+    // Garantía adicional: la misma que se pactó en la oferta; si la reserva no la tiene anotada, se deja sin elegir
+    const gm=v11GmRes(r), ren=parseFloat(r.renta)||0;
+    s('co-f',ren); if(gm===null){ s('co-g',''); s('co-gop',''); } else { s('co-g',gm?Math.round(ren*gm*100)/100:0); s('co-gop',gm?'si':'no'); }
     const ge=(r.garante||{}).estado; if(ge==='aprobada'||ge==='dispensada'){ s('co-gimp','si'); const c=$i('co-gimpok'); if(c) c.checked=ge==='aprobada'; } else if(ge==='nousa') s('co-gimp','no');
     if(r.garEnt) s('co-gimpent',r.garEnt); if(hab){ if(r.otra1) s('co-otra1',r.otra1); if(r.inqId2&&r.otra2) s('co-otra2',r.otra2); }
     if(hab&&r.vivHab1) s('co-vivhab',r.vivHab1);
@@ -15116,6 +15120,7 @@ function v4ContratoDesdeReserva(id){
 // ── Ficha de gestión del contrato: vivienda habitual ──
 function v4Gestionar(coId){
   v7GestionarBase(coId); const co=v4Co(coId), c=$i('drw-c'); if(!co||!c) return;
+  try{ v11PintarReglasCo(co,c); }catch(e){ console.warn(e); }
   try{
     if(!v7EsHab(co)) return; const t=v7TermHab(co), F=v4F(co);
     [...c.querySelectorAll('.card span')].forEach(sp=>{ const tx=sp.textContent.trim(), val=sp.nextElementSibling; if(!val) return;
@@ -15768,6 +15773,120 @@ async function v7LeerOfertaArchivo(inp){
   box.innerHTML='<div style="font-size:11.5px;color:var(--ink3);">🔎 Leyendo la oferta…</div>';
   try{ const {t,via}=await v7TextoArchivo(f); v10AplicarLecturaOferta(v10AnalizarOferta(t),via); }
   catch(e){ box.innerHTML='<div class="alert alert-y" style="font-size:11.5px;">No he podido leer el texto: '+v4Esc(e.message||String(e))+'. Elige el tipo a mano.</div>'; }
+}
+
+// ══════════════════════════════════════════════════════════════
+// v4.11 · 13/11/2026 · Guardar contratos y reservas aunque haya reglas en rojo:
+// se avisa antes con la lista, se guarda y las reglas siguen en rojo (formulario,
+// lista de contratos, ficha y Avisos) hasta que se corrijan.
+// Garantía adicional: la pactada en la oferta pasa al contrato tal cual.
+// ══════════════════════════════════════════════════════════════
+function v11Y(a){ return a.length<2?(a[0]||''):a.slice(0,-1).join(', ')+' y '+a[a.length-1]; }
+function v11NReglas(n){ return n===1?'1 regla':n+' reglas'; }
+function v11Lista(errs){ return '• '+errs.join('\n• '); }
+
+// Reglas incumplidas de un contrato guardado o del formulario
+function v11ErroresCo(co,v){
+  let errs=[];
+  try{ errs=((v||v4ValidarContrato(co)).err||[]).slice(); }catch(e){ console.warn(e); errs=((co.reglasForzadas||{}).err||[]).slice(); }
+  if(!v7Gest(co)){ try{ v2ChequeoTemporal(co,co.id).filter(x=>x.n==='error').forEach(x=>{ if(!errs.includes(x.t)) errs.push(x.t); }); }catch(e){} }
+  return errs;
+}
+// Un contrato guardado con reglas en rojo cuando era nuevo se sigue validando como nuevo (reglas en rojo, no solo avisos) hasta que se corrija
+function v5ContratoExistente(co){ if(!v11ExistenteBase(co)) return false; const x=(D.conts||[]).find(c=>c.id===co.id); return !(x&&x.reglasForzadas&&x.reglasForzadas.nuevo); }
+// Sin esto el contrato no existe en la app: es lo único que sigue impidiendo guardar
+function v11FaltaMinCo(co){ const f=[]; if(!co.inqId) f.push('el arrendatario'); if(v7Gest(co)){ if(!co.propId) f.push('el piso'); if(!v4F(co)) f.push('la fecha de firma'); } return f; }
+function v11ConfirmarGuardarCo(co,v){
+  const falta=v11FaltaMinCo(co);
+  if(falta.length){ v4ValidarFormCont(); toast('Para guardar el contrato falta '+v11Y(falta),false); return false; }
+  const errs=v11ErroresCo(co,v);
+  if(errs.length){
+    const txt='⚠️ Este contrato no cumple '+v11NReglas(errs.length)+':\n\n'+v11Lista(errs)+'\n\nSi lo guardas igualmente, las reglas seguirán marcadas en rojo en el formulario, en la lista de contratos, en su ficha y en Avisos hasta que las corrijas.\n\n¿Guardarlo igualmente?';
+    if(!confirm(txt)){ v4ValidarFormCont(); const b=$i('co-val'); if(b&&b.scrollIntoView) b.scrollIntoView({behavior:'smooth',block:'center'}); toast('No se ha guardado: corrige las reglas en rojo o guárdalo igualmente',false); return false; }
+    co.reglasForzadas={f:new Date().toISOString(), err:errs.slice(0,40), nuevo:!v5ContratoExistente(co)};
+    if(co.hechos&&co.hechos.reglas){ co.hechos=Object.assign({},co.hechos); delete co.hechos.reglas; }
+  } else delete co.reglasForzadas;
+  return true;
+}
+function v11FaltaMinRes(r){ const f=[];
+  if(!r.inqId||(r.inqId==='__nuevo'&&!(r._nuevo&&String(r._nuevo.nom||'').trim()))) f.push('el interesado');
+  if(!r.propId) f.push('el piso'); if(!String(r.hab||'').trim()) f.push('la habitación'); if(!r.O) f.push('la fecha de la oferta');
+  return f; }
+function v11ConfirmarGuardarRes(r,v){
+  const falta=v11FaltaMinRes(r);
+  if(falta.length){ v4ValidarFormRes(); toast('Para guardar la reserva falta '+v11Y(falta),false); return false; }
+  const errs=((v&&v.err)||[]).slice();
+  if(errs.length){
+    const txt='⚠️ Esta oferta y reserva no cumple '+v11NReglas(errs.length)+':\n\n'+v11Lista(errs)+'\n\nSi la guardas igualmente, las reglas seguirán marcadas en rojo en el formulario, en su ficha y en Avisos hasta que las corrijas.\n\n¿Guardarla igualmente?';
+    if(!confirm(txt)){ v4ValidarFormRes(); toast('No se ha guardado: corrige las reglas en rojo o guárdala igualmente',false); return false; }
+    r.reglasForzadas={f:new Date().toISOString(), err:errs.slice(0,40)};
+    if(r.hechos&&r.hechos['r-reglas']){ r.hechos=Object.assign({},r.hechos); delete r.hechos['r-reglas']; }
+  } else delete r.reglasForzadas;
+  return true;
+}
+function v11ErroresRes(r){ if(!r||!r.reglasForzadas) return []; try{ return (v4ValidarReserva(r).err||[]).slice(); }catch(e){ console.warn(e); return (r.reglasForzadas.err||[]).slice(); } }
+function v11FechaForz(x,hoy){ const f=String((x.reglasForzadas||{}).f||'').slice(0,10); return /^\d{4}-\d{2}-\d{2}$/.test(f)?f:(hoy||v4Hoy()); }
+
+// Avisos: siguen en rojo mientras no se corrijan
+function v11AlertasReglas(hoy){
+  hoy=hoy||v4Hoy(); const out=[];
+  (D.conts||[]).forEach(co=>{ try{
+    if(!co.reglasForzadas||(co.llaves&&co.llaves.L)) return; const e=v11ErroresCo(co); if(!e.length) return; const f=v11FechaForz(co,hoy);
+    out.push(v7Al(co,'reglas',f,'Contrato guardado sin cumplir '+v11NReglas(e.length)+': '+v4Nombres(co),'Lo guardaste igualmente el '+v4F2(f)+'. Sigue pendiente: '+e.join(' · ')+' Para corregirlo: ⚙️ Contrato → ✏️ Corregir.',{tipo:'Revisar',nivel:'urgente'}));
+  }catch(x){ console.warn('Reglas del contrato',co.id,x); } });
+  (D.reservas||[]).forEach(r=>{ try{
+    if(!r.reglasForzadas||r.coId||r.fin||r.datosSuprimidos) return; const e=v11ErroresRes(r); if(!e.length) return; const f=v11FechaForz(r,hoy);
+    const H=r.hechos||{}, p=(D.props||[]).find(x=>x.id==r.propId), lugar='Hab. '+r.hab+' · '+(p?p.nom:''), nom=v4NomResCorto(r);
+    out.push({k:'r-reglas', resId:r.id, fecha:f, desde:f, titulo:'Oferta y reserva guardada sin cumplir '+v11NReglas(e.length)+': '+nom+' · '+lugar, det:'La guardaste igualmente el '+v4F2(f)+'. Sigue pendiente: '+e.join(' · ')+' Para corregirla: 📝 Reserva → ✏️ Corregir.', tpl:[], tipo:'Revisar', nivel:'urgente', caduca:'', auto:false, hecho:!!H['r-reglas'], hechoEl:H['r-reglas']||'', lugar, nom, propId:r.propId, hab:String(r.hab||'')});
+  }catch(x){ console.warn('Reglas de la reserva',r.id,x); } });
+  return out;
+}
+function v11BadgeReglasCo(c){ try{ if(!c.reglasForzadas) return ''; const e=v11ErroresCo(c); if(!e.length) return ''; return ' <span class="badge badge-r" title="'+v4Esc(e.join(' · '))+'">⛔ '+v11NReglas(e.length)+' en rojo</span>'; }catch(x){ return ''; } }
+function v11BoxReglas(errs,f,quien,js){
+  return '<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;margin-bottom:12px;"><div style="min-width:0;flex:1;">⛔ <strong>'+quien+' el '+v4F2(f)+' sin cumplir '+v11NReglas(errs.length)+'</strong><br>• '+errs.map(v4Esc).join('<br>• ')
+   +'<div style="margin-top:7px;"><button class="btn btn-ghost btn-xs" onclick="'+js+'">✏️ Corregir</button></div></div></div>';
+}
+function v11Insertar(c,html){ const d=document.createElement('div'); d.className='v11-reglas'; d.innerHTML=html; const h=c.firstElementChild; if(h) h.after(d); else c.prepend(d); }
+function v11PintarReglasCo(co,c){ if(!co.reglasForzadas) return; const e=v11ErroresCo(co); if(!e.length) return;
+  v11Insertar(c,v11BoxReglas(e,v11FechaForz(co),'Guardado',"try{closeM('m-v4av');}catch(e){} closeDrw(); editCont('"+co.id+"')")); }
+function v11PintarReglasRes(r,c){ if(!r.reglasForzadas||r.coId) return; const e=v11ErroresRes(r); if(!e.length) return;
+  v11Insertar(c,v11BoxReglas(e,v11FechaForz(r),'Guardada',"try{closeM('m-v4av');}catch(e){} closeDrw(); v4FormReserva('"+r.id+"')")); }
+
+// ── Garantía adicional: de la oferta de reserva al contrato ──
+// Mensualidades pactadas en la oferta; null si la reserva no lo tiene anotado.
+// Las ofertas anteriores al 05/11/2026 (v20261102 y la antigua) fijaban 1 mensualidad.
+function v11GmRes(r){
+  if(!r) return null;
+  if(r.gMeses!==undefined&&r.gMeses!==null&&r.gMeses!=='') return +r.gMeses||0;
+  const of=r.oferta||(r.O&&r.O>='2026-11-06'?'v20261106':r.O&&r.O>='2026-11-05'?'v20261105':r.O&&r.O>=V5_FECHA_MODELO?'v20261102':'antigua');
+  return (of==='v20261102'||of==='antigua')?1:null;
+}
+// «No se pacta garantía adicional» deja el importe a 0; «Sí» sin importe propone el de la oferta (o 1 mensualidad)
+function v11GopCambio(){
+  const op=gi('co-gop'), g=$i('co-g'); if(!g) return;
+  if(op==='no') g.value='0';
+  else if(op==='si'&&!(parseFloat(g.value)>0)){ const rs=gi('co-resid')?v4Res(gi('co-resid')):null, gm=v11GmRes(rs), r=gn('co-r'); if(r>0) g.value=Math.round(r*((gm&&gm>0)?gm:1)*100)/100; }
+}
+// Escribir un importe de garantía marca «Sí»; escribir 0 marca «No se pacta»
+function v11GCambio(){
+  const g=$i('co-g'), s=$i('co-gop'); if(!g||!s) return; const t=String(g.value).trim(), v=parseFloat(t);
+  if(v>0&&s.value!=='si') s.value='si'; else if(t!==''&&v===0&&s.value==='si') s.value='no';
+}
+// El contrato tiene que recoger lo pactado en la oferta y reserva enlazada (cláusula 6 de las ofertas v20261106 y VH-20261106):
+// fianza de una mensualidad y la garantía adicional marcada (ninguna, una o dos mensualidades)
+function v11ValGarRes(co,rs,av,err){
+  const hab=v7EsHab(co), rr=parseFloat(rs.renta)||0, rc=parseFloat(co.r)||0, f=parseFloat(co.f)||0, cl=v10MapCl(rs,'cláusula 5 de la oferta'), arr=' Si lo habéis cambiado de mutuo acuerdo y por escrito, corrígelo antes en la reserva.';
+  if(hab&&rr>0&&rc>0&&Math.abs(rc-rr)>0.004) err.push('La renta ('+v4E2(rc)+' €) no es la de la oferta y reserva ('+v4E2(rr)+' €; '+cl+').'+arr);
+  if(!hab&&rr>0&&Math.abs(f-rr)>0.004) err.push('La oferta fija una fianza de una mensualidad: '+v4E2(rr)+' € (ahora '+v4E2(f)+' €; '+cl+', art. 36.1 LAU).');
+  const gm=v11GmRes(rs);
+  if(gm===null){ av.push('La reserva enlazada no tiene anotada la garantía adicional pactada en la oferta: anótala en la reserva (ninguna, 1 mensualidad'+(v7ResHab(rs)?' o 2 mensualidades':'')+') y marca lo mismo en la cláusula 8 del contrato.'); return; }
+  if(!co.gOp&&!(parseFloat(co.g)>0)) return; // ya sale «Marca en la cláusula 8…»
+  const base=rr>0?rr:rc, pact=Math.round(base*gm*100)/100, g=co.gOp==='no'?0:(parseFloat(co.g)||0);
+  if(Math.abs(g-pact)<=0.01) return;
+  const of=gm+' mensualidad'+(gm>1?'es':'')+(base>0?', '+v4E2(pact)+' €':'');
+  if(gm===0) err.push('En la oferta y reserva no se pactó garantía adicional ('+cl+') y en el contrato pones '+v4E2(g)+' €.'+arr);
+  else if(!(g>0)) err.push('En la oferta y reserva se pactó una garantía adicional de '+of+' ('+cl+') y en el contrato marcas «No se pacta garantía adicional».'+arr);
+  else err.push('En la oferta y reserva se pactó una garantía adicional de '+of+' ('+cl+') y en el contrato pones '+v4E2(g)+' €.'+arr);
 }
 
 </script>
