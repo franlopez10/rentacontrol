@@ -994,6 +994,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="ph"><div class="ph-title">🏢 Propiedades</div>
     <button class="btn btn-primary" onclick="newProp()">+ Nueva propiedad</button>
   </div>
+  <div id="props-resumen"></div>
   <div class="g2" id="props-grid"></div>
 </section>
 
@@ -3377,13 +3378,13 @@ function repararTodasPropiedades(){
 }
 function rProps(){
   repararTodasPropiedades();
-  const g=$i('props-grid');
+  const g=$i('props-grid'); try{ v16ResumenProps(); }catch(e){ console.warn('v16ResumenProps',e); }
   if(!D.props.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏢</div><p>Añade tu primera propiedad</p></div>';return;}
   g.innerHTML=D.props.map(p=>{
     const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado!=='PASADO');
     const act=iqs.filter(i=>i.estado==='ACTIVO');
     const renta=act.reduce((s,i)=>s+parseFloat(i.alq||0),0);
-    const pc=p.habs?Math.round(iqs.length/p.habs*100):0;
+    const o16=v16EstHabs(p), pc=o16.N?Math.round(o16.occ.length/o16.N*100):0;
     const col=pc>70?'var(--gn)':pc>40?'var(--ye)':'var(--rd)';
     const yld=p.precio&&renta?(renta*12/p.precio*100).toFixed(1):'–';
     const incC=D.incs.filter(i=>i.propId==p.id&&i.estado!=='resuelta').length;
@@ -3404,8 +3405,7 @@ function rProps(){
         <div><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--bl);">${yld}%</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-top:2px;">Rent. bruto</div></div>
         <div><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:${col};">${pc}%</div><div style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-top:2px;">Ocupación</div></div>
       </div>
-      <div style="font-size:11px;color:var(--ink3);margin-bottom:5px;">${iqs.length} de ${p.habs} habitaciones ocupadas</div>
-      <div class="pbar"><div class="pbar-fill" style="width:${pc}%;background:${col};"></div></div>
+      ${v16HtmlOcupProp(o16)}
       ${(p.fcompra||p.anyo)?`<div style="font-size:10px;color:var(--ink3);margin-top:8px;">Comprado ${p.fcompra?fD(p.fcompra):p.anyo}${totalCostesAdq(p)>0?' · Coste total '+eur(parseFloat(p.precio||0)+totalCostesAdq(p)):''} · Hipoteca ${p.hipo||0}€/mes</div>`:''}${totalCostesAdq(p)>0?`<div style="font-size:10px;color:var(--acc);margin-top:3px;">📐 ${(p.costesAdq||[]).length} gasto${((p.costesAdq||[]).length!==1)?'s':''} de adquisición · ${eur(totalCostesAdq(p))}</div>`:''}
     ${totalFacturasVinculadas(p)>0?`<div style="font-size:10px;color:var(--acc);margin-top:2px;">🧾 + ${eur(totalFacturasVinculadas(p))} en facturas vinculadas (amortizables)</div>`:''}
     ${(()=>{const va=valorActualizadoPiso(p); const det=detectarCCAA(p.cp); return va.meses>0&&Math.abs(va.pctAcum)>0.01?`<div style="font-size:10px;color:var(--bl);margin-top:2px;">📈 Valor hoy: <strong>${eur(va.valor)}</strong> (${va.pctAcum>=0?'+':''}${va.pctAcum.toFixed(1)}% en ${va.meses} mes${va.meses!==1?'es':''}${det?' · IPC '+det[1]:''})</div>`:'';})()}
@@ -3434,8 +3434,8 @@ function rHabs(){
   pan.innerHTML=props.map(p=>{
     const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado!=='PASADO');
     const renta=iqs.filter(i=>i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0);
-    const ent14=v14EnteroEn(p.id,v4Hoy()), libre=ent14?0:Math.max(0,(parseInt(p.habs)||0)-new Set(iqs.filter(i=>i.estado==='ACTIVO').map(i=>String(i.hab))).size);
-    const nRes=Array.from({length:parseInt(p.habs)||0},(_,n)=>n+1).filter(num=>v4ResDeHab(p.id,num)&&!iqs.some(i=>i.estado==='ACTIVO'&&parseInt(i.hab)==num)).length;
+    const ent14=v14EnteroEn(p.id,v4Hoy()), o16=v16EstHabs(p), libre=o16.libre.length+o16.res.length;
+    const nRes=o16.res.length;
     const cfgAll=p.habsConfig||{};
     // Renta potencial: precio configurado de cada habitación
     const rentaPot=Array.from({length:p.habs},(_,n)=>parseFloat((cfgAll[n+1]||{}).precio)||0).reduce((a,b)=>a+b,0);
@@ -3443,7 +3443,7 @@ function rHabs(){
     const cards=Array.from({length:p.habs},(_,n)=>{
       const num=n+1;
       const rsv=v4ResDeHab(p.id,num), rsvIds=rsv?[rsv.inqId,rsv.inqId2].filter(Boolean):[];
-      const iqH=iqs.filter(i=>parseInt(i.hab)==num&&!(rsv&&i.estado==='RESERVADO'&&rsvIds.includes(i.id))).sort((a,b)=>(b.estado==='ACTIVO')-(a.estado==='ACTIVO'));
+      const iqH=iqs.filter(i=>v16NumHab(i.hab)===num&&!(rsv&&i.estado==='RESERVADO'&&rsvIds.includes(i.id))).sort((a,b)=>(b.estado==='ACTIVO')-(a.estado==='ACTIVO'));
       const inq=iqH[0], inq2=iqH[1];
       const cfg=cfgAll[num]||{tipo:'individual',plazas:1,precio:0};
       const est=ent14?'occ':inq?(inq.estado==='RESERVADO'?'res':'occ'):(rsv?'res':'free');
@@ -3483,7 +3483,7 @@ function rHabs(){
         <div><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;">${p.nom}</div><div style="font-size:11px;color:var(--ink3);">${p.dir||''}</div>${v2TxtM2(p)}</div>
         <div style="text-align:right;">
           <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gn);">${renta}€/mes</div>
-          <div style="font-size:10px;color:var(--ink3);">${libre-nRes} hab. libre${(libre-nRes)!==1?'s':''}${nRes?' · '+nRes+' reservada'+(nRes!==1?'s':''):''}${rentaPot>0?` · potencial ${eur(rentaPot)}`:''}</div>
+          <div style="font-size:10px;color:var(--ink3);">${ent14?'Alquilado entero · ':o16.occ.length+' ocupada'+(o16.occ.length!==1?'s':'')+' · '}${libre-nRes} hab. libre${(libre-nRes)!==1?'s':''}${nRes?' · '+nRes+' reservada'+(nRes!==1?'s':''):''}${rentaPot>0?` · potencial ${eur(rentaPot)}`:''}</div>
         </div>
       </div>
       <div class="room-grid">${cards}</div>
@@ -8358,7 +8358,7 @@ function informeTexto(d){
     L.push('   Fecha de compra: '+fx(p.fcompra||(p.anyo?p.anyo+'-01-01':'')));
     L.push('   Precio de adquisición: '+eu(p.precio));
     L.push('   Valor de construcción (base amortización): '+eu(p.vc));
-    L.push('   Habitaciones: '+p.habs+'  ·  Ocupadas ahora: '+act);
+    L.push('   Habitaciones: '+p.habs+'  ·  Ocupadas ahora: '+v16TxtInforme(p));
     L.push('   Hipoteca mensual: '+eu(p.hipo)+'  ·  Capital pendiente: '+eu(p.capital));
   });
 
@@ -8483,18 +8483,18 @@ function rInfs(){
   const tG=D.gastos.reduce((s,g)=>s+g.imp,0);
   const tP=D.pagos.filter(p=>p.estado!=='pagado').reduce((s,p)=>s+p.imp,0);
   const neto=tI-tG,act=D.inqs.filter(i=>i.estado==='ACTIVO').length,pas=D.inqs.filter(i=>i.estado==='PASADO').length;
-  const tH=D.props.reduce((s,p)=>s+p.habs,0),ocu=tH?Math.round(act/tH*100):0;
+  const t16=v16Totales(),tH=t16.N,ocu=tH?Math.round(t16.occ/tH*100):0;
   $i('inf-kpis').innerHTML=`
     <div class="card"><div class="card-title">📈 Rendimiento global</div>
       <div class="fiscal-row"><span class="fiscal-label">Total ingresos cobrados</span><span class="fiscal-val" style="color:var(--gn);">${eur(tI)}</span></div>
       <div class="fiscal-row"><span class="fiscal-label">Total gastos</span><span class="fiscal-val" style="color:var(--rd);">${eur(tG)}</span></div>
       <div class="fiscal-row"><span class="fiscal-label">Resultado neto</span><span class="fiscal-val" style="color:${neto>=0?'var(--gn)':'var(--rd)'};">${eur(neto)}</span></div>
       <div class="fiscal-row"><span class="fiscal-label">Cobros pendientes</span><span class="fiscal-val" style="color:var(--ye);">${eur(tP)}</span></div>
-      <div class="fiscal-row"><span class="fiscal-label">Ocupación global</span><span class="fiscal-val" style="color:var(--bl);">${ocu}% (${act}/${tH} habs)</span></div>
+      <div class="fiscal-row"><span class="fiscal-label">Ocupación global</span><span class="fiscal-val" style="color:var(--bl);">${ocu}% (${t16.occ}/${tH} habs${t16.res?' · '+t16.res+' reservada'+(t16.res!==1?'s':''):''})</span></div>
       <div class="fiscal-row"><span class="fiscal-label">Base de datos</span><span class="fiscal-val">${act} activos · ${pas} pasados</span></div>
     </div>
     <div class="card"><div class="card-title">🏆 Ranking de pisos</div>
-      ${D.props.length?D.props.map(p=>{const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado==='ACTIVO');const r=iqs.reduce((s,i)=>s+parseFloat(i.alq||0),0);const gP=D.gastos.filter(g=>g.propId==p.id).reduce((s,g)=>s+g.imp,0);const pc=p.habs?Math.round(iqs.length/p.habs*100):0;const y=p.precio&&r?(r*12/p.precio*100).toFixed(1):'–';return `<div style="padding:10px 0;border-bottom:1px solid var(--line);"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-weight:600;font-size:13px;">${p.nom}</span><span class="mono" style="color:var(--gn);font-weight:700;">${r}€/mes</span></div><div style="display:flex;gap:12px;font-size:11px;color:var(--ink3);"><span>Rent.: ${y}%</span><span>Ocu: ${pc}%</span><span>Gastos: ${eur(gP)}</span></div></div>`;}).join(''):'<div class="empty" style="padding:20px;"><p>Sin pisos</p></div>'}
+      ${D.props.length?D.props.map(p=>{const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado==='ACTIVO');const r=iqs.reduce((s,i)=>s+parseFloat(i.alq||0),0);const gP=D.gastos.filter(g=>g.propId==p.id).reduce((s,g)=>s+g.imp,0);const o16=v16EstHabs(p),pc=o16.N?Math.round(o16.occ.length/o16.N*100):0;const y=p.precio&&r?(r*12/p.precio*100).toFixed(1):'–';return `<div style="padding:10px 0;border-bottom:1px solid var(--line);"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-weight:600;font-size:13px;">${p.nom}</span><span class="mono" style="color:var(--gn);font-weight:700;">${r}€/mes</span></div><div style="display:flex;gap:12px;font-size:11px;color:var(--ink3);"><span>Rent.: ${y}%</span><span>Ocu: ${pc}% (${o16.occ.length}/${o16.N}${o16.res.length?' · '+o16.res.length+' res.':''})</span><span>Gastos: ${eur(gP)}</span></div></div>`;}).join(''):'<div class="empty" style="padding:20px;"><p>Sin pisos</p></div>'}
     </div>`;
   const totP2=D.pagos.filter(p=>p.estado==='pagado').reduce((s,p)=>s+p.imp,0);
   $i('inf-pisos').innerHTML=`<div class="card-title">💳 Ingresos por piso</div>${D.props.length?D.props.map(p=>{const ingP=D.pagos.filter(pa=>{const inq=D.inqs.find(i=>i.id==pa.inqId);return inq&&inq.propId==p.id&&pa.estado==='pagado';}).reduce((s,pa)=>s+pa.imp,0);const pc2=totP2?Math.round(ingP/totP2*100):0;return `<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px;"><span>${p.nom}</span><span class="mono" style="color:var(--gn);">${eur(ingP)}</span></div><div class="pbar"><div class="pbar-fill" style="width:${pc2}%;background:var(--acc);"></div></div></div>`;}).join(''):'<div class="empty" style="padding:20px;"><p>Sin pisos</p></div>'}`;
@@ -8820,13 +8820,12 @@ function rCartera(){
 
   // Totales de la cartera
   let patBruto=0, patNeto=0, factBruta=0, factNeta=0, dineroTotal=0, deudaTotal=0;
-  let habsTotales=0, habsOcupadas=0, ebitdaMes=0, ingMes=0, gasMes=0, cuoMes=0;
+  let habsTotales=0, habsOcupadas=0, habsReservadas=0, ebitdaMes=0, ingMes=0, gasMes=0, cuoMes=0;
   props.forEach(p=>{
     const eb=v4EbitdaPiso(p); ebitdaMes+=eb.mes; ingMes+=eb.ing.total; gasMes+=eb.gastos.mes; cuoMes+=eb.cuota;
     habsTotales += parseInt(p.habs)||0;
-    // Habitaciones distintas ocupadas por inquilinos activos de este piso
-    const ocupadas=new Set(D.inqs.filter(i=>i.estado==='ACTIVO'&&i.propId==p.id&&i.hab).map(i=>String(i.hab)));
-    habsOcupadas += v14EnteroEn(p.id,v4Hoy())?(parseInt(p.habs)||0):ocupadas.size;
+    // Habitaciones ocupadas y reservadas (una habitación doble cuenta una vez)
+    { const o16=v16EstHabs(p); habsOcupadas += o16.occ.length; habsReservadas += o16.res.length; }
     const va=valorActualizadoPiso(p);
     const valor=va.valor||parseFloat(p.tasacion||p.mercado||p.precio||0);
     const deuda=hipotecaPendiente(p);
@@ -8837,7 +8836,7 @@ function rCartera(){
   // ROCE de la cartera = EBITDA anual (ingresos − todos los gastos − cuotas) / todo el dinero propio
   const roceGlobal = dineroTotal>0 ? (ebitdaMes*12/dineroTotal*100) : null;
   const pctOcupacion = habsTotales>0 ? Math.round(habsOcupadas/habsTotales*100) : 0;
-  const habsLibres = habsTotales-habsOcupadas;
+  const habsLibres = habsTotales-habsOcupadas-habsReservadas;
   const rentBrutaGlobal = patBruto>0 ? (factBruta/patBruto*100) : null;
   const _lq=v9Liquidez(), _tr=v9StatsAlq();
 
@@ -8881,10 +8880,11 @@ function rCartera(){
       </div>
       <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line);">
         <div style="width:${pctOcupacion}%;background:var(--gn);"></div>
-        <div style="width:${100-pctOcupacion}%;background:var(--line2);"></div>
+        <div style="width:${habsTotales>0?habsReservadas/habsTotales*100:0}%;background:var(--ye);"></div>
+        <div style="width:${habsTotales>0?habsLibres/habsTotales*100:0}%;background:var(--line2);"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px;">
-        <span style="color:var(--gn);font-weight:600;">${habsOcupadas} alquiladas (${pctOcupacion}%)</span>
+        <span style="color:var(--gn);font-weight:600;">${habsOcupadas} alquiladas (${pctOcupacion}%)${habsReservadas?`<span style="color:var(--ye);"> · ${habsReservadas} reservada${habsReservadas!==1?'s':''}</span>`:''}</span>
         <span style="color:var(--ink3);font-weight:600;">${habsLibres} libre${habsLibres!==1?'s':''}</span>
       </div>
     </div>
@@ -8919,7 +8919,7 @@ function rCartera(){
       const deuda=hipotecaPendiente(p);
       const fb=facturacionBrutaPiso(p), fn=facturacionNetaPiso(p);
       const dp=dineroPropio(p), roce=roceDe(p), ebM=v4EbitdaPiso(p).mes;
-      const ocuP=v14EnteroEn(p.id,v4Hoy())?(parseInt(p.habs)||0):new Set(D.inqs.filter(i=>i.estado==='ACTIVO'&&i.propId==p.id&&i.hab).map(i=>String(i.hab))).size;
+      const ocuP=v16EstHabs(p).occ.length;
       const totP=parseInt(p.habs)||0;
       const pctP=totP>0?Math.round(ocuP/totP*100):0;
       return `<tr>
@@ -8966,18 +8966,18 @@ function rDash(){
 
   const paM=D.pagos.filter(p=>p.mes===mesAct),ing=paM.filter(p=>p.estado==='pagado').reduce((s,p)=>s+p.imp,0);
   const pen=D.pagos.filter(p=>p.estado!=='pagado').reduce((s,p)=>s+p.imp,0);
-  const tH=D.props.reduce((s,p)=>s+p.habs,0),ocu=v14Ocupadas();
+  const t16=v16Totales(),tH=t16.N,ocu=t16.occ;
   const pc=tH?Math.round(ocu/tH*100):0;
   const tvP=D.props.reduce((s,p)=>s+parseFloat(p.precio||0),0),ingA=D.inqs.filter(i=>i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0)*12;
   const yld=tvP>0?(ingA/tvP*100).toFixed(1):'–';
   const gaM=D.gastos.filter(g=>g.fecha&&g.fecha.startsWith(mesAct)).reduce((s,g)=>s+g.imp,0);
 
-  $i('d-kpis').innerHTML=`<div class="kpi" style="--kc:var(--gn);"><div class="kpi-accent"></div><div class="kpi-label">Ingresos del mes</div><div class="kpi-value">${eur(ing)}</div><div class="kpi-sub">${paM.filter(p=>p.estado==='pagado').length} pagos</div></div><div class="kpi" style="--kc:${pc>70?'var(--gn)':pc>40?'var(--ye)':'var(--rd)'};"><div class="kpi-accent"></div><div class="kpi-label">Ocupación</div><div class="kpi-value">${pc}%</div><div class="kpi-sub">${ocu}/${tH} habs</div></div><div class="kpi" style="--kc:var(--ye);"><div class="kpi-accent"></div><div class="kpi-label">Pendiente cobro</div><div class="kpi-value">${eur(pen)}</div></div><div class="kpi" style="--kc:var(--rd);"><div class="kpi-accent"></div><div class="kpi-label">Gastos del mes</div><div class="kpi-value">${eur(gaM)}</div></div><div class="kpi" style="--kc:var(--bl);"><div class="kpi-accent"></div><div class="kpi-label">Rent. bruto</div><div class="kpi-value">${yld}%</div><div class="kpi-sub">Cartera total</div></div>`;
+  $i('d-kpis').innerHTML=`<div class="kpi" style="--kc:var(--gn);"><div class="kpi-accent"></div><div class="kpi-label">Ingresos del mes</div><div class="kpi-value">${eur(ing)}</div><div class="kpi-sub">${paM.filter(p=>p.estado==='pagado').length} pagos</div></div><div class="kpi" style="--kc:${pc>70?'var(--gn)':pc>40?'var(--ye)':'var(--rd)'};"><div class="kpi-accent"></div><div class="kpi-label">Ocupación</div><div class="kpi-value">${pc}%</div><div class="kpi-sub">${ocu}/${tH} habs${v16SubKpi()}</div></div><div class="kpi" style="--kc:var(--ye);"><div class="kpi-accent"></div><div class="kpi-label">Pendiente cobro</div><div class="kpi-value">${eur(pen)}</div></div><div class="kpi" style="--kc:var(--rd);"><div class="kpi-accent"></div><div class="kpi-label">Gastos del mes</div><div class="kpi-value">${eur(gaM)}</div></div><div class="kpi" style="--kc:var(--bl);"><div class="kpi-accent"></div><div class="kpi-label">Rent. bruto</div><div class="kpi-value">${yld}%</div><div class="kpi-sub">Cartera total</div></div>`;
 
   const ult=D.pagos.slice().reverse().slice(0,6);
   $i('d-pagos').innerHTML=ult.length?ult.map(p=>{const inq=D.inqs.find(i=>i.id==p.inqId);const col=p.estado==='pagado'?'var(--gn)':p.estado==='atrasado'?'var(--rd)':'var(--ye)';return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);"><span style="font-size:12px;">${p.estado==='pagado'?'✅':p.estado==='atrasado'?'🔴':'⏳'} ${inq?inq.nom+' '+inq.ap:'?'} · ${p.con||'Alquiler'}</span><span class="mono" style="font-size:12px;color:${col};">${eur(p.imp)}</span></div>`;}).join(''):'<div class="empty" style="padding:16px;"><p>Sin movimientos</p></div>';
 
-  $i('d-pisos').innerHTML=D.props.length?D.props.map(p=>{const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado==='ACTIVO');const pc2=v14EnteroEn(p.id,v4Hoy())?100:(p.habs?Math.round(iqs.length/p.habs*100):0);const r=iqs.reduce((s,i)=>s+parseFloat(i.alq||0),0);const col=pc2>70?'var(--gn)':pc2>40?'var(--ye)':'var(--rd)';return `<div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="font-weight:600;">${p.nom}</span><span class="mono" style="color:var(--gn);">${r}€/mes</span></div><div style="font-size:10px;color:var(--ink3);margin-bottom:5px;">${iqs.length}/${p.habs} hab · ${pc2}%</div><div class="pbar"><div class="pbar-fill" style="width:${pc2}%;background:${col};"></div></div></div>`;}).join(''):'<div class="empty" style="padding:16px;"><p>Sin pisos</p></div>';
+  $i('d-pisos').innerHTML=v16HtmlDashPisos();
 
   const incAb=D.incs.filter(i=>i.estado!=='resuelta').slice(0,4);
   $i('d-incs').innerHTML=incAb.length?incAb.map(inc=>{const p=D.props.find(pr=>pr.id==inc.propId);const c=inc.pri==='alta'?'var(--rd)':inc.pri==='media'?'var(--ye)':'var(--gn)';return `<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);"><div style="width:7px;height:7px;border-radius:50%;background:${c};margin-top:5px;flex-shrink:0;"></div><div><div style="font-size:12px;">${inc.desc}</div><div style="font-size:10px;color:var(--ink3);">${p?p.nom:'–'}</div></div></div>`;}).join(''):'<div class="empty" style="padding:16px;"><p>Sin incidencias abiertas 🎉</p></div>';
@@ -16855,6 +16855,91 @@ function rAvisos(){
   v15PintarBarra();
   const n=$i('av-notif'); if(n) n.innerHTML=('Notification' in window)?(Notification.permission==='granted'?'🔔 Notificaciones del navegador activadas':'<button class="btn btn-secondary btn-sm" onclick="v4PedirNotif()">🔔 Activar notificaciones</button>'):'';
 }
+
+// ══════════════════════════════════════════════════════════════
+// v4.15 · Habitaciones ocupadas, reservadas y libres: UNA sola regla en toda la app
+// (Propiedades, Habitaciones, Dashboard, Cartera, Informes e informe fiscal).
+// Se cuentan HABITACIONES, no personas: una habitación doble con 2 inquilinos es 1 habitación ocupada.
+//  · Ocupada: el piso está alquilado entero hoy, o hay algún inquilino ACTIVO en esa habitación.
+//  · Reservada: no está ocupada y hay un inquilino RESERVADO en ella, una reserva activa,
+//    o un contrato de piso entero que empieza más adelante.
+//  · Libre: el resto.
+// Es la misma regla que pinta cada tarjeta de la sección Habitaciones.
+// ══════════════════════════════════════════════════════════════
+function v16NumHab(h){ const m=String(h==null?'':h).match(/\d+/); return m?parseInt(m[0],10):null; }
+function v16Pl(n,s,p){ return n+' '+(n===1?s:p); }
+function v16EnteroFut(propId,iso){ return (D.conts||[]).filter(c=>c.pisoEntero&&c.propId==propId&&c.ini&&c.ini>iso).sort((a,b)=>String(a.ini).localeCompare(String(b.ini)))[0]||null; }
+function v16EstHabs(p,iso){
+  iso=iso||v4Hoy();
+  const N=Math.max(0,parseInt(p&&p.habs)||0), ent=p?v14EnteroEn(p.id,iso):null, fut=(p&&!ent)?v16EnteroFut(p.id,iso):null;
+  const iqs=p?(D.inqs||[]).filter(i=>i.propId==p.id&&(i.estado==='ACTIVO'||i.estado==='RESERVADO')):[];
+  const o={N, ent, entFut:fut, occ:[], res:[], libre:[], personas:0, sinHab:[]};
+  for(let n=1;n<=N;n++){
+    const enH=iqs.filter(i=>v16NumHab(i.hab)===n);
+    if(ent||enH.some(i=>i.estado==='ACTIVO')) o.occ.push(n);
+    else if(enH.length||v4ResDeHab(p.id,n)||fut) o.res.push(n);
+    else o.libre.push(n);
+  }
+  if(ent) o.personas=[ent.inqId,ent.inqId2].filter(Boolean).length;
+  else {
+    o.personas=iqs.filter(i=>i.estado==='ACTIVO'&&o.occ.includes(v16NumHab(i.hab))).length;
+    // Inquilinos activos sin una habitación válida de este piso: no se pueden contar, se avisa para corregir la ficha
+    o.sinHab=iqs.filter(i=>{ const n=v16NumHab(i.hab); return i.estado==='ACTIVO'&&!(n>=1&&n<=N); });
+  }
+  return o;
+}
+function v16Totales(props,iso){
+  const t={pisos:0,conInq:0,enteros:0,N:0,occ:0,res:0,libre:0,personas:0};
+  (props||D.props||[]).forEach(p=>{ const o=v16EstHabs(p,iso); t.pisos++; t.N+=o.N; t.occ+=o.occ.length; t.res+=o.res.length; t.libre+=o.libre.length; t.personas+=o.personas; if(o.occ.length) t.conInq++; if(o.ent) t.enteros++; });
+  return t;
+}
+// Sustituye al recuento de v4.14 (contaba personas y no habitaciones)
+function v14Ocupadas(){ return v16Totales().occ; }
+
+function v16Barra(o){
+  const N=o.N||0, pO=N?o.occ.length/N*100:0, pR=N?o.res.length/N*100:0;
+  return '<div class="pbar" style="display:flex;"><div class="pbar-fill" style="width:'+pO+'%;background:var(--gn);border-radius:0;"></div><div class="pbar-fill" style="width:'+pR+'%;background:var(--ye);border-radius:0;"></div></div>';
+}
+function v16TxtOcup(o){
+  if(o.ent) return '<span style="color:var(--gn);font-weight:600;">🏠 Piso alquilado entero · '+o.N+' de '+o.N+' habitaciones</span>';
+  return '<span style="color:var(--gn);font-weight:600;">'+o.occ.length+' de '+o.N+(o.N===1?' habitación ocupada':' habitaciones ocupadas')+'</span>'
+    +(o.personas>o.occ.length?' <span style="color:var(--ink3);">('+o.personas+' inquilinos)</span>':'')
+    +(o.res.length?' · <span style="color:var(--ye);font-weight:600;white-space:nowrap;">'+v16Pl(o.res.length,'reservada','reservadas')+'</span>':'')
+    +' · <span style="color:var(--ink3);white-space:nowrap;">'+v16Pl(o.libre.length,'libre','libres')+'</span>';
+}
+// Tarjeta de Propiedades
+function v16HtmlOcupProp(o){
+  const lista=(o.ent?'':[o.occ.length?'Ocupada'+(o.occ.length===1?'':'s')+': '+o.occ.map(n=>'H'+n).join(', '):'',o.res.length?'Reservada'+(o.res.length===1?'':'s')+': '+o.res.map(n=>'H'+n).join(', '):''].filter(Boolean).join(' · '));
+  return '<div style="font-size:11px;color:var(--ink3);margin-bottom:5px;line-height:1.5;">'+v16TxtOcup(o)+'</div>'
+    +v16Barra(o)
+    +(lista?'<div style="font-size:10px;color:var(--ink3);margin-top:5px;">'+lista+'</div>':'')
+    +(o.entFut?'<div style="font-size:10px;color:var(--ye);margin-top:4px;">🏠 Alquilado entero a partir del '+v4F2(o.entFut.ini)+'</div>':'')
+    +(o.sinHab.length?'<div style="font-size:10px;color:var(--rd);margin-top:4px;">⚠ '+v16Pl(o.sinHab.length,'inquilino activo','inquilinos activos')+' sin habitación válida de este piso ('+o.sinHab.map(i=>v4Esc((i.nom||'')+' '+(i.ap||'')).trim()).join(', ')+'): no se cuenta'+(o.sinHab.length===1?'':'n')+'. Corrige la habitación en su ficha.</div>':'');
+}
+// Resumen arriba de Propiedades
+function v16ResumenProps(){
+  const b=$i('props-resumen'); if(!b) return;
+  const ps=D.props||[]; if(!ps.length){ b.innerHTML=''; return; }
+  const t=v16Totales(ps);
+  b.innerHTML='<div class="card" style="margin-bottom:14px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:12.5px;">'
+   +'<span><strong>'+v16Pl(t.pisos,'piso','pisos')+'</strong> · '+t.conInq+' con inquilinos'+(t.enteros?' ('+v16Pl(t.enteros,'alquilado entero','alquilados enteros')+')':'')+'</span>'
+   +'<span style="color:var(--gn);font-weight:600;">'+v16Pl(t.occ,'habitación ocupada','habitaciones ocupadas')+'</span>'
+   +(t.res?'<span style="color:var(--ye);font-weight:600;">'+v16Pl(t.res,'reservada','reservadas')+'</span>':'')
+   +'<span style="color:var(--ink3);">'+v16Pl(t.libre,'libre','libres')+' de '+t.N+'</span>'
+   +'</div>';
+}
+// Dashboard · Ocupación por piso
+function v16HtmlDashPisos(){
+  const ps=D.props||[]; if(!ps.length) return '<div class="empty" style="padding:16px;"><p>Sin pisos</p></div>';
+  return ps.map(p=>{
+    const o=v16EstHabs(p), r=(D.inqs||[]).filter(i=>i.propId==p.id&&i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0), pc=o.N?Math.round(o.occ.length/o.N*100):0;
+    return '<div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="font-weight:600;">'+v4Esc(p.nom||'')+'</span><span class="mono" style="color:var(--gn);">'+r+'€/mes</span></div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-bottom:5px;">'+(o.ent?'Piso entero · '+o.N+'/'+o.N+' hab':o.occ.length+'/'+o.N+' hab ocupada'+(o.occ.length===1?'':'s')+(o.res.length?' · <span style="color:var(--ye);">'+v16Pl(o.res.length,'reservada','reservadas')+'</span>':''))+' · '+pc+'%</div>'
+      +v16Barra(o)+'</div>';
+  }).join('');
+}
+function v16SubKpi(){ const t=v16Totales(); return t.res?' · '+v16Pl(t.res,'reservada','reservadas'):''; }
+function v16TxtInforme(p){ const o=v16EstHabs(p); return o.occ.length+(o.ent?' (piso alquilado entero)':'')+(o.res.length?'  ·  Reservadas: '+o.res.length:''); }
 
 </script>
 </body>
