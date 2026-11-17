@@ -936,7 +936,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- ═══════════════ DASHBOARD ═══════════════ -->
 <section class="sec on" data-ws="gentaury" id="sec-dash">
   <div id="dash-avisos"></div>
-  <div id="d-alerts" style="margin-bottom:14px;"></div>
+  <div id="d-alerts"></div>
   <div class="kpi-strip" id="d-kpis"></div>
   <div class="card mb" id="d-cartera"></div>
   <div class="g2 mb">
@@ -956,15 +956,21 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 
 <!-- ═══════════════ AVISOS ═══════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-avisos">
-  <div class="ph"><div><div class="ph-title">🔔 Avisos de contratos</div>
-    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Fechas y plazos de cada contrato de habitación (contrato v20261102). Marca cada aviso como hecho cuando lo hagas.</div></div>
+  <div class="ph"><div><div class="ph-title">🔔 Avisos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Todo lo que hay que hacer, por fecha. Marca «✓ Hecho» cuando lo hagas o «🗑» para borrar un aviso que no te interesa (queda en la papelera y se puede recuperar). «▾ Detalle y acciones» abre las plantillas y los botones de cada aviso.</div></div>
     <div class="ph-acts"><button class="btn btn-secondary btn-sm" onclick="v4VentanaAvisos(true)">Ver resumen de hoy</button></div>
   </div>
-  <div class="fb">
+  <div id="av-resumen"></div>
+  <style>@media(max-width:768px){.fb.av-fb{display:grid;grid-template-columns:1fr 1fr;gap:8px;}.fb.av-fb #av-q,.fb.av-fb #av-notif{grid-column:1/-1;}.fb.av-fb select{font-size:12px!important;padding:8px 6px!important;}}</style>
+  <div class="fb av-fb" style="flex-wrap:wrap;">
+    <input id="av-q" type="search" placeholder="🔍 Buscar" oninput="rAvisos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:150px;outline:none;">
+    <select id="av-cat" onchange="rAvisos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos los temas</option><option value="cobros">💶 Cobros y pagos</option><option value="contratos">📄 Contratos y plazos</option><option value="fiscal">🧾 Impuestos (ITP, IRPF)</option><option value="res">📝 Reservas</option><option value="inc">🔧 Incidencias</option><option value="vis">📅 Visitas</option><option value="piso">🏢 Pisos y certificados</option><option value="norma">⚖️ Normativa</option><option value="datos">🔒 Datos personales</option></select>
+    <select id="av-agr" onchange="rAvisos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="fecha">Agrupar por fecha</option><option value="piso">Agrupar por piso</option><option value="tipo">Agrupar por tema</option></select>
     <select id="av-prop" onchange="rAvisos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);min-width:170px;outline:none;"></select>
     <select id="av-tipo" onchange="rAvisos()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos los tipos</option><option value="obl">Obligatorios y urgentes</option><option value="urg">Solo urgentes</option></select>
     <div id="av-notif" style="font-size:11.5px;color:var(--ink3);"></div>
   </div>
+  <div id="av-barra"></div>
   <div id="av-list"></div>
   <div class="card" style="font-size:11.5px;color:var(--ink3);line-height:1.6;">
     <div class="card-title">Días hábiles</div>
@@ -1045,7 +1051,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
 <!-- ═══════════════ CONTRATOS ═══════════════ -->
 <section class="sec" data-ws="gentaury" id="sec-contratos">
   <div class="ph"><div class="ph-title">📄 Contratos</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-secondary" onclick="v4FormReserva()">+ Nueva reserva</button><button class="btn btn-primary" onclick="newCont()">+ Nuevo contrato</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-secondary" onclick="v4FormReserva()">+ Nueva reserva</button><button class="btn btn-secondary" onclick="v14Form()">🏠 Piso entero</button><button class="btn btn-primary" onclick="newCont()">+ Nuevo contrato</button></div>
   </div>
   <div class="fb">
     <select id="cof" onchange="rConts()" style="padding:8px 12px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);outline:none;"><option value="">Todos</option><option value="vigente">Vigentes</option><option value="vence30">Vence 30d</option><option value="exp">Expirados</option></select>
@@ -1872,6 +1878,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Importe (€) *</label><input id="ga-i" type="number" placeholder="150"></div>
     <div class="fgrp"><label>Propiedad</label><select id="ga-p"></select></div>
     <div class="fgrp"><label>Fecha</label><input id="ga-f" type="date"></div>
+    <div class="fgrp"><label>Cuenta o tarjeta de pago</label><select id="ga-cta"></select></div>
     <div class="fgrp"><label>¿Deducible IRPF?</label><select id="ga-ded"><option value="si">✅ Sí, deducible</option><option value="no">❌ No deducible</option></select></div>
     <div class="fgrp fgf"><label>Proveedor / empresa</label><input id="ga-pv" placeholder="Fontanero García — 600 111 222"></div>
     <div class="fgrp fgf"><label>Notas / nº factura</label><input id="ga-n" placeholder="Factura nº 00123..."></div>
@@ -2726,7 +2733,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="fgrp"><label>Últimos 4 dígitos</label><input id="cb-num" maxlength="4"></div>
     <div class="fgrp"><label>Titular *</label><select id="cb-tit"></select></div>
     <div class="fgrp" data-cb9="saldo"><label>Saldo (€)</label><input id="cb-saldo" inputmode="decimal" placeholder="630,00"></div>
-    <div class="fgrp" data-cb9="saldo"><label>Saldo a fecha de (al final del día)</label><input id="cb-sfecha" type="date"></div>
+    <div class="fgrp" data-cb9="saldo"><label>Saldo a fecha de (lo que registres después se suma o se resta)</label><input id="cb-sfecha" type="date"></div>
     <div class="fgrp fgf" data-cb9="saldo"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="cb-princ" style="width:auto;"> Cuenta principal del titular: aquí van los cobros y las facturas que no tengan otra cuenta</label></div>
     <div class="fgrp fgf" data-cb9="cargo"><label>Cuenta de cargo de la tarjeta</label><select id="cb-cargo"></select></div>
     <div class="fgrp fgf"><label>Notas</label><input id="cb-notas"></div>
@@ -3427,7 +3434,7 @@ function rHabs(){
   pan.innerHTML=props.map(p=>{
     const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado!=='PASADO');
     const renta=iqs.filter(i=>i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0);
-    const libre=Math.max(0,(parseInt(p.habs)||0)-new Set(iqs.filter(i=>i.estado==='ACTIVO').map(i=>String(i.hab))).size);
+    const ent14=v14EnteroEn(p.id,v4Hoy()), libre=ent14?0:Math.max(0,(parseInt(p.habs)||0)-new Set(iqs.filter(i=>i.estado==='ACTIVO').map(i=>String(i.hab))).size);
     const nRes=Array.from({length:parseInt(p.habs)||0},(_,n)=>n+1).filter(num=>v4ResDeHab(p.id,num)&&!iqs.some(i=>i.estado==='ACTIVO'&&parseInt(i.hab)==num)).length;
     const cfgAll=p.habsConfig||{};
     // Renta potencial: precio configurado de cada habitación
@@ -3439,9 +3446,9 @@ function rHabs(){
       const iqH=iqs.filter(i=>parseInt(i.hab)==num&&!(rsv&&i.estado==='RESERVADO'&&rsvIds.includes(i.id))).sort((a,b)=>(b.estado==='ACTIVO')-(a.estado==='ACTIVO'));
       const inq=iqH[0], inq2=iqH[1];
       const cfg=cfgAll[num]||{tipo:'individual',plazas:1,precio:0};
-      const est=inq?(inq.estado==='RESERVADO'?'res':'occ'):(rsv?'res':'free');
+      const est=ent14?'occ':inq?(inq.estado==='RESERVADO'?'res':'occ'):(rsv?'res':'free');
       const col=est==='occ'?'var(--gn)':est==='res'?'var(--ye)':'var(--rd)';
-      const label=est==='occ'?'Ocupada':est==='res'?'Reservada':'Libre';
+      const label=ent14?'Piso entero':est==='occ'?'Ocupada':est==='res'?'Reservada':'Libre';
       const esDoble=cfg.tipo==='doble';
       const precioCfg=parseFloat(cfg.precio)||0;
       return `<div class="room-card ${est}" style="text-align:left;padding:12px;">
@@ -3449,7 +3456,8 @@ function rHabs(){
           <span class="room-num" style="color:${col};font-size:15px;">H${num}</span>
           <span style="font-size:8.5px;font-family:'DM Mono',monospace;color:${col};text-transform:uppercase;letter-spacing:.6px;">${label}</span>
         </div>
-        <div class="room-name" style="font-size:12px;${inq||rsv?'cursor:pointer;':''}" ${inq?`onclick="openPerfil('${inq.id}')"`:(rsv?`onclick="v4GestionarReserva('${rsv.id}')"`:'')}>${inq?inq.nom+' '+(inq.ap||'')+(inq2?' y '+inq2.nom+' '+(inq2.ap||''):''):(rsv?v4Esc(v4NomRes(rsv)):'Disponible')}</div>
+        ${ent14?v14HtmlHabEntero(ent14):''}
+        <div class="room-name" style="${ent14?'display:none;':''}font-size:12px;${inq||rsv?'cursor:pointer;':''}" ${inq?`onclick="openPerfil('${inq.id}')"`:(rsv?`onclick="v4GestionarReserva('${rsv.id}')"`:'')}>${inq?inq.nom+' '+(inq.ap||'')+(inq2?' y '+inq2.nom+' '+(inq2.ap||''):''):(rsv?v4Esc(v4NomRes(rsv)):'Disponible')}</div>
         ${inq?`<div style="font-size:10px;color:var(--ink3);margin-top:2px;">Desde ${fD(inq.ini)} · ${inq.alq||0}€/mes</div>`:''}
         <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;">
           <div class="hab-tipo" role="group" aria-label="Tipo de habitación">
@@ -4219,11 +4227,11 @@ function rPagos(){
 // GASTOS
 // ══════════════════════════════════════════════════════════════
 const GI={Mantenimiento:'🔧',Suministros:'💡',Seguros:'🛡️',Comunidad:'🏘️',IBI:'🏛️',Hipoteca:'🏦',Reformas:'🏗️',Gestoría:'📋',Otros:'📦'};
-function addGasto(){
+function v15AddGastoBase(){
   const d=gi('ga-d'),i=gn('ga-i');if(!d||!i){toast('Completa descripción e importe',false);return;}
   const pdfData=$i('ga-pdf-data')?.value||'';
   const pdfName=$i('ga-pdf-name')?.value||'';
-  D.gastos.push({id:uid(),desc:d,cat:$i('ga-c').value,imp:i,propId:gi('ga-p'),fecha:gi('ga-f'),ded:$i('ga-ded').value,prov:gi('ga-pv'),notas:gi('ga-n'),pdfData,pdfName});
+  D.gastos.push({id:uid(),desc:d,cat:$i('ga-c').value,imp:i,propId:gi('ga-p'),fecha:gi('ga-f'),ded:$i('ga-ded').value,prov:gi('ga-pv'),notas:gi('ga-n'),pdfData,pdfName,ctaId:gi('ga-cta')||'',creado:Date.now()});
   saveAndSync();closeM('m-ga');
   clearPdfZone('ga-pdf-zone','ga-pdf-data');
   rGastos();toast('Gasto registrado');
@@ -4591,7 +4599,7 @@ function borrarPdfCompra(id){
   saveAndSync(); rCompras(); editCompra(id); toast('Factura eliminada');
 }
 
-function saveCompra(){
+function v15SaveCompraBase(){
   const con=gi('cp-con'), emp=gi('cp-emp'), imp=gn('cp-imp');
   if(!con||!emp||!imp){toast('Completa concepto, empresa e importe',false);return;}
   const editId=gi('cp-edit-id');
@@ -5202,6 +5210,7 @@ function rCalendarioOcupacion(){
   // ¿Qué inquilino ocupa la habitación h el día d?
   const ocupanteDia=(hab,dia)=>{
     const fecha=new Date(anyo,mes-1,dia);
+    { const e14=v14EnteroEn(propId,fecha.v12Dia()); if(e14) return v4Inq(e14.inqId)||null; }
     return inqs.find(i=>{
       if(String(i.hab)!==String(hab)) return false;
       if(!i.ini) return false;
@@ -5333,7 +5342,7 @@ function cargarHabsVisita(){
   let html='<option value="">Cualquiera / sin decidir</option>';
   for(let i=1;i<=n;i++){
     const cfg=(p.habsConfig||{})[i]||{};
-    const ocupada=D.inqs.some(x=>x.estado==='ACTIVO'&&x.propId==propId&&String(x.hab)===String(i));
+    const ocupada=!!v14EnteroEn(propId,v4Hoy())||D.inqs.some(x=>x.estado==='ACTIVO'&&x.propId==propId&&String(x.hab)===String(i));
     html+=`<option value="${i}">Hab. ${i}${cfg.tipo==='doble'?' (doble)':''}${cfg.precio?' · '+cfg.precio+'€':''}${cfg.m2?' · '+cfg.m2+'m²':''}${ocupada?' — OCUPADA':' — libre'}</option>`;
   }
   sel.innerHTML=html;
@@ -8817,7 +8826,7 @@ function rCartera(){
     habsTotales += parseInt(p.habs)||0;
     // Habitaciones distintas ocupadas por inquilinos activos de este piso
     const ocupadas=new Set(D.inqs.filter(i=>i.estado==='ACTIVO'&&i.propId==p.id&&i.hab).map(i=>String(i.hab)));
-    habsOcupadas += ocupadas.size;
+    habsOcupadas += v14EnteroEn(p.id,v4Hoy())?(parseInt(p.habs)||0):ocupadas.size;
     const va=valorActualizadoPiso(p);
     const valor=va.valor||parseFloat(p.tasacion||p.mercado||p.precio||0);
     const deuda=hipotecaPendiente(p);
@@ -8910,7 +8919,7 @@ function rCartera(){
       const deuda=hipotecaPendiente(p);
       const fb=facturacionBrutaPiso(p), fn=facturacionNetaPiso(p);
       const dp=dineroPropio(p), roce=roceDe(p), ebM=v4EbitdaPiso(p).mes;
-      const ocuP=new Set(D.inqs.filter(i=>i.estado==='ACTIVO'&&i.propId==p.id&&i.hab).map(i=>String(i.hab))).size;
+      const ocuP=v14EnteroEn(p.id,v4Hoy())?(parseInt(p.habs)||0):new Set(D.inqs.filter(i=>i.estado==='ACTIVO'&&i.propId==p.id&&i.hab).map(i=>String(i.hab))).size;
       const totP=parseInt(p.habs)||0;
       const pctP=totP>0?Math.round(ocuP/totP*100):0;
       return `<tr>
@@ -8953,11 +8962,11 @@ function rDash(){
       alerts.push({t:'b',m:`📆 Visita hoy ${v.hora}: ${v.nom}${p?' · '+p.nom:''}${v.recordado!=='si'?' — sin avisar':''}`});
     });
   D.incs.filter(i=>i.estado!=='resuelta'&&i.pri==='alta').forEach(inc=>{const p=D.props.find(pr=>pr.id==inc.propId);alerts.push({t:'r',m:`🔴 Incidencia urgente: ${inc.desc} — ${p?p.nom:'?'}`});});
-  $i('d-alerts').innerHTML=alerts.slice(0,4).map(a=>`<div class="alert alert-${a.t}">${a.m}</div>`).join('');
+  $i('d-alerts').innerHTML=''; // v4.14: los avisos solo salen en la sección Avisos
 
   const paM=D.pagos.filter(p=>p.mes===mesAct),ing=paM.filter(p=>p.estado==='pagado').reduce((s,p)=>s+p.imp,0);
   const pen=D.pagos.filter(p=>p.estado!=='pagado').reduce((s,p)=>s+p.imp,0);
-  const tH=D.props.reduce((s,p)=>s+p.habs,0),ocu=D.inqs.filter(i=>i.estado==='ACTIVO').length;
+  const tH=D.props.reduce((s,p)=>s+p.habs,0),ocu=v14Ocupadas();
   const pc=tH?Math.round(ocu/tH*100):0;
   const tvP=D.props.reduce((s,p)=>s+parseFloat(p.precio||0),0),ingA=D.inqs.filter(i=>i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0)*12;
   const yld=tvP>0?(ingA/tvP*100).toFixed(1):'–';
@@ -8968,7 +8977,7 @@ function rDash(){
   const ult=D.pagos.slice().reverse().slice(0,6);
   $i('d-pagos').innerHTML=ult.length?ult.map(p=>{const inq=D.inqs.find(i=>i.id==p.inqId);const col=p.estado==='pagado'?'var(--gn)':p.estado==='atrasado'?'var(--rd)':'var(--ye)';return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);"><span style="font-size:12px;">${p.estado==='pagado'?'✅':p.estado==='atrasado'?'🔴':'⏳'} ${inq?inq.nom+' '+inq.ap:'?'} · ${p.con||'Alquiler'}</span><span class="mono" style="font-size:12px;color:${col};">${eur(p.imp)}</span></div>`;}).join(''):'<div class="empty" style="padding:16px;"><p>Sin movimientos</p></div>';
 
-  $i('d-pisos').innerHTML=D.props.length?D.props.map(p=>{const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado==='ACTIVO');const pc2=p.habs?Math.round(iqs.length/p.habs*100):0;const r=iqs.reduce((s,i)=>s+parseFloat(i.alq||0),0);const col=pc2>70?'var(--gn)':pc2>40?'var(--ye)':'var(--rd)';return `<div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="font-weight:600;">${p.nom}</span><span class="mono" style="color:var(--gn);">${r}€/mes</span></div><div style="font-size:10px;color:var(--ink3);margin-bottom:5px;">${iqs.length}/${p.habs} hab · ${pc2}%</div><div class="pbar"><div class="pbar-fill" style="width:${pc2}%;background:${col};"></div></div></div>`;}).join(''):'<div class="empty" style="padding:16px;"><p>Sin pisos</p></div>';
+  $i('d-pisos').innerHTML=D.props.length?D.props.map(p=>{const iqs=D.inqs.filter(i=>i.propId==p.id&&i.estado==='ACTIVO');const pc2=v14EnteroEn(p.id,v4Hoy())?100:(p.habs?Math.round(iqs.length/p.habs*100):0);const r=iqs.reduce((s,i)=>s+parseFloat(i.alq||0),0);const col=pc2>70?'var(--gn)':pc2>40?'var(--ye)':'var(--rd)';return `<div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="font-weight:600;">${p.nom}</span><span class="mono" style="color:var(--gn);">${r}€/mes</span></div><div style="font-size:10px;color:var(--ink3);margin-bottom:5px;">${iqs.length}/${p.habs} hab · ${pc2}%</div><div class="pbar"><div class="pbar-fill" style="width:${pc2}%;background:${col};"></div></div></div>`;}).join(''):'<div class="empty" style="padding:16px;"><p>Sin pisos</p></div>';
 
   const incAb=D.incs.filter(i=>i.estado!=='resuelta').slice(0,4);
   $i('d-incs').innerHTML=incAb.length?incAb.map(inc=>{const p=D.props.find(pr=>pr.id==inc.propId);const c=inc.pri==='alta'?'var(--rd)':inc.pri==='media'?'var(--ye)':'var(--gn)';return `<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);"><div style="width:7px;height:7px;border-radius:50%;background:${c};margin-top:5px;flex-shrink:0;"></div><div><div style="font-size:12px;">${inc.desc}</div><div style="font-size:10px;color:var(--ink3);">${p?p.nom:'–'}</div></div></div>`;}).join(''):'<div class="empty" style="padding:16px;"><p>Sin incidencias abiertas 🎉</p></div>';
@@ -11562,7 +11571,7 @@ function v2MigrarTodos(){
 // Reconstrucción de desplegables conservando la opción «Todos» en Facturas
 function populateSels(){
   const e=$i('cp-prop'), prev=e?e.value:'';
-  populateSelsBase();
+  populateSelsBase(); try{ v15FillCtaSel(); }catch(e){}
   if($i('cp-prop')){ v2PrepPropTodos(); if(prev==='__todos') $i('cp-prop').value='__todos'; }
 }
 
@@ -11941,7 +11950,7 @@ function v4Nombres(co){ const n=v4InqsCo(co).map(i=>(i.nom||'').trim()).filter(B
 function v4NombresCompletos(co){ return v4InqsCo(co).map(i=>((i.nom||'')+' '+(i.ap||'')).trim()).join(' y ')||'—'; }
 function v4Prop(co){ return (D.props||[]).find(p=>p.id==co.propId); }
 function v4Hab(co){ return co.hab||(v4Inq(co.inqId)||{}).hab||'?'; }
-function v4Lugar(co){ const p=v4Prop(co); return 'Hab. '+v4Hab(co)+' · '+(p?p.nom:'piso sin asignar'); }
+function v4Lugar(co){ const p=v4Prop(co); return (co&&co.pisoEntero?'Piso entero':'Hab. '+v4Hab(co))+' · '+(p?p.nom:'piso sin asignar'); }
 function v4NumPersonas(co,iso){ return v4PersonasCo(co).filter(x=>!iso||(x.desde<=iso&&x.hasta>=iso)).length||1; }
 function v4EsTemporal(co){ return !co.tipoContrato||co.tipoContrato==='temporal'; }
 
@@ -12347,7 +12356,7 @@ function v4Alertas(hoy){
 }
 function v4Grupos(hoy){
   hoy=hoy||v4Hoy(); const al=v4Alertas(hoy);
-  return {todas:al, vencidos:al.filter(a=>a.visible&&a.fecha<hoy&&a.nivel!=='info'), hoy:al.filter(a=>a.visible&&(a.fecha===hoy||(a.fecha<hoy&&a.nivel==='info'))), proximos:al.filter(a=>a.visible&&a.fecha>hoy&&a.fecha<=fxAdd(hoy,10)), hechos:al.filter(a=>a.hecho&&!a.auto&&a.hechoEl).sort((a,b)=>String(b.hechoEl).localeCompare(String(a.hechoEl)))};
+  return {todas:al, vencidos:al.filter(a=>a.visible&&a.fecha<hoy&&a.nivel!=='info'), hoy:al.filter(a=>a.visible&&(a.fecha===hoy||(a.fecha<hoy&&a.nivel==='info'))), proximos:al.filter(a=>a.visible&&a.fecha>hoy&&a.fecha<=fxAdd(hoy,10)), hechos:al.filter(a=>a.hecho&&!a.auto&&a.hechoEl&&!a.borrado).sort((a,b)=>String(b.hechoEl).localeCompare(String(a.hechoEl)))};
 }
 function v4MarcarHecho(ref,k,on){
   if(ref.startsWith('inc:')){ const inc=(D.incs||[]).find(i=>i.id==ref.slice(4)); if(!inc) return; inc.avisoHecho=on?new Date().toISOString():''; if(on&&!inc.respondida) inc.respondida=v4Hoy(); }
@@ -12637,7 +12646,7 @@ function v4AddEntrada(coId){ const co=v4Co(coId), t=gi('v4e-t'), f=gi('v4e-f'), 
   co.entradas=(co.entradas||[]).concat([{tipo:t,fecha:f,hora:h,horaFin:hf,motivo:gi('v4e-m'),urgente:u,avisado:u,revocado:!!($i('v4e-rv')&&$i('v4e-rv').checked)}]); v4Guardar(co,'Entrada programada'); v4Entradas(coId); }
 
 // ══ Pagos: generación por contrato (renta proporcional) y vencimiento el día 1 de cada mes ══
-function v4ImporteAlquiler(inq,mes){
+function v14ImporteAlqBase(inq,mes){
   const co=v4CoDeInq(inq.id,mes);
   if(co&&v7Gest(co)&&v4F(co)){ if(co.inqId!=inq.id) return 0; return v4RentaMes(co,mes); }
   return parseFloat(inq.alq)||0;
@@ -12799,7 +12808,7 @@ function rConts(){
      +'<div style="font-size:11px;color:var(--ink3);margin-top:4px;">F '+v4F2(F)+' → E '+v4F2(E)+(C?' · causa hasta '+v4F2(C):'')+' · '+v4E2(c.r)+' €/mes · fianza '+v4E2(c.f)+' €'+(c.g?' · garantía '+v4E2(c.g)+' €':'')+'</div>'
      +(sv&&sv.anticipada?'<div style="font-size:11px;color:var(--ye);margin-top:3px;">🚪 Aviso de salida: se va el '+v4F2(sv.S)+(sv.ok?'':' · se cobra hasta el '+v4F2(sv.valida))+'</div>':'')
      +'<div style="margin-top:6px;max-width:620px;">'+v4HtmlPasoCo(c)+'</div>'
-     +'<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;"><span class="badge badge-b">🏢 '+v4Esc(pr?pr.nom:'Piso sin asignar')+'</span><span class="badge badge-p">🚪 Hab. '+v4Esc(v4Hab(c))+(c.inqId2?' · doble':'')+'</span>'
+     +'<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;"><span class="badge badge-b">🏢 '+v4Esc(pr?pr.nom:'Piso sin asignar')+'</span>'+(c.pisoEntero?'<span class="badge badge-p">🏠 Piso entero</span>':'<span class="badge badge-p">🚪 Hab. '+v4Esc(v4Hab(c))+(c.inqId2?' · doble':'')+'</span>')
      +(v4EsTemporal(c)?('<span class="badge '+(c.itpOk?'badge-g':'badge-y')+'">ITP '+(c.itpOk?'✓':'pendiente')+'</span><span class="badge badge-b">📶 '+((c.wifi1||c.wifi2)?'wifi':'sin wifi')+'</span><span class="badge '+(pc.ok?'badge-g':'badge-r')+'" title="'+v4Esc(pc.t)+'">'+(pc.ok?'Admite 1 prórroga o anexo':'Sin prórroga ni anexo')+'</span>'):'')
      +(c.anexoIData?'<button class="pdf-badge green" onclick="openPdf(\''+c.anexoIData+'\',\''+v4Esc(c.anexoIName||'anexo_I.pdf')+'\')">📎 Anexo I</button>':'')
      +((c.fotosEntrada&&c.fotosEntrada.length)?'<button class="pdf-badge green" onclick="event.stopPropagation();verFotosContrato(\''+c.id+'\',\'entrada\')">📸 Entrada ('+c.fotosEntrada.length+')</button>':'')+'</div></div>'
@@ -12876,7 +12885,7 @@ function v4WidgetDash(){
    +(top.length?top.map(a=>v4HtmlAviso(a,hoy)).join(''):'<div style="font-size:12px;color:var(--ink3);margin-top:8px;">Todo al día.</div>')+v4HtmlPasosHabs()+'</div>';
 }
 // Ventana de avisos al abrir la aplicación
-function v4VentanaAvisos(forzar){
+function v15VentanaBase(forzar){
   const hoy=v4Hoy();
   try{ if(!forzar&&sessionStorage.getItem('rc_v4_avisos')===hoy) return; }catch(e){}
   if(!forzar&&$i('m-v4av')&&$i('m-v4av').classList.contains('open')) return;
@@ -12995,6 +13004,7 @@ function v4PasoDe(lista,hoy){ const p=(lista||[]).filter(a=>!a.hecho&&!(a.caduca
 // Situación de una habitación hoy y su contrato
 function v4CoHab(propId,hab,hoy){
   hoy=hoy||v4Hoy();
+  { const e14=v14EnteroEn(propId,hoy); if(e14) return {co:null, entero:e14, estado:'entero', sig:null}; }
   const cs=(D.conts||[]).filter(c=>c.propId==propId&&String(v4Hab(c))===String(hab)&&v4F(c)&&v7Gest(c));
   const L=c=>c.llaves&&c.llaves.L, fin=c=>v4FinCobro(c)||v4E(c)||'9999-12-31';
   const fut=cs.filter(c=>v4F(c)>hoy).sort((a,b)=>v4F(a).localeCompare(v4F(b)));
@@ -13018,7 +13028,7 @@ function v4PasoHab(propId,hab,hoy,al){
   const lista=al.filter(a=>(x.co&&a.coId===x.co.id)||((a.incId||a.visId||a.resId)&&a.propId==propId&&String(a.hab||'')===String(hab)));
   return {x, a:v4PasoDe(lista,hoy)};
 }
-const V4_ESTADO_HAB={reserva:'reservada: oferta firmada, falta el contrato',ocupada:'ocupada','sin-llaves':'terminado sin entrega de llaves',reservada:'reservada',cerrando:'libre · pendiente de liquidar la retención',libre:'libre','sin-contrato':'sin contrato registrado'};
+const V4_ESTADO_HAB={reserva:'reservada: oferta firmada, falta el contrato',ocupada:'ocupada','sin-llaves':'terminado sin entrega de llaves',reservada:'reservada',cerrando:'libre · pendiente de liquidar la retención',libre:'libre','sin-contrato':'sin contrato registrado',entero:'piso alquilado entero'};
 function v4Cuando(d){ return d===0?'hoy':d<0?('hace '+(-d)+' día'+(d===-1?'':'s')):d===1?'mañana':('en '+d+' días'); }
 function v4ChipPaso(a,hoy){
   hoy=hoy||v4Hoy();
@@ -13037,6 +13047,7 @@ function v4ChipSinContrato(inq,coViejo){
 }
 function v4HtmlPasoDe(r,hoy){
   if(r.a) return v4ChipPaso(r.a,hoy);
+  if(r.x.estado==='entero') return v14ChipEntero(r.x.entero);
   if(r.x.estado==='sin-contrato') return v4ChipSinContrato(r.x.inq,r.x.coViejo);
   if(r.x.estado==='libre') return v4ChipLibre();
   return v4ChipOk();
@@ -13098,7 +13109,7 @@ const V4_VIS_ACTIVAS=['pendiente','confirmada'];
 function v4MinHM(h){ const [a,b]=String(h||'0:0').split(':').map(Number); return (a||0)*60+(b||0); }
 function v4HMde(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
 function v4Presente(c,iso){ return v7Gest(c)&&v4PersonasCo(c).some(p=>p.desde<=iso&&p.hasta>=iso)&&!(c.llaves&&c.llaves.L&&c.llaves.L<=iso); }
-function v4OcupHab(propId,hab,iso){ return (D.conts||[]).filter(c=>c.propId==propId&&String(v4Hab(c))===String(hab)&&v4Presente(c,iso)); }
+function v4OcupHab(propId,hab,iso){ return (D.conts||[]).filter(c=>c.propId==propId&&((String(v4Hab(c))===String(hab)&&v4Presente(c,iso))||(c.pisoEntero&&v14Vig(c,iso)))); }
 function v4OcupPiso(propId,iso,excluirHab){ return (D.conts||[]).filter(c=>c.propId==propId&&(excluirHab==null||excluirHab===''||String(v4Hab(c))!==String(excluirHab))&&v4Presente(c,iso)); }
 function v4ValidarVisita(v,ahora){
   const err=[], av=[]; if(!v||!v.propId||!v.fecha||!v.hora||!V4_VIS_ACTIVAS.includes(v.est||'pendiente')) return {err,av};
@@ -14237,7 +14248,7 @@ function v5OfertaNueva(r){ if(r&&r.oferta) return r.oferta===V5_MODELO_NUEVO; re
 function v4Venc(co,mes){ const F=v4F(co); if(!F) return null; const mF=F.slice(0,7); if(mes<mF) return null; if(mes===mF) return F;
   if(v5Nuevo(co)) return mes+'-01';
   const prev=v4FinMes(v4MesSig(mes,-1)); if(prev===F) return mes+'-05'; return prev; }
-function v4VencInq(inqId,mes){ const co=v4CoDeInq(inqId,mes); if(co&&v7Gest(co)&&v4F(co)){ const v=v4Venc(co,mes); if(v) return v; } return mes+'-01'; }
+function v14VencInqBase(inqId,mes){ const co=v4CoDeInq(inqId,mes); if(co&&v7Gest(co)&&v4F(co)){ const v=v4Venc(co,mes); if(v) return v; } return mes+'-01'; }
 // Si F cae en los 3 últimos días del mes, el email del primer pago se envía en F o al día siguiente
 function v5FirmaFinMes(F){ return !!F&&fxAdd(v4FinMes(F),-2)<=F; }
 function v5TxtVenc(co,mes){ const V=v4Venc(co,mes); if(!V) return ''; return v5Nuevo(co)?'día 1':v4FL(V); }
@@ -14550,7 +14561,7 @@ function v4AlertasGlobales(hoy){
 }
 
 // ── Motor de avisos (añade los nuevos) ──
-function v4Alertas(hoy){
+function v15AlertasBase(hoy){
   hoy=hoy||v4Hoy();
   let out=[]; (D.conts||[]).forEach(co=>{ try{ out=out.concat(v4AlertasContrato(co,hoy)); }catch(e){ console.warn('Avisos del contrato',co.id,e); } try{ out=out.concat(v5AlertasSituaciones(co,hoy)); }catch(e){ console.warn(e); } });
   [()=>v4AlertasIncidencias(),()=>v4AlertasVisitas(hoy),()=>v4AlertasVisitasCee(hoy),()=>v4AlertasReservas(hoy),()=>v4AlertasPisos(hoy),()=>v4AlertasGlobales(hoy),()=>v4AlertasDatos(hoy),()=>v11AlertasReglas(hoy)].forEach(f=>{ try{ out=out.concat(f()); }catch(e){ console.warn(e); } });
@@ -14682,7 +14693,7 @@ Object.assign(V4_RES_CASOS,{
 
 // ── Tipo de contrato y modelo ──
 function v7EsHab(co){ return !!co&&co.tipoContrato==='habitual'; }
-function v7Gest(co){ return !!co&&(v4EsTemporal(co)||v7EsHab(co)); }
+function v7Gest(co){ return !!co&&!co.pisoEntero&&(v4EsTemporal(co)||v7EsHab(co)); }
 function v7ResHab(r){ return !!r&&r.tipo==='habitual'; }
 function v7OfertaMulti(r){ return !!r&&!!(V7_OFERTAS[r.oferta]||{}).multi; }
 function v7Aniv(co,k){ return v4AddM(v4F(co),12*k); }
@@ -14765,6 +14776,7 @@ function v7ValRes(co,av,err){
   try{ v11ValGarRes(co,rs,av,err||av); }catch(e){ console.warn(e); }
 }
 function v4ValidarContrato(co){
+  if(co&&co.pisoEntero) return v14Validar(co);
   if(v7EsHab(co)) return v7ValidarHab(co);
   const v=v7ValCoBase(co); if(!v4EsTemporal(co)) return v;
   // La regla antigua «fianza y garantía de una mensualidad cada una» solo valía para la oferta v20261102: se sustituye por la de la oferta enlazada (v11ValGarRes)
@@ -14826,6 +14838,7 @@ function v7Txt10(f,l){
   return 'Art. 10.1 LAU, según la redacción que conozco (el contrato remite a la aplicable según el derecho transitorio: compruébala antes de comunicar): si al vencimiento ninguna parte comunica que no quiere renovar —tú con al menos '+V7_ART10.arr+' meses (aquí, como tarde el '+v4F2(l)+') y el inquilino con al menos '+V7_ART10.inq+' meses—, el contrato se prorroga obligatoriamente por años hasta 3 más, salvo que el inquilino avise con 1 mes antes del final de cualquiera de esas anualidades. Tus comunicaciones, por medio fehaciente (cláusulas 3 y 71). Antes, pídele la declaración actualizada de otra vivienda en el municipio (manifiesta 4). Ten en cuenta las prórrogas extraordinarias que, en su caso, prevea el art. 10 a petición del inquilino. Fin del periodo: '+v4F2(f)+'. Si decides no prorrogar, regístralo en Gestionar → 🏁 Terminación por el arrendador.';
 }
 function v4AlertasContrato(co,hoy){
+  if(co&&co.pisoEntero) return v14Alertas(co,hoy);
   hoy=hoy||v4Hoy(); const base=v7AlCoBase(co,hoy);
   if(!v7EsHab(co)){ if(v4EsTemporal(co)&&co.gImp==='si') return base.concat(v7AlGimp(co)); return base; }
   return v7AlertasHab(co,base,hoy);
@@ -15084,7 +15097,7 @@ function v7RellenarV7(co){ const s=(i,v)=>{ const e=$i(i); if(e) e.value=(v===un
   s('co-gop',co.gOp||(co.id&&parseFloat(co.g)>0?'si':'')); s('co-gimp',co.gImp); s('co-gimpent',co.gImpEnt); ch('co-gimpok',co.gImpOk); s('co-otra1',co.otraViv1); s('co-otra2',co.otraViv2); s('co-pads1',co.padSol1); s('co-padv1',co.padVol1); s('co-pads2',co.padSol2); s('co-padv2',co.padVol2); s('co-nec',co.necesidad); s('co-necp',co.necPersona); s('co-necm',co.necMotivo); ch('co-hd-id',co.hdId); ch('co-hd-ing',co.hdIng); ch('co-hd-vl',co.hdVl); ch('co-hd-saldo',co.hdSaldo); ch('co-renov',co.renovMismo); s('co-lee-json',co.pdfLeido?JSON.stringify(co.pdfLeido):'');
   const m=$i('m-co'); if(m) m.dataset.fManual='1'; }
 function newCont(){ v7OpcionesModelo(); v7NewCoBase(); v7ResetV7(); const t=$i('co-tipo'); if(t) t.value='temporal'; const m=$i('co-modelo'); if(m) m.value=V7_TMP; v13DefectosModelo(); v7AplicarTipoForm(); v4ValidarFormCont(); }
-function editCont(id){ v7OpcionesModelo(); v7ResetV7(); v7EditCoBase(id); const co=v4Co(id); if(co) v7RellenarV7(co); v7AplicarTipoForm(); v4ValidarFormCont(); }
+function editCont(id){ { const c0=v4Co(id); if(c0&&c0.pisoEntero){ v14Form(id); return; } } v7OpcionesModelo(); v7ResetV7(); v7EditCoBase(id); const co=v4Co(id); if(co) v7RellenarV7(co); v7AplicarTipoForm(); v4ValidarFormCont(); }
 function v4LeerFormCont(){
   const co=v7LeerCoBase(), ch=i=>!!($i(i)&&$i(i).checked);
   if($i('co-gop')) Object.assign(co,{gOp:gi('co-gop'), gImp:gi('co-gimp'), gImpEnt:gi('co-gimp')==='si'?gi('co-gimpent'):'', gImpOk:gi('co-gimp')==='si'&&ch('co-gimpok')});
@@ -15129,6 +15142,7 @@ function v4ContratoDesdeReserva(id){
 
 // ── Ficha de gestión del contrato: vivienda habitual ──
 function v4Gestionar(coId){
+  { const c0=v4Co(coId); if(c0&&c0.pisoEntero){ v14Ficha(coId); return; } }
   v7GestionarBase(coId); const co=v4Co(coId), c=$i('drw-c'); if(!co||!c) return;
   try{ v11PintarReglasCo(co,c); }catch(e){ console.warn(e); }
   try{
@@ -15526,28 +15540,31 @@ function v9TitProp(pid,iso){ const p=(D.props||[]).find(x=>x.id==pid); if(!p) re
 function v9CtaDef(tit,tipo){ if(!tit) return null; tipo=tipo||'cuenta'; const cs=v9Ctas().filter(c=>c.titularId==tit&&(c.tipo||'cuenta')===tipo); return cs.find(c=>c.principal)||(cs.length===1?cs[0]:null); }
 function v9Final(id){ const c=v9Cta(id); if(!c) return ''; return c.tipo==='tarjeta'?(c.cargoId||''):c.id; }
 function v9Flujos(){
-  const out=[], add=(cta,fecha,imp,tipo,txt,src,id,auto)=>{ if(!fecha||!imp) return; const fin=cta==='__no'?'__no':cta?(v9Final(cta)||cta):''; out.push({cta:fin, orig:cta, fecha, imp:v9R2(imp), tipo, txt, src, id, auto:!!auto}); };
+  const out=[], add=(cta,fecha,imp,tipo,txt,src,id,auto,ts)=>{ if(!fecha||!imp) return; const fin=cta==='__no'?'__no':cta?(v9Final(cta)||cta):''; out.push({cta:fin, orig:cta, fecha, imp:v9R2(imp), tipo, txt, src, id, auto:!!auto, ts:ts||0}); };
   (D.pagos||[]).forEach(pg=>{ if(pg.estado!=='pagado') return; const imp=+pg.imp||0; if(!imp) return; const f=pg.fecha||(pg.mes?pg.mes+'-01':''); const inq=(D.inqs||[]).find(i=>i.id==pg.inqId);
     let cta=pg.ctaId||'', auto=false; if(!cta){ const co=pg.mes&&typeof v4CoDeInq==='function'?v4CoDeInq(pg.inqId,pg.mes):null; if(co&&co.ctaId) cta=co.ctaId; else { const d=v9CtaDef(v9TitProp(inq&&inq.propId,f)); cta=d?d.id:''; } auto=true; }
-    add(cta,f,imp,'cobro',(pg.con||'Cobro')+(pg.mes?' '+v4MesNom(pg.mes):'')+' · '+(inq?((inq.nom||'')+' '+(inq.ap||'')).trim():''),'pago',pg.id,auto); });
+    add(cta,f,imp,'cobro',(pg.con||'Cobro')+(pg.mes?' '+v4MesNom(pg.mes):'')+' · '+(inq?((inq.nom||'')+' '+(inq.ap||'')).trim():''),'pago',pg.id,auto,pg.cobTs||0); });
   (D.reservas||[]).forEach(r=>{ const s=+r.senal||0, f=r.fechaPago||r.O; if(!(s>0)||!f||r.datosSuprimidos) return; const tit=v9TitProp(r.propId,f);
     let cta=r.ctaId||'', auto=false; if(!cta){ const d=r.medio==='efectivo'?v9CtaDef(tit,'efectivo'):v9CtaDef(tit); cta=d?d.id:''; auto=true; }
-    add(cta,f,s,'cobro','Reserva · '+v4NomResCorto(r),'reserva',r.id,auto);
-    if(r.devolucion&&r.devolucion.fecha&&+r.devolucion.importe>0) add(cta,r.devolucion.fecha,-(+r.devolucion.importe),'pago','Devolución de la reserva · '+v4NomResCorto(r),'reserva',r.id,auto); });
+    add(cta,f,s,'cobro','Reserva · '+v4NomResCorto(r),'reserva',r.id,auto,r.senalTs||v15TsId(r.id));
+    if(r.devolucion&&r.devolucion.fecha&&+r.devolucion.importe>0) add(cta,r.devolucion.fecha,-(+r.devolucion.importe),'pago','Devolución de la reserva · '+v4NomResCorto(r),'reserva',r.id,auto,r.devolucion.ts||0); });
   (D.compras||[]).forEach(x=>{ const imp=+x.imp||0, f=x.fPago||x.fecha; if(!imp||!f) return; let cta=x.ctaId||'', auto=false;
     if(!cta){ if(/financiado/i.test(x.pago||'')) return; const tit=x.titular||x.ownerId||v9TitProp(x.propId,f), d=/efectivo/i.test(x.pago||'')?v9CtaDef(tit,'efectivo'):v9CtaDef(tit); cta=d?d.id:''; auto=true; }
-    add(cta,f,-imp,'pago','Factura · '+(x.con||'')+(x.emp?' · '+x.emp:''),'compra',x.id,auto); });
+    add(cta,f,-imp,'pago','Factura · '+(x.con||'')+(x.emp?' · '+x.emp:''),'compra',x.id,auto,x.creado||v15TsId(x.id)); });
   (D.gastos||[]).forEach(g=>{ const imp=+g.imp||0, f=g.fPago||g.fecha; if(!imp||!f) return; let cta=g.ctaId||'', auto=false;
     if(!cta){ const h=g.cat==='Hipoteca'?(D.hipotecas||[]).find(x=>x.propId==g.propId):null; if(h&&h.ctaId) cta=h.ctaId; else { const d=v9CtaDef((h&&h.ownerId)||g.titular||v9TitProp(g.propId,f)); cta=d?d.id:''; } auto=true; }
-    add(cta,f,-imp,'pago','Gasto · '+(g.desc||g.cat||''),'gasto',g.id,auto); });
-  (D.provisiones||[]).forEach(pv=>{ if(pv.ctaId&&pv.fecha&&+pv.imp>0) add(pv.ctaId,pv.fecha,+pv.imp,'cobro','Provisión de fondos de '+nombreC(pv.aportante),'prov',pv.id,false); });
+    add(cta,f,-imp,'pago','Gasto · '+(g.desc||g.cat||''),'gasto',g.id,auto,g.creado||v15TsId(g.id)); });
+  (D.provisiones||[]).forEach(pv=>{ if(pv.ctaId&&pv.fecha&&+pv.imp>0) add(pv.ctaId,pv.fecha,+pv.imp,'cobro','Provisión de fondos de '+nombreC(pv.aportante),'prov',pv.id,false,v15TsId(pv.id)); });
   v9Ctas().forEach(c=>(c.movs||[]).forEach(m=>{ const imp=+m.imp||0; if(!imp||!m.fecha) return;
-    if(m.tipo==='traspaso'){ add(c.id,m.fecha,-Math.abs(imp),'traspaso','Traspaso a '+((v9Cta(m.dest)||{}).nom||'otra cuenta')+(m.concepto?' · '+m.concepto:''),'mov',m.id,false); if(m.dest) add(m.dest,m.fecha,Math.abs(imp),'traspaso','Traspaso desde '+c.nom+(m.concepto?' · '+m.concepto:''),'mov',m.id,false); }
-    else add(c.id,m.fecha,imp,m.tipo||'mov',(m.tipo==='ajuste'?'Ajuste al saldo del banco':m.tipo==='devfianza'?'Devolución de fianza y garantía':'Movimiento')+(m.concepto?' · '+m.concepto:''),'mov',m.id,false); }));
+    if(m.tipo==='traspaso'){ add(c.id,m.fecha,-Math.abs(imp),'traspaso','Traspaso a '+((v9Cta(m.dest)||{}).nom||'otra cuenta')+(m.concepto?' · '+m.concepto:''),'mov',m.id,false,v15TsId(m.id)); if(m.dest) add(m.dest,m.fecha,Math.abs(imp),'traspaso','Traspaso desde '+c.nom+(m.concepto?' · '+m.concepto:''),'mov',m.id,false,v15TsId(m.id)); }
+    else add(c.id,m.fecha,imp,m.tipo||'mov',(m.tipo==='ajuste'?'Ajuste al saldo del banco':m.tipo==='devfianza'?'Devolución de fianza y garantía':'Movimiento')+(m.concepto?' · '+m.concepto:''),'mov',m.id,false,v15TsId(m.id)); }));
   return out;
 }
 function v9ConSaldo(c){ return !!c&&c.saldoFecha&&c.saldoIni!==undefined&&c.saldoIni!==null&&c.saldoIni!==''&&isFinite(+c.saldoIni); }
-function v9SaldoCta(c,hasta,fl){ if(!v9ConSaldo(c)) return null; hasta=hasta||v4Hoy(); fl=fl||v9Flujos(); let s=+c.saldoIni; fl.forEach(f=>{ if(f.cta===c.id&&f.fecha>c.saldoFecha&&f.fecha<=hasta) s+=f.imp; }); return v9R2(s); }
+// Un movimiento cambia el saldo si es posterior al día del saldo de partida. Si es del mismo día y el saldo se escribió ese mismo día,
+// solo cuenta si se registró después de escribir el saldo (lo anterior ya estaba en el saldo del banco).
+function v9Cuenta(c,f){ if(f.fecha>c.saldoFecha) return true; if(f.fecha!==c.saldoFecha||!f.ts||!c.saldoTs) return false; return new Date(c.saldoTs).v12Dia()===c.saldoFecha&&f.ts>c.saldoTs; }
+function v9SaldoCta(c,hasta,fl){ if(!v9ConSaldo(c)) return null; hasta=hasta||v4Hoy(); fl=fl||v9Flujos(); let s=+c.saldoIni; fl.forEach(f=>{ if(f.cta===c.id&&v9Cuenta(c,f)&&f.fecha<=hasta) s+=f.imp; }); return v9R2(s); }
 function v9Depositos(){
   const hoy=v4Hoy(), out=[], devs=new Set(); v9Ctas().forEach(c=>(c.movs||[]).forEach(m=>{ if(m.tipo==='devfianza'&&m.coId) devs.add(m.coId); }));
   (D.conts||[]).forEach(co=>{ const F=v4F(co); if(!F||F>hoy||devs.has(co.id)) return; const f=(parseFloat(co.f)||0)+(parseFloat(co.g)||0); if(!(f>0)) return; const L=co.llaves&&co.llaves.L; if(L&&L<fxAdd(hoy,-60)) return;
@@ -15583,6 +15600,7 @@ function v2GuardarCta(){
   if(o.tipo==='tarjeta'){ o.cargoId=gi('cb-cargo'); o.principal=false; o.saldoIni=''; o.saldoFecha=''; }
   else { o.principal=!!($i('cb-princ')&&$i('cb-princ').checked); o.cargoId='';
     if(sv!==''){ const n=v9Num(sv); if(!isFinite(n)){ toast('El saldo no es un número',false); return; } if(!sf){ toast('Indica la fecha de ese saldo',false); return; } if(sf>v4Hoy()){ toast('La fecha del saldo no puede ser futura',false); return; } o.saldoIni=v9R2(n); o.saldoFecha=sf; } else { o.saldoIni=''; o.saldoFecha=''; } }
+  { const prev=gi('cb-id')?v9Cta(gi('cb-id')):null; o.saldoTs=(o.saldoFecha&&prev&&String(prev.saldoIni)===String(o.saldoIni)&&prev.saldoFecha===o.saldoFecha&&prev.saldoTs)?prev.saldoTs:(o.saldoFecha?Date.now():''); }
   const id=gi('cb-id'); let c; if(id){ c=v9Cta(id); Object.assign(c,o); } else { c=Object.assign({id:uid(), movs:[]},o); D.ctasBanc.push(c); }
   if(o.principal) v9Ctas().forEach(x=>{ if(x.id!==c.id&&x.titularId==c.titularId&&(x.tipo||'cuenta')===(c.tipo||'cuenta')&&x.principal){ x.principal=false; x._upd=Date.now(); } });
   c._upd=Date.now(); saveAndSync(); closeM('m-ctab'); rCtasBanc(); }
@@ -15616,7 +15634,7 @@ function v9GuardarMov(ctaId){ const c=v9Cta(ctaId); if(!c) return; const t=gi('m
 function v9BorrarMov(ctaId,mid){ const c=v9Cta(ctaId); if(!c||!confirm('¿Eliminar este movimiento?')) return; c.movs=(c.movs||[]).filter(m=>m.id!==mid); c._upd=Date.now(); saveAndSync(); rCtasBanc(); v9VerMovs(ctaId); }
 function v9VerMovs(ctaId){
   const c=v9Cta(ctaId); if(!c) return; window._v9DrwCta=ctaId; const fl=v9Flujos(), hoy=v4Hoy();
-  const xs=fl.filter(f=>(f.cta===c.id||f.orig===c.id)&&(!v9ConSaldo(c)||f.fecha>c.saldoFecha)).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const xs=fl.filter(f=>(f.cta===c.id||f.orig===c.id)&&(!v9ConSaldo(c)||v9Cuenta(c,f))).sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.ts||0)-(b.ts||0));
   let s=v9ConSaldo(c)?+c.saldoIni:0;
   const filas=xs.map(f=>{ const fut=f.fecha>hoy, ok=f.cta===c.id; if(ok&&!fut) s=v9R2(s+f.imp);
     const acc=f.src==='mov'?'<button class="btn btn-ghost btn-xs" onclick="v9BorrarMov(\''+c.id+'\',\''+f.id+'\')">🗑</button>':'<select style="font-size:10.5px;max-width:130px;" onchange="v9Reasignar(\''+f.src+'\',\''+f.id+'\',this.value)">'+v9OptsCta(f.auto?'':f.orig,true).replace('<option value="">—</option>','<option value="">'+(f.auto?'Automática':'—')+'</option>')+'</select>';
@@ -15634,7 +15652,7 @@ function rCtasBanc(){
     +(L.on?'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">'
       +'<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;">Saldo en cuentas hoy</div><div style="font-family:\'DM Mono\',monospace;font-size:18px;font-weight:700;">'+v4E2(L.saldo)+' €</div><div style="font-size:10.5px;color:var(--ink3);">'+Object.entries(L.porTit).map(([t,v])=>v4Esc(nombreC(t))+' '+v4E2(v)+' €').join(' · ')+'</div></div>'
       +'<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;">Dinero de inquilinos</div><div style="font-family:\'DM Mono\',monospace;font-size:18px;font-weight:700;color:var(--rd);">−'+v4E2(L.dep)+' €</div><div style="font-size:10.5px;color:var(--ink3);">fianzas, garantías y reservas que hay que devolver o aplicar</div></div>'
-      +'<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;">Liquidez neta (cuenta en el patrimonio)</div><div style="font-family:\'DM Mono\',monospace;font-size:18px;font-weight:700;color:var(--gn);">'+v4E2(L.neta)+' €</div></div></div>'
+      +'<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;">Liquidez neta (cuenta en el patrimonio)</div><div style="font-family:\'DM Mono\',monospace;font-size:18px;font-weight:700;color:'+(L.neta<0?'var(--rd)':'var(--gn)')+';">'+v4E2(L.neta)+' €</div></div></div>'
       +(L.deps.length?'<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:12px;">Detalle del dinero de inquilinos ('+L.deps.length+')</summary><div style="font-size:11.5px;line-height:1.6;margin-top:4px;">'+L.deps.map(d=>'• '+v4Esc(d.txt)+': '+v4E2(d.imp)+' €').join('<br>')+'<br><span style="color:var(--ink3);">Al devolver una fianza, anótalo con «+ Movimiento → Devolución de fianza y garantía».</span></div></details>':'')
     :'<div style="font-size:12px;color:var(--ink3);">Edita cada cuenta ✏️ y escribe su saldo de hoy: desde ese día la app suma los cobros y resta las facturas y los gastos, y la liquidez entra en el patrimonio neto del Dashboard.</div>')
     +(L.sinSaldo.length&&L.on?'<div class="alert alert-y" style="font-size:11.5px;margin-top:8px;">⚠️ Sin saldo inicial: '+L.sinSaldo.map(c=>v4Esc(c.nom)).join(', ')+'. No cuentan en la liquidez.</div>':'')
@@ -15643,11 +15661,11 @@ function rCtasBanc(){
   el.innerHTML=res+v9Ctas().map(c=>{
     const its=items.filter(it=>it.ctaId==c.id), tot=its.reduce((s,it)=>s+it.imp,0), mal=its.filter(it=>it.titular&&c.titularId&&it.titular!==c.titularId&&!it.provId);
     const tar=c.tipo==='tarjeta', ico=tar?'💳':c.tipo==='efectivo'?'💵':'🏦', s=tar?null:v9SaldoCta(c,null,fl);
-    const des=fl.filter(f=>f.cta===c.id&&v9ConSaldo(c)&&f.fecha>c.saldoFecha&&f.fecha<=hoy), ent=des.filter(f=>f.imp>0).reduce((a,f)=>a+f.imp,0), sal=des.filter(f=>f.imp<0).reduce((a,f)=>a+f.imp,0);
+    const des=fl.filter(f=>f.cta===c.id&&v9ConSaldo(c)&&v9Cuenta(c,f)&&f.fecha<=hoy), ent=des.filter(f=>f.imp>0).reduce((a,f)=>a+f.imp,0), sal=des.filter(f=>f.imp<0).reduce((a,f)=>a+f.imp,0);
     return '<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;"><div><div style="font-size:14px;font-weight:700;">'+ico+' '+v4Esc(c.nom)+(c.num?' ·'+v4Esc(c.num):'')+(c.principal?' <span class="badge badge-g">principal</span>':'')+'</div><div style="font-size:11px;color:var(--ink3);">'+(c.banco?v4Esc(c.banco)+' · ':'')+'titular <strong>'+v4Esc(nombreC(c.titularId))+'</strong>'+(tar?' · cargo en '+v4Esc((v9Cta(c.cargoId)||{}).nom||'— sin cuenta de cargo'):'')+'</div></div>'
       +'<div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="v2EditCta(\''+c.id+'\')">✏️</button><button class="btn btn-danger btn-xs" onclick="if(confirm(\'¿Eliminar?\')){D.ctasBanc=D.ctasBanc.filter(x=>x.id!=\''+c.id+'\');saveAndSync();rCtasBanc();}">🗑</button></div></div>'
-      +(tar?'':s!==null?'<div style="margin-top:10px;"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;">Saldo hoy</div><div style="font-family:\'DM Mono\',monospace;font-size:22px;font-weight:800;color:'+(s<0?'var(--rd)':'var(--ink)')+';">'+v4E2(s)+' €</div><div style="font-size:11px;color:var(--ink3);">desde '+v4E2(c.saldoIni)+' € el '+v4F2(c.saldoFecha)+': +'+v4E2(ent)+' € de entradas, '+v4E2(sal)+' € de salidas</div></div>':'<div style="margin-top:10px;font-size:12px;color:var(--ye);">Sin saldo inicial: edítala ✏️ y escribe el saldo de hoy.</div>')
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="v9VerMovs(\''+c.id+'\')">📋 Movimientos</button>'+(tar?'':'<button class="btn btn-secondary btn-sm" onclick="window._v9MovCta=\''+c.id+'\';v9FormMov(\''+c.id+'\')">+ Movimiento</button><button class="btn btn-ghost btn-sm" onclick="window._v9MovCta=\''+c.id+'\';v9FormMov(\''+c.id+'\',\'ajuste\')">⚖️ Cuadrar con el banco</button>')+'</div>'
+      +(tar?v15HtmlTarjeta(c,fl):s!==null?'<div style="margin-top:10px;"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;">Saldo hoy</div><div style="font-family:\'DM Mono\',monospace;font-size:22px;font-weight:800;color:'+(s<0?'var(--rd)':'var(--ink)')+';">'+v4E2(s)+' €</div><div style="font-size:11px;color:var(--ink3);">desde '+v4E2(c.saldoIni)+' € el '+v4F2(c.saldoFecha)+': +'+v4E2(ent)+' € de entradas, '+v4E2(sal)+' € de salidas</div></div>':'<div style="margin-top:10px;font-size:12px;color:var(--ye);">Sin saldo inicial: edítala ✏️ y escribe el saldo de hoy.</div>')
+      +v15HtmlUltimos(c,fl)+'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="v9VerMovs(\''+c.id+'\')">📋 Movimientos</button>'+(tar?'':'<button class="btn btn-secondary btn-sm" onclick="window._v9MovCta=\''+c.id+'\';v9FormMov(\''+c.id+'\')">+ Movimiento</button><button class="btn btn-ghost btn-sm" onclick="window._v9MovCta=\''+c.id+'\';v9FormMov(\''+c.id+'\',\'ajuste\')">⚖️ Cuadrar con el banco</button>')+'</div>'
       +'<div style="font-size:12px;margin-top:8px;">'+its.length+' gasto(s) asignados en la ficha fiscal · '+eur(tot)+'</div>'
       +(mal.length?'<div class="alert alert-r" style="margin-top:8px;font-size:11px;">⚠️ '+mal.length+' gasto(s) de otro titular pagados desde esta cuenta sin provisión de fondos.</div>':'')+'</div>';
   }).join('');
@@ -15976,7 +15994,8 @@ function v12Limpiar(){
   return antes-D.pagos.length;
 }
 function v12Generar(){
-  D.pagos=D.pagos||[]; const lim=v12MesLim(), quit=v12Limpiar(); let gen=0;
+  D.pagos=D.pagos||[]; let sinc=false; try{ sinc=v14SyncTodos(); }catch(e){ console.warn(e); }
+  const lim=v12MesLim(), quit=v12Limpiar(); let gen=0;
   (D.conts||[]).forEach(co=>{
     if(!v12CoGest(co)) return; const pay=v4Inq(co.inqId); if(!pay||pay.estado==='PASADO') return;
     const F=v4F(co), fin=v4FinCobro(co); if(!F||!fin) return;
@@ -15993,7 +16012,7 @@ function v12Generar(){
         if(imp>0&&!D.pagos.some(p=>p.inqId==inq.id&&p.mes===m&&(p.con===con||(con==='Alquiler'&&v12EsAlq(p))))){ D.pagos.push({id:uid(),inqId:inq.id,con,mes:m,imp,estado:'pendiente',fecha:'',notas:'Auto',v4:con==='Alquiler'}); gen++; } });
       m=v4MesSig(m); g++; }
   });
-  if(gen||quit) saveAndSync();
+  if(gen||quit||sinc) saveAndSync();
   return gen;
 }
 function autoGenerarPagosPendientes(){ return v12Generar(); }
@@ -16026,6 +16045,8 @@ function v12Unidades(M){
   (D.conts||[]).forEach(co=>{ if(v12CoGest(co)&&v4RentaMes(co,M)>0) get('co:'+co.id); });
   (D.pagos||[]).forEach(p=>{ if(p.mes!==M) return; const u=get(v12UnidadKey(p,M)); if(u) u.recs.push(p); });
   (D.inqs||[]).forEach(i=>{ if(!U.has('inq:'+i.id)&&!v12TieneCoGest(i.id)&&v12LegadoActivo(i,M)) get('inq:'+i.id); });
+  // Inquilino de un alquiler del piso entero (v4.14): la tarjeta es la del piso
+  U.forEach(u=>{ if(!u.co&&u.inqId){ const e=v14CoEnteroInq(u.inqId,M); if(e){ u.entero=e; u.hab=''; u.nom=v4NombresCompletos(e); u.propId=e.propId; } } });
   return [...U.values()].map(u=>Object.assign(u,v12Estado(u,M,hoy))).filter(u=>u.L.length);
 }
 function v12UnidadMes(key,M){ return v12Unidades(M).find(u=>u.key===key)||(()=>{ const u=v12Unidad(key); return u?Object.assign(u,v12Estado(u,M,v4Hoy())):null; })(); }
@@ -16045,16 +16066,16 @@ function v12TxtLinea(u,l,M){
   return l.con+(l.mes&&l.mes!==M?' · '+v4MesNom(l.mes):'')+(v12EsDep(l)?' (depósito)':'');
 }
 function v12HtmlUnidad(u,M,hoy){
-  const c=V12_COL[u.estado]||V12_COL.sin, co=u.co, tipo=co?(v7EsHab(co)?'Vivienda habitual':'Temporal'):'Sin contrato en la app';
+  const c=V12_COL[u.estado]||V12_COL.sin, co=u.co, tipo=co?(v7EsHab(co)?'Vivienda habitual':'Temporal'):u.entero?v14TipoTxt(u.entero):'Sin contrato en la app';
   const vtxt=u.firma?'Se paga en la firma ('+v4F2(u.V)+')':'Vence el '+v4F2(u.V);
   const dias=u.venc?v4Diff(u.V,hoy):0;
   const lin=u.L.map(l=>'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:4px 7px;border-radius:6px;margin-top:3px;background:'+(l.pag?'rgba(16,185,129,.10)':'rgba(120,120,120,.07)')+';">'
     +'<span style="font-size:11px;color:'+(l.pag?'#059669':'var(--ink2)')+';min-width:0;">'+(l.pag?'✓':'○')+' '+v4Esc(v12TxtLinea(u,l,M))+(l.pag&&l.fecha?' <span style="color:var(--ink3);">· cobrado el '+v4F2(l.fecha)+'</span>':'')+(l.virtual?' <span style="color:var(--ink3);">· previsto</span>':'')+'</span>'
     +'<span class="mono" style="font-size:11px;white-space:nowrap;color:'+(l.pag?'#059669':'var(--ink2)')+';">'+v4E2(l.imp)+' €</span></div>').join('');
-  const abre=co?"v4Gestionar('"+co.id+"')":(u.inq?"openPerfil('"+u.inqId+"')":'');
+  const abre=co?"v4Gestionar('"+co.id+"')":u.entero?"v4Gestionar('"+u.entero.id+"')":(u.inq?"openPerfil('"+u.inqId+"')":'');
   return '<div class="v12-u" data-u="'+v4Esc(u.key)+'" style="background:'+c.bg+';border:1.5px solid '+c.bd+';border-radius:10px;padding:11px 12px;min-width:0;">'
    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;"><div style="min-width:0;flex:1;'+(abre?'cursor:pointer;':'')+'"'+(abre?' onclick="'+abre+'"':'')+'>'
-   +'<div style="font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:'+c.txt+';">Hab. '+v4Esc(u.hab||'?')+' · '+v4Esc(tipo)+'</div>'
+   +'<div style="font-family:\'DM Mono\',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:'+c.txt+';">'+(u.entero?'🏠 Piso entero':'Hab. '+v4Esc(u.hab||'?'))+' · '+v4Esc(tipo)+'</div>'
    +'<div style="font-size:12.5px;font-weight:700;margin-top:2px;line-height:1.25;">'+v4Esc(u.nom)+'</div></div><span style="font-size:15px;">'+c.ic+'</span></div>'
    +'<div style="font-size:10.5px;margin-top:4px;color:'+(u.venc?'#dc2626':'var(--ink3)')+';">'+vtxt+(u.venc?' · vencido hace '+dias+' día'+(dias===1?'':'s'):'')+'</div>'
    +'<div style="margin-top:6px;">'+lin+'</div>'
@@ -16127,7 +16148,7 @@ function v12Partir(p,pagado){
 }
 function v12Repartir(recs,importe,fecha,cta){
   let resto=v12R2(importe); const res={falta:0, pagados:[], restos:[], sobra:0};
-  const pagar=p=>{ p.estado='pagado'; p.fecha=fecha; if(cta){ p.ctaId=cta; p.v12Cta=true; } res.pagados.push(p); };
+  const pagar=p=>{ p.estado='pagado'; p.fecha=fecha; p.cobTs=Date.now(); if(cta){ p.ctaId=cta; p.v12Cta=true; } res.pagados.push(p); };
   recs.filter(p=>(+p.imp||0)<0).forEach(p=>{ pagar(p); resto=v12R2(resto-(+p.imp)); });
   recs.filter(p=>(+p.imp||0)>=0).forEach(p=>{ const imp=v12R2(p.imp);
     if(resto>=imp-0.004){ pagar(p); resto=v12R2(resto-imp); }
@@ -16166,21 +16187,21 @@ function v12AplicarCobro(co,M,o){
   r.pagados.forEach(p=>{ if(v12EsAlq(p)&&p.mes===M) p.fechaOrden=orden; if(!p.cicloMes){ p.cicloMes=M; p.v12Ciclo=true; } });
   cic.orden=orden; cic.importePagado=imp; cic.dto=rapido; cic.esperado=esperado; if(o.cta) cic.cta=o.cta; else delete cic.cta;
   co.ciclos[M]=cic; v4Guardar(co);
-  return {esperado, imp, falta:r.falta, sobra:r.sobra, rapido, tarde, V, firma};
+  return {esperado, imp, falta:r.falta, sobra:r.sobra, rapido, tarde, V, firma, ids:r.pagados.map(p=>p.id)};
 }
 function v12AplicarCobroInq(u,M,o){
   let lineas=v12PendCobroInq(u,M); if(o.sel) lineas=lineas.filter(l=>o.sel.includes(l.key));
   const recs=lineas.map(l=>{ if(l.rec) return l.rec; const p=Object.assign({id:uid()},l.virtual); D.pagos.push(p); return p; });
   const esperado=v12R2(recs.reduce((s,p)=>s+(+p.imp||0),0)), imp=(o.imp===null||o.imp===undefined||o.imp==='')?esperado:v12R2(o.imp);
   const r=v12Repartir(recs,imp,o.fecha,o.cta||''); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){}
-  return {esperado, imp, falta:r.falta, sobra:r.sobra};
+  return {esperado, imp, falta:r.falta, sobra:r.sobra, ids:r.pagados.map(p=>p.id)};
 }
 
 // ── Deshacer el cobro de un mes ──
 function v12Deshacer(key,M,sinConfirmar){
   const u=v12UnidadMes(key,M); if(!u) return;
   if(!sinConfirmar&&typeof confirm==='function'&&!confirm('¿Deshacer el cobro de '+v12MesTxt(M)+' de '+u.nom+'? Las líneas cobradas vuelven a quedar pendientes.')) return;
-  const volver=p=>{ p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } };
+  const volver=p=>{ p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; delete p.cobTs; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } };
   if(u.co){ const co=u.co, ids=[co.inqId,co.inqId2].filter(Boolean);
     (D.pagos||[]).forEach(p=>{ if(!v12Pag(p)||v12EsDep(p)) return; const mio=(p.coId===co.id||ids.includes(p.inqId))&&v12RecDeCo(p,co,p.mes); if(!mio) return;
       if((v12EsAlq(p)&&p.mes===M)||p.cicloMes===M||(p.pen&&p.pen.coId===co.id&&p.pen.mes===M)||(p.mes===M&&!p.cicloMes)) volver(p); });
@@ -16247,7 +16268,7 @@ function v12GuardarCobro(){
   } else { const fecha=gi('v12c-fecha'); if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ v4Msg('v12c-res','Indica la fecha del cobro.','r'); return; }
     r=v12AplicarCobroInq(u,x.M,{fecha, imp, cta, sel:keys}); }
   _v12Cobro=null; closeM('m-v4'); v12RefrescarPagos();
-  toast(r.falta>0.004?'Cobro parcial guardado · faltan '+v4E2(r.falta)+' €':'Cobro guardado · '+v4E2(r.imp)+' €'+(r.rapido?' (con el descuento de 5 €)':'')+(r.tarde?' (fuera de plazo: penalización de 20 €)':'')+(r.sobra?' · '+v4E2(r.sobra)+' € de más':''));
+  toast((r.falta>0.004?'Cobro parcial guardado · faltan '+v4E2(r.falta)+' €':'Cobro guardado · '+v4E2(r.imp)+' €'+(r.rapido?' (con el descuento de 5 €)':'')+(r.tarde?' (fuera de plazo: penalización de 20 €)':'')+(r.sobra?' · '+v4E2(r.sobra)+' € de más':''))+v15SufijoCuenta('pago',r.ids||[]));
 }
 
 // ── El ciclo del pago mensual (desde Avisos) usa el mismo cálculo ──
@@ -16291,7 +16312,7 @@ function rPagos(){
      +'<button class="btn btn-danger btn-xs" title="Eliminar" onclick="v12BorrarRec(\''+p.id+'\')">🗑</button></td></tr>'; }).join('')+(list.length>600?'<tr><td colspan="8" style="font-size:11px;color:var(--ink3);">Se muestran 600 de '+list.length+'. Filtra por mes para ver el resto.</td></tr>':'');
 }
 function cobrar(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p||!p.mes) return; v12Cobro(v12UnidadKey(p,p.mes),p.mes,[p.id]); }
-function v12DeshacerRec(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p) return; if(p.con==='Bonificación pago rápido'){ D.pagos=D.pagos.filter(x=>x!==p); } else { p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } }
+function v12DeshacerRec(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p) return; if(p.con==='Bonificación pago rápido'){ D.pagos=D.pagos.filter(x=>x!==p); } else { p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; delete p.cobTs; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } }
   if(v12EsAlq(p)&&p.mes){ const co=v4CoDeInq(p.inqId,p.mes); if(co&&co.ciclos&&co.ciclos[p.mes]&&co.ciclos[p.mes].orden){ const c=Object.assign({},co.ciclos[p.mes]); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete c[k]); co.ciclos=Object.assign({},co.ciclos,{[p.mes]:c}); co._upd=Date.now(); } }
   v12Fusionar(); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} v12RefrescarPagos(); toast('Vuelve a estar pendiente'); }
 function v12BorrarRec(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p) return; if(typeof confirm==='function'&&!confirm('¿Eliminar este movimiento ('+(p.con||'')+' · '+v4E2(p.imp)+' €)? Si es una renta de un contrato, se volverá a generar pendiente.')) return; D.pagos=D.pagos.filter(x=>x!==p); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} v12RefrescarPagos(); toast('Eliminado'); }
@@ -16314,20 +16335,23 @@ function addPago(){
   if(!v12MesOk(mes)&&!/fianza|garant/i.test(con)){ toast('Elige el mes al que corresponde',false); return; }
   if(est==='pagado'&&!fecha) fecha=v4Hoy();
   const pdfData=$i('pa-pdf-data')?$i('pa-pdf-data').value:'', pdfName=$i('pa-pdf-name')?$i('pa-pdf-name').value:'', cta=gi('pa-cta');
-  let p=id?(D.pagos||[]).find(x=>x.id==id):null;
+  let p=id?(D.pagos||[]).find(x=>x.id==id):null; const pagadoAntes=!!p&&p.estado==='pagado';
   if(p){ const cambiaImp=Math.abs((+p.imp||0)-imp)>0.004||p.con!==con||p.mes!==mes; Object.assign(p,{inqId:iId, con, mes, imp, estado:est, fecha:est==='pagado'?fecha:'', notas:gi('pa-n')}); if(cambiaImp){ delete p.v4; if(p.notas==='Auto') p.notas='Editado a mano'; } }
   else { p={id:uid(), inqId:iId, con, mes, imp, estado:est, fecha:est==='pagado'?fecha:'', notas:gi('pa-n')}; D.pagos.push(p); }
   if(cta){ p.ctaId=cta; delete p.v12Cta; } else if(id&&!p.v12Cta) delete p.ctaId;
+  if(p.estado==='pagado'){ if(!p.cobTs||!id||!pagadoAntes) p.cobTs=Date.now(); } else delete p.cobTs;
   if(pdfData){ p.pdfData=pdfData; p.pdfName=pdfName; }
   saveAndSync(); closeM('m-pa'); try{ clearPdfZone('pa-pdf-zone','pa-pdf-data'); }catch(e){} try{ v4RefrescarAvisos(); }catch(e){} v12RefrescarPagos(); try{ rDash(); }catch(e){}
-  toast(id?'Movimiento actualizado':'Movimiento registrado');
+  toast((id?'Movimiento actualizado':'Movimiento registrado')+(p.estado==='pagado'?v15SufijoCuenta('pago',[p.id]):''));
 }
 
 // Al borrar un contrato, sus rentas pendientes generadas automáticamente se quitan (no son ingresos de nadie)
 function delCont(id){
   if(typeof confirm==='function'&&!confirm('¿Eliminar el contrato? Se perderán sus avisos y registros (pagos mensuales, llaves, anexos…). Las rentas pendientes generadas para él también se quitan; las cobradas se conservan.')) return;
   const co=v4Co(id);
-  if(co){ const meses=v4MesesCobro(co); D.pagos=(D.pagos||[]).filter(p=>!(p.estado!=='pagado'&&p.con==='Alquiler'&&(p.notas==='Auto'||p.v4)&&meses.includes(p.mes)&&(p.coId===co.id||(!p.coId&&p.inqId==co.inqId&&(()=>{ const c=v4CoDeInq(p.inqId,p.mes); return !c||c.id===co.id; })())))); }
+  if(co&&co.pisoEntero){ D.pagos=(D.pagos||[]).filter(p=>!(p.estado!=='pagado'&&p.con==='Alquiler'&&p.notas==='Auto'&&p.inqId==co.inqId&&p.mes>=String(co.ini||'').slice(0,7)));
+    [co.inqId,co.inqId2].filter(Boolean).forEach(i=>{ const q=v4Inq(i); if(q){ q.alq=0; q._upd=Date.now(); } }); }
+  else if(co){ const meses=v4MesesCobro(co); D.pagos=(D.pagos||[]).filter(p=>!(p.estado!=='pagado'&&p.con==='Alquiler'&&(p.notas==='Auto'||p.v4)&&meses.includes(p.mes)&&(p.coId===co.id||(!p.coId&&p.inqId==co.inqId&&(()=>{ const c=v4CoDeInq(p.inqId,p.mes); return !c||c.id===co.id; })())))); }
   D.conts=(D.conts||[]).filter(c=>c.id!==id); saveAndSync(); try{ v12Generar(); }catch(e){} rConts(); try{ v4RefrescarAvisos(); }catch(e){} toast('Eliminado');
 }
 
@@ -16409,6 +16433,7 @@ function v13DefectosModelo(){
 function v13CambioModelo(){ if(!gi('co-edit-id')) v13DefectosModelo(); }
 // ── Comprobaciones propias de los modelos 20261113 y 20261114, y de la fecha real frente a la prevista ──
 function v13ValCo(co,av,err){
+  try{ v14ValSolape(co,err); }catch(e){ console.warn(e); }
   const mo=co.modelo||'', F=v4F(co), ex=v5ContratoExistente(co), p=(D.props||[]).find(x=>x.id==co.propId);
   if(V13_MOD13.includes(mo)){
     if(p){ const d=v13Dorm(p), c=v13CapViv(p); if(!d.explicita||!c.explicita) av.push('Anota en la ficha del piso el número de dormitorios y la capacidad máxima de la vivienda: van en el encabezamiento del modelo '+mo+' (ahora la app calcula '+(d.n||'?')+' dormitorios y '+(c.n||'?')+' personas).'); }
@@ -16459,6 +16484,376 @@ function v13GuardarAdelanto(id){
   r.prorrogas=(r.prorrogas||[]).concat([{fecha:gi('ra-f')||hoy, P:p, adelanto:true}]); if(gi('ra-h')) r.Phora=gi('ra-h');
   saveAndSync(); closeM('m-v4'); v4RefrescarAvisos(); try{ v4PintarReservas(); }catch(e){}
   toast('Firma adelantada al '+v4F2(p)+' · pago en la firma '+v4E2(v4PagoFirmaRes(r))+' € (antes '+v4E2(antes)+' €)');
+}
+
+// ══════════════════════════════════════════════════════════════
+// v4.14 · 17/11/2026 · Alquiler de la vivienda completa (piso entero)
+// Caso: Javalí Viejo (C/ Poeta Vicente Medina), alquilado entero a los vendedores desde la compra mientras reforman su otra casa.
+// No es un modelo de la app por habitaciones: se registra aparte (pisoEntero + externo) y
+// · ocupa todas las habitaciones del piso mientras dure (habitaciones, calendario, reservas, visitas, panel y siguiente paso);
+// · genera la renta mensual en Pagos (proporcional el primer y el último mes) con su día de pago;
+// · deja anotado en la ficha del piso el contrato de la vivienda completa (art. 17.9 LAU);
+// · los suministros pueden ir a cargo de los arrendatarios.
+// Fuentes: LAU consolidada en el BOE (BOE-A-1994-26003, actualizada el 13/11/2026): arts. 2, 9.1, 17.9, 36.1 y 37.
+// ══════════════════════════════════════════════════════════════
+const V14_TIPOS={habitual:'Vivienda habitual de los arrendatarios (art. 2.1 LAU)',temporal:'Temporal (art. 2.3 LAU: desplazados de su domicilio habitual por una causa acreditable)',usoDistinto:'Uso distinto de vivienda',pendiente:'Por decidir'};
+const V14_ESCRITO={si:'Contrato escrito firmado',escritura:'Pactado en la escritura de compraventa',no:'Sin contrato escrito (acuerdo verbal)'};
+function v14Fin(co){ return (co&&(co.salida||co.fin))||''; }
+function v14Vig(co,iso){ const F=co&&(co.ini||co.firma); if(!F||F>iso) return false; const f=v14Fin(co); return !f||f>=iso; }
+function v14EnteroEn(propId,iso){ return (D.conts||[]).filter(c=>c.pisoEntero&&c.propId==propId&&v14Vig(c,iso)).sort((a,b)=>String(b.ini).localeCompare(String(a.ini)))[0]||null; }
+function v14CoEnteroInq(inqId,mes){
+  if(!inqId||!mes) return null; const d1=mes+'-01', dN=v4FinMes(d1);
+  return (D.conts||[]).filter(c=>c.pisoEntero&&(c.inqId==inqId||c.inqId2==inqId)&&(c.ini||'9999')<=dN&&(!v14Fin(c)||v14Fin(c)>=d1)).sort((a,b)=>String(b.ini).localeCompare(String(a.ini)))[0]||null;
+}
+function v14TipoTxt(co){ return (V14_TIPOS[co.tipoContrato]||'Por decidir').replace(/ \(.*$/,''); }
+function v14Ocupadas(){
+  const hoy=v4Hoy(); let n=0;
+  (D.props||[]).forEach(p=>{ n+=v14EnteroEn(p.id,hoy)?(parseInt(p.habs)||0):(D.inqs||[]).filter(i=>i.estado==='ACTIVO'&&i.propId==p.id).length; });
+  return n+(D.inqs||[]).filter(i=>i.estado==='ACTIVO'&&!(D.props||[]).some(p=>p.id==i.propId)).length;
+}
+
+// ── Renta y vencimiento en Pagos (el arrendatario 1 paga la renta) ──
+function v4ImporteAlquiler(inq,mes){
+  const co=inq&&v14CoEnteroInq(inq.id,mes);
+  if(co){
+    if(co.inqId!=inq.id) return 0;
+    const r=parseFloat(co.r)||0, d1=mes+'-01', dN=v4FinMes(d1), a=co.ini>d1?co.ini:d1, f=v14Fin(co), b=f&&f<dN?f:dN; if(b<a) return 0;
+    const dm=v4DiasMes(mes), n=v4Diff(a,b)+1; return n>=dm?r:Math.round(r/dm*n*100)/100;
+  }
+  return v14ImporteAlqBase(inq,mes);
+}
+function v4VencInq(inqId,mes){
+  const co=v14CoEnteroInq(inqId,mes);
+  if(co){ const dia=Math.min(Math.max(parseInt(co.diaPago)||1,1),v4DiasMes(mes)), v=mes+'-'+String(dia).padStart(2,'0'); return (co.ini&&co.ini.slice(0,7)===mes&&co.ini>v)?co.ini:v; }
+  return v14VencInqBase(inqId,mes);
+}
+// La ficha de los arrendatarios sigue al contrato (Pagos, panel y avisos de fin la usan)
+function v14SyncInqs(co){
+  const hoy=v4Hoy(), F=co.ini, f=v14Fin(co), est=!F?'':F>hoy?'RESERVADO':(f&&f<hoy?'PASADO':'ACTIVO'); let cambio=false;
+  [co.inqId,co.inqId2].filter(Boolean).forEach((id,k)=>{ const i=v4Inq(id); if(!i) return;
+    const nv={propId:co.propId, hab:'', ini:F||'', fin:f||'', alq:k===0?(parseFloat(co.r)||0):0};
+    if(co.sumInq){ nv.luz=0; nv.agua=0; } if(est) nv.estado=est;
+    Object.keys(nv).forEach(x=>{ if(String(i[x]??'')!==String(nv[x])){ i[x]=nv[x]; cambio=true; } });
+    if(cambio) i._upd=Date.now(); });
+  return cambio;
+}
+function v14SyncTodos(){ let c=false; (D.conts||[]).forEach(co=>{ if(co.pisoEntero&&v14SyncInqs(co)) c=true; }); return c; }
+
+// ── Comprobaciones (no son contratos por habitaciones: solo las reglas de la LAU que aplican al piso entero) ──
+function v14Validar(co){
+  const err=[], av=[], r=parseFloat(co.r)||0, f=parseFloat(co.f)||0, p=(D.props||[]).find(x=>x.id==co.propId), F=co.ini, fin=v14Fin(co);
+  if(!co.propId) err.push('Elige el piso.');
+  if(!co.inqId) err.push('Elige o crea el arrendatario.');
+  if(!F) err.push('Pon la fecha de inicio del alquiler.');
+  if(!(r>0)) err.push('Pon la renta mensual.');
+  if(F&&co.fin&&co.fin<F) err.push('El fin previsto es anterior al inicio.');
+  if(co.salida&&F&&co.salida<F) err.push('La salida es anterior al inicio.');
+  if(co.propId&&F){ const hasta=fin||'9999-12-31';
+    const otros=(D.conts||[]).filter(c=>c.id!==co.id&&c.propId==co.propId&&(c.pisoEntero?((c.ini||'')<=hasta&&(!v14Fin(c)||v14Fin(c)>=F)):(v7Gest(c)&&v4F(c)&&v4F(c)<=hasta&&(v4FinCobro(c)||v4E(c)||'9999-12-31')>=F&&!(c.llaves&&c.llaves.L&&c.llaves.L<F))));
+    if(otros.length) err.push('En esas fechas el piso tiene otros contratos: '+otros.map(c=>(c.pisoEntero?'piso entero':'hab. '+v4Hab(c))+' de '+v4Nombres(c)).join(', ')+'.'); }
+  if(co.tipoContrato==='pendiente'||!co.tipoContrato) av.push('Elige el tipo: si viven en él como su vivienda es de vivienda habitual (art. 2.1 LAU); el temporal (art. 2.3 LAU) es para quien está desplazado de su domicilio habitual por una causa justificada y acreditable.');
+  if(co.tipoContrato==='habitual') av.push('Vivienda habitual: si la duración pactada es inferior a 5 años, el contrato se prorroga obligatoriamente por años hasta 5, salvo que los arrendatarios comuniquen al menos 30 días antes que no quieren renovar (art. 9.1 LAU). ITP: exento, pero los arrendatarios tienen que presentar el modelo 600. IRPF: la app aplica la reducción del art. 23.2 LIRPF que corresponda.');
+  if(co.tipoContrato==='temporal') av.push('Temporal: solo vale si los arrendatarios están desplazados de su domicilio habitual por una causa justificada y acreditable (art. 2.3 LAU). Si este piso es su vivienda mientras reforman la otra casa, revísalo con el abogado. ITP: modelo 600 a cargo de los arrendatarios.');
+  if(co.tipoContrato==='usoDistinto') av.push('Uso distinto de vivienda: si viven en él como su vivienda, la ley lo trata como arrendamiento de vivienda (art. 2 LAU). Revísalo con el abogado.');
+  if(co.escrito==='no') av.push('Sin contrato escrito: cualquiera de las partes puede exigir a la otra que se formalice por escrito (art. 37 LAU).');
+  if(r>0&&co.tipoContrato!=='pendiente'){ const m=co.tipoContrato==='usoDistinto'?2:1; if(Math.abs(f-r*m)>0.004) av.push('La fianza obligatoria es de '+(m===1?'una mensualidad':'dos mensualidades')+' en metálico ('+v4E2(r*m)+' €; art. 36.1 LAU). Anotada: '+v4E2(f)+' €.'); }
+  av.push('Es un contrato de la vivienda completa: con la lectura más probable del art. 17.9 LAU, su renta ('+v4E2(r)+' €) sería el tope de la suma de las rentas de las habitaciones de '+(p?p.nom:'este piso')+' que estén alquiladas a la vez cuando lo alquiles por habitaciones. Consúltalo con el abogado antes de fijar precios. Queda anotado en la ficha del piso.');
+  return {ok:!err.length, err, av};
+}
+function v4ValidarContratoEntero(co){ return v14Validar(co); }
+
+// ── Avisos ──
+function v14Alertas(co,hoy){
+  hoy=hoy||v4Hoy(); const out=[]; if(co.salida) return out;
+  if(co.fin){ const f=co.fin; out.push(v7Al(co,'e-fin',f,'Fin previsto del alquiler del piso entero: '+v4Nombres(co),'Termina el '+v4F2(f)+'. Si se van, registra la salida en la ficha del contrato; si siguen, cambia el fin previsto.',{tipo:'Contrato',nivel:'alto',desde:fxAdd(f,-30)})); }
+  return out;
+}
+
+// ── Ventana del contrato ──
+function v14OptsInq(sel){ return '<option value="">— Elegir —</option><option value="__nuevo">+ Nuevo inquilino</option>'+(D.inqs||[]).slice().sort((a,b)=>v12NomInq(a).localeCompare(v12NomInq(b))).map(i=>'<option value="'+v4Esc(i.id)+'"'+(String(i.id)===String(sel||'')?' selected':'')+'>'+v4Esc(v12NomInq(i))+(i.dni?' · '+v4Esc(i.dni):'')+'</option>').join(''); }
+function v14HtmlNuevo(n){ return '<div id="pe-n'+n+'" class="fg" style="display:none;grid-column:1/-1;background:var(--bg);border-radius:8px;padding:8px;"><div class="fgrp"><label>Nombre</label><input id="pe-nom'+n+'"></div><div class="fgrp"><label>Apellidos</label><input id="pe-ap'+n+'"></div><div class="fgrp"><label>DNI/NIE</label><input id="pe-dni'+n+'"></div><div class="fgrp"><label>Teléfono</label><input id="pe-tel'+n+'"></div></div>'; }
+function v14Form(id){
+  const co=id?v4Co(id):null, s=v=>v4Esc(v==null?'':String(v)), o=(obj,sel)=>Object.keys(obj).map(k=>'<option value="'+k+'"'+(k===sel?' selected':'')+'>'+v4Esc(obj[k])+'</option>').join('');
+  const html='<div style="font-size:11.5px;color:var(--ink3);line-height:1.55;margin-bottom:8px;">Para un piso alquilado entero (no por habitaciones), por ejemplo a los vendedores que siguen viviendo en él después de la compra. Mientras dure, todas las habitaciones del piso constan ocupadas y la renta sale cada mes en Pagos.</div>'
+   +'<input type="hidden" id="pe-id" value="'+s(co&&co.id)+'"><div class="fg" oninput="v14Revisar()" onchange="v14Revisar()">'
+   +'<div class="fgrp"><label>Piso *</label><select id="pe-prop"><option value="">— Elegir —</option>'+(D.props||[]).map(p=>'<option value="'+v4Esc(p.id)+'"'+(co&&String(co.propId)===String(p.id)?' selected':'')+'>'+v4Esc(p.nom)+'</option>').join('')+'</select></div>'
+   +'<div class="fgrp"><label>Tipo de contrato</label><select id="pe-tipo">'+o(V14_TIPOS,(co&&co.tipoContrato)||'pendiente')+'</select></div>'
+   +'<div class="fgrp"><label>Arrendatario 1 (paga la renta) *</label><select id="pe-i1" onchange="v14VerNuevo()">'+v14OptsInq(co&&co.inqId)+'</select></div>'
+   +'<div class="fgrp"><label>Arrendatario 2</label><select id="pe-i2" onchange="v14VerNuevo()">'+v14OptsInq(co&&co.inqId2).replace('— Elegir —','— Ninguno —')+'</select></div>'
+   +v14HtmlNuevo(1)+v14HtmlNuevo(2)
+   +'<div class="fgrp"><label>Fecha de inicio (desde cuándo pagan) *</label><input type="date" id="pe-ini" value="'+s(co&&co.ini)+'"></div>'
+   +'<div class="fgrp"><label>Fin previsto (si lo hay)</label><input type="date" id="pe-fin" value="'+s(co&&co.fin)+'"></div>'
+   +'<div class="fgrp"><label>Renta mensual (€) *</label><input type="number" step="0.01" inputmode="decimal" id="pe-r" value="'+s(co&&co.r)+'" placeholder="700"></div>'
+   +'<div class="fgrp"><label>Día de pago de cada mes</label><input type="number" min="1" max="31" id="pe-dia" value="'+s((co&&co.diaPago)||1)+'"></div>'
+   +'<div class="fgrp"><label>Fianza entregada (€)</label><input type="number" step="0.01" inputmode="decimal" id="pe-f" value="'+s(co&&co.f)+'" placeholder="0"></div>'
+   +'<div class="fgrp"><label>Cuenta donde cobra el titular</label><select id="pe-cta">'+v12OptsCtas(co&&co.ctaId)+'</select></div>'
+   +'<div class="fgrp"><label>¿Hay contrato escrito?</label><select id="pe-esc">'+o(V14_ESCRITO,(co&&co.escrito)||'no')+'</select></div>'
+   +'<div class="fgrp"><label>Fecha de firma (si está escrito)</label><input type="date" id="pe-firma" value="'+s(co&&co.firmaDoc)+'"></div>'
+   +'<div class="fgrp fgf"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;"><input type="checkbox" id="pe-sum" style="width:auto;"'+(!co||co.sumInq?' checked':'')+'> Luz, agua y demás suministros a cargo de los arrendatarios (no los pagas tú)</label></div>'
+   +'<div class="fgrp fgf"><label>Notas</label><input id="pe-notas" value="'+s(co&&co.notas)+'" placeholder="Ej.: vendedores del piso; se quedan hasta terminar la reforma de su otra casa"></div>'
+   +'<div class="fgrp fgf"><div class="pdf-upload-zone" id="pe-pdf-zone" onclick="document.getElementById(\'pe-pdf\').click()"><input type="file" id="pe-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload(\'pe-pdf\',\'pe-pdf-zone\',\'pe-pdf-data\')"><input type="hidden" id="pe-pdf-data"><input type="hidden" id="pe-pdf-name"><span class="pdf-upload-label">📎 '+(co&&co.pdfData?'Contrato adjunto: '+v4Esc(co.pdfName||'contrato.pdf')+' (pulsa para cambiarlo)':'Adjuntar el contrato o la escritura (opcional)')+'</span></div></div>'
+   +'</div><div id="pe-val" style="margin-top:8px;"></div>';
+  v4Modal(co?'🏠 Alquiler del piso entero':'🏠 Nuevo alquiler del piso entero',html,'<button class="btn btn-primary" onclick="v14Guardar()">Guardar</button>');
+  v14Revisar();
+}
+function v14VerNuevo(){ [1,2].forEach(n=>{ const b=$i('pe-n'+n); if(b) b.style.display=gi('pe-i'+n)==='__nuevo'?'':'none'; }); }
+function v14LeerForm(){
+  const id=gi('pe-id'), prev=id?v4Co(id):null, n=x=>v12R2(String(x||'').replace(',','.'));
+  return Object.assign({},prev||{},{id:id||'', pisoEntero:true, externo:true, hab:'', propId:gi('pe-prop'), tipoContrato:gi('pe-tipo')||'pendiente', escrito:gi('pe-esc')||'no', inqId:gi('pe-i1'), inqId2:gi('pe-i2'), ini:gi('pe-ini'), fin:gi('pe-fin'), firmaDoc:gi('pe-firma'), r:n(gi('pe-r')), f:n(gi('pe-f')), diaPago:parseInt(gi('pe-dia'))||1, ctaId:gi('pe-cta'), sumInq:!!($i('pe-sum')&&$i('pe-sum').checked), notas:gi('pe-notas')});
+}
+function v14HtmlVal(v,cab){
+  return (v.err.length?'<div class="alert alert-r" style="font-size:11.5px;line-height:1.55;"><div style="min-width:0;flex:1;">⛔ '+(cab||'Falta')+':<br>• '+v.err.map(v4Esc).join('<br>• ')+'</div></div>':'')
+   +(v.av.length?'<div class="alert alert-y" style="font-size:11.5px;line-height:1.55;margin-top:6px;"><div style="min-width:0;flex:1;">⚠️ A tener en cuenta:<br>• '+v.av.map(v4Esc).join('<br>• ')+'</div></div>':'');
+}
+function v14Revisar(){ v14VerNuevo(); const co=v14LeerForm(); if(co.inqId==='__nuevo') co.inqId=gi('pe-nom1')?'nuevo':''; if(co.inqId2==='__nuevo') co.inqId2=gi('pe-nom2')?'nuevo2':''; const b=$i('pe-val'); if(b) b.innerHTML=v14HtmlVal(v14Validar(co)); }
+function v14CrearInq(n,co){
+  const nom=String(gi('pe-nom'+n)||'').trim(); if(!nom) return '';
+  const i={id:uid(), nom, ap:String(gi('pe-ap'+n)||'').trim(), dni:String(gi('pe-dni'+n)||'').trim().toUpperCase(), tel:String(gi('pe-tel'+n)||'').trim(), estado:'ACTIVO', propId:co.propId, hab:'', creado:v4Hoy()};
+  D.inqs=D.inqs||[]; D.inqs.push(i); return i.id;
+}
+function v14Guardar(){
+  const co=v14LeerForm();
+  if(co.inqId==='__nuevo'&&!String(gi('pe-nom1')||'').trim()){ toast('Escribe el nombre del arrendatario 1',false); return; }
+  if(co.inqId2==='__nuevo'&&!String(gi('pe-nom2')||'').trim()) co.inqId2='';
+  const prueba=Object.assign({},co,{inqId:co.inqId==='__nuevo'?'nuevo':co.inqId, inqId2:co.inqId2==='__nuevo'?'nuevo2':co.inqId2}), v=v14Validar(prueba);
+  const minimo=v.err.filter(e=>/^(Elige el piso|Elige o crea|Pon la fecha|Pon la renta)/.test(e));
+  if(minimo.length){ $i('pe-val').innerHTML=v14HtmlVal(v); toast('Falta '+minimo.length+' dato'+(minimo.length===1?'':'s')+' obligatorio'+(minimo.length===1?'':'s'),false); return; }
+  const otros=v.err.filter(e=>!minimo.includes(e));
+  if(otros.length&&!confirm('⚠️ Hay '+otros.length+' problema'+(otros.length===1?'':'s')+':\n\n• '+otros.join('\n• ')+'\n\n¿Guardarlo igualmente?')) return;
+  if(co.inqId==='__nuevo') co.inqId=v14CrearInq(1,co);
+  if(co.inqId2==='__nuevo') co.inqId2=v14CrearInq(2,co);
+  if(co.inqId2===co.inqId) co.inqId2='';
+  const pdf=gi('pe-pdf-data'); if(pdf){ co.pdfData=pdf; co.pdfName=gi('pe-pdf-name')||'contrato_piso_entero.pdf'; }
+  if(otros.length) co.reglasForzadas={f:new Date().toISOString(), err:otros.slice(0,20), nuevo:false}; else delete co.reglasForzadas;
+  if(co.id){ const i=D.conts.findIndex(c=>c.id===co.id); co._upd=Date.now(); if(i>=0) D.conts[i]=co; else D.conts.push(co); }
+  else { co.id=uid(); co.creado=v4Hoy(); D.conts.push(co); }
+  // Ficha del piso: contrato de la vivienda completa (art. 17.9 LAU)
+  const p=(D.props||[]).find(x=>x.id==co.propId); let nota17='';
+  if(p){ const antes=parseFloat(p.rentaUnit)||0; p.enteroAlq='si'; if(!(antes>0)||Math.abs(antes-co.r)>0.004){ p.rentaUnit=co.r; } p.enteroFin=v14Fin(co)||''; p._upd=Date.now(); nota17=' · anotado en la ficha de '+p.nom+' (art. 17.9 LAU)'; }
+  v14SyncInqs(co);
+  // Rentas automáticas pendientes: se recalculan con los datos nuevos (renta, fechas)
+  const pay=v4Inq(co.inqId); if(pay){ const quitar=new Set(); (D.pagos||[]).forEach(x=>{ if(x.inqId==co.inqId&&x.con==='Alquiler'&&x.estado!=='pagado'&&x.notas==='Auto'&&x.mes>=String(co.ini||'').slice(0,7)){ const imp=v4ImporteAlquiler(pay,x.mes); if(imp>0) x.imp=imp; else quitar.add(x); } }); if(quitar.size) D.pagos=D.pagos.filter(x=>!quitar.has(x)); }
+  saveAndSync(); try{ v12Generar(); }catch(e){}
+  closeM('m-v4'); try{ rConts(); }catch(e){} try{ v4RefrescarAvisos(); }catch(e){} try{ v12RefrescarPagos(); }catch(e){}
+  toast('Alquiler del piso entero guardado'+nota17);
+}
+
+// ── Ficha (panel lateral) ──
+function v14Ficha(id){
+  const co=v4Co(id); if(!co) return; const p=(D.props||[]).find(x=>x.id==co.propId), v=v14Validar(co), hoy=v4Hoy(), vig=v14Vig(co,hoy);
+  const fila=(k,x)=>'<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--line);"><span style="color:var(--ink3);">'+k+'</span><span style="text-align:right;">'+x+'</span></div>';
+  const cob=(D.pagos||[]).filter(x=>x.inqId==co.inqId&&v14CoEnteroInq(x.inqId,x.mes)===co&&x.estado==='pagado').reduce((s,x)=>s+(+x.imp||0),0);
+  const pend=(D.pagos||[]).filter(x=>x.inqId==co.inqId&&v14CoEnteroInq(x.inqId,x.mes)===co&&x.estado!=='pagado').reduce((s,x)=>s+(+x.imp||0),0);
+  $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;"><div><div style="font-family:\'Syne\',sans-serif;font-size:17px;font-weight:800;">🏠 Piso entero · '+v4Esc(p?p.nom:'')+'</div><div style="font-size:12px;color:var(--ink3);">'+v4Esc(v4NombresCompletos(co))+'</div></div><button class="btn btn-ghost btn-xs" onclick="closeDrw()">✕</button></div>'
+   +'<div style="margin-bottom:10px;"><span class="badge '+(vig?'badge-g':'badge-y')+'">'+(co.salida?'Terminado el '+v4F2(co.salida):vig?'En vigor':co.ini>hoy?'Empieza el '+v4F2(co.ini):'Terminado')+'</span> <span class="badge badge-b">'+v4Esc(v14TipoTxt(co))+'</span></div>'
+   +fila('Inicio',v4F2(co.ini))+fila('Fin previsto',co.fin?v4F2(co.fin):'sin fecha')+(co.salida?fila('Salida',v4F2(co.salida)):'')
+   +fila('Renta',v4E2(co.r)+' €/mes · día '+(co.diaPago||1))+fila('Fianza',v4E2(co.f)+' €')+fila('Contrato',v4Esc(V14_ESCRITO[co.escrito]||'—')+(co.firmaDoc?' · '+v4F2(co.firmaDoc):''))
+   +fila('Suministros',co.sumInq?'a cargo de los arrendatarios':'a cargo del titular')+fila('Cobrado / pendiente',v4E2(cob)+' € / '+v4E2(pend)+' €')+(co.notas?fila('Notas',v4Esc(co.notas)):'')
+   +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0;"><button class="btn btn-primary btn-sm" onclick="closeDrw();v14Form(\''+co.id+'\')">✏️ Editar</button>'+(co.salida?'':'<button class="btn btn-secondary btn-sm" onclick="v14Salida(\''+co.id+'\')">🚪 Registrar la salida</button>')
+   +'<button class="btn btn-secondary btn-sm" onclick="closeDrw();v4IrA(\'pagos\')">💳 Pagos</button>'+(co.pdfData?'<button class="pdf-badge green" onclick="openPdf(\''+co.pdfData+'\',\''+v4Esc(co.pdfName||'contrato.pdf')+'\')">📄 Contrato</button>':'')+'<button class="btn btn-danger btn-sm" onclick="closeDrw();delCont(\''+co.id+'\')">🗑</button></div>'
+   +v14HtmlVal(v,'Revisar');
+  $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
+}
+function v14Salida(id){
+  const co=v4Co(id); if(!co) return;
+  v4Modal('🚪 Salida del piso entero','<div class="fg"><div class="fgrp"><label>Último día en el piso (entrega de llaves)</label><input type="date" id="pe-sal" value="'+v4Hoy()+'" min="'+v4Esc(co.ini||'')+'"></div></div><div style="font-size:11.5px;color:var(--ink3);line-height:1.55;margin-top:6px;">Desde el día siguiente las habitaciones vuelven a estar libres. La renta de ese mes se calcula hasta ese día (renta ÷ días del mes × días); si pactasteis otra cosa, corrígela en Pagos.</div>','<button class="btn btn-primary" onclick="v14GuardarSalida(\''+id+'\')">Guardar salida</button>');
+}
+function v14GuardarSalida(id){
+  const co=v4Co(id), s=gi('pe-sal'); if(!co||!s) return; if(co.ini&&s<co.ini){ toast('La salida no puede ser anterior al inicio',false); return; }
+  co.salida=s; co._upd=Date.now(); const p=(D.props||[]).find(x=>x.id==co.propId); if(p){ p.enteroFin=s; p._upd=Date.now(); }
+  // Rentas automáticas pendientes de meses posteriores a la salida: se quitan
+  D.pagos=(D.pagos||[]).filter(x=>!(x.inqId==co.inqId&&x.con==='Alquiler'&&x.estado!=='pagado'&&x.notas==='Auto'&&x.mes>s.slice(0,7)));
+  (D.pagos||[]).forEach(x=>{ if(x.inqId==co.inqId&&x.con==='Alquiler'&&x.estado!=='pagado'&&x.notas==='Auto'&&x.mes===s.slice(0,7)){ const imp=v4ImporteAlquiler(v4Inq(co.inqId),x.mes); if(imp>0) x.imp=imp; } });
+  v14SyncInqs(co); saveAndSync(); closeM('m-v4'); v14Ficha(id); try{ rConts(); }catch(e){} try{ v4RefrescarAvisos(); }catch(e){}
+  toast('Salida guardada: el piso queda libre desde el '+v4F2(fxAdd(s,1)));
+}
+// Habitaciones: tarjeta de una habitación de un piso alquilado entero
+function v14HtmlHabEntero(co){ return '<div class="room-name" style="font-size:12px;cursor:pointer;" onclick="v4Gestionar(\''+co.id+'\')">'+v4Esc(v4NombresCompletos(co))+'</div><div style="font-size:10px;color:var(--ink3);margin-top:2px;">Piso entero desde '+v4F2(co.ini)+' · '+v4E2(co.r)+' €/mes el piso'+(co.fin?' · hasta '+v4F2(co.fin):'')+'</div>'; }
+function v14ChipEntero(co){ return v4ChipTxt('var(--gn)','piso alquilado entero a '+v4Esc(v4Nombres(co))+(v14Fin(co)?' hasta el '+v4F2(v14Fin(co)):' sin fecha de fin'),'v4Gestionar(\''+co.id+'\')'); }
+
+// Contrato de habitación en fechas en que el piso está alquilado entero
+function v14ValSolape(co,err){
+  if(!co||co.pisoEntero||!co.propId) return; const F=v4F(co); if(!F) return; const fin=v4FinCobro(co)||v4E(co)||F;
+  const e=(D.conts||[]).filter(c=>c.pisoEntero&&c.propId==co.propId&&(c.ini||'9999')<=fin&&(!v14Fin(c)||v14Fin(c)>=F))[0]; if(!e) return;
+  const nom=v4Nombres(e); if(err.some(x=>x.indexOf(nom)>=0)) return;
+  err.push('El piso está alquilado entero a '+nom+' del '+v4F2(e.ini)+(v14Fin(e)?' al '+v4F2(v14Fin(e)):', sin fecha de fin')+': no se pueden alquilar habitaciones en esas fechas.');
+}
+
+// ══════════════════════════════════════════════════════════════
+// v4.14 · 17/11/2026 · Cuentas que se mueven con cada factura, gasto y cobro · Dashboard sin avisos · Avisos rehechos
+// ══════════════════════════════════════════════════════════════
+
+// ── Cuentas y tarjetas ──
+// Momento en que se registró algo: los id de la app empiezan por la hora en milisegundos
+function v15TsId(id){ const m=String(id||'').match(/^(\d{13})/); return m?+m[1]:0; }
+// Texto que se añade al mensaje al guardar: en qué cuenta entra o de cuál sale, y el saldo que queda
+function v15TxtFlujo(f){
+  if(!f) return '';
+  const fl=v9Flujos(), hoy=v4Hoy(), c=f.cta&&f.cta!=='__no'?v9Cta(f.cta):null, tar=f.orig&&f.orig!==f.cta?v9Cta(f.orig):null, imp=Math.abs(f.imp), ver=f.imp<0?'se resta':'se suma', prep=f.imp<0?' de ':' a ';
+  if(f.cta==='__no') return ' · no pasa por ninguna cuenta';
+  if(!c) return ' · ⚠️ sin cuenta: el titular no tiene cuenta principal; elige la cuenta en la factura o márcala como principal';
+  const nom='«'+c.nom+'»'+(tar?' (con la tarjeta '+tar.nom+')':'');
+  if(!v9ConSaldo(c)) return ' · '+ver+prep+nom+', pero esa cuenta no tiene saldo inicial: escríbelo en Cuentas y tarjetas';
+  if(!v9Cuenta(c,f)) return ' · no cambia el saldo de '+nom+': el '+(f.imp<0?'pago':'cobro')+' ('+v4F2(f.fecha)+') es anterior al saldo de partida ('+v4F2(c.saldoFecha)+'), que ya lo incluye';
+  if(f.fecha>hoy) return ' · '+(f.imp<0?'se restará':'se sumará')+prep+nom+' el '+v4F2(f.fecha);
+  return ' · '+ver+' '+v4E2(imp)+' €'+prep+nom+' (saldo hoy: '+v4E2(v9SaldoCta(c,null,fl))+' €)';
+}
+function v15SufijoCuenta(src,ids){ try{ ids=[].concat(ids||[]); const fl=v9Flujos(), fs=fl.filter(f=>f.src===src&&ids.includes(f.id)); if(!fs.length) return '';
+  if(fs.length===1) return v15TxtFlujo(fs[0]);
+  const tot=v9R2(fs.reduce((s,f)=>s+f.imp,0)), f0=Object.assign({},fs[0],{imp:tot}); return fs.every(f=>f.cta===fs[0].cta)?v15TxtFlujo(f0):' · repartido entre varias cuentas'; }catch(e){ console.warn(e); return ''; } }
+// Al guardar una factura o un gasto, el mensaje dice qué pasa con la cuenta
+function saveCompra(){
+  const ed=gi('cp-edit-id'), antes=new Set((D.compras||[]).map(x=>x.id)), ab=$i('m-compra');
+  v15SaveCompraBase();
+  if(ab&&ab.classList.contains('open')) return; // no se guardó (faltan datos)
+  const x=ed?(D.compras||[]).find(o=>o.id==ed):(D.compras||[]).find(o=>!antes.has(o.id)); if(!x) return;
+  if(/financiado/i.test(x.pago||'')&&!x.ctaId){ toast((ed?'Factura actualizada':'Factura guardada')+' · financiada: no sale de ninguna cuenta'); return; }
+  toast((ed?'Factura actualizada':'Factura guardada')+v15SufijoCuenta('compra',x.id)); try{ if(typeof rCtasBanc==='function') rCtasBanc(); }catch(e){}
+}
+function addGasto(){
+  const antes=new Set((D.gastos||[]).map(x=>x.id));
+  v15AddGastoBase();
+  const g=(D.gastos||[]).find(o=>!antes.has(o.id)); if(!g) return;
+  toast('Gasto registrado'+v15SufijoCuenta('gasto',g.id)); try{ if(typeof rCtasBanc==='function') rCtasBanc(); }catch(e){}
+}
+// Desplegable de cuenta en el formulario de gasto
+function v15FillCtaSel(){ const e=$i('ga-cta'); if(!e) return; const v=e.value; e.innerHTML=v9OptsCta(v,true).replace('<option value="">—</option>','<option value="">Automática (cuenta de la hipoteca o principal del titular)</option>'); e.value=v; }
+// Tarjeta: lo que se ha pagado con ella y de qué cuenta sale
+function v15HtmlTarjeta(c,fl){
+  const hoy=v4Hoy(), mes=hoy.slice(0,7), xs=fl.filter(f=>f.orig===c.id&&f.fecha<=hoy), m=v9R2(xs.filter(f=>f.fecha.slice(0,7)===mes).reduce((s,f)=>s+f.imp,0)), cargo=v9Cta(c.cargoId);
+  return '<div style="margin-top:10px;"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;">Pagado con la tarjeta en '+v4MesNom(mes)+'</div><div style="font-family:\'DM Mono\',monospace;font-size:22px;font-weight:800;">'+v4E2(Math.abs(m))+' €</div>'
+   +'<div style="font-size:11px;color:'+(cargo?'var(--ink3)':'var(--rd)')+';">'+(cargo?'Cada pago se resta de «'+v4Esc(cargo.nom)+'».':'⚠️ Sin cuenta de cargo: lo que pagues con ella no resta de ninguna cuenta. Edítala ✏️ y elige la cuenta de cargo.')+'</div></div>';
+}
+// Últimos movimientos de la cuenta (los que cambian el saldo y los ya incluidos en el saldo de partida)
+function v15HtmlUltimos(c,fl){
+  const hoy=v4Hoy(), tar=c.tipo==='tarjeta', xs=fl.filter(f=>(tar?f.orig===c.id:f.cta===c.id)&&f.fecha<=hoy).sort((a,b)=>b.fecha.localeCompare(a.fecha)||(b.ts||0)-(a.ts||0)).slice(0,5);
+  if(!xs.length) return '<div style="font-size:11px;color:var(--ink3);margin-top:8px;">Sin movimientos todavía.</div>';
+  return '<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:6px;"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Últimos movimientos</div>'
+   +xs.map(f=>{ const cuenta=tar||!v9ConSaldo(c)||v9Cuenta(c,f);
+     return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px;line-height:1.5;'+(cuenta?'':'opacity:.55;')+'"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+v4F2(f.fecha)+' · '+v4Esc(f.txt)+(!tar&&f.orig&&f.orig!==f.cta?' (con tarjeta)':'')+(cuenta?'':' (ya en el saldo de partida)')+'</span><span style="white-space:nowrap;font-family:\'DM Mono\',monospace;color:'+(f.imp<0?'var(--rd)':'var(--gn)')+';">'+(f.imp>0?'+':'')+v4E2(f.imp)+'</span></div>'; }).join('')+'</div>';
+}
+
+// ── Dashboard sin avisos (solo en la sección Avisos) ──
+function v4WidgetDash(){ const b=$i('dash-avisos'); if(b) b.innerHTML=''; }
+// La ventana de avisos ya no sale sola al abrir la app: solo con «Ver resumen de hoy»
+function v4VentanaAvisos(forzar){ if(!forzar) return; return v15VentanaBase(true); }
+
+// ── Borrar avisos (van a la papelera y se pueden recuperar) ──
+function v15ObjAviso(ref){
+  if(!ref) return null;
+  if(ref.startsWith('inc:')) return (D.incs||[]).find(i=>i.id==ref.slice(4))||null;
+  if(ref.startsWith('vis:')) return (D.visitas||[]).find(x=>x.id==ref.slice(4))||null;
+  if(ref.startsWith('res:')) return v4Res(ref.slice(4))||null;
+  if(ref.startsWith('prop:')) return (D.props||[]).find(x=>x.id==ref.slice(5))||null;
+  if(ref==='glob'){ D.cfg=D.cfg||{}; return D.cfg; }
+  return (D.conts||[]).find(c=>c.id==ref)||null;
+}
+function v15MapaBorr(o,ref){ return o?(ref==='glob'?(o.avBorrGlob||{}):(o.avBorr||{})):{}; }
+function v15BorradoEl(a){ const ref=v4RefAviso(a), o=v15ObjAviso(ref); return v15MapaBorr(o,ref)[String(a.k)]||''; }
+function v15SetBorrado(ref,k,on){
+  const o=v15ObjAviso(ref); if(!o) return false; const f=ref==='glob'?'avBorrGlob':'avBorr', m=Object.assign({},o[f]||{});
+  if(on) m[String(k)]=new Date().toISOString(); else delete m[String(k)];
+  o[f]=m; if(ref==='glob') o._cfgUpd=Date.now(); else o._upd=Date.now(); return true;
+}
+function v4Alertas(hoy){
+  const out=v15AlertasBase(hoy);
+  out.forEach(a=>{ const b=v15BorradoEl(a); if(b){ a.borrado=b; a.visible=false; a.vencido=false; } });
+  return out;
+}
+function v15Borrar(ref,k){
+  if(typeof confirm==='function'&&!confirm('¿Borrar este aviso? Deja de salir en la lista y en el contador. Lo puedes recuperar desde «🗑 Papelera».')) return;
+  if(v15SetBorrado(ref,k,true)){ saveAndSync(); v4RefrescarAvisos(); toast('Aviso borrado · está en la papelera'); }
+}
+function v15Recuperar(ref,k){ if(v15SetBorrado(ref,k,false)){ saveAndSync(); v4RefrescarAvisos(); toast('Aviso recuperado'); } }
+
+// ── Sección Avisos ──
+const V15_CATS={cobros:['💶','Cobros y pagos'],contratos:['📄','Contratos y plazos'],fiscal:['🧾','Impuestos (ITP, IRPF)'],res:['📝','Reservas'],inc:['🔧','Incidencias'],vis:['📅','Visitas'],piso:['🏢','Pisos y certificados'],norma:['⚖️','Normativa'],datos:['🔒','Datos personales']};
+function v15Cat(a){
+  const k=String(a.k||'');
+  if(a.incId) return 'inc'; if(a.visId) return 'vis'; if(a.propAl) return 'piso'; if(a.glob) return 'norma';
+  if(/^d-/.test(k)) return 'datos';
+  if(a.resId) return /^r-dev/.test(k)?'cobros':'res';
+  if(/^(pm:|cobro|ret|S-dev|itp-reemb)/.test(k)) return 'cobros';
+  if(/^itp|^600/.test(k)) return 'fiscal';
+  return 'contratos';
+}
+function v15SinHecho(a){ const k=String(a.k); return !!(a.auto||a.soloDatos||k==='r-caduca'||k==='r-visitas'||k==='r-anuncio'||a.rdlBtns||k.startsWith('irav:')); }
+function v15Clave(a){ return v4RefAviso(a)+'|'+a.k; }
+let _v15Vista='pend', _v15Sel=new Set();
+function v15Vista(v){ _v15Vista=v; _v15Sel=new Set(); rAvisos(); }
+function v15Chip(a,hoy){
+  if(a.borrado) return '<span class="badge" style="background:var(--bg);color:var(--ink3);">borrado el '+v4F2(String(a.borrado).slice(0,10))+'</span>';
+  if(a.hecho) return '<span class="badge badge-g">hecho'+(a.hechoEl?' el '+v4F2(String(a.hechoEl).slice(0,10)):'')+'</span>';
+  const d=v4Diff(hoy,a.fecha); if(d<0) return '<span class="badge badge-r">vencido hace '+(-d)+' día'+(d===-1?'':'s')+'</span>';
+  if(d===0) return '<span class="badge badge-y">hoy</span>'; return '<span class="badge badge-b">en '+d+' día'+(d===1?'':'s')+'</span>';
+}
+function v15HtmlFila(a,hoy){
+  const ref=v4RefAviso(a), cl=v15Clave(a), col=a.borrado?'var(--line2)':a.hecho?'var(--gn)':a.nivel==='urgente'?'var(--rd)':a.nivel==='alto'?'var(--acc)':a.nivel==='info'?'var(--bl)':'var(--ye)';
+  const c=V15_CATS[v15Cat(a)], esc=s=>String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"), det=String(a.det||''), corto=det.length>150?det.slice(0,147)+'…':det;
+  const bot=a.borrado?'<button class="btn btn-ghost btn-xs" onclick="v15Recuperar(\''+esc(ref)+'\',\''+esc(a.k)+'\')">♻️ Recuperar</button>'
+    :(v15SinHecho(a)?'':'<button class="btn '+(a.hecho?'btn-ghost':'btn-success')+' btn-xs" onclick="v4MarcarHecho(\''+esc(ref)+'\',\''+esc(a.k)+'\','+(a.hecho?'false':'true')+')">'+(a.hecho?'↩ Deshacer':'✓ Hecho')+'</button>')
+      +'<button class="btn btn-ghost btn-xs" title="Borrar el aviso" onclick="v15Borrar(\''+esc(ref)+'\',\''+esc(a.k)+'\')">🗑</button>';
+  return '<div class="v15-av" data-cl="'+v4Esc(cl)+'" style="border-left:4px solid '+col+';background:var(--card);border-radius:9px;padding:9px 11px;margin:6px 0;box-shadow:0 1px 0 var(--line);">'
+   +'<div style="display:flex;gap:9px;align-items:flex-start;">'
+   +(a.borrado?'':'<input type="checkbox" style="width:auto;margin-top:3px;flex:none;" '+(_v15Sel.has(cl)?'checked ':'')+'onchange="v15Sel(\''+esc(cl)+'\',this.checked)">')
+   +'<div style="min-width:0;flex:1;">'
+   +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:2px;">'+v15Chip(a,hoy)+'<span style="font-size:10.5px;color:var(--ink3);">'+c[0]+' '+v4Esc(c[1])+(a.lugar?' · '+v4Esc(a.lugar):'')+' · '+v4F2(a.fecha)+'</span></div>'
+   +'<div style="font-size:12.5px;font-weight:700;line-height:1.35;">'+v4Esc(a.titulo)+'</div>'
+   +(corto?'<div style="font-size:11.5px;color:var(--ink2);line-height:1.5;margin-top:2px;">'+v4Esc(corto)+'</div>':'')
+   +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;align-items:center;">'+bot+'<details style="display:inline-block;" ontoggle="if(this.open&&!this.dataset.ok){ this.dataset.ok=1; this.querySelector(\'.v15-det\').innerHTML=v15Detalle(\''+esc(cl)+'\'); }"><summary class="btn btn-ghost btn-xs" style="list-style:none;cursor:pointer;">▾ Detalle y acciones</summary><div class="v15-det" style="margin-top:4px;"></div></details></div>'
+   +'</div></div></div>';
+}
+// Detalle completo con sus botones (plantillas, contrato, pago…), el de siempre
+function v15Detalle(cl){ const hoy=v4Hoy(), a=v4Alertas(hoy).find(x=>v15Clave(x)===cl); return a?v4HtmlAviso(a,hoy):'<div style="font-size:11.5px;color:var(--ink3);">Este aviso ya no existe.</div>'; }
+function v15Sel(cl,on){ if(on) _v15Sel.add(cl); else _v15Sel.delete(cl); v15PintarBarra(); }
+function v15SelTodo(on){ document.querySelectorAll('#av-list .v15-av').forEach(e=>{ const cl=e.dataset.cl, cb=e.querySelector('input[type=checkbox]'); if(!cb) return; cb.checked=on; if(on) _v15Sel.add(cl); else _v15Sel.delete(cl); }); v15PintarBarra(); }
+function v15PintarBarra(){
+  const b=$i('av-barra'); if(!b) return; const n=_v15Sel.size;
+  b.innerHTML=n?'<div class="card mb" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;position:sticky;top:6px;z-index:5;"><strong style="font-size:12.5px;">'+n+' seleccionado'+(n===1?'':'s')+'</strong>'+(_v15Vista!=='hechos'?'<button class="btn btn-success btn-sm" onclick="v15Masivo(\'hecho\')">✓ Marcar como hechos</button>':'')+'<button class="btn btn-ghost btn-sm" onclick="v15Masivo(\'borrar\')">🗑 Borrar</button><button class="btn btn-ghost btn-sm" onclick="v15SelTodo(false)">Quitar la selección</button></div>':'';
+}
+function v15Masivo(acc){
+  const hoy=v4Hoy(), al=v4Alertas(hoy).filter(a=>_v15Sel.has(v15Clave(a))); if(!al.length) return;
+  if(acc==='borrar'&&typeof confirm==='function'&&!confirm('¿Borrar '+al.length+' aviso'+(al.length===1?'':'s')+'? Los puedes recuperar desde «🗑 Papelera».')) return;
+  let n=0, salt=0;
+  al.forEach(a=>{ const ref=v4RefAviso(a);
+    if(acc==='borrar'){ if(v15SetBorrado(ref,a.k,true)) n++; }
+    else if(v15SinHecho(a)) salt++;
+    else { const o=v15ObjAviso(ref); if(!o) return; v15MarcarSin(ref,a.k); n++; } });
+  _v15Sel=new Set(); saveAndSync(); v4RefrescarAvisos();
+  toast(acc==='borrar'?n+' aviso'+(n===1?'':'s')+' borrado'+(n===1?'':'s'):n+' marcado'+(n===1?'':'s')+' como hecho'+(n===1?'':'s')+(salt?' · '+salt+' se completa'+(salt===1?'':'n')+' solo'+(salt===1?'':'s')+' con los datos':''));
+}
+// Marcar hecho sin guardar ni repintar en cada uno (para la selección)
+function v15MarcarSin(ref,k){ const sv=window.saveAndSync, rf=window.v4RefrescarAvisos; try{ window.saveAndSync=()=>{}; window.v4RefrescarAvisos=()=>{}; v4MarcarHecho(ref,k,true); } finally { window.saveAndSync=sv; window.v4RefrescarAvisos=rf; } }
+function rAvisos(){
+  const box=$i('av-list'); if(!box) return; const hoy=v4Hoy(), todas=v4Alertas(hoy);
+  const pf=gi('av-prop'), tf=gi('av-tipo'), cf=gi('av-cat'), q=(gi('av-q')||'').toLowerCase().trim(), agr=gi('av-agr')||'fecha';
+  const filt=a=>(!pf||a.propId==pf)&&(!tf||(tf==='obl'?/Obligatorio|Urgente/.test(a.tipo):tf==='urg'?a.nivel==='urgente':true))&&(!cf||v15Cat(a)===cf)&&(!q||(String(a.titulo)+' '+String(a.det)+' '+String(a.lugar||'')+' '+String(a.nom||'')).toLowerCase().includes(q));
+  const caduca=a=>a.caduca&&a.caduca<hoy;
+  const G={venc:todas.filter(a=>a.visible&&a.fecha<hoy&&a.nivel!=='info'), hoy:todas.filter(a=>a.visible&&(a.fecha===hoy||(a.fecha<hoy&&a.nivel==='info'))), prox:todas.filter(a=>a.visible&&a.fecha>hoy&&a.fecha<=fxAdd(hoy,10)),
+    mas:todas.filter(a=>!a.hecho&&!a.borrado&&!caduca(a)&&!a.visible&&a.fecha>hoy), hechos:todas.filter(a=>a.hecho&&!a.auto&&a.hechoEl&&!a.borrado).sort((a,b)=>String(b.hechoEl).localeCompare(String(a.hechoEl))), papelera:todas.filter(a=>a.borrado).sort((a,b)=>String(b.borrado).localeCompare(String(a.borrado)))};
+  Object.keys(G).forEach(k=>{ G[k]=G[k].filter(filt); });
+  const pend=G.venc.length+G.hoy.length+G.prox.length;
+  const chip=(v,ico,t,n,col)=>'<button class="btn btn-sm '+(_v15Vista===v?'btn-primary':'btn-secondary')+'" style="display:flex;gap:6px;align-items:center;" onclick="v15Vista(\''+v+'\')">'+ico+' '+t+' <span style="background:'+(_v15Vista===v?'rgba(255,255,255,.25)':col)+';color:'+(_v15Vista===v?'inherit':'#fff')+';border-radius:10px;padding:0 7px;font-size:11px;font-weight:700;">'+n+'</span></button>';
+  const res=$i('av-resumen'); if(res) res.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'
+    +chip('pend','📌','Pendientes',pend,G.venc.length?'var(--rd)':pend?'var(--ye)':'var(--ink3)')+chip('mas','🗓','Más adelante',G.mas.length,'var(--ink3)')+chip('hechos','✓','Hechos',G.hechos.length,'var(--gn)')+chip('papelera','🗑','Papelera',G.papelera.length,'var(--ink3)')
+    +'</div><div style="font-size:11.5px;color:var(--ink3);margin-bottom:8px;">'+(G.venc.length?'<span style="color:var(--rd);font-weight:700;">🔴 '+G.venc.length+' vencido'+(G.venc.length===1?'':'s')+'</span> · ':'')+'📌 '+G.hoy.length+' para hoy · ⏳ '+G.prox.length+' en los próximos 10 días</div>';
+  const card=(t,arr,vacio)=>'<div class="card mb"><div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;"><span>'+t+' ('+arr.length+')</span></div>'+(arr.length?arr.map(a=>v15HtmlFila(a,hoy)).join(''):'<div style="font-size:12px;color:var(--ink3);">'+vacio+'</div>')+'</div>';
+  const porGrupo=(arr,fk,fn)=>{ const m=new Map(); arr.forEach(a=>{ const k=fk(a); if(!m.has(k)) m.set(k,[]); m.get(k).push(a); }); return [...m.entries()].map(([k,xs])=>card(fn(k),xs,'')).join(''); };
+  const nomPiso=id=>{ const p=(D.props||[]).find(x=>x.id==id); return p?'🏢 '+p.nom:'🌐 General'; };
+  let html='';
+  if(_v15Vista==='pend'){
+    const arr=G.venc.concat(G.hoy).concat(G.prox);
+    if(!arr.length) html='<div class="card mb"><div class="empty"><div class="empty-icon">✅</div><p>Todo al día: nada vencido, nada para hoy ni para los próximos 10 días'+(pf||tf||cf||q?' con estos filtros':'')+'.</p></div></div>';
+    else if(agr==='piso') html=porGrupo(arr,a=>a.propId||'',nomPiso);
+    else if(agr==='tipo') html=porGrupo(arr,v15Cat,k=>V15_CATS[k][0]+' '+V15_CATS[k][1]);
+    else html=card('🔴 Vencidos',G.venc,'Nada vencido.')+card('📌 Hoy',G.hoy,'Nada para hoy.')+card('⏳ Próximos 10 días',G.prox,'Nada en los próximos 10 días.');
+  } else if(_v15Vista==='mas') html=card('🗓 Más adelante',G.mas.slice(0,150),'Nada más adelante.');
+  else if(_v15Vista==='hechos') html=card('✓ Hechos',G.hechos.slice(0,150),'Todavía no has marcado ninguno como hecho.');
+  else html=card('🗑 Papelera',G.papelera,'La papelera está vacía. Al borrar un aviso, queda aquí por si lo quieres recuperar.');
+  const visibles=_v15Vista==='papelera'?0:(_v15Vista==='pend'?pend:_v15Vista==='mas'?Math.min(G.mas.length,150):Math.min(G.hechos.length,150));
+  box.innerHTML=(visibles?'<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:11.5px;"><label style="display:flex;gap:5px;align-items:center;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="checkbox" style="width:auto;" onchange="v15SelTodo(this.checked)"> Seleccionar todos los que se ven</label></div>':'')+html;
+  v15PintarBarra();
+  const n=$i('av-notif'); if(n) n.innerHTML=('Notification' in window)?(Notification.permission==='granted'?'🔔 Notificaciones del navegador activadas':'<button class="btn btn-secondary btn-sm" onclick="v4PedirNotif()">🔔 Activar notificaciones</button>'):'';
 }
 
 </script>
