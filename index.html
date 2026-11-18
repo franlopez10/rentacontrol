@@ -8930,7 +8930,7 @@ function rDash(){
   $i('d-alerts').innerHTML=''; // v4.14: los avisos solo salen en la sección Avisos
 
   const paM=D.pagos.filter(p=>p.mes===mesAct&&!v12EsDep(p)),ing=v17MesIngGas(mesAct).ing;
-  const pen=D.pagos.filter(p=>p.estado!=='pagado').reduce((s,p)=>s+p.imp,0);
+  const pen=D.pagos.filter(p=>p.estado!=='pagado'&&(!p.mes||p.mes<=mesAct)).reduce((s,p)=>s+(+p.imp||0),0);
   const t16=v16Totales(),tH=t16.N,ocu=t16.occ;
   const pc=tH?Math.round(ocu/tH*100):0;
   const tvP=D.props.reduce((s,p)=>s+parseFloat(p.precio||0),0),ingA=D.inqs.filter(i=>i.estado==='ACTIVO').reduce((s,i)=>s+parseFloat(i.alq||0),0)*12;
@@ -16046,7 +16046,7 @@ function v12HtmlUnidad(u,M,hoy){
    +'<div style="margin-top:6px;">'+lin+'</div>'
    +'<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid '+c.bd+';">'
    +'<span style="font-size:11px;font-weight:700;color:'+c.txt+';">'+c.et+(u.estado==='parcial'?' · faltan '+v4E2(u.pend)+' €':u.estado==='cobrado'?' · '+v4E2(u.cobrado)+' €':' · '+v4E2(u.pend)+' €')+'</span>'
-   +'<span style="display:flex;gap:5px;flex-wrap:wrap;">'+(u.L.some(l=>l.pag)?'<button class="btn btn-ghost btn-xs" onclick="v12Deshacer(\''+u.key+'\',\''+M+'\')">↩ Deshacer</button>':'')
+   +'<span style="display:flex;gap:5px;flex-wrap:wrap;">'+(u.L.some(l=>!v12EsDep(l))?'<button class="btn btn-secondary btn-xs" title="Email y WhatsApp del pago, con las facturas" onclick="v19Abrir(\''+u.key+'\',\''+M+'\')">📨 Mensaje</button>':'')+(u.L.some(l=>l.pag)?'<button class="btn btn-ghost btn-xs" onclick="v12Deshacer(\''+u.key+'\',\''+M+'\')">↩ Deshacer</button>':'')
    +(u.pend>0.004?'<button class="btn btn-success btn-xs" onclick="v12Cobro(\''+u.key+'\',\''+M+'\')">💶 Registrar cobro</button>':'')+'</span></div></div>';
 }
 function rTableroPagos(){
@@ -16097,12 +16097,16 @@ function v12PendCobroCo(co,M){
     const resto=!!p.restoDe&&p.mes===M, pen=p.pen&&p.pen.coId===co.id&&p.pen.mes===M;
     if(cic.email&&cic.emailTexto){ if(p.cicloMes!==M&&!resto&&!pen) return; }
     else if(p.cicloMes&&p.cicloMes!==M&&!resto) return;
+    else if(!p.cicloMes&&p.mes&&p.mes>M) return;
     out.push({key:p.id, rec:p, con:p.con, mes:p.mes, imp:v12R2(p.imp)});
   });
   const ord=l=>l.con==='Alquiler'?0:l.con==='Alquiler'+V12_RESTO?1:/penaliz/i.test(l.con)?8:5;
   return out.sort((a,b)=>ord(a)-ord(b)||String(a.mes).localeCompare(String(b.mes)));
 }
-function v12PendCobroInq(u,M){ return u.L.filter(l=>!l.pag&&l.imp!==0).map(l=>l.virtual?{key:l.key, virtual:{inqId:u.inqId, con:l.con, mes:M, imp:l.imp, estado:'pendiente', fecha:'', notas:'Auto', v4:l.con==='Alquiler'}, con:l.con, mes:M, imp:l.imp}:{key:l.key, rec:l.rec, con:l.con, mes:l.mes, imp:l.imp}); }
+// Inquilino sin contrato gestionado: lo repartido o cargado en meses anteriores que sigue pendiente (no las cuotas automáticas
+// ni la renta, que se quedan en su mes) y no va en el email de otro mes
+function v12PrevInq(u,M){ return (D.pagos||[]).filter(p=>p.mes&&p.mes<M&&!v12Pag(p)&&!v12EsDep(p)&&!v12EsAlq(p)&&!/bonific/i.test(p.con||'')&&p.notas!=='Auto'&&(!p.cicloMes||p.cicloMes===M)&&v12UnidadKey(p,p.mes)===u.key); }
+function v12PendCobroInq(u,M){ return u.L.filter(l=>!l.pag&&l.imp!==0&&!(l.rec&&l.rec.cicloMes&&l.rec.cicloMes!==M)).map(l=>l.virtual?{key:l.key, virtual:{inqId:u.inqId, con:l.con, mes:M, imp:l.imp, estado:'pendiente', fecha:'', notas:'Auto', v4:l.con==='Alquiler'}, con:l.con, mes:M, imp:l.imp}:{key:l.key, rec:l.rec, con:l.con, mes:l.mes, imp:l.imp}).concat(v12PrevInq(u,M).map(p=>({key:p.id, rec:p, con:p.con, mes:p.mes, imp:v12R2(p.imp)}))); }
 
 // ── Reparto de lo cobrado entre las líneas (si falta, la línea se parte y lo que falta queda pendiente) ──
 function v12Partir(p,pagado){
@@ -16154,12 +16158,19 @@ function v12AplicarCobro(co,M,o){
   co.ciclos[M]=cic; v4Guardar(co);
   return {esperado, imp, falta:r.falta, sobra:r.sobra, rapido, tarde, V, firma, ids:r.pagados.map(p=>p.id)};
 }
+function v12RapidoInq(u,M,email,orden){ if(!u||u.co||u.entero||!u.inq||u.inq.sinBono5||!email||!orden) return false; const V=u.V, dEm=v4DT(orden)-v4DT(email); return orden.slice(0,10)<=V&&dEm>=0&&dEm<=864e5; }
 function v12AplicarCobroInq(u,M,o){
   let lineas=v12PendCobroInq(u,M); if(o.sel) lineas=lineas.filter(l=>o.sel.includes(l.key));
   const recs=lineas.map(l=>{ if(l.rec) return l.rec; const p=Object.assign({id:uid()},l.virtual); D.pagos.push(p); return p; });
+  const rapido=v12RapidoInq(u,M,o.email,o.orden)&&!(D.pagos||[]).some(p=>p.con==='Bonificación pago rápido'&&p.inqId==u.inqId&&p.mes===M);
+  if(rapido){ const bon={id:uid(),inqId:u.inqId,con:'Bonificación pago rápido',mes:M,imp:-V4_PENAL.descuento,estado:'pendiente',fecha:'',notas:'Pago ordenado en menos de 24 h desde el email (cláusula «Bonificación por rapidez»)',cicloMes:M}; D.pagos.push(bon); recs.unshift(bon); }
   const esperado=v12R2(recs.reduce((s,p)=>s+(+p.imp||0),0)), imp=(o.imp===null||o.imp===undefined||o.imp==='')?esperado:v12R2(o.imp);
-  const r=v12Repartir(recs,imp,o.fecha,o.cta||''); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){}
-  return {esperado, imp, falta:r.falta, sobra:r.sobra, ids:r.pagados.map(p=>p.id)};
+  const r=v12Repartir(recs,imp,o.fecha,o.cta||'');
+  r.pagados.forEach(p=>{ if(p.mes!==M&&!p.cicloMes){ p.cicloMes=M; p.v12Ciclo=true; } });
+  if(u.inq&&(o.email||o.orden||u.entero)){ const due=u.entero||u.inq; due.ciclos=Object.assign({},due.ciclos||{}); const cic=Object.assign({},due.ciclos[M]||{});
+    if(o.email&&!cic.email) cic.email=o.email; cic.orden=o.orden||(o.fecha+'T12:00'); cic.importePagado=imp; cic.dto=rapido; cic.esperado=esperado; due.ciclos[M]=cic; due._upd=Date.now(); }
+  saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){}
+  return {esperado, imp, falta:r.falta, sobra:r.sobra, rapido, ids:r.pagados.map(p=>p.id)};
 }
 
 // ── Deshacer el cobro de un mes ──
@@ -16174,7 +16185,11 @@ function v12Deshacer(key,M,sinConfirmar){
     D.pagos=(D.pagos||[]).filter(p=>!(p.con==='Bonificación pago rápido'&&p.estado!=='pagado'&&(p.coId===co.id||ids.includes(p.inqId))&&(p.mes===M||p.cicloMes===M)));
     co.ciclos=Object.assign({},co.ciclos||{}); const cic=Object.assign({},co.ciclos[M]||{}); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete cic[k]); co.ciclos[M]=cic;
     v12Fusionar(); v4Guardar(co);
-  } else { u.recs.forEach(p=>{ if(v12Pag(p)&&!v12EsDep(p)) volver(p); }); v12Fusionar(); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} }
+  } else { u.recs.forEach(p=>{ if(v12Pag(p)&&!v12EsDep(p)) volver(p); });
+    (D.pagos||[]).forEach(p=>{ if(v12Pag(p)&&p.cicloMes===M&&p.mes!==M&&!v12EsDep(p)&&!/bonific/i.test(p.con||'')&&v12UnidadKey(p,p.mes)===key) volver(p); });
+    D.pagos=(D.pagos||[]).filter(p=>!(p.con==='Bonificación pago rápido'&&p.estado!=='pagado'&&p.inqId==u.inqId&&(p.mes===M||p.cicloMes===M)));
+    const due=u.entero||u.inq; if(due&&due.ciclos&&due.ciclos[M]){ const cic=Object.assign({},due.ciclos[M]); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete cic[k]); due.ciclos=Object.assign({},due.ciclos,{[M]:cic}); due._upd=Date.now(); }
+    v12Fusionar(); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} }
   v12RefrescarPagos(); toast('Cobro de '+v4MesNom(M)+' deshecho: vuelve a estar pendiente');
 }
 
@@ -16188,9 +16203,10 @@ function v12Cobro(key,M,soloIds){
   const u=v12UnidadMes(key,M); if(!u){ toast('No encuentro ese cobro',false); return; }
   const co=u.co, lineas=co?v12PendCobroCo(co,M):v12PendCobroInq(u,M);
   if(!lineas.length){ toast('No hay nada pendiente de cobrar en '+v12MesTxt(M),false); return; }
-  const F=co?v4F(co):'', firma=!!(co&&F.slice(0,7)===M), V=u.V, cic=co?v4Ciclo(co,M):{}, hoy=v4Hoy(), ahora=v4LocalDT(new Date());
+  const F=co?v4F(co):'', firma=!!(co&&F.slice(0,7)===M), V=u.V, cic=co?v4Ciclo(co,M):((u.inq&&u.inq.ciclos&&u.inq.ciclos[M])||{}), hoy=v4Hoy(), ahora=v4LocalDT(new Date());
+  const bonoInq=!co&&!u.entero&&!!u.inq&&!u.inq.sinBono5;
   const ordenDef=firma&&F<=hoy?F+'T12:00':ahora;
-  _v12Cobro={key,M,lineas,co:!!co,firma,V};
+  _v12Cobro={key,M,lineas,co:!!co,firma,V,bonoInq};
   const lin=lineas.map((l,i)=>'<label style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:5px 8px;border-radius:7px;background:var(--bg);margin-top:4px;font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer;">'
     +'<span style="display:flex;gap:7px;align-items:center;min-width:0;"><input type="checkbox" id="v12c-l'+i+'" style="width:auto;"'+(!soloIds||soloIds.includes(l.key)?' checked':'')+' onchange="v12CobroCalc()"> '+v4Esc(v12TxtLinea(u,l,M))+'</span>'
     +'<span class="mono" style="white-space:nowrap;">'+v4E2(l.imp)+' €</span></label>').join('');
@@ -16201,7 +16217,9 @@ function v12Cobro(key,M,soloIds){
    +'<div class="fg" style="margin-top:10px;">'
    +(co&&!firma?'<div class="fgrp"><label>Email del pago enviado el (para el descuento de 5 €)</label><input type="datetime-local" id="v12c-email" value="'+v4Esc(cic.email||'')+'" oninput="v12CobroCalc()"></div>':'')
    +(co?'<div class="fgrp"><label>'+(firma?'Fecha y hora del pago en la firma':'Fecha y hora en que ORDENÓ el pago')+' *</label><input type="datetime-local" id="v12c-orden" value="'+ordenDef+'" oninput="v12CobroCalc()"></div>'
-       :'<div class="fgrp"><label>Fecha del cobro *</label><input type="date" id="v12c-fecha" value="'+hoy+'" oninput="v12CobroCalc()"></div>')
+       :'<div class="fgrp"><label>Fecha del cobro'+(bonoInq?' (o de la orden de pago)':'')+' *</label><input type="date" id="v12c-fecha" value="'+hoy+'" oninput="v12CobroCalc()"></div>'
+        +(bonoInq?'<div class="fgrp"><label>Email del pago enviado el (para el descuento de 5 €)</label><input type="datetime-local" id="v12c-email" value="'+v4Esc(cic.email||'')+'" oninput="v12CobroCalc()"></div>'
+          +'<div class="fgrp"><label>Hora en que ordenó el pago</label><input type="time" id="v12c-hora" oninput="v12CobroCalc()"></div>':''))
    +'<div class="fgrp"><label>Importe recibido (€)</label><input type="number" step="0.01" inputmode="decimal" id="v12c-imp" oninput="this.dataset.manual=\'1\';v12CobroCalc()"></div>'
    +'<div class="fgrp"><label>Cuenta donde entra</label><select id="v12c-cta">'+v12OptsCtas(ctaDef)+'</select></div></div>'
    +'<div id="v12c-res" style="margin-top:8px;"></div>'
@@ -16216,6 +16234,9 @@ function v12CobroCalc(){
   if(x.co&&!x.firma){ const orden=gi('v12c-orden'), email=gi('v12c-email');
     if(orden){ const tarde=orden.slice(0,10)>x.V; if(tarde){ const u=v12UnidadMes(x.key,x.M), co=u&&u.co; const ya=co&&(D.pagos||[]).some(p=>p.con==='Penalización retraso'&&p.pen&&p.pen.coId===co.id&&p.pen.mes===x.M); if(!ya){ pen=V4_PENAL.retraso; } nota='Pago ordenado después del '+v4F2(x.V)+': fuera de plazo'+(ya?' (la penalización ya está anotada)':' · se suman 20 € de penalización')+'.'; }
       else if(email){ const d=v4DT(orden)-v4DT(email); if(d>=0&&d<=864e5){ dto=V4_PENAL.descuento; nota='Ordenado en menos de 24 h desde el email: descuento de 5 €.'; } else if(d<0) nota='⚠️ La orden no puede ser anterior al email.'; } } }
+  if(!x.co&&x.bonoInq){ const email=gi('v12c-email'), f=gi('v12c-fecha'), h=gi('v12c-hora');
+    if(email&&f){ if(!h) nota='Indica la hora en que ordenó el pago para saber si tiene el descuento de 5 €.';
+      else { const orden=f+'T'+h, d=v4DT(orden)-v4DT(email); if(d<0) nota='⚠️ La orden no puede ser anterior al email.'; else if(f>x.V) nota='Pago ordenado después del '+v4F2(x.V)+': sin descuento.'; else if(d<=864e5){ dto=V4_PENAL.descuento; nota='Ordenado en menos de 24 h desde el email: descuento de 5 €.'; } else nota='Ordenado más de 24 h después del email: sin descuento.'; } } }
   const esp=v12R2(S+pen-dto), imp=$i('v12c-imp'); if(imp&&imp.dataset.manual!=='1') imp.value=esp.toFixed(2);
   const pagado=imp&&imp.value!==''?v12R2(String(imp.value).replace(',','.')):esp, dif=v12R2(pagado-esp);
   const b=$i('v12c-res'); if(b) b.innerHTML='<div style="background:var(--bg);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.6;">Seleccionado: <strong>'+v4E2(S)+' €</strong>'+(dto?' − descuento '+v4E2(dto)+' €':'')+(pen?' + penalización '+v4E2(pen)+' €':'')+' = a cobrar <strong>'+v4E2(esp)+' €</strong>'
@@ -16231,7 +16252,9 @@ function v12GuardarCobro(){
     if(email&&orden<email){ v4Msg('v12c-res','La orden de pago no puede ser anterior al envío del email. Revisa las fechas.','r'); return; }
     r=v12AplicarCobro(u.co,x.M,{orden, email, imp, cta, sel:keys});
   } else { const fecha=gi('v12c-fecha'); if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ v4Msg('v12c-res','Indica la fecha del cobro.','r'); return; }
-    r=v12AplicarCobroInq(u,x.M,{fecha, imp, cta, sel:keys}); }
+    const email=$i('v12c-email')?gi('v12c-email'):'', hora=$i('v12c-hora')?gi('v12c-hora'):'', orden=hora?fecha+'T'+hora:'';
+    if(email&&orden&&orden<email){ v4Msg('v12c-res','La orden de pago no puede ser anterior al envío del email. Revisa las fechas.','r'); return; }
+    r=v12AplicarCobroInq(u,x.M,{fecha, imp, cta, sel:keys, email, orden}); }
   _v12Cobro=null; closeM('m-v4'); v12RefrescarPagos();
   toast((r.falta>0.004?'Cobro parcial guardado · faltan '+v4E2(r.falta)+' €':'Cobro guardado · '+v4E2(r.imp)+' €'+(r.rapido?' (con el descuento de 5 €)':'')+(r.tarde?' (fuera de plazo: penalización de 20 €)':'')+(r.sobra?' · '+v4E2(r.sobra)+' € de más':''))+v15SufijoCuenta('pago',r.ids||[]));
 }
@@ -16278,7 +16301,8 @@ function rPagos(){
 }
 function cobrar(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p||!p.mes) return; v12Cobro(v12UnidadKey(p,p.mes),p.mes,[p.id]); }
 function v12DeshacerRec(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p) return; if(p.con==='Bonificación pago rápido'){ D.pagos=D.pagos.filter(x=>x!==p); } else { p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; delete p.cobTs; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } }
-  if(v12EsAlq(p)&&p.mes){ const co=v4CoDeInq(p.inqId,p.mes); if(co&&co.ciclos&&co.ciclos[p.mes]&&co.ciclos[p.mes].orden){ const c=Object.assign({},co.ciclos[p.mes]); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete c[k]); co.ciclos=Object.assign({},co.ciclos,{[p.mes]:c}); co._upd=Date.now(); } }
+  if(v12EsAlq(p)&&p.mes){ const iq=v4Inq(p.inqId); if(iq&&iq.ciclos&&iq.ciclos[p.mes]&&iq.ciclos[p.mes].orden){ const c=Object.assign({},iq.ciclos[p.mes]); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete c[k]); iq.ciclos=Object.assign({},iq.ciclos,{[p.mes]:c}); iq._upd=Date.now(); }
+    const co=v4CoDeInq(p.inqId,p.mes); if(co&&co.ciclos&&co.ciclos[p.mes]&&co.ciclos[p.mes].orden){ const c=Object.assign({},co.ciclos[p.mes]); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete c[k]); co.ciclos=Object.assign({},co.ciclos,{[p.mes]:c}); co._upd=Date.now(); } }
   v12Fusionar(); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} v12RefrescarPagos(); toast('Vuelve a estar pendiente'); }
 function v12BorrarRec(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p) return; if(typeof confirm==='function'&&!confirm('¿Eliminar este movimiento ('+(p.con||'')+' · '+v4E2(p.imp)+' €)? Si es una renta de un contrato, se volverá a generar pendiente.')) return; D.pagos=D.pagos.filter(x=>x!==p); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} v12RefrescarPagos(); toast('Eliminado'); }
 
@@ -17551,6 +17575,881 @@ function v17Enlazar(box){
   if(typeof ResizeObserver==='function'){ let w0=0; new ResizeObserver(en=>{ const w=Math.round(en[0].contentRect.width); if(w&&Math.abs(w-w0)>2){ w0=w; if(S.data) v17Programar(); } }).observe(box); }
   else window.addEventListener('resize',()=>{ if(S.data) v17Programar(); });
 }
+
+// ══════════════════════════════════════════════════════════════
+// v4.17 · Reparto AUTOMÁTICO de suministros
+// Cada factura de luz, agua, gas o internet con piso y periodo (del … al …) se reparte sola por personas-día,
+// con las reglas del contrato (v4Reparto):
+//  · personas-día de cada habitación en el periodo de la factura (doble: días de cada persona);
+//  · días con el piso entero vacío: arrendador (cuenta como 1 persona);
+//  · internet: solo quienes lo tienen solicitado; tope = importe anual del contrato prorrateado; el exceso, arrendador;
+//  · luz, agua y gas: tope de 1.200 €/persona/año prorrateado por días de contrato; el exceso, arrendador;
+//  · la suma de las habitaciones más la parte del arrendador da exactamente la factura (al céntimo).
+// Lo de cada habitación se añade al PRÓXIMO PAGO MENSUAL (el que se prepara a final de mes) junto a la renta.
+// Mientras ese pago no vence, no se cobra y no se manda el email, se recalcula solo si cambia algo (la factura,
+// las fechas de entrada o salida, el wifi…). Desde que vence, se cobra o se envía el email, queda fijo.
+// Si la persona ya se ha ido, su parte va a la liquidación de la retención de la fianza (plantilla 11).
+// ══════════════════════════════════════════════════════════════
+const V18_EMP=[
+  [/iberdrola|endesa|holaluz|lucera|octopus|factor ?energ|audax|aldro|curenergia|energ[ií]a ?xxi|totalenergies|som ?energia|plenitude|repsol (luz|electricidad)|naturgy (luz|electricidad)/i,'Luz'],
+  [/aguas|emuasa|hidrogea|socamex|aqualia|canal de isabel|acciona agua|esamur/i,'Agua'],
+  [/nedgia|gas natural|madrile[ñn]a red de gas|butano|naturgy gas|repsol gas/i,'Gas'],
+  [/movistar|telef[oó]nica|vodafone|orange|jazztel|m[aá]s ?m[oó]vil|\bdigi\b|pepephone|lowi|simyo|finetwork|\bo2\b|yoigo|adamo|avatel|euskaltel|virgin telco|parlem|fibra/i,'Internet']
+];
+const V18_ICO={Luz:'💡',Agua:'💧',Gas:'🔥',Internet:'📶'};
+function v18Tipo(x){
+  if(!x) return null;
+  if(x.sumTipo) return V4_SUMINISTROS.includes(x.sumTipo)?x.sumTipo:null;
+  const t=v4TipoSum(x.con||''); if(V4_SUMINISTROS.includes(t)) return t;
+  for(const [re,tp] of V18_EMP) if(re.test(x.emp||'')) return tp;
+  return null;
+}
+// ¿Parece un suministro aunque no sepamos de qué tipo? (para pedir el tipo)
+function v18PareceSum(x){ return !!x&&(x.cat==='Suministros'||x.catF==='H'||/suministro|electricidad|energ[ií]a/i.test((x.con||'')+' '+(x.emp||''))); }
+function v18Registro(x){ const t=+x.creado||v15TsId(x.id); return t?new Date(t).v12Dia():(x.fecha||''); }
+function v18Desde(){ D.cfg=D.cfg||{}; if(!/^\d{4}-\d{2}-\d{2}$/.test(D.cfg.repAutoDesde||'')) D.cfg.repAutoDesde=v4Hoy().slice(0,7)+'-01'; return D.cfg.repAutoDesde; }
+function v18Key(x,t){ return x.propId+'|'+t+'|'+x.pIni+'|'+x.pFin+'|'+(Math.round((+x.imp||0)*100)/100); }
+// Alquiler del piso entero con los suministros a cargo de los arrendatarios en el periodo de la factura
+function v18EnteroInq(x){ return (D.conts||[]).find(c=>c.pisoEntero&&c.sumInq&&c.propId==x.propId&&(c.ini||c.firma||'9999')<=x.pFin&&(!v14Fin(c)||v14Fin(c)>=x.pIni))||null; }
+var _v18Idx=null;   // índice de líneas por factura y por clave, solo durante una sincronización
+function v18Indice(){ const c=new Map(), k=new Map(); (D.pagos||[]).forEach(p=>{ if(!p.rep) return; if(p.rep.compraId){ if(!c.has(p.rep.compraId)) c.set(p.rep.compraId,[]); c.get(p.rep.compraId).push(p); } else if(p.rep.facKey){ if(!k.has(p.rep.facKey)) k.set(p.rep.facKey,[]); k.get(p.rep.facKey).push(p); } }); return {c,k}; }
+function v18Info(x){
+  const t=v18Tipo(x), o={x, tipo:t};
+  if(x&&x.sumTipo==='no'){ o.st='no'; return o; }
+  if(!t){ o.st=v18PareceSum(x)?'sinTipo':'no'; return o; }
+  if(x.noRepartir){ o.st='noRep'; return o; }
+  if(!x.propId){ o.st='sinPiso'; return o; }
+  if(!(x.pIni&&x.pFin&&/^\d{4}-\d{2}-\d{2}$/.test(x.pIni)&&/^\d{4}-\d{2}-\d{2}$/.test(x.pFin)&&x.pFin>=x.pIni)){ o.st='sinPeriodo'; return o; }
+  if(!(+x.imp>0)){ o.st='sinImporte'; return o; }
+  o.key=v18Key(x,t);
+  if(_v18Idx){ o.lineas=_v18Idx.c.get(x.id)||[]; o.manual=_v18Idx.k.get(o.key)||[]; }
+  else { o.lineas=(D.pagos||[]).filter(p=>p.rep&&p.rep.compraId===x.id); o.manual=(D.pagos||[]).filter(p=>p.rep&&!p.rep.compraId&&p.rep.facKey===o.key); }
+  if(o.manual.length&&!o.lineas.length){ o.st='manual'; return o; }
+  const en=v18EnteroInq(x); if(en){ o.st='entero'; o.co=en; return o; }
+  if(!o.lineas.length&&!x.repForzar&&v18Registro(x)<v18Desde()){ o.st='antes'; return o; }
+  o.st='auto'; return o;
+}
+// Una línea ya no se toca cuando: está cobrada, ya salió en un email mensual, su pago ya venció (mes en curso o
+// anterior) o, si es de liquidación, la liquidación de la retención ya se comunicó.
+function v18Congelada(p,hoy){
+  if(!p) return true; if(p.estado==='pagado'||p.cicloMes) return true;
+  if(p.rep&&p.rep.liq){ const co=p.rep.coId&&v4Co(p.rep.coId); return !!(co&&co.retencion&&co.retencion.comunicada); }
+  return !!(p.mes&&p.mes<=(hoy||v4Hoy()).slice(0,7));
+}
+// Mes de cobro: el próximo pago mensual (mes siguiente al de hoy) que aún no se ha cobrado ni enviado.
+// Si la persona ya no paga renta ese mes (se fue), su parte va a la liquidación de la retención.
+function v18Destino(co,inqId,hoy){
+  let M=v4MesSig((hoy||v4Hoy()).slice(0,7));
+  for(let g=0;g<24;g++,M=v4MesSig(M)){
+    if(co){
+      if(!(v4RentaMes(co,M)>0)){ if(co.retencion&&co.retencion.comunicada) return {omitir:true, motivo:'liquidada'}; return {mes:M, liq:true}; }
+      if(v4Ciclo(co,M).email||v4Pagado(co,M)) continue;
+      return {mes:M};
+    }
+    const i=v4Inq(inqId); if(!i) return {omitir:true, motivo:'sinInq'};
+    if(!v12LegadoActivo(i,M)) return {mes:M, liq:true};
+    if((D.pagos||[]).some(p=>p.inqId==inqId&&p.mes===M&&v12EsAlq(p)&&p.estado==='pagado')) continue;
+    return {mes:M};
+  }
+  return {omitir:true, motivo:'sinMes'};
+}
+// El tope de 1.200 € solo mira lo repartido en facturas ANTERIORES de la misma persona (no la propia factura)
+function v4CobradoTope(coId,n,excluir){
+  let s=0; const ex=window._v18Excl;
+  (D.pagos||[]).forEach(p=>{ if(!p.rep||p.rep.coId!==coId||!V4_SUM_TOPE.includes(p.rep.tipo)) return; if(excluir&&p.rep.facKey===excluir) return;
+    if(ex){ if(p.rep.compraId===ex.id||p.rep.facKey===ex.key) return; if(p.rep.ini&&p.rep.ini>ex.ini) return; }
+    (p.rep.personas||[]).forEach(x=>{ if(+x.n===+n) s+=+x.importe||0; }); });
+  return Math.round(s*100)/100;
+}
+// Cálculo de una factura: el reparto del contrato y lo que toca a cada contrato (o inquilino antiguo) de cada habitación
+function v18Calc(o,hoy){
+  const x=o.x; window._v18Excl={id:x.id,key:o.key,ini:x.pIni};
+  let r; try{ r=v4Reparto(x.propId,o.tipo,x.pIni,x.pFin,+x.imp); } finally { window._v18Excl=null; }
+  if(!r) return null;
+  const grupos=[];
+  r.habs.forEach(h=>{
+    if(!(h.importe>0)) return;
+    const G=new Map();
+    h.personas.forEach(p=>{ if(!(p.pd>0)) return; const k=p.coId?'co:'+p.coId:'inq:'+p.inqId; if(!G.has(k)) G.set(k,{k,coId:p.coId||null,ps:[],pd:0,imp:0,topado:false}); const g=G.get(k); g.ps.push(p); g.pd+=p.pd; g.imp+=+p.importe||0; if(p.topado) g.topado=true; });
+    const gs=[...G.values()]; if(!gs.length) return;
+    const tot=Math.round(h.importe*100);
+    if(gs.length===1) gs[0].cts=tot;
+    else { const w=gs.map(g=>g.topado?g.imp:g.pd), W=w.reduce((a,b)=>a+b,0)||1; let as=0; gs.forEach((g,i)=>{ g.ex=tot*w[i]/W; g.cts=Math.floor(g.ex+1e-9); as+=g.cts; }); let rest=tot-as; gs.slice().sort((a,b)=>(b.ex-b.cts)-(a.ex-a.cts)).forEach(g=>{ if(rest>0){ g.cts++; rest--; } }); }
+    gs.forEach(g=>{
+      const co=g.coId?v4Co(g.coId):null, inqId=co?v4PagadorInq(co):g.ps[0].inqId, ip=co?null:v4Inq(g.ps[0].inqId);
+      const fijo=!co&&ip&&((o.tipo==='Luz'&&+ip.luz>0)||(o.tipo==='Agua'&&+ip.agua>0));
+      grupos.push({h, g, co, inqId, imp:g.cts/100, fijo, varios:gs.length>1, id:'rep-'+x.id+'-'+h.hab+(gs.length>1?'-'+String(g.k).replace(/[^A-Za-z0-9]/g,''):'')});
+    });
+  });
+  return {r, grupos};
+}
+function v18Linea(o,c,gr,dest){
+  const x=o.x, r=c.r, h=gr.h;
+  const habsPD=gr.varios?r.habs.map(y=>({hab:y.hab,pd:String(y.hab)===String(h.hab)?gr.g.pd:y.pd})):r.habs.map(y=>({hab:y.hab,pd:y.pd}));
+  const nota=gr.varios?'(Solo los días de su contrato en la habitación '+h.hab+': '+gr.g.pd+' personas-día de '+h.pd+'.)':'';
+  return {inqId:gr.inqId, con:o.tipo, mes:dest.mes, imp:gr.imp, notas:o.tipo+' '+v4F2(x.pIni)+'–'+v4F2(x.pFin)+' · hab. '+h.hab+' · '+(gr.varios?gr.g.pd:h.pd)+'/'+r.totalPD+' p-día · reparto automático'+(dest.liq?' · liquidación':''),
+    rep:{facKey:o.key, compraId:x.id, auto:true, liq:!!dest.liq, tipo:o.tipo, ini:x.pIni, fin:x.pFin, dias:r.dias, importe:r.importe, base:r.base, totalPD:r.totalPD, linPD:r.linPD, habsPD,
+      hab:h.hab, exInet:r.landlord.exInet, ajuste:gr.varios?0:(h.ajuste||0), topado:gr.g.topado, personas:gr.g.ps.map(p=>({n:p.n,inqId:p.inqId,pd:p.pd,importe:p.importe})), coId:gr.co?gr.co.id:null, nota}};
+}
+function v18Igual(a,b){ return JSON.stringify(a)===JSON.stringify(b); }
+// Sincroniza las líneas automáticas con las facturas. Devuelve cuántos cambios ha hecho (no guarda: lo hace quien llama).
+function v18Sync(hoy){
+  if(typeof D==='undefined'||!D||!Array.isArray(D.compras)||!Array.isArray(D.pagos)) return {cambios:0};
+  hoy=hoy||v4Hoy(); let cambios=0; const stamp=()=>(typeof ahoraMonotono==='function'?ahoraMonotono():Date.now());
+  _v18Idx=v18Indice(); let infos; try{ infos=D.compras.map(v18Info); } finally { _v18Idx=null; }
+  const autos=infos.filter(o=>o.st==='auto').sort((a,b)=>a.x.pIni.localeCompare(b.x.pIni)||String(a.x.id).localeCompare(String(b.x.id)));
+  const vivas=new Set();
+  autos.forEach(o=>{
+    vivas.add(o.x.id);
+    const mias=(D.pagos||[]).filter(p=>p.rep&&p.rep.compraId===o.x.id&&p.rep.auto);
+    if(mias.some(p=>v18Congelada(p,hoy))) return;                // ya cobrada o enviada: no se toca
+    const c=v18Calc(o,hoy); if(!c) return;
+    const quiero=new Map();
+    c.grupos.forEach(gr=>{ if(gr.fijo) return; const dest=v18Destino(gr.co,gr.inqId,hoy); if(dest.omitir) return; quiero.set(gr.id,v18Linea(o,c,gr,dest)); });
+    // quitar o actualizar las que había
+    mias.forEach(p=>{ const q=quiero.get(p.id);
+      if(!q){ D.pagos=D.pagos.filter(z=>z!==p); cambios++; return; }
+      ['inqId','con','mes','imp','notas'].forEach(k=>{ if(p[k]!==q[k]){ p[k]=q[k]; cambios++; } });
+      if(!v18Igual(p.rep,q.rep)){ p.rep=q.rep; cambios++; }
+      if(p.estado!=='pendiente'&&p.estado!=='pagado'){ p.estado='pendiente'; cambios++; }
+      quiero.delete(p.id); });
+    // crear las nuevas (id fijo por factura y habitación: dos dispositivos no las duplican)
+    quiero.forEach((q,id)=>{ if((D.pagos||[]).some(p=>p.id===id)) return; D.pagos.push(Object.assign({id, estado:'pendiente', fecha:'', _upd:stamp()},q)); if(D._del) delete D._del['pagos:'+id]; cambios++; });
+  });
+  // Líneas automáticas de facturas borradas o que ya no se reparten: fuera, si aún no están cobradas ni enviadas
+  const antes=D.pagos.length;
+  D.pagos=D.pagos.filter(p=>!(p.rep&&p.rep.auto&&p.rep.compraId&&!vivas.has(p.rep.compraId)&&!v18Congelada(p,hoy)));
+  cambios+=antes-D.pagos.length;
+  // Duplicados (por si dos dispositivos crearon la misma línea con ids distintos en versiones anteriores)
+  const vistos=new Set(); const antes2=D.pagos.length;
+  D.pagos=D.pagos.filter(p=>{ if(!(p.rep&&p.rep.auto)) return true; const k=p.rep.compraId+'|'+p.id; if(vistos.has(k)) return false; vistos.add(k); return true; });
+  cambios+=antes2-D.pagos.length;
+  return {cambios};
+}
+// La nota de la línea (contratos distintos en la misma habitación) también sale en el email mensual
+v4LineaSuministro=(function(prev){ return function(rep,hab){ let t=prev(rep,hab); if(rep&&rep.nota) t+=' '+rep.nota; return t; }; })(v4LineaSuministro);
+
+// ── Enganches: cada guardado sincroniza; al arrancar también; al guardar una factura, se dice qué ha pasado ──
+saveAndSync=(function(prev){ return function(){ if(!window._v18En){ window._v18En=true; try{ v18Sync(); }catch(e){ console.warn('v18Sync',e); } finally{ window._v18En=false; } } return prev.apply(this,arguments); }; })(saveAndSync);
+v4Arranque=(function(prev){ return function(){ const r=prev.apply(this,arguments); try{ if(v18Sync().cambios) saveAndSync(); }catch(e){ console.warn('v18 arranque',e); } return r; }; })(v4Arranque);
+saveCompra=(function(prev){ return function(){
+  const editId=gi('cp-edit-id'), antes=new Set((D.compras||[]).map(x=>x.id));
+  const r=prev.apply(this,arguments);
+  try{ const x=editId?(D.compras||[]).find(c=>c.id==editId):(D.compras||[]).find(c=>!antes.has(c.id)); if(x){ const t=v18TxtFactura(x); if(t) setTimeout(()=>toast(t),1900); } }catch(e){ console.warn(e); }
+  return r; }; })(saveCompra);
+// Resumen de una factura para el aviso al guardarla
+function v18TxtFactura(x){
+  const o=v18Info(x); if(o.st==='no') return '';
+  const ico=V18_ICO[o.tipo]||'⚡';
+  if(o.st==='sinPeriodo') return '⚠️ '+(o.tipo||'Suministro')+': falta el periodo de la factura (del … al …) para repartirla entre las habitaciones';
+  if(o.st==='sinTipo') return '⚠️ ¿Es luz, agua, gas o internet? Indícalo en Facturas → Habs para repartirla';
+  if(o.st==='sinPiso') return '⚠️ '+o.tipo+': falta el piso para repartirla';
+  if(o.st==='entero') return '🏠 '+o.tipo+' del piso entero: la pagan los arrendatarios, no se reparte';
+  if(o.st==='antes') return ico+' '+o.tipo+' registrada antes del reparto automático: si no se ha cobrado, repártela en Facturas → Habs';
+  if(o.st==='manual') return ico+' '+o.tipo+': ya estaba repartida a mano';
+  if(o.st!=='auto') return '';
+  const ls=(D.pagos||[]).filter(p=>p.rep&&p.rep.compraId===x.id);
+  if(!ls.length) return ico+' '+o.tipo+': nadie vivía en el piso en ese periodo, la paga el arrendador';
+  const meses=[...new Set(ls.filter(p=>!p.rep.liq).map(p=>p.mes))].sort();
+  return ico+' '+o.tipo+' repartida: '+ls.map(p=>'hab. '+p.rep.hab+' '+v4E2(p.imp)+' €').join(' · ')+(meses.length?' → pago de '+meses.map(m=>v4MesNom(m)).join(', '):'')+(ls.some(p=>p.rep.liq)?' (y a liquidar con la fianza de quien ya se fue)':'');
+}
+
+// ══ Panel «Suministros: reparto automático» (Facturas → Habs) ══
+var _v18Mes=null, _v18Abierta=null, _v18Todas=false;
+function v18NomGrupo(gr){ if(gr.co) return v4Nombres(gr.co); const i=v4Inq(gr.inqId); return i?((i.nom||'')+' '+(i.ap||'')).trim():'—'; }
+function v18Estado(o,hoy){
+  hoy=hoy||v4Hoy();
+  const T={
+    sinTipo:['⚠️','¿Qué suministro es?','var(--rd)'], sinPiso:['⚠️','Falta el piso','var(--rd)'], sinPeriodo:['⚠️','Falta el periodo de la factura (del … al …)','var(--rd)'],
+    sinImporte:['⚠️','Falta el importe','var(--rd)'], antes:['🕓','Registrada antes del reparto automático','var(--ink3)'], manual:['✓','Repartida a mano','var(--gn)'],
+    entero:['🏠','Piso entero: la pagan los arrendatarios','var(--ink3)'], noRep:['⛔','No se reparte (marcado)','var(--ink3)']};
+  if(T[o.st]) return {ico:T[o.st][0], txt:T[o.st][1], col:T[o.st][2]};
+  const ls=(D.pagos||[]).filter(p=>p.rep&&p.rep.compraId===o.x.id);
+  if(!ls.length) return {ico:'🏠',txt:'Nadie vivía en el piso: la paga el arrendador',col:'var(--ink3)'};
+  const pag=ls.filter(p=>p.estado==='pagado').length, env=ls.some(p=>p.cicloMes), meses=[...new Set(ls.filter(p=>!p.rep.liq).map(p=>p.mes))].sort(), liq=ls.some(p=>p.rep.liq);
+  if(pag===ls.length) return {ico:'✓',txt:'Cobrada a todas las habitaciones',col:'var(--gn)'};
+  const dest=(meses.length?'pago de '+meses.map(m=>v4MesNom(m)).join(', '):'')+(liq?(meses.length?' y ':'')+'liquidación de la fianza':'');
+  if(pag) return {ico:'◐',txt:'Cobrada en parte · '+dest,col:'var(--ye)'};
+  if(env) return {ico:'📧',txt:'En el email del '+dest,col:'var(--bl)'};
+  return {ico:'⚡',txt:'Repartida · '+dest,col:'var(--gn)'};
+}
+function v18Panel(){
+  const sec=$i('sec-facturas'); if(!sec) return;
+  let box=$i('v18-panel'); if(!box){ box=document.createElement('div'); box.id='v18-panel'; const ph=sec.querySelector('.ph'); if(ph&&ph.nextSibling) sec.insertBefore(box,ph.nextSibling); else sec.appendChild(box); }
+  const hoy=v4Hoy(), desde=v18Desde(); if(!_v18Mes) _v18Mes=v4MesSig(hoy.slice(0,7));
+  box.innerHTML='<div class="card mb" id="v18-card">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;"><div><div class="card-title" style="margin:0;">⚡ Suministros: reparto automático</div>'
+    +'<div style="font-size:11.5px;color:var(--ink3);margin-top:4px;line-height:1.55;max-width:760px;">Cada factura de luz, agua, gas o internet con su piso y su periodo se reparte sola por personas-día, como dice el contrato, y lo de cada habitación se suma a su <strong>próximo pago mensual</strong> junto a la renta. Se recalcula sola hasta que ese pago vence, se cobra o se envía el email.</div></div>'
+    +'<div style="font-size:11.5px;color:var(--ink2);display:flex;align-items:center;gap:6px;flex-wrap:wrap;" title="Las facturas registradas antes de esta fecha no se reparten solas (para no cobrar dos veces lo que ya se cobró fuera de la app). Puedes repartir cualquiera con su botón.">Automático para facturas registradas desde <input type="date" id="v18-desde" value="'+desde+'" onchange="v18SetDesde(this.value)" style="padding:4px 6px;border:1.5px solid var(--line2);border-radius:6px;font-size:12px;background:var(--card);color:var(--ink);"></div></div>'
+    +'<div id="v18-pago" style="margin-top:14px;"></div>'
+    +'<div id="v18-facs" style="margin-top:16px;"></div>'
+    +'<div style="font-size:10.5px;color:var(--ink3);margin-top:12px;line-height:1.55;">La «División rápida» de más abajo reparte a partes iguales o por m²: no es el método del contrato, úsala solo para lo que no sea luz, agua, gas o internet.</div>'
+    +'</div>';
+  v18PintarPago(); v18PintarFacturas();
+}
+// Pago del mes por habitación: renta + suministros (+ otros) = total, igual que en Pagos
+function v18PintarPago(){
+  const b=$i('v18-pago'); if(!b) return; const M=_v18Mes, hoy=v4Hoy();
+  let us=[]; try{ us=v12Unidades(M); }catch(e){ console.warn(e); }
+  const props=(D.props||[]).filter(p=>us.some(u=>u.propId==p.id));
+  const tipos=V4_SUMINISTROS.filter(t=>us.some(u=>u.L.some(l=>l.con===t&&l.imp)));
+  const fila=u=>{ const R=u.L.filter(l=>!v12EsDep(l)), renta=R.filter(l=>v12EsAlq(l)).reduce((s,l)=>s+l.imp,0), porT={}; tipos.forEach(t=>porT[t]=R.filter(l=>l.con===t).reduce((s,l)=>s+l.imp,0));
+    const otros=R.filter(l=>!v12EsAlq(l)&&!tipos.includes(l.con)).reduce((s,l)=>s+l.imp,0);
+    const est={cobrado:['✓ cobrado','var(--gn)'],parcial:['◐ parcial','var(--ye)'],vencido:['vencido','var(--rd)'],pendiente:['pendiente','var(--ink3)']}[u.estado]||['','var(--ink3)'];
+    return '<tr><td style="font-weight:600;white-space:nowrap;">'+(u.entero?'🏠 Piso entero':'Hab. '+v4Esc(u.hab||'?'))+'</td><td style="font-size:11.5px;">'+v4Esc(u.nom||'')+'</td><td class="n mono">'+v4E2(renta)+'</td>'
+      +tipos.map(t=>'<td class="n mono">'+(porT[t]?v4E2(porT[t]):'<span style="color:var(--ink3);">—</span>')+'</td>').join('')
+      +'<td class="n mono">'+(otros?v4E2(otros):'<span style="color:var(--ink3);">—</span>')+'</td><td class="n mono" style="font-weight:700;">'+v4E2(u.total)+'</td><td style="font-size:10.5px;color:'+est[1]+';white-space:nowrap;">'+est[0]+'</td></tr>'; };
+  let h='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><button class="btn btn-ghost btn-xs" onclick="v18Mes(-1)" aria-label="Mes anterior">‹</button><div style="font-size:13px;font-weight:700;">Pago de '+v4MesNom(M)+' por habitación</div><button class="btn btn-ghost btn-xs" onclick="v18Mes(1)" aria-label="Mes siguiente">›</button>'
+    +'<span style="font-size:11px;color:var(--ink3);">'+(M===v4MesSig(hoy.slice(0,7))?'el que se prepara a final de este mes · ':'')+'renta + suministros repartidos = total a pagar</span></div>';
+  if(!us.length){ b.innerHTML=h+'<div style="font-size:12px;color:var(--ink3);padding:10px;background:var(--bg);border-radius:var(--r2);">No hay pagos de este mes.</div>'; return; }
+  let tot=0;
+  h+='<div class="tbl-wrap"><table><thead><tr><th>Habitación</th><th>Inquilino</th><th class="n">Renta</th>'+tipos.map(t=>'<th class="n">'+V18_ICO[t]+' '+t+'</th>').join('')+'<th class="n">Otros</th><th class="n">Total</th><th></th></tr></thead><tbody>';
+  props.forEach(p=>{ const ups=us.filter(u=>u.propId==p.id).sort((a,b)=>(parseInt(a.hab)||0)-(parseInt(b.hab)||0)); const sp=ups.reduce((s,u)=>s+u.total,0); tot+=sp;
+    h+='<tr style="background:var(--bg2);"><td colspan="'+(4+tipos.length)+'" style="font-weight:700;font-size:12px;">'+v4Esc(p.nom||'')+'</td><td class="n mono" style="font-weight:700;">'+v4E2(sp)+'</td><td></td></tr>'+ups.map(fila).join(''); });
+  h+='</tbody><tfoot><tr style="font-weight:700;"><td colspan="'+(4+tipos.length)+'">Total del mes</td><td class="n mono">'+v4E2(Math.round(tot*100)/100)+'</td><td></td></tr></tfoot></table></div>';
+  // Móvil: una línea por habitación con la suma escrita
+  let m='<div class="v18-movil">';
+  props.forEach(p=>{ const ups=us.filter(u=>u.propId==p.id).sort((a,b)=>(parseInt(a.hab)||0)-(parseInt(b.hab)||0));
+    m+='<div style="font-size:12px;font-weight:700;margin:10px 0 4px;">'+v4Esc(p.nom||'')+'</div>'+ups.map(u=>{ const R=u.L.filter(l=>!v12EsDep(l)&&l.imp);
+      const partes=R.map(l=>(v12EsAlq(l)?'Renta':(V18_ICO[l.con]||'')+' '+l.con)+' '+v4E2(l.imp));
+      return '<div style="padding:8px 10px;background:var(--bg);border-radius:var(--r2);margin-bottom:5px;"><div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;"><strong>'+(u.entero?'🏠 Piso entero':'Hab. '+v4Esc(u.hab||'?'))+' · '+v4Esc(u.nom||'')+'</strong><strong class="mono">'+v4E2(u.total)+' €</strong></div><div style="font-size:11px;color:var(--ink2);margin-top:2px;line-height:1.5;">'+v4Esc(partes.join(' + '))+'</div></div>'; }).join(''); });
+  m+='<div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;margin-top:6px;"><span>Total del mes</span><span class="mono">'+v4E2(Math.round(tot*100)/100)+' €</span></div></div>';
+  b.innerHTML='<style>#v18-pago .v18-movil{display:none;}@media(max-width:700px){#v18-pago .tbl-wrap{display:none;}#v18-pago .v18-movil{display:block;}}</style>'+h+m;
+}
+function v18Mes(d){ _v18Mes=v4MesSig(_v18Mes||v4MesSig(v4Hoy().slice(0,7)),d); v18PintarPago(); }
+function v18PintarFacturas(){
+  const b=$i('v18-facs'); if(!b) return; const hoy=v4Hoy(), lim=fxAdd(hoy,-400), limA=fxAdd(v18Desde(),-90);
+  let infos=(D.compras||[]).map(v18Info).filter(o=>o.st!=='no').filter(o=>{ const reg=v18Registro(o.x), f=o.x.pFin||o.x.fecha||reg; if(o.st==='antes') return reg>=limA; return _v18Todas||reg>=lim||f>=lim; });
+  infos.sort((a,b)=>String(b.x.pFin||b.x.fecha||'').localeCompare(String(a.x.pFin||a.x.fecha||''))||String(b.x.id).localeCompare(String(a.x.id)));
+  const prob=infos.filter(o=>['sinTipo','sinPiso','sinPeriodo','sinImporte'].includes(o.st)).length;
+  let h='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><div style="font-size:13px;font-weight:700;">Facturas de suministros'+(prob?' <span class="badge badge-r" style="margin-left:6px;">'+prob+' sin poder repartir</span>':'')+'</div>'
+    +'<button class="btn btn-ghost btn-xs" onclick="_v18Todas=!_v18Todas;v18PintarFacturas()">'+(_v18Todas?'Ver solo el último año':'Ver todas')+'</button></div>';
+  if(!infos.length){ b.innerHTML=h+'<div style="font-size:12px;color:var(--ink3);padding:10px;background:var(--bg);border-radius:var(--r2);">Aún no hay facturas de luz, agua, gas o internet. Regístralas en Facturas con su piso y su periodo (del … al …): se repartirán solas.</div>'; return; }
+  h+=infos.map(o=>v18HtmlFactura(o,hoy)).join('');
+  b.innerHTML=h;
+}
+function v18HtmlFactura(o,hoy){
+  const x=o.x, p=(D.props||[]).find(z=>z.id==x.propId), e=v18Estado(o,hoy), abierta=_v18Abierta===x.id, id=v4Esc(String(x.id));
+  const per=x.pIni&&x.pFin?v4F2(x.pIni)+' – '+v4F2(x.pFin)+' ('+(v4Diff(x.pIni,x.pFin)+1)+' días)':'sin periodo';
+  let acc='';
+  if(o.st==='sinTipo') acc='<select onchange="v18SetTipo(\''+id+'\',this.value)" style="font-size:11.5px;padding:4px 6px;border:1.5px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink);"><option value="">Elegir…</option><option>Luz</option><option>Agua</option><option>Gas</option><option>Internet</option><option value="no">No es un suministro</option></select>';
+  if(['sinPeriodo','sinPiso','sinImporte'].includes(o.st)) acc='<button class="btn btn-primary btn-xs" onclick="editCompra(\''+id+'\')">Completar</button>';
+  if(o.st==='antes') acc='<button class="btn btn-secondary btn-xs" onclick="v18Forzar(\''+id+'\')">Repartir en el próximo pago</button>';
+  if(o.st==='noRep') acc='<button class="btn btn-secondary btn-xs" onclick="v18NoRep(\''+id+'\',false)">Volver a repartir</button>';
+  if(o.st==='auto'&&(D.pagos||[]).some(pg=>pg.rep&&pg.rep.compraId===x.id)&&!(D.pagos||[]).some(pg=>pg.rep&&pg.rep.compraId===x.id&&v18Congelada(pg,hoy))) acc='<button class="btn btn-ghost btn-xs" onclick="v18NoRep(\''+id+'\',true)" title="Por ejemplo, si ya la cobraste fuera de la app">No repartir</button>';
+  return '<div style="border:1px solid var(--line);border-radius:var(--r2);margin-bottom:6px;background:var(--card);">'
+    +'<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;flex-wrap:wrap;cursor:pointer;" onclick="if(event.target.closest(\'button,select\'))return;_v18Abierta=(_v18Abierta===\''+id+'\'?null:\''+id+'\');v18PintarFacturas()">'
+    +'<span style="font-size:16px;">'+(V18_ICO[o.tipo]||'⚡')+'</span>'
+    +'<div style="flex:1;min-width:200px;"><div style="font-size:12.5px;font-weight:600;">'+v4Esc(o.tipo||x.con||'Factura')+' · '+v4Esc(p?p.nom:'sin piso')+' <span class="mono" style="font-weight:700;margin-left:4px;">'+v4E2(+x.imp||0)+' €</span></div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-top:1px;">'+per+' · '+v4Esc(x.emp||'')+(x.fecha?' · factura del '+v4F2(x.fecha):'')+'</div></div>'
+    +'<div style="font-size:11.5px;color:'+e.col+';font-weight:600;max-width:340px;">'+e.ico+' '+v4Esc(e.txt)+'</div>'
+    +'<div style="display:flex;gap:6px;align-items:center;">'+acc+'<span style="color:var(--ink3);font-size:11px;">'+(abierta?'▴':'▾')+'</span></div></div>'
+    +(abierta?'<div style="padding:4px 12px 12px;">'+v18HtmlDetalle(o,hoy)+'</div>':'')+'</div>';
+}
+function v18HtmlDetalle(o,hoy){
+  const x=o.x;
+  if(['sinTipo','sinPiso','sinPeriodo','sinImporte'].includes(o.st)) return '<div style="font-size:11.5px;color:var(--ink2);line-height:1.6;">Para repartirla hace falta: el tipo de suministro, el piso, el importe y el <strong>periodo de la factura</strong> (fechas de inicio y fin del consumo, en la ficha de la factura). En cuanto lo completes, se reparte sola.</div>';
+  if(o.st==='entero') return '<div style="font-size:11.5px;color:var(--ink2);">El piso está alquilado entero con los suministros a cargo de los arrendatarios: esta factura no se les reparte.</div>';
+  if(o.st==='manual') return '<div style="font-size:11.5px;color:var(--ink2);">Se repartió con el botón «⚖️ Reparto por persona-día»: '+o.manual.map(p=>'hab. '+v4Esc((p.rep&&p.rep.hab)||'?')+' '+v4E2(p.imp)+' € ('+v4MesNom(p.mes)+')').join(' · ')+'.</div>';
+  const info=Object.assign({},o,{key:o.key||v18Key(x,o.tipo)}); const c=v18Calc(info,hoy);
+  if(!c) return '<div style="font-size:11.5px;color:var(--rd);">No se puede calcular: revisa las fechas del periodo.</div>';
+  const r=c.r, ls=(D.pagos||[]).filter(p=>p.rep&&p.rep.compraId===x.id), fija=ls.some(p=>v18Congelada(p,hoy));
+  const filas=c.grupos.map(gr=>{ const l=ls.find(p=>p.id===gr.id), dest=gr.fijo?null:v18Destino(gr.co,gr.inqId,hoy);
+    let d; if(gr.fijo) d='cuota fija de su ficha: no se le reparte';
+    else if(l) d=(l.rep.liq?'liquidación de la fianza':'pago de '+v4MesNom(l.mes))+(l.estado==='pagado'?' · ✓ cobrado':l.cicloMes?' · 📧 enviado':'');
+    else if(o.st==='auto'&&dest&&dest.omitir) d=dest.motivo==='liquidada'?'ya se liquidó su fianza: no se cobra':'sin pago donde añadirlo';
+    else if(o.st==='auto') d=fija?'no incluido (la factura ya se cobró)':'—';
+    else d=(o.st==='antes'?'se añadirá al pulsar «Repartir»':'no se reparte');
+    const pdTxt=gr.varios?gr.g.pd+' de '+gr.h.pd:String(gr.h.pd);
+    const difer=l&&Math.abs((+l.imp||0)-gr.imp)>0.004?' <span style="color:var(--rd);">(ahora daría '+v4E2(gr.imp)+' €)</span>':'';
+    return '<tr><td style="font-weight:600;">Hab. '+v4Esc(gr.h.hab)+'</td><td style="font-size:11.5px;">'+v4Esc(v18NomGrupo(gr))+(gr.g.topado?' · <span style="color:var(--ye);">tope 1.200 €/año</span>':'')+'</td><td class="n mono">'+pdTxt+'</td><td class="n mono" style="font-weight:700;">'+v4E2(l?l.imp:gr.imp)+' €'+difer+'</td><td style="font-size:11px;color:var(--ink2);">'+d+'</td></tr>'; }).join('');
+  const L=r.landlord, mot=[L.pd?L.pd+' '+(r.tipo==='Internet'?'días sin nadie con wifi':'días con el piso vacío'):'',L.exInet>0?'exceso sobre el tope anual de internet '+v4E2(L.exInet)+' €':'',L.exTope>0?'exceso del tope de 1.200 € '+v4E2(L.exTope)+' €':''].filter(Boolean);
+  if(L.importe>0&&!mot.length) mot.push('céntimos de redondeo'); const motivos=mot.join(' · ');
+  const vacias=r.habs.filter(h=>!(h.pd>0)).map(h=>h.hab);
+  return '<div style="font-size:11px;color:var(--ink2);line-height:1.6;margin-bottom:6px;">'+v4Esc(r.linPD)+'. Cada habitación paga ('+v4E2(r.base)+' / '+r.totalPD+') × sus personas-día'+(r.tipo==='Internet'&&r.internetAnual&&r.internetAnual.anual>0?' · tope de internet: '+v4E2(r.internetAnual.anual)+' €/año × '+r.dias+'/365 = '+v4E2(Math.round(r.internetAnual.anual*r.dias/365*100)/100)+' €':'')+(r.tipo==='Internet'&&!(r.internetAnual&&r.internetAnual.anual>0)?' · ⚠️ falta el importe anual de internet en los contratos (tope del art. 20.1 LAU)':'')+'.</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Habitación</th><th>Quién paga</th><th class="n">'+(r.tipo==='Internet'?'P-día con wifi':'Personas-día')+'</th><th class="n">Importe</th><th>Dónde se cobra</th></tr></thead><tbody>'+(filas||'<tr><td colspan="5" style="color:var(--ink3);">Nadie vivía en el piso en ese periodo.</td></tr>')
+    +'<tr style="background:var(--ye-l);"><td colspan="2">🏠 Arrendador'+(motivos?' · '+motivos:'')+'</td><td class="n mono">'+L.pd+'</td><td class="n mono" style="font-weight:700;">'+v4E2(L.importe)+' €</td><td></td></tr>'
+    +'<tr style="font-weight:700;background:var(--bg2);"><td colspan="2">Total factura</td><td class="n mono">'+r.totalPD+'</td><td class="n mono">'+v4E2(r.suma)+' €</td><td style="font-size:11px;color:'+(r.cuadra?'var(--gn)':'var(--rd)')+';">'+(r.cuadra?'✓ suma exacta':'⛔ no cuadra')+'</td></tr></tbody></table></div>'
+    +(vacias.length?'<div style="font-size:10.5px;color:var(--ink3);margin-top:5px;">Habitaciones sin nadie en el periodo (0 personas-día): '+vacias.map(h=>'H'+v4Esc(h)).join(', ')+'.</div>':'')
+    +(fija&&ls.some(l=>{ const g=c.grupos.find(z=>z.id===l.id); return !g||Math.abs(g.imp-(+l.imp||0))>0.004; })?'<div class="alert alert-y" style="font-size:11px;margin-top:6px;">⚠️ La factura o las fechas de entrada y salida han cambiado después de cobrar o enviar este reparto. Lo ya cobrado no se toca: si hay que corregir algo, hazlo en Pagos.</div>':'');
+}
+function v18SetDesde(v){ if(!/^\d{4}-\d{2}-\d{2}$/.test(v||'')) return; D.cfg=D.cfg||{}; D.cfg.repAutoDesde=v; saveAndSync(); v18Panel(); toast('Reparto automático para facturas registradas desde el '+v4F2(v)); }
+function v18Forzar(id){ const x=(D.compras||[]).find(c=>c.id==id); if(!x) return; x.repForzar=true; delete x.noRepartir; saveAndSync(); v18Panel(); const t=v18TxtFactura(x); if(t) toast(t); }
+function v18NoRep(id,on){ const x=(D.compras||[]).find(c=>c.id==id); if(!x) return; if(on&&!confirm('¿No repartir esta factura? Se quitarán sus líneas del próximo pago (por ejemplo, si ya la cobraste fuera de la app).')) return; if(on) x.noRepartir=true; else { delete x.noRepartir; x.repForzar=true; } saveAndSync(); v18Panel(); }
+function v18SetTipo(id,t){ const x=(D.compras||[]).find(c=>c.id==id); if(!x||!t) return; x.sumTipo=t; saveAndSync(); v18Panel(); const s=v18TxtFactura(x); if(s) toast(s); }
+rFacturas=(function(prev){ return function(){ const r=prev.apply(this,arguments); try{ v18Panel(); }catch(e){ console.warn('v18Panel',e); } return r; }; })(rFacturas);
+
+// ══════════════════════════════════════════════════════════════
+// v4.18 · Mensaje del pago mensual desde Pagos: email (plantilla 1) y WhatsApp (plantilla 10 con el desglose),
+// con la cuenta de cobro de cada piso y las facturas adjuntas con los datos personales tapados.
+// ══════════════════════════════════════════════════════════════
+
+// ── Cuenta de cobro ──
+// Por orden: la del contrato (si se eligió) → la del piso (si se eligió en la ventana del mensaje) → la indicada por el
+// propietario para ese piso (Molina: Trade Republic; Alcalde 25: Unicaja) → la principal de quien disfruta el piso.
+function v19Pista(p){ const t=((p&&p.nom)||'')+' '+((p&&p.dir)||''); if(/molina/i.test(t)) return /trade\s*republic/i; if(/alcalde/i.test(t)) return /unicaja/i; return null; }
+function v19Cuentas(){ return (D.ctasBanc||[]).filter(c=>(c.tipo||'cuenta')!=='tarjeta'); }
+function v19CuentaPiso(p){
+  const cs=v19Cuentas(); if(!p) return {cta:null, origen:''};
+  if(p.ctaCobro){ const c=cs.find(x=>x.id==p.ctaCobro); if(c) return {cta:c, origen:'elegida para este piso'}; }
+  let tit=null; try{ tit=(titularidadDia(p.id,v4Hoy())||{}).disfrute||null; }catch(e){}
+  const pista=v19Pista(p), deTit=cs.filter(c=>tit&&c.titularId==tit), txt=c=>(c.nom||'')+' '+(c.banco||'');
+  if(pista){ const c=deTit.find(c=>pista.test(txt(c)))||cs.find(c=>pista.test(txt(c))); if(c) return {cta:c, origen:'la indicada para este piso'}; }
+  const c=deTit.find(c=>c.principal)||deTit[0]||null; return {cta:c, origen:c?'la principal de quien cobra las rentas del piso':''};
+}
+function v19FmtIban(s){ const t=String(s||'').replace(/\s+/g,'').toUpperCase(); return /^[A-Z]{2}\d{2}[A-Z0-9]{8,30}$/.test(t)?t.replace(/(.{4})/g,'$1 ').trim():String(s||'').trim(); }
+// Dígitos de control del IBAN (ISO 13616, módulo 97)
+function v19IbanOk(s){ const t=String(s||'').replace(/\s+/g,'').toUpperCase(); if(!/^[A-Z]{2}\d{2}[A-Z0-9]{8,30}$/.test(t)) return false; if(t.startsWith('ES')&&t.length!==24) return false;
+  const r=(t.slice(4)+t.slice(0,4)).replace(/[A-Z]/g,ch=>String(ch.charCodeAt(0)-55)); let m=0; for(const ch of r) m=(m*10+(+ch))%97; return m===1; }
+function v19NomTitular(id){ const o=(D.propietarios||[]).find(x=>x.id==id); return o?((o.nom||'').trim()||o.alias||''):''; }
+v4Cuenta=(function(prev){ return function(co){ if(!co) return null; if(co.ctaId){ const c=(D.ctasBanc||[]).find(x=>x.id==co.ctaId); if(c) return c; }
+  const p=(D.props||[]).find(x=>x.id==co.propId); const r=v19CuentaPiso(p); return r.cta||prev(co); }; })(v4Cuenta);
+function v19Bizum(co){ const b=String((co&&co.bizum)||'').replace(/[^\d]/g,''); return b.length>=9?String(co.bizum).trim():''; }
+// Bizum ya no se usa (reglas del 15/11/2026): solo se menciona si el contrato tiene un número de verdad
+v4DatosCobro=function(co){ const cta=v4Cuenta(co); let tit=cta&&cta.titularId?v19NomTitular(cta.titularId):'';
+  if(!tit){ try{ const t=v4TitularCobro(co); if(t) tit=v19NomTitular(t)||nombreC(t); }catch(e){} }
+  return {bizum:v19Bizum(co), iban:cta&&cta.num?v19FmtIban(cta.num):'[IBAN]', titular:tit||'[TITULAR]', cta}; };
+function v19TxtPago(dc){ return (dc.bizum?'por Bizum al '+dc.bizum+' o ':'')+'por transferencia a la cuenta '+dc.iban+', a nombre de '+dc.titular; }
+// Las demás plantillas que nombran el Bizum del arrendador: si no hay número, solo transferencia
+v4Plantilla=(function(prev){ return function(tpl,co,ctx){ const r=prev.apply(this,arguments); try{ if(r&&r.texto&&co&&!v19Bizum(co)) r.texto=r.texto
+  .replace(/por Bizum al (\[NÚMERO\]|[^ ,]*) o (por )?transferencia/g,'por transferencia').replace(/el Bizum, ingreso o transferencia/g,'la transferencia'); }catch(e){} return r; }; })(v4Plantilla);
+
+// ── Qué se pide en el pago de un mes ──
+// La renta del mes si sigue pendiente, y lo pendiente que sea de ese mes o de antes (nunca lo asignado a un pago posterior).
+function v19RentaCo(co,M){ const full=v4RentaMes(co,M), a=v12AlqRecs(co,M), main=a.find(p=>p.con==='Alquiler');
+  if(!main) return {renta:v12R2(full), ya:0}; return v12Pag(main)?{renta:0, ya:v12R2(main.imp)}:{renta:v12R2(main.imp), ya:0}; }
+v4CalculoMensual=function(co,mes){
+  const pend=f=>v4PagosPendCo(co,mes,f).filter(p=>!p.mes||p.mes<=mes||p.cicloMes===mes);
+  const renta=v19RentaCo(co,mes).renta, sum=pend(v4EsSuministroPago), otras=pend(v4EsExtraPago);
+  const sSum=v12R2(sum.reduce((s,p)=>s+(+p.imp||0),0)), sOtras=v12R2(otras.reduce((s,p)=>s+(+p.imp||0),0));
+  return {mes, V:v4Venc(co,mes), renta, sum, otras, sSum, sOtras, total:v12R2(renta+sSum+sOtras)};
+};
+// Ventana del ciclo mensual (Avisos): si la renta del mes ya está cobrada, lo dice en vez de «0,00 €»
+v4AbrirCiclo=(function(prev){ return function(coId,mes){ prev.apply(this,arguments); try{ const co=v4Co(coId), sel=$i('v4c-mes'), M=(sel&&sel.value)||mes; if(!co||!M) return; const r=v19RentaCo(co,M); if(r.renta>0||!(r.ya>0)) return;
+  [...document.querySelectorAll('#m-v4-c span')].forEach(sp=>{ if(sp.textContent==='Renta de '+v4MesNom(M)&&sp.nextElementSibling) sp.nextElementSibling.textContent='ya cobrados '+v4E2(r.ya)+' €'; }); }catch(e){} }; })(v4AbrirCiclo);
+// Inquilino sin contrato gestionado (o piso entero): las líneas pendientes de la tarjeta del mes y lo repartido o cargado
+// antes que siga pendiente (las cuotas automáticas y la renta de meses anteriores se quedan en su mes).
+function v19LinInq(u,M){
+  const own=u.L.filter(l=>!l.pag&&!v12EsDep(l)&&!/bonific/i.test(l.con||'')&&Math.abs(l.imp)>0.004&&!(l.rec&&l.rec.cicloMes&&l.rec.cicloMes!==M))
+    .map(l=>l.virtual?{id:'v:'+l.con, con:l.con, imp:l.imp, mes:M, virtual:true, notas:'Auto'}:l.rec);
+  return own.concat(v12PrevInq(u,M));
+}
+
+// ── Datos del mensaje de una tarjeta de Pagos ──
+function v19Ciclo(d){ if(d.co) return v4Ciclo(d.co,d.M); if(d.ent) return v4Ciclo(d.ent,d.M); const i=d.inq; return (i&&i.ciclos&&i.ciclos[d.M])||{}; }
+function v19Dueno(d){ return d.co||d.ent||d.inq||null; }
+function v19Datos(key,M){
+  const u=v12UnidadMes(key,M); if(!u) return null;
+  const co=u.co||null, ent=u.entero||null, prop=(D.props||[]).find(p=>p.id==u.propId)||null;
+  const personas=(co?v4InqsCo(co):ent?v4InqsCo(ent):(u.inq?[u.inq]:[])).filter(Boolean);
+  let renta, ya, sum, otras, rentaProp=false;
+  if(co){ const r=v19RentaCo(co,M), c=v4CalculoMensual(co,M); renta=r.renta; ya=r.ya; sum=c.sum.slice(); otras=c.otras.slice(); rentaProp=(r.renta+r.ya)>0&&v4RentaMes(co,M)<(parseFloat(co.r)||0)-0.004; }
+  else { const L=v19LinInq(u,M);
+    renta=v12R2(L.filter(p=>p.con==='Alquiler').reduce((s,p)=>s+(+p.imp||0),0));
+    ya=v12R2(u.L.filter(l=>l.pag&&l.con==='Alquiler').reduce((s,l)=>s+l.imp,0));
+    sum=L.filter(p=>!v12EsAlq(p)&&v4EsSuministroPago(p)); otras=L.filter(p=>p.con!=='Alquiler'&&!(!v12EsAlq(p)&&v4EsSuministroPago(p))); }
+  const ord=p=>({Internet:0,Luz:1,Agua:2,Gas:3})[p.rep?p.rep.tipo:v4TipoSum(p.con)]??5;
+  sum.sort((a,b)=>String(a.mes||'').localeCompare(String(b.mes||''))||ord(a)-ord(b));
+  const sSum=v12R2(sum.reduce((s,p)=>s+(+p.imp||0),0)), sOtras=v12R2(otras.reduce((s,p)=>s+(+p.imp||0),0));
+  const firma=!!(co&&v4F(co)&&v4F(co).slice(0,7)===M);
+  const d={key, M, u, co, ent, inq:u.inq||null, prop, personas, hab:u.hab, renta, ya, rentaProp, sum, otras, sSum, sOtras, total:v12R2(renta+sSum+sOtras), V:u.V, firma,
+    dc:v4DatosCobro(co||ent||{propId:u.propId})};
+  d.bono=!ent&&!firma&&!(!co&&u.inq&&u.inq.sinBono5);
+  d.cic=v19Ciclo(d); d.facturas=v19FacturasDe(d);
+  return d;
+}
+// Facturas de los suministros del pago (las de las líneas repartidas)
+function v19FacturasDe(d){
+  const out=[], vistos=new Set();
+  d.sum.forEach(p=>{ if(!p.rep) return; let x=null;
+    if(p.rep.compraId) x=(D.compras||[]).find(c=>c.id===p.rep.compraId)||null;
+    if(!x&&p.rep.facKey) x=(D.compras||[]).find(c=>{ try{ const t=v18Tipo(c); return t&&c.pIni&&c.pFin&&v18Key(c,t)===p.rep.facKey; }catch(e){ return false; } })||null;
+    const k=x?x.id:'k:'+p.rep.facKey; if(vistos.has(k)) return; vistos.add(k);
+    out.push(x||{id:k, falta:true, con:p.rep.tipo, imp:p.rep.importe, pIni:p.rep.ini, pFin:p.rep.fin});
+  });
+  return out;
+}
+const V19_NOMSUM={Luz:'Electricidad',Agua:'Agua',Gas:'Gas',Internet:'Internet'};
+function v19Fecha(V){ return v4FL(V); }
+function v19Nom(i){ return ((i&&i.nom)||'').trim(); }
+function v19Saludo(d,persona){ if(persona) return v19Nom(persona)||'inquilino'; const n=d.personas.map(v19Nom).filter(Boolean); return n.length>1?n.slice(0,-1).join(', ')+' y '+n[n.length-1]:(n[0]||'inquilino'); }
+function v19Donde(d){ return d.ent?'la vivienda':'la habitación '+d.hab; }
+function v19Otra(pg){ const ms=pg.mes?v4MesNom(pg.mes):'';
+  if(v12EsAlq(pg)) return 'Parte pendiente de la renta'+(ms?' de '+ms:'');
+  if(pg.con==='Penalización retraso') return 'Penalización por retraso'+(ms?' del pago de '+ms:'');
+  return pg.con||'Otros'; }
+
+// ── Email (plantilla 1) ──
+function v19Email(d){
+  const ms=v4MesNom(d.M), p=d.prop, conFac=d.facturas.some(x=>!x.falta);
+  const asunto='Pago mensual de '+ms+' – '+(d.ent?'vivienda':'habitación '+d.hab)+(p?' – '+p.nom:'');
+  const lin=d.sum.map(pg=>{
+    const atr=pg.mes&&pg.mes<d.M?' (Pendiente del pago de '+v4MesNom(pg.mes)+'.)':'';
+    if(pg.rep&&pg.rep.restoRep) return '- Parte pendiente de '+(V19_NOMSUM[pg.rep.tipo]||pg.con).toLowerCase()+' (factura del '+v4DM(pg.rep.ini)+' al '+v4DM(pg.rep.fin)+'): '+v4E2(pg.imp)+' euros.'+atr;
+    if(pg.rep) return v4LineaSuministro(Object.assign({},pg.rep,{importeHab:pg.imp}),pg.rep.hab||d.hab)+atr;
+    return '- '+(V19_NOMSUM[v4TipoSum(pg.con)]||pg.con)+(pg.notas==='Auto'||pg.virtual?' (cuota mensual)':'')+': '+v4E2(pg.imp)+' euros.'+atr;
+  });
+  const otr=d.otras.map(pg=>'- Otras cantidades pendientes ('+v19Otra(pg).toLowerCase()+'): '+v4E2(pg.imp)+' euros.');
+  const intro=d.sum.length?'Incluye '+(d.renta>0?'la renta de '+ms+' y ':'')+'los suministros pendientes'+(d.sum.some(x=>x.rep)?', calculados por personas-día según el contrato'+(conFac?' (adjunto las facturas)':''):'')+':'
+    :(d.renta>0?'Incluye la renta de '+ms+':':'Incluye:');
+  const t=['Hola '+v19Saludo(d)+':','',
+    'Este es el pago mensual total de '+v19Donde(d)+', que debe ordenarse como máximo el '+v19Fecha(d.V)+'. '+intro,''];
+  if(d.renta>0) t.push('- Renta de '+ms+': '+v4E2(d.renta)+' euros.'+(d.rentaProp?' (Renta proporcional: '+v4E2(d.co.r)+' / '+v4DiasMes(d.M)+' x días.)':''));
+  else if(d.ya>0) t.push('- Renta de '+ms+': ya pagados '+v4E2(d.ya)+' euros.');
+  t.push(...lin,...otr,'');
+  if(d.sum.length) t.push('Total suministros: '+(d.sum.length>1?d.sum.map(x=>v4E2(x.imp)).join(' + ')+' = ':'')+v4E2(d.sSum)+' euros.');
+  else t.push('Este mes no hay suministros pendientes.');
+  const partes=[d.renta>0?v4E2(d.renta):'', d.sum.length?v4E2(d.sSum):'', d.sOtras?v4E2(d.sOtras):''].filter(Boolean);
+  t.push('Total a pagar: '+(partes.length>1?partes.join(' + ')+' = ':'')+v4E2(d.total)+' euros.','');
+  if(d.bono&&d.total>5) t.push('Si el pago se ordena en menos de 24 horas desde el envío de este email, se pueden descontar 5 euros, y el total a pagar queda en '+v4E2(d.total-5)+' euros.','');
+  t.push('El pago se hace '+v19TxtPago(d.dc)+'. Una vez ordenado, es necesario enviarme por este email o por WhatsApp una foto o copia del justificante.','',
+    'Quedo a disposición para cualquier duda o aclaración.','','Un saludo y gracias,',v4Firma());
+  return {asunto, texto:t.join('\n')};
+}
+// Las demás pantallas (Avisos, ficha del contrato) usan el mismo texto
+v4TxtEmailMensual=function(co,mes){ const d=v19Datos('co:'+co.id,mes); const c=v4CalculoMensual(co,mes); if(!d) return {texto:'',asunto:'',calc:c}; const e=v19Email(d); return {texto:'Asunto: '+e.asunto+'\n\n'+e.texto, asunto:e.asunto, calc:c}; };
+
+// ── WhatsApp (plantilla 10 con el desglose, para que se entienda sin abrir el email) ──
+function v19LineaWA(pg,d){
+  const atr=pg.mes&&pg.mes<d.M?' (pendiente de '+v4MesNom(pg.mes)+')':'';
+  if(!pg.rep) return '• '+(V19_NOMSUM[v4TipoSum(pg.con)]||pg.con)+(pg.notas==='Auto'||pg.virtual?' (cuota mensual)':'')+': '+v4E2(pg.imp)+' €'+atr;
+  const r=pg.rep, nom=V19_NOMSUM[r.tipo]||pg.con;
+  if(r.restoRep) return '• '+nom+' (parte pendiente de la factura del '+v4DM(r.ini)+' al '+v4DM(r.fin)+'): *'+v4E2(pg.imp)+' €*'+atr;
+  const h=(r.habsPD||[]).find(x=>String(x.hab)===String(r.hab||d.hab)), pd=h?h.pd:0;
+  return '• '+nom+': factura de '+v4E2(r.importe)+' € del '+v4DM(r.ini)+' al '+v4DM(r.fin)+(r.exInet>0?' (se reparten '+v4E2(r.base)+' €, el máximo anual del contrato prorrateado)':'')
+    +'; a '+(d.ent?'la vivienda':'la habitación')+' le corresponden '+pd+' de '+r.totalPD+' personas-día'+(r.tipo==='Internet'?' con wifi':'')+' → *'+v4E2(pg.imp)+' €*'+atr;
+}
+function v19WA(d,persona){
+  const ms=v4MesNom(d.M), p=d.prop, em=d.cic&&d.cic.email?v4DT(d.cic.email):null, hayEmail=d.personas.some(i=>v19Email1(i)), conFac=d.facturas.some(x=>!x.falta);
+  const t=['Hola '+v19Saludo(d,persona)+'. '+(hayEmail?(em?'Acabo de enviar por email':'Te envío por email')+' el cálculo':'Te paso el cálculo')+' del pago mensual de '+ms+' de '+v19Donde(d)+(p?' ('+p.nom+')':'')+(conFac?', con las facturas, que también adjunto por aquí':'')+':',''];
+  if(d.renta>0) t.push('• Renta de '+ms+': *'+v4E2(d.renta)+' €*'+(d.rentaProp?' (proporcional a los días)':''));
+  else if(d.ya>0) t.push('• Renta de '+ms+': ya pagados '+v4E2(d.ya)+' € ✓');
+  d.sum.forEach(x=>t.push(v19LineaWA(x,d))); d.otras.forEach(x=>t.push('• '+v19Otra(x)+': '+v4E2(x.imp)+' €'));
+  if(!d.sum.length) t.push('• Este mes no hay suministros pendientes');
+  t.push('','*Total a pagar: '+v4E2(d.total)+' €*, como máximo el '+v19Fecha(d.V)+'.');
+  if(d.bono&&d.total>5){
+    if(em){ const lim=new Date(em.getTime()+864e5); t.push('','Si el pago se ordena antes del '+v4F2(fxIso(lim))+' a las '+v4HM(lim)+' (24 horas desde el envío del email), se pueden descontar 5 € y quedan *'+v4E2(d.total-5)+' €*.'); }
+    else t.push('','Si el pago se ordena en menos de 24 horas desde el envío del email, se pueden descontar 5 € y quedan *'+v4E2(d.total-5)+' €*.');
+  }
+  t.push('','Pago '+v19TxtPago(d.dc)+'. Cuando esté hecho, necesito por aquí la foto o captura del justificante. Para cualquier duda o aclaración, aquí estoy. ¡Un abrazo y gracias por todo! :-)');
+  return t.join('\n');
+}
+v4TxtWAMensual=function(co,mes){ const d=v19Datos('co:'+co.id,mes); return d?v19WA(d):''; };
+function v19Email1(i){ const e=String((i&&i.email)||'').trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)?e:''; }
+function v19Tel(i){ let t=String((i&&(i.wa||i.tel))||'').replace(/\D/g,''); if(t.startsWith('00')) t=t.slice(2); if(t.length===9&&/^[6789]/.test(t)) t='34'+t; return t.length>=10?t:''; }
+
+// ── Marcar el email como enviado (la hora cuenta para el descuento de 5 €; lo incluido queda en este pago) ──
+function v19MarcarEnviado(key,M,dt){
+  const d=v19Datos(key,M); if(!d) return false; dt=dt||v4LocalDT(new Date()); const dueno=v19Dueno(d); if(!dueno) return false;
+  const e=v19Email(d); dueno.ciclos=Object.assign({},dueno.ciclos||{}); const cic=Object.assign({},dueno.ciclos[M]||{});
+  cic.email=dt; cic.total=d.total; cic.emailTexto='Asunto: '+e.asunto+'\n\n'+e.texto; dueno.ciclos[M]=cic; dueno._upd=Date.now();
+  d.sum.concat(d.otras).forEach(p=>{ if(p.virtual) return; const r=(D.pagos||[]).find(x=>x.id===p.id); if(r&&!r.cicloMes){ r.cicloMes=M; r.v19Ciclo=true; r._upd=Date.now(); } });
+  saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} return true;
+}
+function v19DesmarcarEnviado(key,M){
+  const d=v19Datos(key,M); if(!d) return false; const dueno=v19Dueno(d); if(!dueno||!dueno.ciclos||!dueno.ciclos[M]||!dueno.ciclos[M].email) return false;
+  if(dueno.ciclos[M].orden){ toast('Ese pago ya tiene un cobro registrado: deshaz antes el cobro',false); return false; }
+  const cic=Object.assign({},dueno.ciclos[M]); ['email','total','emailTexto'].forEach(k=>delete cic[k]); dueno.ciclos=Object.assign({},dueno.ciclos,{[M]:cic}); dueno._upd=Date.now();
+  (D.pagos||[]).forEach(p=>{ if(p.v19Ciclo&&p.cicloMes===M&&!v12Pag(p)&&v12UnidadKey(p,p.mes||M)===key){ delete p.cicloMes; delete p.v19Ciclo; p._upd=Date.now(); } });
+  saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} return true;
+}
+
+// ══════════════════════════════════════════════════════════════
+// Facturas con los datos personales tapados
+// Se dibuja cada página con pdf.js (en el propio navegador: la factura no sale de aquí), se buscan en su texto los datos
+// que no interesan a los inquilinos (IBAN y cuentas, DNI/NIE, emails y móviles personales, nombres de los propietarios y su
+// dirección, nº de contrato, cliente, póliza, CUPS…) y se tapan con cajas negras. El PDF resultante es solo imagen:
+// lo tapado no se puede recuperar copiando el texto. Lo que se ve: empresa, periodo, consumos, impuestos e importes.
+// ══════════════════════════════════════════════════════════════
+const V19_LETRAS='TRWAGMYFPDXBNJZSQVHLCKE';
+function v19DniOk(s){ const t=String(s).toUpperCase().replace(/[\s-]/g,''); let m=t.match(/^(\d{8})([A-Z])$/); if(m) return V19_LETRAS[+m[1]%23]===m[2];
+  m=t.match(/^([XYZ])(\d{7})([A-Z])$/); if(m) return V19_LETRAS[+(('XYZ'.indexOf(m[1]))+m[2])%23]===m[3]; return false; }
+function v19Norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase(); }
+const V19_CONECT=new Set(['DE','DEL','LA','LAS','LOS','Y','I','DA','DO','DOS','SAN','SANTA']);
+const V19_DOMPERS=/@(gmail|googlemail|hotmail|outlook|live|msn|yahoo|ymail|icloud|me|mac|aol|proton|protonmail|pm|gmx|terra|telefonica|movistar|orange|vodafone|yandex|mail|zoho)\./i;
+// Lo que se busca: nombres, emails, teléfonos y DNI de los propietarios (y de quien firma la app)
+function v19Sensibles(){
+  const nombres=[], emails=new Set(), tels=new Set(), dnis=new Set();
+  const add=n=>{ const toks=v19Norm(n).split(/[^A-Z]+/).filter(t=>t.length>=3&&!V19_CONECT.has(t)); if(toks.length) nombres.push(new Set(toks)); };
+  (D.propietarios||[]).forEach(o=>{ if(o.nom) add(o.nom); if(o.alias&&o.alias.trim().split(/\s+/).length>1) add(o.alias); if(o.email) emails.add(String(o.email).trim().toLowerCase()); if(o.tel) tels.add(String(o.tel).replace(/\D/g,'').slice(-9)); if(o.dni) dnis.add(v19Norm(o.dni).replace(/[^A-Z0-9]/g,'')); });
+  const c=D.cfg||{}; if(c.nom) add(c.nom); if(c.email) emails.add(String(c.email).trim().toLowerCase()); if(c.tel) tels.add(String(c.tel).replace(/\D/g,'').slice(-9));
+  return {nombres, emails, tels, dnis};
+}
+// Etiquetas cuyo valor se tapa (al principio de un bloque de texto). «Dirección de suministro» no: es la del piso.
+const V19_ETIQ=new RegExp('^\\s*(?:[-•·*]\\s*)?(?:'+[
+  'TITULAR(?:\\s+(?:DEL?|DE\\s+LA)\\s+(?:CONTRATO|SUMINISTRO|CUENTA|FACTURA|POLIZA))?','NOMBRE(?:\\s+Y\\s+APELLIDOS|\\s+DEL\\s+TITULAR|\\s+DEL\\s+CLIENTE)?','APELLIDOS(?:\\s+Y\\s+NOMBRE)?','RAZON\\s+SOCIAL',
+  'N\\.?\\s?I\\.?\\s?F\\.?(?:\\s*/\\s*C\\.?\\s?I\\.?\\s?F\\.?)?(?:\\s+(?:DEL?\\s+)?(?:TITULAR|CLIENTE))?','D\\.?\\s?N\\.?\\s?I\\.?(?:\\s*/\\s*N\\.?\\s?I\\.?\\s?E\\.?)?','N\\.?\\s?I\\.?\\s?E\\.?','C\\.?\\s?I\\.?\\s?F\\.?\\s+(?:DEL?\\s+)?(?:TITULAR|CLIENTE)',
+  'IBAN','C\\.?\\s?C\\.?\\s?C\\.?','(?:N[ºO°.]*\\s*(?:DE\\s+)?)?CUENTA(?:\\s+(?:BANCARIA|DE\\s+(?:CARGO|DOMICILIACION|ABONO|PAGO)))?','DOMICILIACION(?:\\s+BANCARIA)?','DOMICILIADO\\s+EN','ENTIDAD(?:\\s+BANCARIA|\\s+FINANCIERA)?','FORMA\\s+DE\\s+PAGO','MEDIO\\s+DE\\s+PAGO','MANDATO(?:\\s+SEPA)?','REFERENCIA\\s+(?:DEL\\s+)?MANDATO',
+  '(?:N[ºO°.]*\\s*(?:DE\\s+)?|NUMERO\\s+DE\\s+|COD(?:IGO|\\.)?\\s+(?:DE\\s+)?)?(?:CONTRATO|CLIENTE|POLIZA|ABONADO|CUENTA\\s+CONTRATO)','REFERENCIA(?:\\s+(?:DEL?\\s+)?(?:CONTRATO|CLIENTE|SUMINISTRO))?','(?:CODIGO\\s+)?CUPS',
+  '(?:DIRECCION|DOMICILIO)(?:\\s+(?:DE\\s+)?(?:ENVIO|POSTAL|FISCAL|CORRESPONDENCIA|FACTURACION|NOTIFICACIONES|DEL\\s+TITULAR|DEL\\s+CLIENTE|DE\\s+CORRESPONDENCIA|DE\\s+ENVIO))','DATOS\\s+(?:DEL\\s+)?(?:TITULAR|CLIENTE)',
+  'E-?MAIL','CORREO(?:\\s+ELECTRONICO)?','TELEFONO(?:\\s+(?:MOVIL|DE\\s+CONTACTO|DEL\\s+TITULAR))?','MOVIL'].join('|')+')\\s*(?::|\\.|-(?=\\s)|$|\\s(?=\\S))','i');
+const V19_NOETIQ=/SUMINISTRO|ATENCION|AVERIAS|URGENCIAS|RECLAMACIONES|GRATUITO|SERVICIO\s+DE/;
+const V19_DINERO=/\d[\d.]*,\d{2}\s*(?:€|EUR)|€\s*\d/;
+const V19_DIR=/(?:^|[\s,])(?:C\/|CL\.?|CALLE|AVDA\.?|AV\.|AVENIDA|PZA\.?|PLAZA|PASEO|P[º°]|CAMINO|CTRA\.?|CARRETERA|URB\.?|URBANIZACION|RONDA|TRAVESIA|GLORIETA|BLOQUE|PORTAL|PISO|PLANTA|ESC\.?|ESCALERA|PUERTA|BAJO|APARTADO)(?=[\s.,\d]|$)|\b\d{5}\b|\bN[º°]\s*\d/;
+// Patrones que se tapan estén donde estén
+function v19Patrones(S){
+  return [
+    {m:'IBAN', re:/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9*Xx•·]{4}){3,7}(?:[ ]?[A-Z0-9*]{1,4})?\b/g},
+    {m:'cuenta', re:/(?:[*Xx•·]{2,}[ \-]?){2,}\d{2,4}\b|\b\d{4}[ \-]?\d{4}[ \-]?\d{2}[ \-]?\d{10}\b/g},
+    {m:'DNI/NIE', re:/\b(?:\d{8}|[XYZ][ \-]?\d{7})[ \-]?[A-Z]\b/g, ok:s=>v19DniOk(s)},
+    {m:'DNI/NIE', re:/(?:\*{2,}|X{3,})\d{3,6}(?:\*{1,4}|X{1,4})?[A-Z]?\b|\b\d{3,6}(?:\*{2,4}|X{2,4})[A-Z]?\b/g},
+    {m:'email', re:/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/gi, ok:s=>{ const l=s.toLowerCase(); if(S.emails.has(l)||V19_DOMPERS.test(l)) return true; const loc=v19Norm(l.split('@')[0]); return S.nombres.some(ns=>[...ns].some(t=>t.length>=4&&loc.includes(t))); }},
+    {m:'teléfono', re:/(?:\+?34[\s.\-]?)?[67]\d{2}(?:[\s.\-]?\d{3}[\s.\-]?\d{3}|(?:[\s.\-]?\d{2}){3})\b/g},
+    {m:'teléfono', re:/(?:\+?34[\s.\-]?)?[89]\d{2}(?:[\s.\-]?\d{3}[\s.\-]?\d{3}|(?:[\s.\-]?\d{2}){3})\b/g, ok:s=>S.tels.has(s.replace(/\D/g,'').slice(-9))},
+    {m:'DNI', re:/\b[0-9XYZ][0-9 \-]{6,10}[A-Z]\b/g, ok:s=>S.dnis.has(s.replace(/[^A-Z0-9]/gi,'').toUpperCase())}
+  ];
+}
+// Coincidencias de un patrón que no son parte de un número o una palabra más larga (sin «lookbehind», que no va en Safari antiguo)
+function v19Buscar(p,src){ const out=[]; p.re.lastIndex=0; let m, g=0;
+  while((m=p.re.exec(src))&&g++<500){ if(!m[0]){ p.re.lastIndex++; continue; } const a=m.index, b=a+m[0].length;
+    if(/^[A-Za-z0-9]/.test(m[0])&&a>0&&/[A-Za-z0-9]/.test(src[a-1])) continue; if(/[0-9]$/.test(m[0])&&b<src.length&&/[0-9]/.test(src[b])) continue;
+    if(p.ok&&!p.ok(m[0])) continue; out.push([a,b]); }
+  return out; }
+// Nombre de un propietario: dos o más palabras seguidas de su nombre completo (con «de», «la»… entre medias)
+function v19Nombres(txt,S){
+  const N=v19Norm(txt), out=[], re=/[A-Z]+/g; let w; const ws=[]; while((w=re.exec(N))) ws.push({t:w[0], a:w.index, b:w.index+w[0].length});
+  const junto=(a,b)=>N.slice(ws[a].b,ws[b].a).trim().length<=1;
+  S.nombres.forEach(ns=>{ let i=0; while(i<ws.length){ if(!ns.has(ws[i].t)){ i++; continue; }
+      let j=i; const dist=new Set([ws[i].t]);
+      for(;;){ let k=j+1; while(k<ws.length&&k-j<=3&&V19_CONECT.has(ws[k].t)&&junto(k-1,k)) k++;
+        if(k<ws.length&&ns.has(ws[k].t)&&junto(k-1,k)){ j=k; dist.add(ws[k].t); } else break; }
+      if(dist.size>=2) out.push([ws[i].a,ws[j].b]); i=j+1; } });
+  return out;
+}
+
+// Texto de una página: bloques (trozos de una misma línea separados por un hueco grande) con la posición de cada letra
+function v19Bloques(items){
+  const H=items.filter(i=>i.hor).sort((a,b)=>a.base-b.base||a.x0-b.x0), lines=[];
+  H.forEach(it=>{ let L=null; for(const l of lines){ if(Math.abs(l.base-it.base)<Math.max(1.5,0.4*Math.min(l.fh,it.fh))){ L=l; break; } } if(!L){ L={base:it.base, fh:it.fh, its:[]}; lines.push(L); } L.its.push(it); });
+  const segs=[];
+  lines.forEach(L=>{ L.its.sort((a,b)=>a.x0-b.x0); let cur=null;
+    L.its.forEach(it=>{ const gap=cur?it.x0-cur.x1:0;
+      if(!cur||gap>Math.max(1.6*L.fh,14)){ cur={txt:'', map:[], x0:it.x0, x1:it.x1, y0:it.y0, y1:it.y1, fh:L.fh, base:L.base}; segs.push(cur); }
+      else if(gap>0.2*L.fh&&!/\s$/.test(cur.txt)&&!/^\s/.test(it.s)){ cur.txt+=' '; cur.map.push(null); }
+      for(let k=0;k<it.s.length;k++) cur.map.push({it,k}); cur.txt+=it.s;
+      cur.x1=Math.max(cur.x1,it.x1); cur.y0=Math.min(cur.y0,it.y0); cur.y1=Math.max(cur.y1,it.y1); }); });
+  segs.sort((a,b)=>a.base-b.base||a.x0-b.x0);
+  return segs;
+}
+// Rectángulo (en píxeles de la página) de las letras [a,b) de un bloque
+function v19Rects(seg,a,b){
+  const por=new Map(); for(let q=Math.max(0,a);q<Math.min(b,seg.map.length);q++){ const m=seg.map[q]; if(!m) continue; const r=por.get(m.it)||{k0:m.k,k1:m.k}; r.k0=Math.min(r.k0,m.k); r.k1=Math.max(r.k1,m.k); por.set(m.it,r); }
+  const out=[]; por.forEach((r,it)=>{ const n=Math.max(1,it.s.length), w=it.x1-it.x0, of=it.of;
+    out.push(of?{x0:it.x0+w*of[r.k0], x1:it.x0+w*of[r.k1+1], y0:it.y0, y1:it.y1}:{x0:it.x0+w*r.k0/n, x1:it.x0+w*(r.k1+1)/n, y0:it.y0, y1:it.y1}); });
+  return out;
+}
+// Busca lo que hay que tapar en una página → cajas en coordenadas relativas (0–1) con su motivo
+function v19Detectar(pg,S){
+  const segs=v19Bloques(pg.items), cajas=[], P=v19Patrones(S), W=pg.w, Hh=pg.h;
+  const tapar=(rs,mot)=>rs.forEach(r=>cajas.push({x0:r.x0,x1:r.x1,y0:r.y0,y1:r.y1,mot}));
+  const todo=seg=>({x0:seg.x0,x1:seg.x1,y0:seg.y0,y1:seg.y1});
+  const debajo=(seg)=>segs.find(s=>s!==seg&&s.base>seg.base&&s.base-seg.base<2.2*Math.max(seg.fh,s.fh)&&s.x0<seg.x1+seg.fh*2&&s.x1>seg.x0-seg.fh*2);
+  const derecha=(seg)=>segs.filter(s=>s!==seg&&Math.abs(s.base-seg.base)<0.4*seg.fh&&s.x0>=seg.x1-1&&s.x0-seg.x1<W*0.45).sort((a,b)=>a.x0-b.x0)[0];
+  const quitarDinero=(seg)=>V19_DINERO.test(seg.txt.toUpperCase());
+  segs.forEach(seg=>{
+    const U=v19Norm(seg.txt);
+    // 1) patrones
+    P.forEach(p=>{ const src=p.m==='email'?seg.txt:U; v19Buscar(p,src).forEach(([a,b])=>tapar(v19Rects(seg,a,b),p.m)); });
+    // 2) nombres de los propietarios y su dirección (las líneas de debajo con pinta de dirección)
+    const ns=v19Nombres(seg.txt,S);
+    ns.forEach(([a,b])=>{ tapar(v19Rects(seg,a,b),'nombre');
+      let s=seg, n=0; for(let k=0;k<4&&n<3;k++){ s=debajo(s); if(!s) break; const u=v19Norm(s.txt); if(V19_NOETIQ.test(u)||V19_DINERO.test(u)) break;
+        if(V19_ETIQ.test(u)&&!V19_DIR.test(u)) continue;   // otra etiqueta (NIF…): la tapa su regla y se sigue buscando la dirección
+        if(V19_DIR.test(u)||n>0&&/^[A-Z .'()\-]{3,}$/.test(u.trim())){ tapar([todo(s)],'dirección'); n++; } else break; } });
+    // 3) etiquetas: «Titular: …», «Nº de contrato …», «IBAN …», «Dirección de envío …»
+    const m=U.match(V19_ETIQ);
+    if(m&&!V19_NOETIQ.test(U.slice(0,m[0].length+12))){
+      const resto=seg.txt.slice(m[0].length);
+      let s=seg;
+      const cif=/^[ABCDEFGHJNPQRSUVW][\s\-]?\d{7}[0-9A-J]$/.test(v19Norm(resto).trim())&&/N\.?\s?I\.?\s?F|C\.?\s?I\.?\s?F/.test(m[0]);
+      if(resto.trim()){ if(!V19_DINERO.test(v19Norm(resto))&&!cif) tapar(v19Rects(seg,m[0].length,seg.txt.length),'dato del titular'); }
+      else { s=derecha(seg)||debajo(seg); if(s&&!quitarDinero(s)) tapar([todo(s)],'dato del titular'); }
+      // la dirección postal sigue en las líneas de debajo (código postal, población…)
+      if(s&&/DIRECCION|DOMICILIO/.test(U)){ let t=s; for(let k=0;k<2;k++){ t=debajo(t); if(!t) break; const u=v19Norm(t.txt); if(V19_DIR.test(u)&&!V19_NOETIQ.test(u)&&!V19_DINERO.test(u)&&!V19_ETIQ.test(u)) tapar([todo(t)],'dirección'); else break; } }
+    }
+  });
+  // Texto girado (márgenes): se tapa la pieza entera si contiene algo sensible
+  pg.items.filter(i=>!i.hor).forEach(it=>{ const seg={txt:it.s, map:[...it.s].map((c,k)=>({it,k})), x0:it.x0,x1:it.x1,y0:it.y0,y1:it.y1,fh:it.fh,base:it.base}, U=v19Norm(it.s);
+    const hit=P.some(p=>v19Buscar(p,p.m==='email'?it.s:U).length)||v19Nombres(it.s,S).length||V19_ETIQ.test(U);
+    if(hit) tapar([todo(seg)],'texto del margen'); });
+  // Las cajas que se solapan (o se tocan en la misma línea) se unen en una: una sola caja que quitar o revisar
+  const un=[]; cajas.forEach(c=>{ const x=Object.assign({},c);
+    for(let g=0; g<50; g++){ const j=un.findIndex(o=>o.x0<=x.x1+2&&x.x0<=o.x1+2&&Math.min(o.y1,x.y1)-Math.max(o.y0,x.y0)>0.5*Math.min(o.y1-o.y0,x.y1-x.y0)); if(j<0) break;
+      const o=un.splice(j,1)[0]; x.x0=Math.min(x.x0,o.x0); x.x1=Math.max(x.x1,o.x1); x.y0=Math.min(x.y0,o.y0); x.y1=Math.max(x.y1,o.y1); if(o.mot!==x.mot&&!String(x.mot).includes(o.mot)) x.mot=x.mot+', '+o.mot; }
+    un.push(x); });
+  // A coordenadas relativas, con un pequeño margen, y sin repetidas
+  const pad=Math.max(1.5,W*0.0015), out=[], vistos=new Set();
+  un.forEach(c=>{ const x=Math.max(0,(c.x0-pad)/W), y=Math.max(0,(c.y0-pad)/Hh), w=Math.min(1-x,(c.x1-c.x0+2*pad)/W), h=Math.min(1-y,(c.y1-c.y0+2*pad)/Hh); if(!(w>0&&h>0)) return;
+    const k=pg.n+'|'+Math.round(x*1000)+'|'+Math.round(y*1000)+'|'+Math.round(w*1000); if(vistos.has(k)) return; vistos.add(k); out.push({p:pg.n, x, y, w, h, k, mot:c.mot}); });
+  return out;
+}
+
+// ── Leer el archivo de la factura (Drive del usuario o copia guardada en la app) ──
+async function v19Bytes(x){
+  const ref=x&&x.pdfData; if(!ref) throw new Error('La factura no tiene el archivo adjunto');
+  if(String(ref).startsWith('drive:')){ if(!gToken){ const e=new Error('Conecta Google Drive para leer la factura'); e.drive=true; throw e; }
+    const r=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(ref.slice(6))+'?alt=media',{headers:{Authorization:'Bearer '+gToken}});
+    if(r.status===401){ const e=new Error('La sesión de Google Drive ha caducado: vuelve a conectar'); e.drive=true; throw e; }
+    if(!r.ok) throw new Error('Google Drive respondió '+r.status); return new Uint8Array(await r.arrayBuffer()); }
+  if(String(ref).startsWith('data:')){ const b=atob(ref.slice(ref.indexOf(',')+1)); const u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+  throw new Error('No reconozco el formato del archivo');
+}
+function v19TipoArch(u8){ const n=Math.min(u8.length-4,1024); for(let i=0;i<n;i++) if(u8[i]===0x25&&u8[i+1]===0x50&&u8[i+2]===0x44&&u8[i+3]===0x46) return 'pdf';
+  if(u8[0]===0xFF&&u8[1]===0xD8) return 'jpg'; if(u8[0]===0x89&&u8[1]===0x50&&u8[2]===0x4E) return 'png'; if(u8[0]===0x52&&u8[1]===0x49&&u8[8]===0x57&&u8[9]===0x45) return 'webp'; return ''; }
+// Dónde empieza cada letra (0–1 del ancho del trozo), medido con una fuente sin serifa parecida a la de las facturas
+let _v19Mx=null;
+function v19Offsets(str){ try{ if(!_v19Mx){ _v19Mx=document.createElement('canvas').getContext('2d'); if(!_v19Mx) return null; _v19Mx.font='100px Helvetica, Arial, sans-serif'; }
+  const tot=_v19Mx.measureText(str).width; if(!(tot>0)) return null; const of=[0]; for(let k=1;k<=str.length;k++) of.push(k===str.length?1:_v19Mx.measureText(str.slice(0,k)).width/tot); return of; }catch(e){ return null; } }
+// Páginas dibujadas (a 150 ppp) con la posición de su texto
+async function v19Paginas(u8,tipo){
+  const pags=[];
+  if(tipo==='pdf'){
+    const lib=await v7CargarPdfJs(); const doc=await lib.getDocument({data:u8.slice(), isEvalSupported:false}).promise;
+    for(let n=1;n<=Math.min(doc.numPages,15);n++){
+      const pg=await doc.getPage(n), v1=pg.getViewport({scale:1}), sc=Math.min(150/72, 2600/Math.max(v1.width,v1.height)), vp=pg.getViewport({scale:sc});
+      const cv=document.createElement('canvas'); cv.width=Math.ceil(vp.width); cv.height=Math.ceil(vp.height); const cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);
+      await pg.render({canvasContext:cx, viewport:vp}).promise;
+      const tc=await pg.getTextContent(), items=[];
+      tc.items.forEach(it=>{ if(!it.str||!it.str.trim()) return; const t=lib.Util.transform(vp.transform,it.transform), fh=Math.hypot(t[2],t[3]), lw=Math.hypot(t[0],t[1]); if(!(fh>0&&lw>0)) return;
+        const ux=t[0]/lw, uy=t[1]/lw, upx=t[2]/fh, upy=t[3]/fh, w=(it.width||0)*sc, bx=t[4], by=t[5];
+        const pts=[[0,-0.25],[0,0.92],[1,-0.25],[1,0.92]].map(([a,s])=>[bx+a*w*ux+s*fh*upx, by+a*w*uy+s*fh*upy]);
+        const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+        items.push({s:it.str, x0:Math.min(...xs), x1:Math.max(...xs), y0:Math.min(...ys), y1:Math.max(...ys), fh, base:by, hor:Math.abs(uy)<0.05&&ux>0, of:v19Offsets(it.str)}); });
+      pags.push({n, cv, w:cv.width, h:cv.height, pw:v1.width, ph:v1.height, items}); pg.cleanup&&pg.cleanup();
+    }
+    try{ doc.destroy(); }catch(e){}
+  } else {
+    const blob=new Blob([u8],{type:tipo==='png'?'image/png':tipo==='webp'?'image/webp':'image/jpeg'}), url=URL.createObjectURL(blob);
+    const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('No se pudo abrir la imagen')); i.src=url; });
+    const k=Math.min(1,2600/Math.max(img.naturalWidth,img.naturalHeight)), cv=document.createElement('canvas'); cv.width=Math.round(img.naturalWidth*k); cv.height=Math.round(img.naturalHeight*k);
+    const cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(img,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
+    const pw=595.28, ph=pw*cv.height/cv.width; pags.push({n:1, cv, w:cv.width, h:cv.height, pw, ph, items:[]});
+  }
+  return pags;
+}
+// PDF mínimo con una imagen JPEG por página (sin capa de texto)
+function v19PdfDeJpgs(pags){
+  const enc=new TextEncoder(), parts=[], offs=[]; let len=0;
+  const push=b=>{ if(typeof b==='string') b=enc.encode(b); parts.push(b); len+=b.length; };
+  const f=n=>(Math.round(n*100)/100).toString();
+  const obj=(id,fn)=>{ offs[id]=len; push(id+' 0 obj\n'); fn(); push('\nendobj\n'); };
+  push('%PDF-1.4\n'); push(new Uint8Array([37,226,227,207,211,10]));
+  const n=pags.length;
+  obj(1,()=>push('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2,()=>push('<< /Type /Pages /Kids ['+pags.map((p,i)=>(3+3*i)+' 0 R').join(' ')+'] /Count '+n+' >>'));
+  pags.forEach((p,i)=>{ const P=3+3*i, I=P+1, C=P+2, cs='q '+f(p.pw)+' 0 0 '+f(p.ph)+' 0 0 cm /Im0 Do Q';
+    obj(P,()=>push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+f(p.pw)+' '+f(p.ph)+'] /Resources << /XObject << /Im0 '+I+' 0 R >> >> /Contents '+C+' 0 R >>'));
+    obj(I,()=>{ push('<< /Type /XObject /Subtype /Image /Width '+p.iw+' /Height '+p.ih+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+p.jpg.length+' >>\nstream\n'); push(p.jpg); push('\nendstream'); });
+    obj(C,()=>push('<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream')); });
+  const xref=len, tot=3+3*n; let x='xref\n0 '+tot+'\n0000000000 65535 f \n'; for(let i=1;i<tot;i++) x+=String(offs[i]).padStart(10,'0')+' 00000 n \n';
+  push(x); push('trailer\n<< /Size '+tot+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF\n');
+  return new Blob(parts,{type:'application/pdf'});
+}
+function v19Jpg(cv,q){ return new Promise((res,rej)=>cv.toBlob(b=>b?b.arrayBuffer().then(a=>res(new Uint8Array(a)),rej):rej(new Error('No se pudo crear la imagen')),'image/jpeg',q||0.82)); }
+const V19_PIE='Copia para el reparto de suministros · datos personales tapados';
+// Cajas de una factura: las automáticas (menos las quitadas a mano) y las añadidas a mano
+function v19Cajas(R,x){ const t=x.tapas||{}, quit=new Set(t.quit||[]); return R.auto.filter(c=>!quit.has(c.k)).concat((t.man||[]).map(c=>Object.assign({mot:'a mano'},c))); }
+async function v19Componer(R,x){
+  const cajas=v19Cajas(R,x), out=[];
+  for(const pg of R.pags){
+    const pie=Math.round(pg.h*0.018)+10, cv=document.createElement('canvas'); cv.width=pg.w; cv.height=pg.h+pie; const cx=cv.getContext('2d');
+    cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(pg.cv,0,0); cx.fillStyle='#000';
+    cajas.filter(c=>c.p===pg.n).forEach(c=>cx.fillRect(Math.floor(c.x*pg.w),Math.floor(c.y*pg.h),Math.ceil(c.w*pg.w)+1,Math.ceil(c.h*pg.h)+1));
+    cx.fillStyle='#f3f3f3'; cx.fillRect(0,pg.h,cv.width,pie); cx.fillStyle='#555'; cx.font=Math.round(pie*0.5)+'px sans-serif'; cx.textBaseline='middle';
+    cx.fillText(V19_PIE+(R.pags.length>1?' · pág. '+pg.n+'/'+R.pags.length:''),Math.round(pg.w*0.03),pg.h+pie/2);
+    out.push({jpg:await v19Jpg(cv,0.82), iw:cv.width, ih:cv.height, pw:pg.pw, ph:pg.ph*(pg.h+pie)/pg.h});
+  }
+  return v19PdfDeJpgs(out);
+}
+const _v19Rend=new Map(), _v19Comp=new Map();
+// Prepara la copia tapada de una factura: {blob, nAuto, nMan, revisar, motivo, err}
+async function v19Preparar(x){
+  if(!x||x.falta) return {err:'No encuentro la factura en Facturas'};
+  if(!x.pdfData) return {err:'La factura no tiene el archivo adjunto: añádelo en Facturas'};
+  const rk=x.id+'|'+String(x.pdfData).slice(0,80)+'|'+String(x.pdfData).length;
+  let R=_v19Rend.get(rk);
+  if(!R){ const u8=await v19Bytes(x), tipo=v19TipoArch(u8); if(!tipo) throw new Error('El archivo no es un PDF ni una imagen');
+    const pags=await v19Paginas(u8,tipo), S=v19Sensibles(), auto=[]; pags.forEach(pg=>auto.push(...v19Detectar(pg,S)));
+    R={pags, auto, tipo, sinTexto:pags.filter(p=>!p.items.length).map(p=>p.n)}; _v19Rend.set(rk,R);
+    while(_v19Rend.size>6){ const k0=_v19Rend.keys().next().value; _v19Rend.delete(k0); for(const k of [..._v19Comp.keys()]) if(k.startsWith(k0+'|')) _v19Comp.delete(k); } }
+  const ck=rk+'|'+JSON.stringify(x.tapas||{}); let C=_v19Comp.get(ck);
+  if(!C){ const blob=await v19Componer(R,x), t=x.tapas||{}, nAuto=R.auto.length-(t.quit||[]).filter(k=>R.auto.some(c=>c.k===k)).length, nMan=(t.man||[]).length;
+    const motivo=R.tipo!=='pdf'?'es una imagen: no se puede leer su texto':R.sinTexto.length?(R.sinTexto.length===R.pags.length?'es un escaneo sin texto':'la página '+R.sinTexto.join(', ')+' no tiene texto'):!R.auto.length?'no he encontrado datos personales':'';
+    C={blob, nAuto, nMan, revisar:!!motivo&&!t.ok, motivo, R}; _v19Comp.set(ck,C); }
+  return C;
+}
+function v19NombreFac(x,prop){ const t=(v18Tipo(x)||x.con||'factura'), per=x.pIni&&x.pFin?'_'+v4DM(x.pIni).replace('/','-')+'_al_'+v4DM(x.pFin).replace('/','-')+'_'+x.pFin.slice(0,4):'';
+  return ('Factura_'+t+per+(prop?'_'+prop.nom:'')).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9_\-]+/g,'_').replace(/_+/g,'_')+'.pdf'; }
+
+// ══════════════════════════════════════════════════════════════
+// Ventana «📨 Mensaje» de una tarjeta de Pagos
+// ══════════════════════════════════════════════════════════════
+let _v19=null;
+// (la de revisar no se cierra al tocar fuera: se perdería lo tapado a mano)
+function v19Modal(id){ let m=$i(id); if(!m){ m=document.createElement('div'); m.className='modal-overlay'; m.id=id; m.innerHTML='<div class="modal modal-lg" id="'+id+'-c" style="width:880px;"></div>'; if(id!=='m-v19r') m.addEventListener('click',e=>{ if(e.target===m) closeM(id); }); document.body.appendChild(m); } return $i(id+'-c'); }
+function v19Abrir(key,M){
+  const d=v19Datos(key,M); if(!d){ toast('No encuentro ese pago',false); return; }
+  const prev=_v19&&_v19.key===key&&_v19.M===M?_v19:null;
+  _v19={key, M, d, fac:d.facturas.map(x=>({x, st:'cargando'})), edit:prev?prev.edit:{}};
+  const c=v19Modal('m-v19'); c.innerHTML=v19Html(); $i('m-v19').classList.add('open');
+  v19PrepararTodas();
+}
+function v19Re(){ if(!_v19) return; const {key,M}=_v19; v19Abrir(key,M); }
+function v19Cerrar(){ closeM('m-v19'); _v19=null; }
+function v19Txt(id){ const e=$i(id); return e?e.value:''; }
+function v19Html(){
+  const {d}=_v19, ms=v4MesNom(d.M), p=d.prop, e=v19Email(d), cic=d.cic||{}, dueno=v19Dueno(d);
+  const emails=d.personas.map(v19Email1).filter(Boolean), cs=v19Cuentas(), cta=d.dc.cta, cp=v19CuentaPiso(p);
+  const ibanMal=cta&&cta.num&&!v19IbanOk(cta.num);
+  const box=(t,b)=>'<div style="border:1px solid var(--line2);border-radius:10px;padding:12px;margin-top:10px;"><div style="font-weight:800;font-size:13px;margin-bottom:8px;">'+t+'</div>'+b+'</div>';
+  const ta=(id,v,rows)=>'<textarea id="'+id+'" rows="'+rows+'" oninput="_v19.edit[\''+id+'\']=1" style="width:100%;font-size:12px;line-height:1.5;font-family:inherit;padding:9px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);">'+v4Esc(v)+'</textarea>';
+  const res='<div style="display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;line-height:1.6;background:var(--bg);border-radius:10px;padding:10px 12px;">'
+    +(d.renta>0?'<span>Renta de '+v4Esc(ms)+' <strong class="mono">'+v4E2(d.renta)+' €</strong></span>':d.ya>0?'<span>Renta de '+v4Esc(ms)+' ✓ ya pagados '+v4E2(d.ya)+' €</span>':'')
+    +(d.sum.length?'<span>Suministros <strong class="mono">'+v4E2(d.sSum)+' €</strong></span>':'<span style="color:var(--ink3);">Sin suministros pendientes</span>')
+    +(d.sOtras?'<span>Otras <strong class="mono">'+v4E2(d.sOtras)+' €</strong></span>':'')
+    +'<span>Total <strong class="mono" style="font-size:14px;">'+v4E2(d.total)+' €</strong>'+(d.bono&&d.total>5?' <span style="color:var(--ink3);">(−5 € en 24 h: '+v4E2(d.total-5)+' €)</span>':'')+'</span>'
+    +'<span style="color:var(--ink3);">Como máximo el '+v4F2(d.V)+'</span></div>';
+  const avisos=[];
+  if(d.firma) avisos.push('Este mes se paga en la firma del contrato: normalmente no hace falta el email mensual.');
+  if(!cta) avisos.push('No hay cuenta de cobro para este piso: elige una abajo (o créala en Cuentas).');
+  if(ibanMal) avisos.push('El IBAN de la cuenta elegida no supera la comprobación de sus dígitos de control: revísalo antes de enviarlo.');
+  if(cta&&p&&!p.ctaCobro&&!(d.co&&d.co.ctaId)&&cp.origen!=='la indicada para este piso') avisos.push('Para '+v4Esc(p.nom)+' uso '+v4Esc(cp.origen||'la principal del titular')+'. Si no es la buena, cámbiala abajo y quedará guardada para este piso.');
+  if(d.sum.some(x=>x.rep)&&d.facturas.some(x=>x.falta)) avisos.push('Alguna línea repartida ya no tiene su factura en Facturas.');
+  if(!emails.length) avisos.push('Nadie de esta '+(d.ent?'vivienda':'habitación')+' tiene email en su ficha: añádelo en Inquilinos para enviarle el email.');
+  if(d.total<=0.004) avisos.push('No queda nada pendiente de este pago.');
+  const ctaSel='<div class="fgrp" style="margin:0;"><label>'+(d.co&&d.co.ctaId?'Cuenta de cobro de este contrato':'Cuenta de cobro de '+v4Esc(p?p.nom:'este piso'))+'</label><select id="v19-cta" onchange="v19SetCta(this.value)">'
+    +(cta?'':'<option value="">— Elige la cuenta —</option>')+cs.map(c=>'<option value="'+v4Esc(c.id)+'"'+(cta&&c.id==cta.id?' selected':'')+'>'+v4Esc((c.nom||c.banco||'Cuenta')+' · '+(c.titularId?v19NomTitular(c.titularId):'')+' · '+v19FmtIban(c.num||'').slice(-9))+'</option>').join('')+'</select>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-top:3px;">'+(cta?'Transferencia a <span class="mono">'+v4Esc(d.dc.iban)+'</span>, a nombre de '+v4Esc(d.dc.titular):'')+'</div></div>';
+  const bonoSel=!d.co&&!d.ent&&d.inq?'<label style="display:flex;gap:7px;align-items:center;font-size:12px;text-transform:none;letter-spacing:0;margin-top:8px;cursor:pointer;"><input type="checkbox" style="width:auto;" '+(d.inq.sinBono5?'':'checked')+' onchange="v19SetBono(this.checked)"> Ofrecer el descuento de 5 € si paga en menos de 24 horas desde el email (cláusula «Bonificación por rapidez»)</label>':'';
+  const enviado=cic.email?'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;"><span class="badge badge-g">📧 Email enviado el '+v4F2(cic.email.slice(0,10))+' a las '+v4Esc(cic.email.slice(11,16))+'</span>'+(d.bono?'<span style="color:var(--ink3);">El descuento vale hasta el '+(()=>{ const l=new Date(v4DT(cic.email).getTime()+864e5); return v4F2(fxIso(l))+' a las '+v4HM(l); })()+'</span>':'')+'<button class="btn btn-ghost btn-xs" onclick="v19NoEnviado()">↩ No lo he enviado</button></div>'
+    :'<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;"><div class="fgrp" style="margin:0;"><label>Enviado el</label><input type="datetime-local" id="v19-dt" value="'+v4LocalDT(new Date())+'"></div><button class="btn btn-primary btn-sm" onclick="v19Enviado()">✓ Marcar email enviado</button><span style="font-size:11px;color:var(--ink3);max-width:330px;line-height:1.45;">La hora cuenta para el descuento de 5 € y deja anotado en este pago lo que incluye el email.</span></div>';
+  const comp=!!(navigator.share&&navigator.canShare);
+  const em=box('✉️ Email · plantilla 1',
+    '<div class="fg"><div class="fgrp"><label>Para</label><input id="v19-para" value="'+v4Esc(emails.join(', '))+'" placeholder="email del inquilino"></div><div class="fgrp"><label>Asunto</label><input id="v19-asunto" value="'+v4Esc(e.asunto)+'"></div></div>'
+    +ta('v19-email',e.texto,14)
+    +'<div style="font-size:11.5px;font-weight:700;margin:10px 0 4px;">Adjuntos: facturas con los datos personales tapados</div><div id="v19-adj">'+v19HtmlAdj()+'</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">'
+    +(comp?'<button class="btn btn-primary btn-sm" onclick="v19Compartir(\'email\')">📤 Compartir email con las facturas</button>':'')
+    +'<button class="btn btn-secondary btn-sm" onclick="v19Eml()" title="Se abre en Outlook, Thunderbird o Mail como borrador con las facturas adjuntas">⬇ Borrador con adjuntos (.eml)</button>'
+    +'<button class="btn btn-secondary btn-sm" onclick="v19Gmail()">Gmail</button><button class="btn btn-secondary btn-sm" onclick="v19Mailto()">Abrir en el correo</button>'
+    +'<button class="btn btn-ghost btn-sm" onclick="v19Copiar(\'v19-email\')">📋 Copiar texto</button>'+(d.facturas.length?'<button class="btn btn-ghost btn-sm" onclick="v19DescargarTodas()">⬇ Facturas</button>':'')+'</div>'
+    +'<div style="font-size:10.5px;color:var(--ink3);margin-top:5px;line-height:1.5;">Gmail y «Abrir en el correo» no pueden adjuntar archivos: descarga antes las facturas y añádelas. En el móvil, «Compartir» lo deja todo listo en la app de correo.</div>'
+    +'<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line2);">'+enviado+'</div>');
+  const was=d.personas.map((i,n)=>{ const tel=v19Tel(i), id='v19-wa'+n;
+    return '<div style="margin-top:'+(n?'12':'0')+'px;"><div style="font-size:12px;font-weight:700;margin-bottom:4px;">'+v4Esc(((i.nom||'')+' '+(i.ap||'')).trim()||'Inquilino')+(tel?' · <span class="mono" style="font-weight:400;">+'+tel.slice(0,2)+' '+tel.slice(2)+'</span>':' · <span style="color:var(--rd);font-weight:400;">sin teléfono en la ficha</span>')+'</div>'
+      +ta(id,v19WA(d,d.personas.length>1?i:null),10)
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">'+(tel?'<button class="btn btn-success btn-sm" onclick="v19AbrirWA('+n+')">💬 Abrir chat con el texto</button>':'')
+      +(comp&&d.facturas.length?'<button class="btn btn-secondary btn-sm" onclick="v19Compartir(\'wa\','+n+')">📤 Compartir facturas y texto</button>':'')
+      +'<button class="btn btn-ghost btn-sm" onclick="v19Copiar(\''+id+'\')">📋 Copiar</button></div></div>'; }).join('')||'<div style="font-size:12px;color:var(--ink3);">No hay inquilinos en este pago.</div>';
+  const wa=box('💬 WhatsApp · plantilla 10, con el desglose',was+(d.facturas.length?'<div style="font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.5;">El chat se abre con el texto escrito; las facturas se mandan después con el clip 📎 (descárgalas arriba) o con «Compartir» en el móvil.</div>':''));
+  return '<h2>📨 Mensaje del pago de '+v4Esc(ms)+' de '+v4Esc(d.M.slice(0,4))+'</h2>'
+    +'<div style="font-size:12px;color:var(--ink3);margin:-4px 0 8px;">'+(d.ent?'🏠 Piso entero':'Hab. '+v4Esc(d.hab||'?'))+' · '+v4Esc(p?p.nom:'')+' · '+v4Esc(d.u.nom)+'</div>'
+    +res+(avisos.length?'<div class="alert alert-y" style="font-size:11.5px;line-height:1.55;margin-top:8px;">'+avisos.map(a=>'⚠️ '+a).join('<br>')+'</div>':'')
+    +'<div style="margin-top:10px;">'+ctaSel+bonoSel+'</div>'+em+wa
+    +'<div class="modal-footer"><button class="btn btn-ghost" onclick="v19Cerrar()">Cerrar</button></div>';
+}
+function v19HtmlAdj(){
+  if(!_v19) return ''; const L=_v19.fac;
+  if(!L.length) return '<div style="font-size:11.5px;color:var(--ink3);">Este pago no tiene facturas repartidas.</div>';
+  return L.map((f,i)=>{ const x=f.x, tit=(V19_NOMSUM[v18Tipo(x)]||x.con||'Factura')+(x.emp?' · '+x.emp:'')+(x.pIni&&x.pFin?' · del '+v4F2(x.pIni)+' al '+v4F2(x.pFin):'')+(x.imp?' · '+v4E2(x.imp)+' €':'');
+    let st='';
+    if(f.st==='cargando') st='<span style="color:var(--ink3);">⏳ Preparando la copia tapada…</span>';
+    else if(f.st==='error') st='<span style="color:var(--rd);">✗ '+v4Esc(f.err)+'</span>'+(f.drive?' <button class="btn btn-secondary btn-xs" onclick="v19Drive()">Conectar Drive</button>':'');
+    else { const c=f.c; st=(c.revisar?'<span style="color:#b45309;">⚠️ Revísala: '+v4Esc(c.motivo)+'</span>':'<span style="color:var(--gn);">✓ '+(x.tapas&&x.tapas.ok?'Revisada':'Tapada')+': '+(c.nAuto+c.nMan)+' dato'+(c.nAuto+c.nMan===1?'':'s')+' tapado'+(c.nAuto+c.nMan===1?'':'s')+'</span>')
+      +' · '+(c.blob.size/1024>1024?(c.blob.size/1048576).toFixed(1)+' MB':Math.round(c.blob.size/1024)+' KB'); }
+    return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 8px;background:var(--bg);border-radius:8px;margin-top:4px;font-size:11.5px;">'
+      +'<span style="min-width:0;">📄 '+v4Esc(tit)+'<br>'+st+'</span><span style="display:flex;gap:4px;flex-wrap:wrap;">'
+      +(f.st==='ok'?'<button class="btn btn-ghost btn-xs" onclick="v19Ver('+i+')">👁 Ver</button><button class="btn btn-ghost btn-xs" onclick="v19Revisar('+i+')">✏️ Revisar tapado</button><button class="btn btn-ghost btn-xs" onclick="v19Descargar('+i+')">⬇</button>':'')
+      +(f.st==='error'&&!f.drive?'<button class="btn btn-ghost btn-xs" onclick="v19Reintentar('+i+')">Reintentar</button>':'')+'</span></div>'; }).join('');
+}
+function v19PintarAdj(){ const e=$i('v19-adj'); if(e) e.innerHTML=v19HtmlAdj(); }
+async function v19Prep1(f){ try{ f.c=await v19Preparar(f.x); f.st=f.c.err?'error':'ok'; if(f.c.err) f.err=f.c.err; }catch(e){ f.st='error'; f.err=e.message||String(e); f.drive=!!e.drive; } }
+async function v19PrepararTodas(){ const s=_v19; if(!s) return; for(const f of s.fac){ if(_v19!==s) return; await v19Prep1(f); if(_v19===s) v19PintarAdj(); } }
+async function v19Reintentar(i){ const f=_v19&&_v19.fac[i]; if(!f) return; f.st='cargando'; v19PintarAdj(); await v19Prep1(f); v19PintarAdj(); }
+function v19Drive(){ try{ gdriveConnect(); }catch(e){ toast('No se pudo conectar Drive',false); } const s=_v19; let n=0; const t=setInterval(()=>{ n++; if(_v19!==s||n>120){ clearInterval(t); return; } if(gToken){ clearInterval(t); s.fac.forEach(f=>{ if(f.st==='error'&&f.drive) f.st='cargando'; }); v19PintarAdj(); v19PrepararTodas(); } },1000); }
+async function v19Listas(){ const s=_v19; if(!s) return []; for(const f of s.fac) if(f.st==='cargando') await v19Prep1(f); v19PintarAdj();
+  return s.fac.filter(f=>f.st==='ok').map(f=>new File([f.c.blob],v19NombreFac(f.x,s.d.prop),{type:'application/pdf'})); }
+function v19Ver(i){ const f=_v19&&_v19.fac[i]; if(!f||f.st!=='ok') return; const url=URL.createObjectURL(f.c.blob); window.open(url,'_blank'); setTimeout(()=>URL.revokeObjectURL(url),120000); }
+function v19Descargar(i){ const f=_v19&&_v19.fac[i]; if(!f||f.st!=='ok') return; descargarBlob(f.c.blob,v19NombreFac(f.x,_v19.d.prop)); }
+async function v19DescargarTodas(){ const fs=await v19Listas(); if(!fs.length){ toast('No hay facturas listas',false); return; } fs.forEach((f,i)=>setTimeout(()=>descargarBlob(f,f.name),i*400)); }
+function v19SetCta(id){ if(!_v19||!id) return; const d=_v19.d;
+  if(d.co&&d.co.ctaId){ d.co.ctaId=id; d.co._upd=Date.now(); } else if(d.prop){ d.prop.ctaCobro=id; d.prop._upd=Date.now(); }
+  saveAndSync(); toast('Cuenta de cobro guardada'+(d.co&&d.co.ctaId?' en el contrato':d.prop?' para '+d.prop.nom:'')); v19Re(); }
+function v19SetBono(on){ if(!_v19||!_v19.d.inq) return; const i=_v19.d.inq; if(on) delete i.sinBono5; else i.sinBono5=true; i._upd=Date.now(); saveAndSync(); v19Re(); }
+function v19Enviado(){ if(!_v19) return; const dt=v19Txt('v19-dt'); if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dt)){ toast('Indica la fecha y la hora del envío',false); return; }
+  if(v19MarcarEnviado(_v19.key,_v19.M,dt.slice(0,16))){ toast('Email marcado como enviado el '+v4F2(dt.slice(0,10))+' a las '+dt.slice(11,16)); _v19.edit={}; v19Re(); try{ v12RefrescarPagos(); }catch(e){} } }
+function v19NoEnviado(){ if(!_v19) return; if(v19DesmarcarEnviado(_v19.key,_v19.M)){ toast('Quitada la marca de email enviado'); v19Re(); try{ v12RefrescarPagos(); }catch(e){} } }
+async function v19Copiar(id){ const t=v19Txt(id); try{ await navigator.clipboard.writeText(t); toast('Copiado'); }catch(e){ const el=$i(id); if(el){ el.select(); try{ document.execCommand('copy'); toast('Copiado'); }catch(e2){ toast('No se pudo copiar: selecciónalo a mano',false); } } } }
+function v19Para(){ return v19Txt('v19-para').split(/[,;\s]+/).map(s=>s.trim()).filter(s=>/@/.test(s)); }
+function v19Gmail(){ const u='https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(v19Para().join(','))+'&su='+encodeURIComponent(v19Txt('v19-asunto'))+'&body='+encodeURIComponent(v19Txt('v19-email')); window.open(u,'_blank'); }
+function v19Mailto(){ const u='mailto:'+v19Para().map(encodeURIComponent).join(',')+'?subject='+encodeURIComponent(v19Txt('v19-asunto'))+'&body='+encodeURIComponent(v19Txt('v19-email').replace(/\r?\n/g,'\r\n')); location.href=u; }
+function v19AbrirWA(n){ const s=_v19; if(!s) return; const i=s.d.personas[n], tel=v19Tel(i); if(!tel){ toast('Sin teléfono en la ficha',false); return; } window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(v19Txt('v19-wa'+n)),'_blank'); }
+async function v19Compartir(canal,n){
+  const fs=await v19Listas(); const data=canal==='email'?{title:v19Txt('v19-asunto'), text:v19Txt('v19-email')}:{text:v19Txt('v19-wa'+n)};
+  if(fs.length) data.files=fs;
+  try{ if(data.files&&navigator.canShare&&!navigator.canShare({files:data.files})){ delete data.files; toast('Este navegador no deja compartir archivos: descarga las facturas',false); }
+    await navigator.share(data); }catch(e){ if(e&&e.name!=='AbortError') toast('No se pudo compartir: '+(e.message||e),false); }
+}
+function v19Bajar(blob,nombre){ const url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=nombre; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),30000); }
+// Borrador .eml (MIME) con las facturas adjuntas: Outlook lo abre listo para enviar (X-Unsent)
+function v19B64(u8){ let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s).replace(/(.{76})/g,'$1\r\n'); }
+function v19B64Txt(t){ return v19B64(new TextEncoder().encode(t)); }
+function v19Cab(t){ return /^[\x20-\x7e]*$/.test(t)?t:'=?UTF-8?B?'+btoa(String.fromCharCode(...new TextEncoder().encode(t)))+'?='; }
+async function v19EmlBlob(para,asunto,texto,files){
+  const b='----=_RentaControl_'+Date.now().toString(36), L=['To: '+para.join(', '),'Subject: '+v19Cab(asunto),'X-Unsent: 1','MIME-Version: 1.0','Content-Type: multipart/mixed; boundary="'+b+'"','',
+    '--'+b,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',v19B64Txt(texto.replace(/\r?\n/g,'\r\n'))];
+  for(const f of files){ const u8=new Uint8Array(await f.arrayBuffer()); L.push('--'+b,'Content-Type: application/pdf; name="'+f.name+'"','Content-Disposition: attachment; filename="'+f.name+'"','Content-Transfer-Encoding: base64','',v19B64(u8)); }
+  L.push('--'+b+'--',''); return new Blob([L.join('\r\n')],{type:'message/rfc822'});
+}
+async function v19Eml(){ const s=_v19; if(!s) return; const fs=await v19Listas();
+  const blob=await v19EmlBlob(v19Para(),v19Txt('v19-asunto'),v19Txt('v19-email'),fs);
+  v19Bajar(blob,('Email_pago_'+s.M+'_'+(s.d.ent?'vivienda':'hab'+s.d.hab)+'_'+(s.d.prop?s.d.prop.nom:'')).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9_\-]+/g,'_')+'.eml');
+  toast('Borrador descargado'+(fs.length?' con '+fs.length+' factura'+(fs.length===1?'':'s'):'')+': ábrelo con tu programa de correo'); }
+
+// ── Revisar el tapado de una factura: arrastra para tapar más; toca una caja para quitarla ──
+let _v19R=null;
+function v19Revisar(i){
+  const f=_v19&&_v19.fac[i]; if(!f||f.st!=='ok') return; const x=f.x, R=f.c.R, t=x.tapas||{};
+  _v19R={i, x, R, quit:new Set(t.quit||[]), man:(t.man||[]).map(c=>Object.assign({},c)), modo:'mover'};
+  const c=v19Modal('m-v19r'); c.style.width='980px';
+  c.innerHTML='<h2>✏️ Revisar el tapado</h2><div style="font-size:11.5px;color:var(--ink3);line-height:1.55;margin-bottom:8px;">Negro: se tapa. <strong>Arrastra</strong> sobre la factura para tapar algo más; <strong>toca una caja</strong> para quitarla (con borde rojo discontinuo: quitada). Tapa nombre, DNI, dirección postal del titular, cuentas, nº de contrato o cliente y CUPS; deja a la vista la empresa, el periodo, los consumos y los importes.</div>'
+    +'<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;font-size:11.5px;" id="v19r-modo"></div>'
+    +'<div id="v19r-pags">'+R.pags.map(pg=>'<div class="v19r-p" data-p="'+pg.n+'" style="position:relative;margin:0 auto 12px;max-width:100%;width:'+Math.min(900,pg.w)+'px;touch-action:pan-y pinch-zoom;user-select:none;-webkit-user-select:none;border:1px solid var(--line2);"><img src="'+pg.cv.toDataURL('image/jpeg',0.72)+'" style="width:100%;display:block;pointer-events:none;" draggable="false"><div class="v19r-c" style="position:absolute;inset:0;"></div></div>').join('')+'</div>'
+    +'<div class="modal-footer"><button class="btn btn-ghost" onclick="closeM(\'m-v19r\')">Cancelar</button><button class="btn btn-secondary" onclick="v19RTodo()">Restablecer las automáticas</button><button class="btn btn-primary" onclick="v19RGuardar()">✓ Guardar revisión</button></div>';
+  $i('m-v19r').classList.add('open'); v19RModo('mover');
+  c.querySelectorAll('.v19r-p').forEach(el=>v19REnlazar(el));
+}
+// En pantallas táctiles: «Mover» deja desplazar la página (tocar una caja la quita); «Tapar» dibuja cajas con el dedo
+function v19RModo(m){ const s=_v19R; if(!s) return; s.modo=m; const e=$i('v19r-modo');
+  if(e) e.innerHTML='<span style="color:var(--ink3);">Con el dedo:</span><button class="btn btn-xs '+(m==='mover'?'btn-primary':'btn-ghost')+'" onclick="v19RModo(\'mover\')">👆 Mover</button><button class="btn btn-xs '+(m==='tapar'?'btn-primary':'btn-ghost')+'" onclick="v19RModo(\'tapar\')">⬛ Tapar</button><span style="color:var(--ink3);">(con ratón se tapa arrastrando siempre)</span>';
+  document.querySelectorAll('#v19r-pags .v19r-p').forEach(el=>{ el.style.touchAction=m==='tapar'?'none':'pan-y pinch-zoom'; }); v19RPintar(); }
+function v19RPintar(){ const s=_v19R; if(!s) return; document.querySelectorAll('#v19r-pags .v19r-p').forEach(el=>{ const n=+el.dataset.p, cc=el.querySelector('.v19r-c');
+  const bx=(c,tipo,idx)=>'<div data-t="'+tipo+'" data-i="'+v4Esc(idx)+'" title="'+v4Esc(c.mot||'')+'" style="position:absolute;left:'+(c.x*100)+'%;top:'+(c.y*100)+'%;width:'+(c.w*100)+'%;height:'+(c.h*100)+'%;cursor:pointer;'
+    +(tipo==='q'?'border:1.5px dashed #e34948;background:rgba(227,73,72,.08);':'background:rgba(0,0,0,.86);outline:1px solid #e34948;')+'"></div>';
+  cc.innerHTML=s.R.auto.filter(c=>c.p===n).map(c=>bx(c,s.quit.has(c.k)?'q':'a',c.k)).join('')+s.man.map((c,j)=>c.p===n?bx(c,'m',j):'').join(''); }); }
+function v19REnlazar(el){
+  let ini=null, tmp=null;
+  const pos=e=>{ const r=el.getBoundingClientRect(); return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)), y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))}; };
+  el.addEventListener('pointerdown',e=>{ const dib=e.pointerType!=='touch'||(_v19R&&_v19R.modo==='tapar'); ini=Object.assign(pos(e),{t:e.target, dib});
+    if(dib){ try{ el.setPointerCapture(e.pointerId); }catch(_){} e.preventDefault(); } });
+  el.addEventListener('pointercancel',()=>{ ini=null; if(tmp){ tmp.remove(); tmp=null; } });
+  el.addEventListener('pointermove',e=>{ if(!ini||!ini.dib) return; const p=pos(e), x=Math.min(ini.x,p.x), y=Math.min(ini.y,p.y), w=Math.abs(p.x-ini.x), h=Math.abs(p.y-ini.y);
+    if(w<0.006&&h<0.004) return; if(!tmp){ tmp=document.createElement('div'); tmp.style.cssText='position:absolute;background:rgba(0,0,0,.6);outline:1px dashed #fff;pointer-events:none;'; el.appendChild(tmp); }
+    Object.assign(tmp.style,{left:x*100+'%',top:y*100+'%',width:w*100+'%',height:h*100+'%'}); });
+  el.addEventListener('pointerup',e=>{ if(!ini) return; const s=_v19R, p=pos(e), w=Math.abs(p.x-ini.x), h=Math.abs(p.y-ini.y), n=+el.dataset.p;
+    if(tmp){ tmp.remove(); tmp=null; }
+    if(w>=0.006||h>=0.004){ if(ini.dib&&w>0.002&&h>0.002) s.man.push({p:n, x:Math.min(ini.x,p.x), y:Math.min(ini.y,p.y), w, h}); }
+    else { // tocar: quita (o vuelve a poner) las cajas que hay en ese punto
+      const den=c=>c.p===n&&p.x>=c.x&&p.x<=c.x+c.w&&p.y>=c.y&&p.y<=c.y+c.h, j=s.man.map((c,k)=>den(c)?k:-1).filter(k=>k>=0).pop();
+      if(j!==undefined) s.man.splice(j,1);
+      else { const as=s.R.auto.filter(den); if(as.length){ if(as.some(c=>!s.quit.has(c.k))) as.forEach(c=>s.quit.add(c.k)); else as.forEach(c=>s.quit.delete(c.k)); } } }
+    ini=null; v19RPintar(); });
+}
+function v19RTodo(){ if(!_v19R) return; _v19R.quit.clear(); _v19R.man=[]; v19RPintar(); }
+async function v19RGuardar(){ const s=_v19R; if(!s) return; const r4=v=>Math.round(v*10000)/10000;
+  s.x.tapas={man:s.man.map(c=>({p:c.p,x:r4(c.x),y:r4(c.y),w:r4(c.w),h:r4(c.h)})), quit:[...s.quit].filter(k=>s.R.auto.some(c=>c.k===k)), ok:v4LocalDT(new Date())}; s.x._upd=Date.now();
+  saveAndSync(); closeM('m-v19r'); _v19R=null; toast('Revisión guardada');
+  if(_v19){ const f=_v19.fac[s.i]; if(f){ f.st='cargando'; v19PintarAdj(); await v19Prep1(f); v19PintarAdj(); } } }
 
 </script>
 </body>
