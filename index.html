@@ -690,6 +690,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   font-size:9.5px;color:var(--ink3);margin-top:4px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
+#sec-pDash tr.v20-tot td,#sec-pPisos tr.v20-tot td{border-top:1.5px solid var(--line2);background:var(--bg);}
 .cartera-box .cb-val .cb-u{font-size:11px;color:var(--ink3);font-weight:400;}
 @media(max-width:560px){
   .cartera-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
@@ -890,6 +891,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <div class="nav-group" data-ws="personal">
     <div class="nav-label">Resumen</div>
     <div class="nav-item" data-ws="personal" data-s="pDash" onclick="go(this)"><span class="nav-icon">◈</span> Panel</div>
+    <div class="nav-item" data-ws="personal" data-s="pPisos" onclick="go(this)"><span class="nav-icon">🏘️</span> Mis pisos</div>
     <div class="nav-item" data-ws="personal" data-s="pPatrimonio" onclick="go(this)"><span class="nav-icon">📈</span> Patrimonio neto</div>
   </div>
   <div class="nav-group" data-ws="personal">
@@ -1454,6 +1456,13 @@ td .name-link:hover{border-bottom-color:var(--acc);}
     <div class="card"><div class="card-title">🔁 Próximos cargos</div><div id="pd-subs"></div></div>
     <div class="card"><div class="card-title">🏁 Objetivos</div><div id="pd-metas"></div></div>
   </div>
+</section>
+
+<!-- ════════════ PERSONAL: MIS PISOS (v4.19, desde RentaControl) ════════════ -->
+<section class="sec" data-ws="personal" id="sec-pPisos">
+  <div class="ph"><div><div class="ph-title">🏘️ Mis pisos</div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:3px;">Lo que te generan los pisos cuyas rentas cobras, con los datos de RentaControl: EBITDA y limpio, mes a mes</div></div></div>
+  <div id="pp-cont"></div>
 </section>
 
 <!-- ════════════ PERSONAL: MOVIMIENTOS ════════════ -->
@@ -18450,6 +18459,982 @@ async function v19RGuardar(){ const s=_v19R; if(!s) return; const r4=v=>Math.rou
   s.x.tapas={man:s.man.map(c=>({p:c.p,x:r4(c.x),y:r4(c.y),w:r4(c.w),h:r4(c.h)})), quit:[...s.quit].filter(k=>s.R.auto.some(c=>c.k===k)), ok:v4LocalDT(new Date())}; s.x._upd=Date.now();
   saveAndSync(); closeM('m-v19r'); _v19R=null; toast('Revisión guardada');
   if(_v19){ const f=_v19.fac[s.i]; if(f){ f.st='cargando'; v19PintarAdj(); await v19Prep1(f); v19PintarAdj(); } } }
+
+// ══════════════════════════════════════════════════════════════
+// v4.19 · Finanzas personales conectadas con RentaControl
+// La parte personal ve, en solo lectura, los datos de RentaControl: lo que generan los pisos de los que eres usufructuario
+// (o propietario pleno) y tus cuentas, con el mismo saldo y los mismos movimientos. RentaControl no cambia en nada.
+// ══════════════════════════════════════════════════════════════
+
+// ── 1. Datos de RentaControl ──
+// Fuente: la copia de este dispositivo (rc5) fusionada con la de Google Drive (rentacontrol_backup.json), con la misma
+// regla que la sincronización (gana el dato más reciente de cada registro; las lápidas de borrado se respetan).
+// La copia de Drive se guarda solo en memoria: no se duplica en el almacenamiento del dispositivo.
+let _v20Loc={raw:null,obj:null}, _v20Esp={obj:null,t:0,cargando:false,err:''}, _v20Mez={a:null,b:null,obj:null};
+function v20Norm(o){ if(!o||typeof o!=='object') return null; COLS.forEach(k=>{ if(!Array.isArray(o[k])) o[k]=[]; }); if(!o.cfg||typeof o.cfg!=='object') o.cfg={}; return o; }
+function v20Local(){
+  let raw=null; try{ raw=localStorage.getItem(WS_CFG.gentaury.key); }catch(e){}
+  if(!raw||raw.length<40){ _v20Loc={raw:null,obj:null}; return null; }
+  if(raw!==_v20Loc.raw){ let o=null; try{ o=v20Norm(JSON.parse(raw)); }catch(e){ o=null; } _v20Loc={raw,obj:o}; }
+  return _v20Loc.obj;
+}
+function v20RC(){
+  if(WS!=='personal') return D;   // dentro de RentaControl los datos son los suyos
+  const L=v20Local(), E=_v20Esp.obj;
+  if(!L&&!E) return null; if(!E) return L; if(!L) return E;
+  if(_v20Mez.a===L&&_v20Mez.b===E) return _v20Mez.obj;
+  const f=fusionar(L,E), o=v20Norm(Object.assign({},E,L,f));
+  _v20Mez={a:L,b:E,obj:o}; return o;
+}
+// Última modificación conocida de los datos de RentaControl (para decir de cuándo son)
+function v20Info(){
+  const R=v20RC(); if(!R) return {hay:false};
+  let t=+R._cfgUpd||0; COLS.forEach(k=>(R[k]||[]).forEach(x=>{ if(x&&+x._upd>t) t=+x._upd; }));
+  return {hay:true, t, drive:!!_v20Esp.obj, local:!!v20Local(), cargando:_v20Esp.cargando, err:_v20Esp.err, tDrive:_v20Esp.t};
+}
+async function v20BajarEspejo(forzar){
+  if(WS!=='personal'||!gToken||!gFolderId||_v20Esp.cargando) return false;
+  if(!forzar&&_v20Esp.obj&&Date.now()-_v20Esp.t<120000) return false;
+  _v20Esp.cargando=true; let ok=false;
+  try{
+    const q=encodeURIComponent("name='"+WS_CFG.gentaury.backup+"' and '"+gFolderId+"' in parents and trashed=false");
+    const res=await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)');
+    if(res&&res.files&&res.files.length){
+      const url='https://www.googleapis.com/drive/v3/files/'+res.files[0].id+'?alt=media';
+      let r=await fetch(url,{headers:{Authorization:'Bearer '+gToken},cache:'no-store'});
+      if(r.status===401&&await renovarTokenAhora()) r=await fetch(url,{headers:{Authorization:'Bearer '+gToken},cache:'no-store'});
+      if(r.ok){ const txt=await r.text(); if(txt&&txt.trim().length>40){ _v20Esp.obj=v20Norm(JSON.parse(txt)); _v20Esp.t=Date.now(); _v20Esp.err=''; ok=true; } }
+      else _v20Esp.err='Google Drive respondió '+r.status;
+    }
+  }catch(e){ _v20Esp.err=e.message||String(e); }
+  finally{ _v20Esp.cargando=false; }
+  v20Refrescar(); return ok;
+}
+// Cálculos con las MISMAS funciones de RentaControl: se usan sus datos un instante y se vuelve a los de Personal
+let _v20P=null;   // los datos de Personal mientras se calcula con los de RentaControl
+function v20EnRC(fn){
+  const R=v20RC(); if(!R) return null; if(R===D) return fn(R);
+  const D0=D, P0=_v20P; _v20P=D0; D=R; try{ try{ v4InvalidarCaches(); }catch(e){} return fn(R); }
+  finally{ D=D0; _v20P=P0; try{ v4InvalidarCaches(); }catch(e){} }
+}
+
+// ── 2. Quién eres en RentaControl ──
+function v20Txt(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toLowerCase(); }
+function v20Yo(R){
+  R=R||v20RC(); if(!R) return ''; const PD=_v20P||D, ps=R.propietarios||[], oy=PD.cfg&&PD.cfg.ownerYo;
+  if(oy&&oy!=='TODAS'&&ps.some(o=>o.id==oy)) return String(oy);
+  let o=ps.find(x=>/^yo\b/i.test(String(x.rel||'').trim()));
+  if(!o){ const n=v20Txt(PD.cfg&&PD.cfg.nom); if(n) o=ps.find(x=>v20Txt(x.nom)===n||v20Txt(x.alias)===n); }
+  if(!o&&ps.length===1) o=ps[0];
+  return o?String(o.id):'';
+}
+function v20NomRC(id,R){ R=R||v20RC(); const o=R&&(R.propietarios||[]).find(x=>x.id==id); return o?(o.alias||o.nom||''):''; }
+
+// ── 3. Lo que generan tus pisos ──
+// Ingresos: cobros marcados como cobrados, en el mes al que corresponden (igual que el Dashboard de RentaControl), sin fianzas
+// ni garantías. Si en ese mes cambia quién cobra las rentas (p. ej. empieza el usufructo), se reparten por días (art. 474 CC).
+// Gastos: facturas y gastos de RentaControl hasta hoy que paga quien eres tú (el titular indicado o, si no hay, quien cobra
+// las rentas del piso ese día), con el mismo criterio que usan las cuentas de RentaControl:
+//  · hipoteca: cuotas registradas (intereses y capital);
+//  · inversión: mejoras, muebles y electrodomésticos, gastos de compra y reformas (lo que se amortiza);
+//  · explotación: todo lo demás (suministros, comunidad, IBI, seguros, reparaciones, gestoría…).
+// EBITDA = ingresos − explotación. Limpio = ingresos − explotación − inversión − hipoteca (lo que queda en el bolsillo).
+const V20_INV=['mejora','amort10','amort3'];
+function v20EsInv(x,src){ if(src==='gasto') return x.cat==='Reformas'||V20_INV.includes(x.ded); return V20_INV.includes(fiscalKey(x.ded)); }
+function v20Pisos(){
+  return v20EnRC(R=>{
+    const yo=v20Yo(R); if(!yo) return null;
+    const hoy=v4Hoy(), props=R.props||[], pById=new Map(props.map(p=>[String(p.id),p])), inqP=new Map((R.inqs||[]).map(i=>[String(i.id),i]));
+    const dis=(pid,iso)=>{ const p=pById.get(String(pid)); try{ return String(titularidadDia(pid,iso).disfrute||(p&&p.ownerId)||''); }catch(e){ return String((p&&p.ownerId)||''); } };
+    const fc=new Map(), frac=(pid,k)=>{ const ck=pid+'|'+k; let f=fc.get(ck); if(f) return f; const y=+k.slice(0,4), m=+k.slice(5,7), dm=new Date(y,m,0).getDate(); let dd=0;
+      for(let d=1;d<=dm;d++) if(dis(pid,k+'-'+String(d).padStart(2,'0'))===yo) dd++; f={dd,dm}; fc.set(ck,f); return f; };
+    const out={yo, m:{}, det:{}, pids:new Set(), sinPiso:0};
+    const cel=(k,pid)=>{ const a=out.m[k]||(out.m[k]={}); return a[pid]||(a[pid]={ing:0,opex:0,inv:0,hip:0}); };
+    const det=(k,o)=>{ (out.det[k]=out.det[k]||[]).push(o); };
+    (R.pagos||[]).forEach(p=>{
+      if(!p||p.estado!=='pagado'||!/^\d{4}-\d{2}/.test(p.mes||'')||v12EsDep(p)) return; const imp=+p.imp||0; if(!imp) return;
+      const k=p.mes.slice(0,7), inq=inqP.get(String(p.inqId)), pid=String(p.propId||(inq&&inq.propId)||'');
+      if(!pid||!pById.has(pid)){ out.sinPiso++; return; }
+      const f=frac(pid,k); if(!f.dd) return; const v=imp*f.dd/f.dm; cel(k,pid).ing+=v; out.pids.add(pid);
+      det(k,{pid, t:'ing', imp:v, total:imp, dd:f.dd, dm:f.dm, fecha:p.fecha||'', txt:(p.con||'Cobro')+' · '+(inq?((inq.nom||'')+' '+(inq.ap||'')).trim():'')});
+    });
+    const gasto=(x,src)=>{
+      if(!x) return; const f=x.fecha||x.fPago, imp=+x.imp||0; if(!/^\d{4}-\d{2}-\d{2}/.test(f||'')||f>hoy||!imp) return;
+      const pid=x.propId&&pById.has(String(x.propId))?String(x.propId):'';
+      let tit='';
+      if(src==='gasto'){ const h=x.cat==='Hipoteca'?(R.hipotecas||[]).find(h=>h.propId==x.propId):null; tit=(h&&h.ownerId)||x.titular||(pid?dis(pid,f):''); }
+      else tit=x.titular||x.ownerId||(pid?dis(pid,f):'');
+      if(String(tit)!==yo) return;
+      const tipo=src==='gasto'&&x.cat==='Hipoteca'?'hip':v20EsInv(x,src)?'inv':'opex', k=f.slice(0,7), cp=pid||'__gen';
+      cel(k,cp)[tipo]+=imp; if(pid) out.pids.add(pid);
+      det(k,{pid:cp, t:tipo, imp, fecha:f, txt:src==='gasto'?(x.cat||'Gasto')+(x.desc?' · '+x.desc:''):'Factura · '+(x.con||'')+(x.emp?' · '+x.emp:'')});
+    };
+    (R.gastos||[]).forEach(g=>gasto(g,'gasto')); (R.compras||[]).forEach(x=>gasto(x,'compra'));
+    // Pisos que son (o han sido) tuyos, aunque aún no tengan movimientos
+    props.forEach(p=>{ if(dis(p.id,hoy)===yo) out.pids.add(String(p.id)); });
+    // Qué parte de cada mes fue tuyo cada piso (para las medias mensuales y la gráfica)
+    const kH=hoy.slice(0,7), kMin=Object.keys(out.m).filter(k=>k<=kH).sort()[0]||kH; let k0=kMin<kH.slice(0,4)+'-01'?kMin:kH.slice(0,4)+'-01';
+    out.dueno={}; out.pids.forEach(pid=>{ const d=out.dueno[pid]={}; for(let k=k0,n=0;k<=kH&&n<600;k=v17SigMes(k),n++){ const f=frac(pid,k); d[k]=f.dd/f.dm; } });
+    out.props=[...out.pids].map(id=>{ const p=pById.get(id); return {id, nom:(p&&p.nom)||'Piso', hoy:dis(id,hoy)===yo}; }).sort((a,b)=>(b.hoy-a.hoy)||a.nom.localeCompare(b.nom));
+    return out;
+  });
+}
+// Resumen de un mes (o de una lista de meses): pisos + movimientos personales
+function v20MovsPers(){ return (D.movs||[]).filter(m=>m&&(m.tipo==='ingreso'||m.tipo==='gasto')&&/^\d{4}-\d{2}-\d{2}/.test(m.fecha||'')&&(+m.imp||0)); }
+function v20Res(ks,P,MV){
+  ks=[].concat(ks); P=P===undefined?v20Pisos():P; MV=MV||v20MovsPers(); const set=new Set(ks);
+  const r={ks, porPiso:{}, gen:{opex:0,inv:0,hip:0}, ingP:0, opex:0, inv:0, hip:0, ingO:0, gasPer:0, catIng:{}, catGas:{}, nMov:0};
+  if(P) (P.props||[]).forEach(p=>{ r.porPiso[p.id]={id:p.id, nom:p.nom, ing:0,opex:0,inv:0,hip:0}; });
+  if(P) ks.forEach(k=>{ const a=P.m[k]||{}; Object.keys(a).forEach(pid=>{ const c=a[pid], t=pid==='__gen'?r.gen:(r.porPiso[pid]||(r.porPiso[pid]={id:pid,nom:'Piso',ing:0,opex:0,inv:0,hip:0}));
+    if(pid!=='__gen') t.ing+=c.ing; t.opex+=c.opex; t.inv+=c.inv; t.hip+=c.hip; r.ingP+=c.ing; r.opex+=c.opex; r.inv+=c.inv; r.hip+=c.hip; }); });
+  MV.forEach(m=>{ const k=m.fecha.slice(0,7); if(!set.has(k)) return; const v=+m.imp||0, c=m.cat||'Otros'; r.nMov++;
+    if(m.tipo==='ingreso'){ r.ingO+=v; r.catIng[c]=(r.catIng[c]||0)+v; } else { r.gasPer+=v; r.catGas[c]=(r.catGas[c]||0)+v; } });
+  Object.values(r.porPiso).forEach(p=>{ ['ing','opex','inv','hip'].forEach(x=>p[x]=v17R(p[x])); p.ebitda=v17R(p.ing-p.opex); p.limpio=v17R(p.ing-p.opex-p.inv-p.hip); });
+  ['opex','inv','hip'].forEach(x=>r.gen[x]=v17R(r.gen[x])); r.gen.total=v17R(r.gen.opex+r.gen.inv+r.gen.hip);
+  ['ingP','opex','inv','hip','ingO','gasPer'].forEach(x=>r[x]=v17R(r[x])); Object.keys(r.catIng).forEach(c=>r.catIng[c]=v17R(r.catIng[c])); Object.keys(r.catGas).forEach(c=>r.catGas[c]=v17R(r.catGas[c]));
+  r.ebitda=v17R(r.ingP-r.opex); r.gasPis=v17R(r.opex+r.inv+r.hip); r.limpio=v17R(r.ingP-r.gasPis);
+  r.ing=v17R(r.ingP+r.ingO); r.gas=v17R(r.gasPis+r.gasPer); r.aho=v17R(r.ing-r.gas);
+  return r;
+}
+
+// ── 4. Cuentas ──
+// Cada cuenta tuya de RentaControl aparece con EXACTAMENTE el saldo y los movimientos de RentaControl. Encima se suman los
+// gastos e ingresos personales que apuntes aquí con esa cuenta, salvo los que ya estén dentro de RentaControl: los anteriores
+// al saldo de partida de la cuenta o a su último «Ajuste al saldo real del banco» (ese saldo del banco ya los incluía).
+function v20TsMov(m){ return +m.ts||v15TsId(m.id)||0; }
+function v20Corte(c,t){
+  let co=c.saldoFecha?{fecha:c.saldoFecha, ts:+c.saldoTs||0}:null;
+  (c.movs||[]).forEach(m=>{ if(m.tipo!=='ajuste'||!m.fecha||m.fecha>t) return; const ts=v15TsId(m.id);
+    if(!co||m.fecha>co.fecha||(m.fecha===co.fecha&&ts>co.ts)) co={fecha:m.fecha, ts, ajuste:true}; });
+  return co;
+}
+function v20Cuenta(co,m){ if(!co) return true; if(m.fecha>co.fecha) return true; if(m.fecha<co.fecha) return false; const ts=v20TsMov(m); return !!(ts&&co.ts&&ts>co.ts&&new Date(co.ts).v12Dia()===co.fecha); }
+// Cuenta de RentaControl a la que va un movimiento personal ('' si es de una cuenta solo personal)
+function v20RcDe(ctaId){ const s=String(ctaId||''); if(s.startsWith('rc:')) return s.slice(3); const c=(D.cuentas||[]).find(x=>x.id==s); return c&&c.rcId?String(c.rcId):''; }
+function v20CtasRC(){
+  return v20EnRC(R=>{
+    const yo=v20Yo(R); if(!yo) return null; const fl=v9Flujos(), hoy=v4Hoy(), cs=v9Ctas();
+    const deps=v9Depositos().filter(d=>String(d.tit)===yo);
+    const mias=cs.filter(c=>String(c.titularId)===yo);
+    // tarjetas: sus cargos van a la cuenta de cargo
+    const fin=id=>{ const c=cs.find(x=>x.id==id); return c&&c.tipo==='tarjeta'?String(c.cargoId||''):String(id); };
+    return {yo, fl, deps, fin, cs:mias.map(c=>({c, id:String(c.id), tarjeta:c.tipo==='tarjeta', con:v9ConSaldo(c),
+      saldoRC:v9ConSaldo(c)?v9SaldoCta(c,hoy,fl):null, flujos:fl.filter(f=>f.cta===c.id||f.orig===c.id)}))};
+  });
+}
+function v20Cuentas(){
+  const X=v20CtasRC(), hoy=v4Hoy(), MV=v20MovsPers(); const out={rc:[], pers:[], total:0, totalRC:0, pend:0, dep:0, sinSaldo:[]};
+  if(X){
+    X.cs.forEach(o=>{ if(o.tarjeta){ out.rc.push(Object.assign({},o,{pendMovs:[], pend:0, saldo:null})); return; }
+      const co=v20Corte(o.c,hoy);
+      const ms=MV.filter(m=>{ const r=v20RcDe(m.ctaId); return r&&X.fin(r)===o.id; });
+      const cuentan=ms.filter(m=>m.fecha<=hoy&&v20Cuenta(co,m)), dentro=ms.filter(m=>m.fecha<=hoy&&!v20Cuenta(co,m));
+      const pend=v17R(cuentan.reduce((s,m)=>s+(m.tipo==='ingreso'?1:-1)*(+m.imp||0),0));
+      const saldo=o.con?v17R(o.saldoRC+pend):null;
+      out.rc.push(Object.assign({},o,{corte:co, pendMovs:cuentan, dentro, pend, saldo}));
+      if(o.con){ out.total+=saldo; out.totalRC+=o.saldoRC; out.pend+=pend; } else out.sinSaldo.push(o.c.nom);
+    });
+    out.dep=v17R(X.deps.reduce((s,d)=>s+d.imp,0)); out.deps=X.deps;
+  }
+  (D.cuentas||[]).forEach(c=>{ if(c.rcId&&X&&X.cs.some(o=>o.id==String(c.rcId))) return; const s=saldoCuenta(c.id); out.pers.push({c, saldo:s});
+    if(c.tipo!=='Tarjeta de crédito') out.total+=s; });
+  out.total=v17R(out.total); out.totalRC=v17R(out.totalRC); out.pend=v17R(out.pend);
+  return out;
+}
+// Saldo de todas tus cuentas a final de un día (para la gráfica)
+function v20SaldoEn(t,X,MV){
+  let s=0, hay=false;
+  if(X) X.cs.forEach(o=>{ if(o.tarjeta||!o.con||o.c.saldoFecha>t) return; hay=true;
+    let v=v9SaldoCta(o.c,t,X.fl)||0; const co=v20Corte(o.c,t);
+    MV.forEach(m=>{ const r=v20RcDe(m.ctaId); if(!r||X.fin(r)!==o.id||m.fecha>t||!v20Cuenta(co,m)) return; v+=(m.tipo==='ingreso'?1:-1)*(+m.imp||0); });
+    s+=v; });
+  (D.cuentas||[]).forEach(c=>{ if(c.tipo==='Tarjeta de crédito'||(c.rcId&&X&&X.cs.some(o=>o.id==String(c.rcId)))) return;
+    const alta=(v15TsId(c.id)?new Date(v15TsId(c.id)).v12Dia():''); if(alta&&alta>t) return; hay=true;
+    s+=(+c.saldo||0)+MV.filter(m=>m.ctaId==c.id&&m.fecha<=t).reduce((a,m)=>a+(m.tipo==='ingreso'?1:-1)*(+m.imp||0),0); });
+  return hay?v17R(s):null;
+}
+// Liquidez total de Personal: tus cuentas de RentaControl (con lo personal) + las cuentas solo personales
+totalLiquido=function(){ try{ return v20Cuentas().total; }catch(e){ return (D.cuentas||[]).filter(c=>c.tipo!=='Tarjeta de crédito').reduce((s,c)=>s+saldoCuenta(c.id),0); } };
+// Propiedades que computan como tuyas: las que hoy te dan las rentas (usufructo o pleno dominio)
+function propsDeYo(){ if(!G) return []; const yo=v20Yo(G); if(!yo) return []; const hoy=v4Hoy(); return (G.props||[]).filter(p=>{ let t=''; const D0=D; try{ D=G; t=String(titularidadDia(p.id,hoy).disfrute||p.ownerId||''); }catch(e){ t=String(p.ownerId||''); } finally{ D=D0; } return t===yo; }); }
+// El puente antiguo (G / GEN): ahora siempre con los datos fusionados y sin el fallo de «.then»
+function cargarGentaury(){ try{ G=v20RC(); if(G===D) G=null; }catch(e){ G=null; } if(!GEN) GEN={}; if(WS==='personal') v20BajarEspejo(false); return Promise.resolve(G); }
+
+// ══════════════════════════════════════════════════════════════
+// v4.19 · Gráfica de evolución de Personal (generada por build/mk29.py a partir de la de RentaControl, v4/p26.js)
+// ══════════════════════════════════════════════════════════════
+// Serie mensual: cada mes a su último día (el mes en curso, hoy)
+function v20gSerie(){
+  const hoy=v4Hoy(), kH=hoy.slice(0,7), P=v20Pisos(), MV=v20MovsPers(), X=v20CtasRC(), kMin=(+kH.slice(0,4)-40)+'-01';
+  const ok=k=>/^\d{4}-\d{2}$/.test(k)&&k<=kH&&k>=kMin, cand=[], altas=[];
+  if(P) Object.keys(P.m).forEach(k=>cand.push(k));
+  MV.forEach(m=>cand.push(m.fecha.slice(0,7)));
+  if(X) X.cs.forEach(o=>{ if(o.con&&!o.tarjeta){ cand.push(o.c.saldoFecha.slice(0,7)); altas.push(o.c.saldoFecha); } });
+  const X2=X; (D.cuentas||[]).forEach(c=>{ if(c.tipo==='Tarjeta de crédito'||(c.rcId&&X2&&X2.cs.some(o=>o.id==String(c.rcId)))) return; const t=v15TsId(c.id); if(t){ const f=new Date(t).v12Dia(); cand.push(f.slice(0,7)); altas.push(f); } });
+  const c2=cand.filter(ok).sort(); if(!c2.length) return null;
+  const meses=[]; for(let k=c2[0];k<=kH&&meses.length<500;k=v17SigMes(k)) meses.push(k);
+  const iniSaldos=altas.sort()[0]||null, props=P?P.props:[];
+  let aI=0,aA=0,yy='';
+  const rows=meses.map(k=>{
+    const t=k===kH?hoy:v17FinMes(k), y=k.slice(0,4); if(y!==yy){ aI=0; aA=0; yy=y; }
+    const r=v20Res(k,P,MV); aI=v17R(aI+r.ing); aA=v17R(aA+r.aho);
+    const row={k, t, hoy:k===kH, ev:[], ing:r.ing, gas:r.gas, aho:r.aho, ingP:r.ingP, ingO:r.ingO, gasPer:r.gasPer, gasPis:r.gasPis, ebitda:r.ebitda, limpio:r.limpio, accI:aI, accA:aA, sal:v20SaldoEn(t,X,MV)};
+    props.forEach(p=>{ const o=r.porPiso[p.id], suyo=P.dueno&&P.dueno[p.id]&&P.dueno[p.id][k]>0; row['e:'+p.id]=suyo||o&&(o.ing||o.opex||o.inv||o.hip)?(o?o.ebitda:0):null; });
+    return row;
+  });
+  if(iniSaldos) { const j=rows.findIndex(r=>r.k===iniSaldos.slice(0,7)); if(j>=0) rows[j].ev.push('🏦 Desde aquí se conoce el saldo de tus cuentas'); }
+  return {rows, kH, iniSaldos, props};
+}
+// ══ Gráfica de evolución ══
+// Una sola gráfica a todo el ancho con paneles alineados en el tiempo (cada panel, un solo eje: nunca dos escalas en el
+// mismo dibujo). Cruceta y lectura de todos los valores del mes, rangos rápidos, zoom arrastrando / con pellizco /
+// Ctrl+rueda, navegador inferior para mover y estirar el tramo, resumen del tramo y vista de tabla.
+// Colores: paleta categórica validada (CVD y contraste) sobre el fondo de las tarjetas; cada concepto conserva su color.
+const V20G_BASE=[
+  {id:'ing',   nom:'Ingresos',            pan:'mes', tipo:'bar',  col:'#1baf7a', bueno:1,  flujo:true, desc:'Tu parte de lo cobrado de tus pisos + tus otros ingresos'},
+  {id:'gas',   nom:'Gastos',              pan:'mes', tipo:'bar',  col:'#eb6834', bueno:-1, flujo:true, desc:'Tus gastos personales + los gastos de tus pisos (hipoteca incluida)'},
+  {id:'aho',   nom:'Ahorro',              pan:'mes', tipo:'line', col:'#2a78d6', bueno:1,  flujo:true, desc:'Ingresos − gastos del mes'},
+  {id:'ebitda',nom:'EBITDA pisos',        pan:'pis', tipo:'line', col:'#6250d6', bueno:1,  flujo:true, desc:'Ingresos de tus pisos − gastos de explotación'},
+  {id:'limpio',nom:'Limpio pisos',        pan:'pis', tipo:'line', col:'#008300', bueno:1,  flujo:true, desc:'EBITDA − cuotas de hipoteca − inversión'},
+  {id:'ingP',  nom:'De tus pisos',        pan:'ori', tipo:'line', col:'#1baf7a', bueno:1,  flujo:true, desc:'Tu parte de lo cobrado de tus pisos'},
+  {id:'ingO',  nom:'Otros ingresos',      pan:'ori', tipo:'line', col:'#eda100', bueno:1,  flujo:true, desc:'Clases particulares y demás ingresos apuntados aquí'},
+  {id:'gasPer',nom:'Gastos personales',   pan:'gp',  tipo:'line', col:'#eb6834', bueno:-1, flujo:true, desc:'Gastos apuntados aquí (gasolina, restaurantes…)'},
+  {id:'gasPis',nom:'Gastos de tus pisos', pan:'gp',  tipo:'line', col:'#6250d6', bueno:-1, flujo:true, desc:'Explotación, hipoteca e inversión de tus pisos'},
+  {id:'accI',  nom:'Ingresos del año',    pan:'acc', tipo:'line', col:'#1baf7a', bueno:1,  acum:true, desc:'Ingresos desde el 1 de enero'},
+  {id:'accA',  nom:'Ahorro del año',      pan:'acc', tipo:'line', col:'#2a78d6', bueno:1,  acum:true, desc:'Ahorro desde el 1 de enero'},
+  {id:'sal',   nom:'Saldo de tus cuentas',pan:'liq', tipo:'line', col:'#e87ba4', suave:true, bueno:1, desc:'Tus cuentas de RentaControl (con lo personal) + tus cuentas solo personales'}
+];
+// Colores de cada piso en el panel de pisos (paleta validada: CVD y contraste, después del EBITDA y el limpio)
+const V20G_COLPISO=['#eda100','#e87ba4','#2a78d6','#eb6834','#1baf7a','#e34948'];
+const V20G_SER=[];
+function v20gSeries(props){
+  const out=V20G_BASE.slice(0,5).concat((props||[]).slice(0,6).map((p,i)=>({id:'e:'+p.id, nom:'EBITDA '+p.nom, pan:'pis', tipo:'line', col:V20G_COLPISO[i], bueno:1, flujo:true, desc:'EBITDA de '+p.nom+' (tu parte)'}))).concat(V20G_BASE.slice(5));
+  V20G_SER.splice(0,V20G_SER.length,...out); return out.map(s=>s.id).join('|');
+}
+v20gSeries([]);
+const V20G_PAN=[
+  {id:'mes', nom:'Mes a mes', u:'€ cada mes', w:1.15},
+  {id:'pis', nom:'Tus pisos', u:'€ cada mes', w:1},
+  {id:'ori', nom:'Ingresos por origen', u:'€ cada mes', w:.85},
+  {id:'gp',  nom:'Gastos por tipo', u:'€ cada mes', w:.85},
+  {id:'acc', nom:'Acumulado del año', u:'€ desde el 1 de enero', w:1},
+  {id:'liq', nom:'Saldo de tus cuentas', u:'€', w:.85}
+];
+const V20G_HEROE=['aho','ing','gas','ebitda','limpio','sal','accA','accI','ingP','ingO','gasPer','gasPis'];
+const V20G_RANGOS=[['6m','6M'],['ytd','Este año'],['12m','12M'],['3a','3 años'],['todo','Todo']];
+let V20G=null;
+function v20gSer(id){ return V20G_SER.find(s=>s.id===id); }
+function v20gEstado(){
+  if(V20G) return V20G;
+  let g={}; try{ g=JSON.parse(localStorage.getItem('pers-evol')||'{}')||{}; }catch(e){ g={}; }
+  const ids=V20G_SER.map(s=>s.id), sel=Array.isArray(g.sel)?g.sel.filter(x=>ids.includes(x)||/^e:/.test(x)):[];
+  const r=V20G_RANGOS.some(x=>x[0]===g.rango)?g.rango:'12m';
+  V20G={sel:new Set(sel.length?sel:['ing','gas','aho','ebitda','sal']), rango:r, rangoBase:r, i0:0, i1:0, hov:null, tabla:false, data:null, L:null, ptrs:new Map(), pinch:null, drag:null, nav:null, zAcc:1, panAcc:0, raf:0, W:0};
+  return V20G;
+}
+function v20gGuardar(){ try{ localStorage.setItem('pers-evol',JSON.stringify({sel:[...V20G.sel], rango:V20G.rangoBase})); }catch(e){} }
+
+// Formatos
+function v20gNum(v,dec){ return (+v||0).toLocaleString('es-ES',{minimumFractionDigits:dec||0,maximumFractionDigits:dec||0}); }
+function v20gEur(v){ return v20gNum(Math.round(v))+' €'; }
+function v20gCorto(v,pct){
+  if(v===null||v===undefined||!isFinite(v)) return '—';
+  if(pct) return v20gNum(Math.round(v))+' %';
+  const a=Math.abs(v);
+  if(a>=1e6) return v20gNum(v/1e6,a>=1e7?1:2).replace(/,?0+$/,'')+' M€';
+  if(a>=1e4) return v20gNum(v/1e3,a>=1e5?0:1).replace(/,0$/,'')+' k€';
+  return v20gNum(Math.round(v))+' €';
+}
+function v20gVal(s,v){ if(v===null||v===undefined||!isFinite(v)) return '—'; return s.pct?v20gNum(Math.round(v))+' %':v20gEur(v); }
+function v20gPaso(x){ if(!(x>0)) return 1; const p=Math.pow(10,Math.floor(Math.log10(x))), f=x/p; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p; }
+function v20gDom(p,R,i0,i1){
+  if(p.id==='ocu') return {a:0,b:100,step:p.h<100?50:25,fmt:v=>v20gNum(v)+' %'};
+  let mn=Infinity,mx=-Infinity;
+  for(let i=i0;i<=i1;i++) p.ss.forEach(s=>{ const v=R[i][s.id]; if(v===null||v===undefined||!isFinite(v)) return; if(v<mn) mn=v; if(v>mx) mx=v; });
+  if(mn===Infinity){ mn=0; mx=1; }
+  if(p.ss.some(s=>s.tipo==='bar')||p.id==='acc'||p.id==='mes'){ mn=Math.min(0,mn); mx=Math.max(0,mx); }
+  else if(mn>=0&&mn<0.35*mx) mn=0;
+  if(mx===mn){ const d=Math.abs(mx)*0.1||1; mx+=d; if(mn!==0) mn-=d; }
+  const nt=p.h<105?2:p.h<150?3:4, step=v20gPaso((mx-mn)/nt);
+  let a=Math.floor(mn/step+1e-9)*step, b=Math.ceil(mx/step-1e-9)*step; if(b<=a) b=a+step;
+  // Un valor un poco por debajo de cero no reserva un paso entero de eje vacío
+  if(mn<0&&-mn<step*0.5) a=mn-(mx-mn)*0.06;
+  const comp=Math.max(Math.abs(a),Math.abs(b))>=1e4;
+  const fmt=v=>{ if(Math.abs(v)<1e-9) return '0'; if(!comp) return v20gNum(v); const x=Math.abs(v);
+    return x>=1e6?v20gNum(v/1e6,x%1e6?1:0).replace(/,0$/,'')+'M':v20gNum(v/1e3,x%1e3?1:0).replace(/,0$/,'')+'k'; };
+  return {a,b,step,fmt};
+}
+function v20gBarra(x,w,y0,y1,r){
+  const h=Math.abs(y0-y1); if(h<0.5) return ''; r=Math.min(r,w/2,h); const f=n=>n.toFixed(1);
+  if(y1<y0) return 'M'+f(x)+','+f(y0)+'V'+f(y1+r)+'Q'+f(x)+','+f(y1)+' '+f(x+r)+','+f(y1)+'H'+f(x+w-r)+'Q'+f(x+w)+','+f(y1)+' '+f(x+w)+','+f(y1+r)+'V'+f(y0)+'Z';
+  return 'M'+f(x)+','+f(y0)+'V'+f(y1-r)+'Q'+f(x)+','+f(y1)+' '+f(x+r)+','+f(y1)+'H'+f(x+w-r)+'Q'+f(x+w)+','+f(y1)+' '+f(x+w)+','+f(y1-r)+'V'+f(y0)+'Z';
+}
+function v20gRecta(pts){ return pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(''); }
+// Curva monótona (no inventa picos ni valles entre dos meses)
+function v20gCurva(pts){
+  const n=pts.length; if(n<3) return v20gRecta(pts);
+  const dx=[],m=[],t=[]; for(let i=0;i<n-1;i++){ dx[i]=pts[i+1][0]-pts[i][0]; m[i]=(pts[i+1][1]-pts[i][1])/(dx[i]||1); }
+  t[0]=m[0]; t[n-1]=m[n-2]; for(let i=1;i<n-1;i++) t[i]=m[i-1]*m[i]<=0?0:(m[i-1]+m[i])/2;
+  for(let i=0;i<n-1;i++){ if(m[i]===0){ t[i]=0; t[i+1]=0; continue; } const a=t[i]/m[i], b=t[i+1]/m[i], h=a*a+b*b; if(h>9){ const k=3/Math.sqrt(h); t[i]=k*a*m[i]; t[i+1]=k*b*m[i]; } }
+  let d='M'+pts[0][0].toFixed(1)+','+pts[0][1].toFixed(1);
+  for(let i=0;i<n-1;i++){ const h=dx[i]/3; d+='C'+(pts[i][0]+h).toFixed(1)+','+(pts[i][1]+t[i]*h).toFixed(1)+' '+(pts[i+1][0]-h).toFixed(1)+','+(pts[i+1][1]-t[i+1]*h).toFixed(1)+' '+pts[i+1][0].toFixed(1)+','+pts[i+1][1].toFixed(1); }
+  return d;
+}
+
+// ── Montaje ──
+function v20gSeguro(){ try{ v20gRender(); }catch(e){ console.warn('v20gRender',e); const b=$i('pd-evol'); if(b) b.innerHTML='<div class="card-title">📈 Evolución</div><div class="empty" style="padding:24px;"><p>No se ha podido dibujar la gráfica.</p></div>'; } }
+function v20gRender(){
+  const box=$i('pd-evol'); if(!box) return; const S=v20gEstado(), prevN=S.data?S.data.rows.length:-1;
+  S.data=v20gSerie();
+  if(!S.data||!S.data.rows.length){ S.data=null; S.firma=''; box.innerHTML='<div class="card-title">📈 Tu evolución</div><div class="empty" style="padding:24px;"><p>Apunta ingresos y gastos (o conecta RentaControl) para ver tu evolución.</p></div>'; return; }
+  const firma=v20gSeries(S.data.props); if(S.firma!==firma){ S.firma=firma; box.innerHTML=''; }
+  if(S.rango!=='custom'||prevN!==S.data.rows.length) v20gAplicarRango(S.rangoBase,true);
+  else { const N=S.data.rows.length; S.i1=Math.min(S.i1,N-1); S.i0=Math.max(0,Math.min(S.i0,S.i1)); }
+  if(S.hov!==null&&S.hov>S.data.rows.length-1) S.hov=null;
+  if(!$i('v20-svg')){ box.innerHTML=v20gEsqueleto(); v20gEnlazar(box); }
+  v20gPintar();
+}
+function v20gAplicarRango(r,sinPintar){
+  const S=V20G, N=S.data.rows.length, last=N-1; let i0=0;
+  if(r==='6m') i0=last-5; else if(r==='12m') i0=last-11; else if(r==='3a') i0=last-35;
+  else if(r==='ytd'){ const y=S.data.kH.slice(0,4); i0=S.data.rows.findIndex(x=>x.k.slice(0,4)===y); if(i0<0) i0=last; }
+  S.i0=Math.max(0,i0); S.i1=last; if(S.i1-S.i0<1&&N>1&&r!=='ytd') S.i0=Math.max(0,S.i1-1);
+  S.rango=r; S.rangoBase=r; S.hov=null; S.zAcc=1; S.panAcc=0;
+  if(!sinPintar){ v20gGuardar(); v20gPintar(); }
+}
+function v20gVentana(a,b){
+  const S=V20G, N=S.data.rows.length; a=Math.round(a); b=Math.round(b); let span=Math.max(N>1?2:1,b-a+1); span=Math.min(span,N);
+  a=Math.max(0,Math.min(a,N-span)); S.i0=a; S.i1=a+span-1;
+  S.rango=(S.i0===0&&S.i1===N-1&&S.rangoBase==='todo')?'todo':'custom';
+  v20gProgramar();
+}
+function v20gProgramar(){ const S=V20G; if(S.raf) return; const f=()=>{ S.raf=0; v20gPintar(); }; S.raf=(typeof requestAnimationFrame==='function')?requestAnimationFrame(f):setTimeout(f,16); }
+function v20gToggle(id){ const S=V20G; if(S.sel.has(id)) S.sel.delete(id); else S.sel.add(id); v20gGuardar(); v20gPintar(); }
+function v20gVerTabla(){ const S=V20G; S.tabla=!S.tabla; v20gPintar(); }
+function v20gEsqueleto(){
+  const css='<style>'
+   +'#pd-evol .v20-top{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;margin-bottom:12px;}'
+   +'#pd-evol .v20-ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}'
+   +'#pd-evol .v20-rng{display:inline-flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px;max-width:100%;overflow-x:auto;}'
+   +'#pd-evol .v20-rng button,#pd-evol .v20-btn{border:0;background:transparent;font:600 12px "DM Sans",sans-serif;color:var(--ink2);padding:6px 11px;border-radius:6px;cursor:pointer;white-space:nowrap;}'
+   +'#pd-evol .v20-rng button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(26,23,20,.14);}'
+   +'#pd-evol .v20-rng button:hover,#pd-evol .v20-btn:hover{background:rgba(26,23,20,.05);}'
+   +'#pd-evol .v20-btn{border:1.5px solid var(--line);background:var(--card);}'
+   +'#pd-evol .v20-btn[aria-pressed="true"]{border-color:var(--ink2);}'
+   +'#pd-evol .v20-chips{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:14px;}'
+   +'#pd-evol .v20-cg{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}'
+   +'#pd-evol .v20-cgl{font:500 9px "DM Mono",monospace;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-right:2px;}'
+   +'#pd-evol .v20-chip{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:5px 11px 5px 9px;font:500 12px "DM Sans",sans-serif;color:var(--ink3);cursor:pointer;}'
+   +'#pd-evol .v20-chip[aria-pressed="true"]{border-color:var(--ink2);color:var(--ink);background:#fff;}'
+   +'#pd-evol .v20-k{display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--line2);}'
+   +'#pd-evol .v20-k.bar{width:9px;height:9px;border-radius:2px;}'
+   +'#pd-evol .v20-hero{min-height:64px;margin:2px 0 6px;}'
+   +'#pd-evol .v20-hl{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:7px;flex-wrap:wrap;}'
+   +'#pd-evol .v20-hv{font:600 clamp(34px,5vw,48px)/1.08 "DM Sans",sans-serif;color:var(--ink);letter-spacing:-1px;margin:2px 0;}'
+   +'#pd-evol .v20-hd{font-size:12.5px;font-weight:600;}'
+   +'#pd-evol .v20-plot{position:relative;}'
+   +'#v20-svg{display:block;width:100%;height:auto;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:crosshair;outline:none;font-family:"DM Sans",sans-serif;}'
+   +'#v20-svg:focus-visible{outline:2px solid #2a78d6;outline-offset:3px;border-radius:4px;}'
+   +'#v20-svg .v20-g{stroke:rgba(26,23,20,.08);stroke-width:1;}#v20-svg .v20-g0{stroke:rgba(26,23,20,.28);stroke-width:1;}'
+   +'#v20-svg .v20-yr{stroke:rgba(26,23,20,.07);stroke-width:1;}'
+   +'#v20-svg .v20-yt,#v20-svg .v20-xt{font-size:10px;fill:#7a7268;font-variant-numeric:tabular-nums;}'
+   +'#v20-svg .v20-pt{font-size:10.5px;fill:#7a7268;}#v20-svg .v20-ptn{font-weight:600;fill:#3d3830;}'
+   +'#v20-svg .v20-l{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}'
+   +'#v20-svg .v20-el{font-size:10.5px;fill:#3d3830;font-weight:600;font-variant-numeric:tabular-nums;}'
+   +'#v20-svg .v20-ld{stroke:rgba(26,23,20,.25);stroke-width:1;}'
+   +'#v20-svg .v20-mk{stroke:rgba(26,23,20,.35);stroke-width:1;}'
+   +'#v20-svg .v20-xb{fill:rgba(26,23,20,.045);}#v20-svg .v20-xl{stroke:#3d3830;stroke-width:1;}'
+   +'#v20-svg .v20-sel{fill:rgba(42,120,214,.10);stroke:#2a78d6;stroke-width:1;}'
+   +'#v20-svg .v20-vacio{font-size:13px;fill:#7a7268;}'
+   +'#pd-evol .v20-tip{position:absolute;top:0;left:0;pointer-events:none;background:#fff;border:1px solid rgba(26,23,20,.10);box-shadow:0 6px 24px rgba(26,23,20,.14);border-radius:8px;padding:9px 11px;font-size:11.5px;min-width:180px;max-width:270px;z-index:6;display:none;color:var(--ink);}'
+   +'#pd-evol .v20-tt-h{font-weight:700;font-size:12px;margin-bottom:5px;}'
+   +'#pd-evol .v20-tt-g{font:500 8.5px "DM Mono",monospace;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin:6px 0 2px;}'
+   +'#pd-evol .v20-tt-r{display:flex;align-items:center;gap:7px;line-height:1.55;white-space:nowrap;}'
+   +'#pd-evol .v20-tt-r b{font-variant-numeric:tabular-nums;min-width:74px;text-align:right;}'
+   +'#pd-evol .v20-tt-r span:last-child{color:var(--ink2);}'
+   +'#pd-evol .v20-tt-n{color:var(--ink3);font-size:10.5px;margin-top:5px;white-space:normal;line-height:1.4;}'
+   +'#pd-evol .v20-nav{margin-top:6px;}'
+   +'#v20-nav{display:block;width:100%;height:auto;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;outline:none;}'
+   +'#v20-nav:focus-visible{outline:2px solid #2a78d6;outline-offset:2px;border-radius:4px;}'
+   +'#pd-evol .v20-help{font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.5;}'
+   +'#pd-evol .v20-sumh{font:500 9px "DM Mono",monospace;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin:16px 0 8px;}'
+   +'#pd-evol .v20-sum{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}'
+   +'#pd-evol .v20-st{background:var(--bg);border-radius:var(--r2);padding:11px 13px;min-width:0;}'
+   +'#pd-evol .v20-stl{font-size:11px;color:var(--ink2);display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+   +'#pd-evol .v20-stv{font-size:18px;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+   +'#pd-evol .v20-sts{font-size:10px;color:var(--ink3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+   +'#pd-evol .v20-tabla{margin-top:14px;max-height:360px;overflow:auto;}'
+   +'#pd-evol .v20-tabla td,#pd-evol .v20-tabla th{white-space:nowrap;}'
+   +'#pd-evol .v20-tip.m{position:static;transform:none!important;display:block;max-width:none;min-width:0;box-shadow:none;border:1px solid var(--line);background:var(--card);margin-top:8px;}'
+   +'#pd-evol .v20-tip.m .v20-tt-rs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px;}'
+   +'#pd-evol .v20-tip.m .v20-tt-r{white-space:normal;align-items:baseline;line-height:1.35;margin:2px 0;}#pd-evol .v20-tip.m .v20-tt-r b{min-width:0;white-space:nowrap;}#pd-evol .v20-tip.m .v20-tt-r>span:first-child{align-self:center;}'
+   +'@media(max-width:820px){#pd-evol .v20-sum{grid-template-columns:repeat(2,minmax(0,1fr));}#pd-evol .v20-chips{gap:6px 10px;}#pd-evol .v20-cg{gap:5px;}#pd-evol .v20-chip{font-size:11.5px;padding:4px 9px 4px 7px;gap:5px;}#pd-evol .v20-rng button,#pd-evol .v20-btn{padding:6px 9px;font-size:11.5px;}}'
+   +'</style>';
+  const chips=V20G_PAN.map(p=>'<div class="v20-cg"><span class="v20-cgl">'+p.nom+'</span>'+V20G_SER.filter(s=>s.pan===p.id).map(s=>'<button type="button" class="v20-chip" id="v20-c-'+s.id+'" aria-pressed="false" title="'+v4Esc(s.desc)+'" onclick="v20gToggle(\''+s.id+'\')"><span class="v20-k'+(s.tipo==='bar'?' bar':'')+'" data-col="'+s.col+'"></span>'+s.nom+'</button>').join('')+'</div>').join('');
+  return css
+    +'<div class="v20-top"><div class="card-title" style="margin:0;">📈 Tu evolución</div><div class="v20-ctl">'
+    +'<div class="v20-rng" role="group" aria-label="Periodo">'+V20G_RANGOS.map(r=>'<button type="button" id="v20-r-'+r[0]+'" aria-pressed="false" onclick="v20gAplicarRango(\''+r[0]+'\')">'+r[1]+'</button>').join('')+'</div>'
+    +'<button type="button" class="v20-btn" id="v20-reset" style="display:none;" onclick="v20gAplicarRango(V20G.rangoBase)">⟲ Quitar zoom</button>'
+    +'<button type="button" class="v20-btn" id="v20-tbtn" aria-pressed="false" onclick="v20gVerTabla()">Ver tabla</button></div></div>'
+    +'<div class="v20-chips" id="v20-chips">'+chips+'</div>'
+    +'<div class="v20-hero" id="v20-hero" aria-live="polite"></div>'
+    +'<div class="v20-plot" id="v20-plot"><svg id="v20-svg" tabindex="0" role="img" xmlns="http://www.w3.org/2000/svg"></svg><div class="v20-tip" id="v20-tip"></div></div>'
+    +'<div class="v20-nav"><svg id="v20-nav" tabindex="0" role="group" aria-label="Tramo visible: arrastra para moverlo, estira los extremos para ampliar o reducir" xmlns="http://www.w3.org/2000/svg"></svg></div>'
+    +'<div class="v20-help" id="v20-help"></div>'
+    +'<div class="v20-sumh" id="v20-sumh"></div><div class="v20-sum" id="v20-sum"></div>'
+    +'<div class="v20-tabla tbl-wrap" id="v20-tabla" style="display:none;"></div>';
+}
+
+// ── Pintado ──
+function v20gPintar(){
+  const S=V20G; if(!S||!S.data||!$i('v20-svg')) return;
+  V20G_RANGOS.forEach(r=>{ const b=$i('v20-r-'+r[0]); if(b) b.setAttribute('aria-pressed',String(S.rango===r[0])); });
+  const rs=$i('v20-reset'); if(rs) rs.style.display=S.rango==='custom'?'':'none';
+  const tb=$i('v20-tbtn'); if(tb){ tb.setAttribute('aria-pressed',String(S.tabla)); tb.textContent=S.tabla?'Ocultar tabla':'Ver tabla'; }
+  V20G_SER.forEach(s=>{ const c=$i('v20-c-'+s.id); if(!c) return; const on=S.sel.has(s.id); c.setAttribute('aria-pressed',String(on)); const k=c.querySelector('.v20-k'); if(k) k.style.background=on?s.col:''; });
+  v20gDibujar(); v20gDibujarNav(); v20gHeroe(); v20gResumen(); v20gTabla(); v20gAyuda();
+  if(S.hov!==null) v20gHover(S.hov,null,true); else v20gLectura(null,null);
+}
+function v20gDibujar(){
+  const S=V20G, svg=$i('v20-svg'), R=S.data.rows, plot=$i('v20-plot');
+  const W=Math.max(280,Math.round((plot&&plot.getBoundingClientRect().width)||(plot&&plot.clientWidth)||720)); S.W=W;
+  const movil=W<560, sers=V20G_SER.filter(s=>S.sel.has(s.id)), pans=V20G_PAN.filter(p=>sers.some(s=>s.pan===p.id));
+  const ML=movil?40:56, MR=movil?52:76, TT=17, GAP=movil?14:18, XB=22, TOP=2;
+  const n=S.i1-S.i0+1, pw=W-ML-MR, band=pw/n, k=pans.length, unit=movil?104:136, mult=k===1?1.9:k===2?1.25:k===3?1.05:1;
+  let y=TOP; const P=pans.map(p=>{ const h=Math.round(p.w*unit*mult), o=Object.assign({},p,{ty:y,y0:y+TT,h,ss:sers.filter(s=>s.pan===p.id)}); y=o.y0+h+GAP; return o; });
+  const H=k?Math.round(y-GAP+XB):150;
+  const X=i=>ML+(i-S.i0+0.5)*band;
+  S.L={W,H,ML,MR,pw,band,n,P,movil,X,top:k?P[0].y0:0,bot:k?P[k-1].y0+P[k-1].h:H};
+  svg.setAttribute('viewBox','0 0 '+W+' '+H); svg.style.aspectRatio=W+' / '+H;
+  const nombres=sers.map(s=>s.nom).join(', ');
+  svg.setAttribute('aria-label','Evolución de '+(nombres||'nada')+' de '+v17MesTxt(R[S.i0].k,true)+' a '+v17MesTxt(R[S.i1].k,true)+'. Usa las flechas para recorrer los meses y + o − para ampliar.');
+  if(!k){ svg.innerHTML='<text x="'+(W/2)+'" y="78" text-anchor="middle" class="v20-vacio">Marca arriba qué quieres ver en la gráfica</text>'; return; }
+  const f1=v=>v.toFixed(1);
+  let o='<defs><linearGradient id="v20-gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6250d6" stop-opacity=".16"/><stop offset="1" stop-color="#6250d6" stop-opacity="0"/></linearGradient></defs>';
+  o+='<rect id="v20-xb" class="v20-xb" x="0" y="'+S.L.top+'" width="0" height="'+(S.L.bot-S.L.top)+'" style="display:none"/>';
+  // Separación de años (el acumulado vuelve a cero cada 1 de enero)
+  if(n<=96) for(let i=S.i0+1;i<=S.i1;i++) if(R[i].k.slice(5,7)==='01'){ const xx=f1(X(i)-band/2); P.forEach(p=>{ o+='<line class="v20-yr" x1="'+xx+'" x2="'+xx+'" y1="'+p.y0+'" y2="'+(p.y0+p.h)+'"/>'; }); }
+  const iSal=S.data.iniSaldos?R.findIndex(r=>r.k===S.data.iniSaldos.slice(0,7)):-1;
+  P.forEach(p=>{
+    const dm=v20gDom(p,R,S.i0,S.i1), Y=v=>p.y0+p.h-(v-dm.a)/(dm.b-dm.a)*p.h; p.dm=dm; p.Y=Y;
+    o+='<text x="'+ML+'" y="'+(p.ty+11)+'" class="v20-pt"><tspan class="v20-ptn">'+p.nom+'</tspan> · '+p.u+'</text>';
+    const t0=Math.ceil(dm.a/dm.step-1e-9)*dm.step;
+    for(let g=0;g<14;g++){ const v=t0+g*dm.step; if(v>dm.b+dm.step*1e-6) break; const yy=f1(Y(v)); o+='<line class="'+(Math.abs(v)<1e-9&&dm.a<0?'v20-g0':'v20-g')+'" x1="'+ML+'" x2="'+(ML+pw)+'" y1="'+yy+'" y2="'+yy+'"/><text class="v20-yt" x="'+(ML-7)+'" y="'+(+yy+3.5)+'" text-anchor="end">'+dm.fmt(v)+'</text>'; }
+    if(dm.a>=0||p.id==='ocu'){ const yb=f1(Y(Math.max(dm.a,0))); o+='<line class="v20-g0" x1="'+ML+'" x2="'+(ML+pw)+'" y1="'+yb+'" y2="'+yb+'"/>'; }
+    // Marcas: inicio de los saldos de las cuentas y compras de pisos
+    if((p.id==='liq'||p.id==='pat')&&iSal>=S.i0&&iSal<=S.i1&&iSal>0){ const xx=f1(X(iSal)-band/2); o+='<line class="v20-mk" x1="'+xx+'" x2="'+xx+'" y1="'+p.y0+'" y2="'+(p.y0+p.h)+'"/>'; }
+    if(p.id==='pat') for(let i=S.i0;i<=S.i1;i++) if(R[i].ev.some(e=>e.indexOf('🏠')===0)){ const xx=X(i), yb=p.y0+p.h; o+='<path d="M'+f1(xx)+','+f1(yb-9)+'l4,4l-4,4l-4,-4z" fill="#3d3830"/>'; }
+    // Barras (crecen desde el cero; extremo redondeado 4 px; 2 px de aire entre barras)
+    const bs=p.ss.filter(s=>s.tipo==='bar');
+    if(bs.length){ const gw=Math.min(band*0.72,bs.length*24+(bs.length-1)*2), bw=Math.max(1,(gw-(bs.length-1)*2)/bs.length), r=bw>=6?4:0, y0=Y(0);
+      for(let i=S.i0;i<=S.i1;i++){ const x0=X(i)-gw/2; bs.forEach((s,j)=>{ const v=R[i][s.id]; if(!v) return; const d=v20gBarra(x0+j*(bw+2),bw,y0,Y(v),r); if(d) o+='<path d="'+d+'" fill="'+s.col+'"/>'; }); } }
+    // Líneas (el acumulado se corta en enero porque vuelve a empezar)
+    const eti=[];
+    p.ss.filter(s=>s.tipo==='line').forEach(s=>{
+      const segs=[]; let cur=[], lastI=-1;
+      for(let i=S.i0;i<=S.i1;i++){ const v=R[i][s.id];
+        if(v===null||v===undefined||!isFinite(v)){ if(cur.length) segs.push(cur); cur=[]; continue; }
+        if(s.acum&&cur.length&&R[i].k.slice(5,7)==='01'){ segs.push(cur); cur=[]; }
+        cur.push([X(i),Y(v)]); lastI=i; }
+      if(cur.length) segs.push(cur);
+      segs.forEach(sg=>{
+        if(s.area&&sg.length>1){ const base=f1(p.y0+p.h); o+='<path d="'+v20gCurva(sg)+'L'+f1(sg[sg.length-1][0])+','+base+'L'+f1(sg[0][0])+','+base+'Z" fill="url(#v20-gr)" stroke="none"/>'; }
+        if(sg.length>1) o+='<path class="v20-l" d="'+(s.suave?v20gCurva(sg):v20gRecta(sg))+'" stroke="'+s.col+'"/>';
+        else o+='<circle cx="'+f1(sg[0][0])+'" cy="'+f1(sg[0][1])+'" r="3" fill="'+s.col+'"/>';
+      });
+      if(lastI>=0){ const lx=X(lastI), ly=Y(R[lastI][s.id]); o+='<circle cx="'+f1(lx)+'" cy="'+f1(ly)+'" r="4" fill="'+s.col+'" stroke="#faf8f5" stroke-width="2"/>'; eti.push({x:lx,y:ly,t:v20gCorto(R[lastI][s.id],s.pct)}); }
+    });
+    // Valor final al lado de cada línea (si dos chocan, se deja solo el primero; el resto está en la lectura y la tabla)
+    eti.sort((a,b)=>a.y-b.y); let ult=-99; const ex=ML+pw+6;
+    eti.forEach(e=>{ const ty=Math.max(p.y0+8,Math.min(p.y0+p.h,e.y+3.5)); if(ty-ult<12) return; ult=ty;
+      if(ex-e.x>9) o+='<line class="v20-ld" x1="'+f1(e.x+5)+'" x2="'+f1(ex-2)+'" y1="'+f1(e.y)+'" y2="'+f1(ty-3.5)+'"/>';
+      o+='<text class="v20-el" x="'+f1(ex)+'" y="'+f1(ty)+'">'+e.t+'</text>'; });
+  });
+  // Eje de meses
+  const minW=movil?46:54, pasos=[1,2,3,4,6,12,24,36,60,120]; let cada=pasos.find(c=>c*band>=minW)||120;
+  for(let i=S.i0;i<=S.i1;i++){ const k2=R[i].k, mAbs=(+k2.slice(0,4))*12+(+k2.slice(5,7)-1);
+    if(mAbs%cada!==0&&!(n<=2)) continue; const t=cada>=12?k2.slice(0,4):v17MesTxt(k2);
+    o+='<text class="v20-xt" x="'+f1(X(i))+'" y="'+(S.L.bot+15)+'" text-anchor="middle">'+t+'</text>'; }
+  o+='<line id="v20-xl" class="v20-xl" x1="0" x2="0" y1="'+S.L.top+'" y2="'+S.L.bot+'" style="display:none"/><g id="v20-xd"></g>';
+  o+='<rect id="v20-sel" class="v20-sel" x="0" y="'+S.L.top+'" width="0" height="'+(S.L.bot-S.L.top)+'" style="display:none"/>';
+  svg.innerHTML=o;
+}
+
+// ── Navegador: toda la historia con el tramo visible marcado ──
+function v20gDibujarNav(){
+  const S=V20G, svg=$i('v20-nav'); if(!svg) return; const R=S.data.rows, N=R.length, W=S.W||720, H=44, pad=8;
+  const xs=i=>pad+(i+0.5)*(W-2*pad)/N; S.NX=xs; S.Npad=pad;
+  const id=R.some(r=>r.sal!==null&&r.sal!==undefined)?'sal':R.some(r=>r.accI)?'accI':'ing', s=v20gSer(id);
+  let mn=Infinity,mx=-Infinity; R.forEach(r=>{ const v=r[id]; if(v!==null&&isFinite(v)){ mn=Math.min(mn,v); mx=Math.max(mx,v); } });
+  if(mn===Infinity){ mn=0; mx=1; } if(mn>0&&mn<0.35*mx) mn=0; if(mx===mn) mx=mn+1;
+  const yv=v=>H-6-(v-mn)/(mx-mn)*(H-14);
+  const pts=[]; R.forEach((r,i)=>{ const v=r[id]; if(v!==null&&isFinite(v)) pts.push([xs(i),yv(v)]); });
+  const xa=xs(S.i0)-(W-2*pad)/N/2, xb=xs(S.i1)+(W-2*pad)/N/2, f1=v=>v.toFixed(1);
+  let o='<rect x="0" y="0" width="'+W+'" height="'+H+'" rx="6" fill="var(--bg)"/>';
+  if(pts.length>1) o+='<path d="'+v20gRecta(pts)+'L'+f1(pts[pts.length-1][0])+','+(H-2)+'L'+f1(pts[0][0])+','+(H-2)+'Z" fill="rgba(26,23,20,.07)"/><path d="'+v20gRecta(pts)+'" fill="none" stroke="rgba(26,23,20,.35)" stroke-width="1.2"/>';
+  o+='<rect x="'+f1(xa)+'" y="1" width="'+f1(Math.max(2,xb-xa))+'" height="'+(H-2)+'" rx="5" fill="rgba(42,120,214,.10)" stroke="#2a78d6" stroke-width="1"/>';
+  [xa,xb].forEach(x=>{ o+='<rect x="'+f1(x-4)+'" y="'+(H/2-11)+'" width="8" height="22" rx="3" fill="#fff" stroke="#2a78d6" stroke-width="1"/><line x1="'+f1(x-1)+'" x2="'+f1(x-1)+'" y1="'+(H/2-5)+'" y2="'+(H/2+5)+'" stroke="#2a78d6"/><line x1="'+f1(x+1)+'" x2="'+f1(x+1)+'" y1="'+(H/2-5)+'" y2="'+(H/2+5)+'" stroke="#2a78d6"/>'; });
+  o+='<text x="'+(pad+2)+'" y="12" font-size="9.5" fill="#7a7268">'+v17MesTxt(R[0].k)+'</text><text x="'+(W-pad-2)+'" y="12" font-size="9.5" fill="#7a7268" text-anchor="end">'+v17MesTxt(R[N-1].k)+'</text>';
+  svg.setAttribute('viewBox','0 0 '+W+' '+H); svg.style.aspectRatio=W+' / '+H; svg.innerHTML=o;
+  svg.setAttribute('aria-valuetext',v17MesTxt(R[S.i0].k,true)+' a '+v17MesTxt(R[S.i1].k,true));
+}
+function v20gAyuda(){
+  const b=$i('v20-help'); if(!b) return; const tactil=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
+  b.textContent=tactil?'Desliza el dedo por la gráfica para ver cada mes · pellizca para ampliar o reducir · arrastra o estira la franja azul de abajo para moverte en el tiempo.'
+    :'Pasa el ratón para ver cada mes · arrastra sobre la gráfica para ampliar un tramo · Ctrl + rueda (o pellizco en el trackpad) para acercar o alejar · arrastra o estira la franja azul de abajo · doble clic para quitar el zoom.';
+}
+
+// ── Lectura de un mes (cruceta + tarjeta con todos los valores) ──
+function v20gIdx(clientX,frac){
+  const S=V20G, svg=$i('v20-svg'); if(!svg||!S.L) return S.i1; const r=svg.getBoundingClientRect(), sc=(r.width||S.L.W)/S.L.W;
+  const x=(clientX-r.left)/sc, f=S.i0+(x-S.L.ML)/S.L.band-0.5;
+  if(frac) return Math.max(S.i0,Math.min(S.i1,f));
+  return Math.max(S.i0,Math.min(S.i1,Math.round(f)));
+}
+function v20gHover(i,ev,quieto){
+  const S=V20G, L=S.L, xl=$i('v20-xl'), xb=$i('v20-xb'), xd=$i('v20-xd'); if(!L||!xl) return;
+  if(i===null||i===undefined||!L.P.length||i<S.i0||i>S.i1){ const habia=S.hov!==null; S.hov=null; xl.style.display='none'; if(xb) xb.style.display='none'; if(xd) xd.innerHTML=''; v20gLectura(null,ev); if(!quieto||habia) v20gHeroe(); return; }
+  const cambia=S.hov!==i; S.hov=i; const r=S.data.rows[i], x=L.X(i);
+  xl.setAttribute('x1',x.toFixed(1)); xl.setAttribute('x2',x.toFixed(1)); xl.style.display='';
+  if(xb){ xb.setAttribute('x',(x-L.band/2).toFixed(1)); xb.setAttribute('width',L.band.toFixed(1)); xb.style.display=''; }
+  let d=''; L.P.forEach(p=>p.ss.filter(s=>s.tipo==='line').forEach(s=>{ const v=r[s.id]; if(v===null||v===undefined||!isFinite(v)) return; d+='<circle cx="'+x.toFixed(1)+'" cy="'+p.Y(v).toFixed(1)+'" r="4.5" fill="'+s.col+'" stroke="#faf8f5" stroke-width="2"/>'; }));
+  xd.innerHTML=d;
+  v20gLectura(i,ev);
+  if(cambia||!quieto) v20gHeroe();
+}
+// Lectura de todos los valores de un mes. Ordenador: tarjeta flotante junto a la cruceta (solo al pasar el ratón).
+// Móvil: bloque fijo debajo de la gráfica que no tapa nada y muestra el mes tocado o, si no, el último del tramo.
+function v20gLectura(i,ev){
+  const S=V20G, L=S.L, tip=$i('v20-tip'); if(!tip||!L) return;
+  const movil=L.movil; tip.classList.toggle('m',!!movil);
+  if(i===null||i===undefined){ if(!movil||!L.P.length){ tip.style.display='none'; tip.innerHTML=''; return; } i=S.i1; }
+  const r=S.data.rows[i], el=(tag,cls,txt)=>{ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!==undefined) e.textContent=txt; return e; };
+  tip.innerHTML='';
+  tip.appendChild(el('div','v20-tt-h',v17MesTxt(r.k,true).replace(/^./,c=>c.toUpperCase())+(r.hoy?' · hasta hoy':'')));
+  L.P.forEach(p=>{ tip.appendChild(el('div','v20-tt-g',p.nom)); const box=el('div','v20-tt-rs');
+    p.ss.forEach(s=>{ const row=el('div','v20-tt-r'), k=el('span'); k.style.cssText='display:inline-block;width:12px;height:2.5px;border-radius:2px;background:'+s.col+';flex:none;';
+      row.appendChild(k); row.appendChild(el('b','',v20gVal(s,r[s.id])));
+      row.appendChild(el('span','',s.nom+(s.pct&&r.oN?' ('+r.oO+' de '+r.oN+' hab.)':''))); box.appendChild(row); });
+    tip.appendChild(box); });
+  const notas=[...r.ev];
+  if(S.sel.has('sal')&&S.data.iniSaldos&&r.t<S.data.iniSaldos) notas.push('Antes del '+v4F2(S.data.iniSaldos)+' no se conoce el saldo de tus cuentas.');
+  if(S.data.props&&S.data.props.length&&r.ingP===0&&r.ebitda===0&&r.limpio===0&&[...S.sel].some(x=>x==='ebitda'||x==='limpio'||/^e:/.test(x))) notas.push('Ese mes no hay nada tuyo de los pisos en RentaControl.');
+  notas.forEach(t=>tip.appendChild(el('div','v20-tt-n',t)));
+  tip.style.display='block';
+  if(movil){ tip.style.transform=''; return; }
+  const plot=$i('v20-plot'), pr=plot.getBoundingClientRect(), sc=(pr.width||L.W)/L.W, x=L.X(i), tw=tip.offsetWidth||200, th=tip.offsetHeight||120;
+  let lx=x*sc+14; if(lx+tw>(pr.width||L.W)) lx=x*sc-14-tw; if(lx<0) lx=Math.max(0,Math.min((pr.width||L.W)-tw,x*sc-tw/2));
+  let ty=ev&&ev.clientY!==undefined?ev.clientY-pr.top-th/2:L.top*sc+6; ty=Math.max(0,Math.min(((pr.height||L.H)-th),ty));
+  tip.style.transform='translate('+Math.round(lx)+'px,'+Math.round(ty)+'px)';
+}
+
+// ── Cifra principal (estilo app de inversión): valor del mes leído o del final del tramo y su variación ──
+function v20gDelta(s,dv,ref,txt){
+  if(dv===null||!isFinite(dv)) return '';
+  const sube=dv>0, baja=dv<0, bien=(sube&&s.bueno>0)||(baja&&s.bueno<0), col=!sube&&!baja?'var(--ink3)':bien?'var(--gn)':'var(--rd)';
+  const pc=ref&&!s.pct&&Math.abs(ref)>0.005?' ('+(dv>=0?'+':'−')+v20gNum(Math.abs(dv/Math.abs(ref)*100),1)+' %)':'';
+  const val=s.pct?v20gNum(Math.abs(dv),1)+' puntos':v20gEur(Math.abs(dv));
+  return '<span style="color:'+col+';">'+(sube?'▲ +':baja?'▼ −':'= ')+val+pc+'</span> <span style="color:var(--ink3);font-weight:500;">'+txt+'</span>';
+}
+function v20gHeroe(){
+  const S=V20G, b=$i('v20-hero'); if(!b||!S.data) return; const R=S.data.rows;
+  const id=V20G_HEROE.find(x=>S.sel.has(x)); if(!id){ b.innerHTML=''; return; }
+  const s=v20gSer(id), j=S.hov!==null?S.hov:S.i1, r=R[j], key='<span class="v20-k'+(s.tipo==='bar'?' bar':'')+'" style="background:'+s.col+'"></span>';
+  let lbl, val, del='';
+  if(s.flujo&&S.hov===null){
+    let t=0; for(let i=S.i0;i<=S.i1;i++) t+=R[i][id]||0; const n=S.i1-S.i0+1;
+    lbl=s.nom+' · total de '+v17MesTxt(R[S.i0].k,true)+' a '+v17MesTxt(R[S.i1].k,true); val=v20gEur(t);
+    if(S.i0-n>=0){ let t2=0; for(let i=S.i0-n;i<S.i0;i++) t2+=R[i][id]||0; del=v20gDelta(s,t-t2,t2,'frente a los '+n+' meses anteriores'); }
+  } else if(s.flujo){
+    lbl=s.nom+' · '+v17MesTxt(r.k,true)+(r.hoy?' (hasta hoy)':''); val=v20gEur(r[id]);
+    if(j>0) del=v20gDelta(s,r[id]-R[j-1][id],R[j-1][id],'frente a '+v17MesTxt(R[j-1].k,true));
+  } else if(s.acum){
+    lbl=s.nom+' · '+r.k.slice(0,4)+' hasta '+V17_MESES_L[+r.k.slice(5,7)-1]+(r.hoy?' (hoy)':''); val=v20gEur(r[id]);
+    const k12=v17MesMenos(r.k,12), j2=R.findIndex(x=>x.k===k12);
+    if(j2>=0) del=v20gDelta(s,r[id]-R[j2][id],R[j2][id],'frente a '+V17_MESES_L[+k12.slice(5,7)-1]+' de '+k12.slice(0,4));
+  } else {
+    lbl=s.nom+' · '+(r.hoy?'hoy':v17MesTxt(r.k,true)); val=v20gVal(s,r[id]);
+    let j0=-1; for(let i=S.i0;i<j;i++){ const v=R[i][id]; if(v!==null&&v!==undefined&&isFinite(v)){ j0=i; break; } }
+    if(j0>=0&&r[id]!==null&&r[id]!==undefined) del=v20gDelta(s,r[id]-R[j0][id],R[j0][id],'desde '+v17MesTxt(R[j0].k,true));
+  }
+  b.innerHTML='<div class="v20-hl">'+key+v4Esc(lbl)+'</div><div class="v20-hv">'+val+'</div><div class="v20-hd">'+(del||'&nbsp;')+'</div>';
+}
+
+// ── Resumen del tramo visible (siempre: «este año hemos facturado tanto») ──
+function v20gResumen(){
+  const S=V20G, b=$i('v20-sum'), h=$i('v20-sumh'); if(!b) return; const R=S.data.rows;
+  let ing=0,gas=0,eb=0,li=0; for(let i=S.i0;i<=S.i1;i++){ ing+=R[i].ing; gas+=R[i].gas; eb+=R[i].ebitda; li+=R[i].limpio; }
+  ing=v17R(ing); gas=v17R(gas); eb=v17R(eb); li=v17R(li); const aho=v17R(ing-gas), n=S.i1-S.i0+1;
+  let a=null,z=null; for(let i=S.i0;i<=S.i1;i++){ if(R[i].sal!==null&&R[i].sal!==undefined){ if(a===null) a=i; z=i; } }
+  const dS=a!==null&&z!==null?R[z].sal-R[a].sal:null;
+  h.textContent='En el tramo visible · de '+v17MesTxt(R[S.i0].k,true)+' a '+v17MesTxt(R[S.i1].k,true)+(R[S.i1].hoy?' (hasta hoy)':'');
+  const t=(id,lbl,val,sub)=>{ const s=v20gSer(id); return '<div class="v20-st"><div class="v20-stl"><span class="v20-k'+(s.tipo==='bar'?' bar':'')+'" style="background:'+s.col+'"></span>'+lbl+'</div><div class="v20-stv">'+val+'</div><div class="v20-sts">'+(sub||'&nbsp;')+'</div></div>'; };
+  b.innerHTML=t('ing','Ingresos',v20gEur(ing),'media '+v20gEur(ing/n)+' al mes')
+    +t('gas','Gastos',v20gEur(gas),'media '+v20gEur(gas/n)+' al mes')
+    +t('aho','Ahorro',v20gEur(aho),ing?v20gNum(aho/ing*100,0)+' % de lo ingresado':'')
+    +t('ebitda','EBITDA de tus pisos',v20gEur(eb),'media '+v20gEur(eb/n)+' al mes · limpio '+v20gEur(li))
+    +t('sal','Saldo de tus cuentas',dS===null?'—':(dS>=0?'+':'−')+v20gEur(Math.abs(dS)),dS===null?'':'de '+v20gCorto(R[a].sal)+' a '+v20gCorto(R[z].sal));
+}
+
+// ── Vista de tabla (los mismos datos, sin necesidad de pasar el ratón) ──
+function v20gTabla(){
+  const S=V20G, b=$i('v20-tabla'); if(!b) return; if(!S.tabla){ b.style.display='none'; b.innerHTML=''; return; }
+  const R=S.data.rows, cols=V20G_SER.filter(s=>S.sel.has(s.id)); b.style.display='';
+  let h='<table><thead><tr><th>Mes</th>'+cols.map(s=>'<th class="n">'+s.nom+'</th>').join('')+'</tr></thead><tbody>';
+  for(let i=S.i1;i>=S.i0;i--){ const r=R[i]; h+='<tr><td>'+v17MesTxt(r.k,true)+(r.hoy?' (hasta hoy)':'')+'</td>'+cols.map(s=>'<td class="n mono">'+v20gVal(s,r[s.id])+'</td>').join('')+'</tr>'; }
+  b.innerHTML=h+'</tbody></table>';
+}
+
+// ── Gestos ──
+function v20gZoomEn(c,f){
+  const S=V20G, N=S.data.rows.length, n=S.i1-S.i0+1; S.zAcc*=f;
+  let n2=Math.round(n*S.zAcc); n2=Math.max(Math.min(2,N),Math.min(N,n2)); if(n2===n) return; S.zAcc=1;
+  const fr=(c-S.i0+0.5)/n, a=Math.round(c+0.5-fr*n2); v20gVentana(a,a+n2-1);
+}
+function v20gDesplazar(m){ const S=V20G, n=S.i1-S.i0+1; if(!m) return; v20gVentana(S.i0+m,S.i0+m+n-1); }
+function v20gEnlazar(box){
+  const S=V20G, svg=$i('v20-svg'), nav=$i('v20-nav');
+  const cap=(el,id)=>{ try{ el.setPointerCapture(id); }catch(e){} };
+  svg.addEventListener('pointerdown',e=>{
+    if(!S.data||(e.pointerType==='mouse'&&e.button!==0)) return;
+    S.ptrs.set(e.pointerId,e.clientX);
+    if(S.ptrs.size===2){ const xs=[...S.ptrs.values()]; S.pinch={d:Math.max(20,Math.abs(xs[0]-xs[1])), i0:S.i0, i1:S.i1, c:v20gIdx((xs[0]+xs[1])/2,true)}; S.drag=null; v20gHover(null); return; }
+    if(e.pointerType==='mouse'){ S.drag={x0:e.clientX, i:v20gIdx(e.clientX), act:false}; cap(svg,e.pointerId); }
+    v20gHover(v20gIdx(e.clientX),e);
+  });
+  svg.addEventListener('pointermove',e=>{
+    if(!S.data) return;
+    if(S.ptrs.has(e.pointerId)) S.ptrs.set(e.pointerId,e.clientX);
+    if(S.pinch&&S.ptrs.size>=2){ const xs=[...S.ptrs.values()], d=Math.max(20,Math.abs(xs[0]-xs[1])), P=S.pinch, N=S.data.rows.length, n0=P.i1-P.i0+1;
+      let n2=Math.round(n0*P.d/d); n2=Math.max(Math.min(2,N),Math.min(N,n2)); const fr=(P.c-P.i0+0.5)/n0, a=Math.round(P.c+0.5-fr*n2); v20gVentana(a,a+n2-1); e.preventDefault(); return; }
+    if(S.drag){ if(Math.abs(e.clientX-S.drag.x0)>6) S.drag.act=true;
+      if(S.drag.act){ const a=Math.min(S.drag.i,v20gIdx(e.clientX)), b=Math.max(S.drag.i,v20gIdx(e.clientX)), L=S.L, sr=$i('v20-sel');
+        if(sr){ sr.setAttribute('x',(L.X(a)-L.band/2).toFixed(1)); sr.setAttribute('width',((b-a+1)*L.band).toFixed(1)); sr.style.display=''; } } }
+    v20gHover(v20gIdx(e.clientX),e);
+  });
+  const fin=e=>{ S.ptrs.delete(e.pointerId); if(S.ptrs.size<2) S.pinch=null;
+    if(S.drag){ const d=S.drag; S.drag=null; const sr=$i('v20-sel'); if(sr) sr.style.display='none';
+      if(d.act&&e.type==='pointerup'){ const a=Math.min(d.i,v20gIdx(e.clientX)), b=Math.max(d.i,v20gIdx(e.clientX)); if(b>a){ S.hov=null; v20gVentana(a,b); } } }
+    if(e.type==='pointercancel') v20gHover(null); };
+  svg.addEventListener('pointerup',fin); svg.addEventListener('pointercancel',fin);
+  svg.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse'&&!S.drag) v20gHover(null); });
+  svg.addEventListener('dblclick',()=>v20gAplicarRango(S.rangoBase));
+  svg.addEventListener('wheel',e=>{ if(!S.data) return;
+    if(e.ctrlKey||e.metaKey){ e.preventDefault(); v20gZoomEn(v20gIdx(e.clientX,true),Math.exp(Math.max(-40,Math.min(40,e.deltaY))*0.012)); return; }
+    if(Math.abs(e.deltaX)>Math.abs(e.deltaY)&&Math.abs(e.deltaX)>1){ e.preventDefault(); S.panAcc+=e.deltaX; const m=Math.trunc(S.panAcc/Math.max(8,S.L.band)); if(m){ S.panAcc-=m*Math.max(8,S.L.band); v20gDesplazar(m); } } },{passive:false});
+  svg.addEventListener('keydown',e=>{ if(!S.data) return; const k=e.key, j=S.hov===null?S.i1:S.hov, n=S.i1-S.i0+1;
+    if(k==='ArrowLeft'||k==='ArrowRight'){ e.preventDefault(); const t=Math.max(0,Math.min(S.data.rows.length-1,j+(k==='ArrowLeft'?-1:1))); if(t<S.i0) v20gDesplazar(t-S.i0); else if(t>S.i1) v20gDesplazar(t-S.i1); v20gHover(t); }
+    else if(k==='Home'){ e.preventDefault(); v20gHover(S.i0); } else if(k==='End'){ e.preventDefault(); v20gHover(S.i1); }
+    else if(k==='+'||k==='='){ e.preventDefault(); v20gZoomEn(j,0.67); } else if(k==='-'||k==='_'){ e.preventDefault(); v20gZoomEn(j,1.5); }
+    else if(k==='Escape'){ v20gHover(null); } });
+  svg.addEventListener('blur',()=>{ if(!S.drag) v20gHover(null); });
+  // Un toque fuera de la gráfica quita la lectura en el móvil
+  document.addEventListener('pointerdown',e=>{ if(S.hov!==null&&e.pointerType!=='mouse'&&!(e.target&&e.target.closest&&e.target.closest('#v20-svg'))) v20gHover(null); });
+  // Navegador
+  const nIdx=cx=>{ const r=nav.getBoundingClientRect(), sc=(r.width||S.W)/S.W, N=S.data.rows.length; return ((cx-r.left)/sc-S.Npad)/((S.W-2*S.Npad)/N)-0.5; };
+  nav.addEventListener('pointerdown',e=>{ if(!S.data) return; e.preventDefault(); cap(nav,e.pointerId); const f=nIdx(e.clientX), N=S.data.rows.length, cw=(S.W-2*S.Npad)/N, r=nav.getBoundingClientRect(), sc=(r.width||S.W)/S.W;
+    const px=(e.clientX-r.left)/sc, xa=S.NX(S.i0)-cw/2, xb=S.NX(S.i1)+cw/2, span=S.i1-S.i0+1;
+    // Asas: 12 px a cada lado del borde; si la franja es estrecha (móvil), dentro de ella solo un cuarto, para poder arrastrarla
+    const ww=xb-xa, hz=ww>=48?12:Math.max(4,ww/4), dl=px-xa, dr=xb-px;
+    if(dl>=-12&&dl<=hz&&(dl<=dr||dl<0)) S.nav={m:'l'}; else if(dr>=-12&&dr<=hz) S.nav={m:'r'};
+    else if(px>xa&&px<xb) S.nav={m:'mv', off:f-S.i0, span};
+    else { const a=Math.round(f-span/2+0.5); v20gVentana(a,a+span-1); S.nav={m:'mv', off:span/2-0.5, span}; }
+    nav.style.cursor='grabbing'; });
+  nav.addEventListener('pointermove',e=>{ if(!S.nav||!S.data) return; const f=nIdx(e.clientX), N=S.data.rows.length;
+    if(S.nav.m==='l'){ const a=Math.max(0,Math.min(S.i1-1,Math.round(f))); if(a!==S.i0) v20gVentana(a,S.i1); }
+    else if(S.nav.m==='r'){ const b=Math.min(N-1,Math.max(S.i0+1,Math.round(f))); if(b!==S.i1) v20gVentana(S.i0,b); }
+    else { const a=Math.round(f-S.nav.off); if(a!==S.i0) v20gVentana(a,a+S.nav.span-1); } });
+  const nfin=()=>{ if(S.nav){ S.nav=null; nav.style.cursor=''; } };
+  nav.addEventListener('pointerup',nfin); nav.addEventListener('pointercancel',nfin);
+  nav.addEventListener('keydown',e=>{ if(!S.data) return; if(e.key==='ArrowLeft'){ e.preventDefault(); v20gDesplazar(-1); } else if(e.key==='ArrowRight'){ e.preventDefault(); v20gDesplazar(1); } });
+  // Redibujar al cambiar el ancho
+  if(typeof ResizeObserver==='function'){ let w0=0; new ResizeObserver(en=>{ const w=Math.round(en[0].contentRect.width); if(w&&Math.abs(w-w0)>2){ w0=w; if(S.data) v20gProgramar(); } }).observe(box); }
+  else window.addEventListener('resize',()=>{ if(S.data) v20gProgramar(); });
+}
+
+// ══════════════════════════════════════════════════════════════
+// v4.19 · Pantallas de Personal: Panel, Mis pisos, Ingresos y gastos, Cuentas y Configuración
+// ══════════════════════════════════════════════════════════════
+if(Array.isArray(CAT_INGRESO)&&!CAT_INGRESO.includes('Clases particulares')) CAT_INGRESO.splice(Math.max(0,CAT_INGRESO.indexOf('Facturación autónomo')+1),0,'Clases particulares');
+Object.assign(IC_CAT,{'Clases particulares':'👨‍🏫','Alquiler (RentaControl)':'🏠','Pisos · explotación':'🔧','Pisos · hipoteca':'🏦','Pisos · inversión':'🛠️'});
+const V20_CAT={ing:'Alquiler (RentaControl)', opex:'Pisos · explotación', hip:'Pisos · hipoteca', inv:'Pisos · inversión'};
+const V20_SECS=['pDash','pPisos','pMovs','pCuentas','pCfg'];
+let _v20K='', _v20Vista='mes', _v20Anyo='';
+function v20E(n){ return v4E2(n)+' €'; }
+function v20E0(n){ return eur(n); }
+function v20MesL(k){ return v17MesTxt(k,true).replace(/^./,c=>c.toUpperCase()); }
+function v20Hoy(){ return v4Hoy(); }
+function v20Sec(){ const n=document.querySelector('.nav-item.on'); return n?n.dataset.s:''; }
+function v20Refrescar(){ if(WS!=='personal') return; const s=v20Sec(); if(V20_SECS.includes(s)&&RENDERS[s]) try{ RENDERS[s](); }catch(e){ console.warn('v20Refrescar',e); } }
+function v20Actualizar(){ _v20Esp.t=0; v20BajarEspejo(true).then(ok=>{ if(!gToken) toast('Conecta Google Drive para traer lo último de RentaControl',false); else if(ok) toast('Datos de RentaControl actualizados'); else if(_v20Esp.err) toast('No se pudo leer RentaControl de Drive: '+_v20Esp.err,false); }); }
+if(WS==='personal'&&!GEN) GEN={};   // evita que el panel antiguo intente cargar Gentaury con «.then»
+
+// ── Estado de la conexión con RentaControl ──
+function v20HtmlEstado(){
+  const I=v20Info(), yo=I.hay?v20Yo():'';
+  if(!I.hay) return '<div class="alert alert-y" style="margin-bottom:12px;">🔗 Todavía no hay datos de RentaControl en este dispositivo.'+(gToken?' '+(I.cargando||_v20Esp.cargando?'Trayéndolos de Google Drive…':'<button class="btn btn-secondary btn-xs" onclick="v20Actualizar()">↻ Traer de Drive</button>'):' Conecta Google Drive o abre RentaControl en este dispositivo.')+'</div>';
+  const cuando=I.t?new Date(I.t):null, fte=I.drive&&I.local?'este dispositivo + Google Drive':I.drive?'Google Drive':'este dispositivo';
+  let h='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--ink3);margin-bottom:10px;">🔗 Conectado con RentaControl · '+(cuando?'último cambio '+v4F2(fxIso(cuando))+' '+v4HM(cuando)+' · ':'')+'datos de '+fte
+    +(gToken?' <button class="btn btn-ghost btn-xs" onclick="v20Actualizar()">'+(_v20Esp.cargando?'⏳ Actualizando…':'↻ Actualizar')+'</button>':'')+(I.err?' <span style="color:var(--rd);">'+v4Esc(I.err)+'</span>':'')+'</div>';
+  if(!yo) h+='<div class="alert alert-y" style="margin-bottom:12px;">👤 No sé cuál de los propietarios de RentaControl eres tú. '+v20SelYo()+'</div>';
+  return h;
+}
+function v20SelYo(){ const R=v20RC(); if(!R) return ''; const yo=v20Yo(R);
+  return '<select onchange="v20SetYo(this.value)" style="padding:5px 8px;border:1.5px solid var(--line2);border-radius:8px;background:var(--card);font-size:12px;color:var(--ink);"><option value="">— Elige quién eres —</option>'
+    +(R.propietarios||[]).map(o=>'<option value="'+v4Esc(o.id)+'"'+(String(o.id)===yo?' selected':'')+'>'+v4Esc((o.nom||o.alias||'')+(o.rel?' ('+o.rel+')':''))+'</option>').join('')+'</select>'; }
+function v20SetYo(id){ D.cfg=Object.assign({},D.cfg,{ownerYo:id||''}); saveAndSync(); try{ cargarGentaury(); }catch(e){} toast(id?'Hecho: '+v20NomRC(id)+' eres tú':'Se elegirá automáticamente'); v20Refrescar(); }
+
+// ── PANEL ──
+const _v20PDashBase=rPDash;
+function v20Meses(y,hasta){ const out=[]; for(let m=1;m<=12;m++){ const k=y+'-'+String(m).padStart(2,'0'); if(hasta&&k>hasta) break; out.push(k); } return out; }
+function v20RenderPanel(){
+  if(WS!=='personal') return _v20PDashBase();
+  if(!GEN) GEN={};
+  // el panel de siempre (avisos, últimos movimientos, presupuestos, cargos, objetivos), sin las cuentas enlazadas con RentaControl
+  { const cs=D.cuentas; try{ D.cuentas=(cs||[]).filter(c=>!c.rcId); _v20PDashBase(); }catch(e){ console.warn('rPDash',e); } finally{ D.cuentas=cs; } }
+  const sec=$i('sec-pDash'); if(!sec) return;
+  let top=$i('v20-panel');
+  if(!top){ top=document.createElement('div'); top.id='v20-panel'; top.innerHTML='<div id="v20-pa"></div><div class="card mb" id="pd-evol" style="padding:20px 22px;"></div><div id="v20-pb"></div>'; sec.insertBefore(top,sec.firstChild); }
+  const k=$i('pd-kpis'); if(k) k.style.display='none';
+  const hoyK=v20Hoy().slice(0,7); if(!_v20K||_v20K>hoyK) _v20K=hoyK;
+  const P=v20Pisos(), MV=v20MovsPers(), C=v20Cuentas();
+  $i('v20-pa').innerHTML=v20HtmlEstado()+v20HtmlCajas(P,MV,C);
+  $i('v20-pb').innerHTML=v20HtmlOrigen(P,MV);
+  const pc=$i('pd-cuentas'); if(pc) pc.innerHTML=v20HtmlCuentasMini(C);
+  try{ v20gRender(); }catch(e){ console.warn('v20gRender',e); }
+  v20BajarEspejo(false);
+}
+function v20MesNav(k,fn){ const y=+k.slice(0,4), m=+k.slice(5,7), prev=(m===1?(y-1)+'-12':y+'-'+String(m-1).padStart(2,'0')), next=v17SigMes(k), hoyK=v20Hoy().slice(0,7);
+  return '<div style="display:flex;align-items:center;gap:6px;"><button class="btn btn-ghost btn-xs" onclick="'+fn+'(\''+prev+'\')" aria-label="Mes anterior">‹</button><strong style="font-size:14px;min-width:150px;text-align:center;">'+v20MesL(k)+'</strong>'
+    +'<button class="btn btn-ghost btn-xs" onclick="'+fn+'(\''+next+'\')"'+(next>hoyK?' disabled style="opacity:.35;"':'')+' aria-label="Mes siguiente">›</button>'+(k!==hoyK?'<button class="btn btn-ghost btn-xs" onclick="'+fn+'(\''+hoyK+'\')">Hoy</button>':'')+'</div>'; }
+function v20IrMes(k){ _v20K=k; v20RenderPanel(); }
+function v20HtmlCajas(P,MV,C){
+  const k=_v20K, y=k.slice(0,4), hoyK=v20Hoy().slice(0,7), r=v20Res(k,P,MV), ks=v20Meses(y,y===hoyK.slice(0,4)?hoyK:''), A=v20Res(ks,P,MV), n=ks.length||1;
+  const sub=(t,st)=>'<div class="cb-sub"'+(st?' style="'+st+'"':'')+'>'+t+'</div>', wn='white-space:normal;line-height:1.35;', col=v=>v>=0?'var(--gn)':'var(--rd)';
+  const mes='del mes';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;"><div class="card-title" style="margin:0;">💰 Tus finanzas</div>'+v20MesNav(k,'v20IrMes')+'</div>'
+   +'<div class="cartera-grid mb">'
+   +v17Caja('Ingresos '+mes,eur(r.ing),sub('pisos '+eur(r.ingP)+' · otros '+eur(r.ingO),wn),{vc:'var(--gn)'})
+   +v17Caja('Gastos '+mes,eur(r.gas),sub('personales '+eur(r.gasPer)+' · pisos '+eur(r.gasPis),wn),{vc:'var(--rd)'})
+   +v17Caja('Ahorro '+mes,eur(r.aho),sub(r.aho<0?'gastas más de lo que ingresas':r.ing>0?'el '+v17Num(r.aho/r.ing*100,0)+' % de lo ingresado':'ingresos − gastos',wn),{vc:col(r.aho)})
+   +v17Caja('Saldo de tus cuentas',eur(C.total),sub((C.dep>0?'de ello, '+eur(C.dep)+' son fianzas y reservas de inquilinos':'hoy, RentaControl + cuentas personales')+(C.sinSaldo.length?' · sin saldo: '+v4Esc(C.sinSaldo.join(', ')):''),wn),{click:"v20Ir('pCuentas')"})
+   +v17Caja('EBITDA de tus pisos',eur(r.ebitda),sub('ingresos '+eur(r.ingP)+' − explotación '+eur(r.opex),wn),{vc:col(r.ebitda),click:"v20Ir('pPisos')"})
+   +v17Caja('Limpio de tus pisos',eur(r.limpio),sub('tras hipoteca '+eur(r.hip)+(r.inv?' e inversión '+eur(r.inv):''),wn),{vc:col(r.limpio),click:"v20Ir('pPisos')"})
+   +v17Caja('Ingresos '+y,eur(A.ing),sub('media '+eur(A.ing/n)+' al mes',wn))
+   +v17Caja('Ahorro '+y,eur(A.aho),sub('media '+eur(A.aho/n)+' al mes',wn),{vc:col(A.aho)})
+   +'</div>';
+}
+function v20Ir(s){ const el=document.querySelector('.nav-item[data-ws="personal"][data-s="'+s+'"]'); if(el) go(el); }
+// Tabla «De dónde sale tu dinero»: cada piso (EBITDA y limpio), cada tipo de ingreso personal, tus gastos y el total
+function v20SetVista(v){ _v20Vista=v; const b=$i('v20-pb'); if(b) b.innerHTML=v20HtmlOrigen(v20Pisos(),v20MovsPers()); }
+function v20HtmlOrigen(P,MV){
+  const k=_v20K, y=k.slice(0,4), hoyK=v20Hoy().slice(0,7), ks=_v20Vista==='mes'?[k]:v20Meses(y,y===hoyK.slice(0,4)?hoyK:''), r=v20Res(ks,P,MV);
+  const media=_v20Vista==='media', nM=ks.length||1;
+  // meses en que cada piso fue tuyo (para la media de cada piso)
+  const nP=pid=>{ if(!media) return 1; let n=0; ks.forEach(kk=>{ if(P&&P.dueno&&P.dueno[pid]&&P.dueno[pid][kk]>0) n++; }); return n||nM; };
+  const f=(v,d)=>{ const x=v/(d||1); return '<td class="n mono" style="white-space:nowrap;'+(x<-0.004?'color:var(--rd);':'')+'">'+(Math.abs(x)<0.005?'<span style="color:var(--ink3);">—</span>':v4E2(x))+'</td>'; };
+  const tit=_v20Vista==='mes'?v20MesL(k):_v20Vista==='media'?'Media mensual de '+y+(y===hoyK.slice(0,4)?' (de enero a '+V17_MESES_L[+hoyK.slice(5,7)-1]+')':''):'Total de '+y+(y===hoyK.slice(0,4)?' (hasta hoy)':'');
+  const filas=[], grp=t=>filas.push('<tr><td colspan="7" style="background:var(--bg2);font:600 9.5px \'DM Mono\',monospace;text-transform:uppercase;letter-spacing:1px;color:var(--ink2);padding:7px 10px;">'+t+'</td></tr>');
+  const fila=(nom,o,d,click,b)=>filas.push('<tr'+(click?' style="cursor:pointer;" onclick="'+click+'"':'')+(b?' class="v20-tot"':'')+'><td style="'+(b?'font-weight:700;':'')+'">'+nom+'</td>'+f(o.ing,d)+f(-o.opex,d)+f(o.ebitda,d)+f(-o.hip,d)+f(-o.inv,d)+f(o.limpio,d)+'</tr>');
+  const pisos=Object.values(r.porPiso);
+  if(P&&pisos.length){ grp('🏠 Tus pisos (RentaControl)');
+    pisos.forEach(p=>fila(v4Esc(p.nom)+(media&&nP(p.id)!==nM?' <span style="font-size:10.5px;color:var(--ink3);">(media de '+nP(p.id)+' mes'+(nP(p.id)===1?'':'es')+')</span>':''),p,nP(p.id),"v20VerDet('"+p.id+"')"));
+    if(r.gen.total) fila('Gastos generales del alquiler',{ing:0,opex:r.gen.opex,inv:r.gen.inv,hip:r.gen.hip,ebitda:-r.gen.opex,limpio:-r.gen.total},nM,"v20VerDet('__gen')");
+    fila('Total pisos',{ing:r.ingP,opex:r.opex,inv:r.inv,hip:r.hip,ebitda:r.ebitda,limpio:r.limpio},nM,'',true); }
+  const ci=Object.entries(r.catIng).sort((a,b)=>b[1]-a[1]), cg=Object.entries(r.catGas).sort((a,b)=>b[1]-a[1]);
+  if(ci.length||cg.length) grp('👤 Personal (apuntado aquí)');
+  ci.forEach(([c,v])=>fila(icCat(c)+' '+v4Esc(c),{ing:v,opex:0,inv:0,hip:0,ebitda:v,limpio:v},nM,"v20IrMovs('"+v4Esc(c)+"')"));
+  if(cg.length) fila('💸 Gastos personales <span style="font-size:10.5px;color:var(--ink3);">('+cg.slice(0,3).map(([c,v])=>v4Esc(c)+' '+eur(v/(media?nM:1))).join(' · ')+(cg.length>3?'…':'')+')</span>',{ing:0,opex:0,inv:0,hip:0,ebitda:-r.gasPer,limpio:-r.gasPer},nM,"v20IrMovs('')");
+  fila('= Total: lo que ganas y lo que ahorras',{ing:r.ing,opex:r.opex,inv:r.inv,hip:r.hip,ebitda:v17R(r.ebitda+r.ingO-r.gasPer),limpio:r.aho},nM,'',true);
+  const avisos=[];
+  const dup=(MV||[]).filter(m=>m.tipo==='ingreso'&&/^alquiler/i.test(m.cat||'')&&ks.includes(m.fecha.slice(0,7)));
+  if(P&&dup.length) avisos.push('⚠️ Tienes '+dup.length+' ingreso'+(dup.length===1?'':'s')+' de «'+v4Esc(dup[0].cat)+'» apuntado'+(dup.length===1?'':'s')+' a mano en este periodo: las rentas de tus pisos ya vienen de RentaControl. Si son las mismas, bórralos para no contarlas dos veces.');
+  if(P&&P.sinPiso) avisos.push('Hay '+P.sinPiso+' cobro'+(P.sinPiso===1?'':'s')+' en RentaControl sin piso asignado: no se puede saber de quién son y no cuentan aquí.');
+  const sel=v=>'<button type="button" class="pill '+(_v20Vista===v[0]?'on':'')+'" onclick="v20SetVista(\''+v[0]+'\')">'+v[1]+'</button>';
+  return '<div class="card mb"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;"><div class="card-title" style="margin:0;">💼 De dónde sale tu dinero · '+tit+'</div><div style="display:flex;gap:6px;flex-wrap:wrap;">'+[['mes','Este mes'],['media','Media al mes'],['anyo','Total del año']].map(sel).join('')+'</div></div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Origen</th><th class="n">Ingresos</th><th class="n">Explotación</th><th class="n">EBITDA</th><th class="n">Hipoteca</th><th class="n">Inversión</th><th class="n">Limpio</th></tr></thead><tbody>'+filas.join('')+'</tbody></table></div>'
+    +'<div style="font-size:10.5px;color:var(--ink3);line-height:1.55;margin-top:8px;">EBITDA = ingresos − gastos de explotación (suministros, comunidad, IBI, seguros, reparaciones…). Limpio = lo que queda en el bolsillo: EBITDA − cuotas de hipoteca (intereses y capital) − inversión (muebles, mejoras, gastos de compra). De los pisos cuenta solo lo tuyo: los cobros desde que te corresponden las rentas (si cambia a mitad de mes, por días, art. 474 del Código Civil) y los gastos que pagas tú. Toca un piso para ver el detalle.</div>'
+    +(avisos.length?'<div class="alert alert-y" style="margin-top:8px;font-size:11.5px;line-height:1.5;">'+avisos.join('<br>')+'</div>':'')+'</div>';
+}
+function v20IrMovs(cat){ v20Ir('pMovs'); setTimeout(()=>{ const s=$i('pm-cat-f'); if(s){ s.value=cat; try{ rMovs(); }catch(e){} } },0); }
+// Detalle de un piso en el periodo de la tabla: cada cobro y cada gasto de RentaControl que cuenta
+function v20VerDet(pid){
+  const P=v20Pisos(); if(!P) return; const k=_v20K, y=k.slice(0,4), hoyK=v20Hoy().slice(0,7), ks=_v20Vista==='mes'?[k]:v20Meses(y,y===hoyK.slice(0,4)?hoyK:'');
+  const it=[]; ks.forEach(kk=>(P.det[kk]||[]).forEach(d=>{ if(d.pid===pid) it.push(Object.assign({k:kk},d)); }));
+  it.sort((a,b)=>a.k.localeCompare(b.k)||(a.t==='ing'?-1:1)||String(a.fecha).localeCompare(String(b.fecha)));
+  const nom=pid==='__gen'?'Gastos generales del alquiler':((P.props.find(p=>p.id===pid)||{}).nom||'Piso'), et={ing:'Cobro',opex:'Explotación',hip:'Hipoteca',inv:'Inversión'};
+  const filas=it.map(d=>'<tr><td style="white-space:nowrap;">'+(d.t==='ing'?v17MesTxt(d.k,true):v4F2(d.fecha))+'</td><td>'+et[d.t]+'</td><td>'+v4Esc(d.txt)+(d.t==='ing'&&d.dd<d.dm?' <span style="font-size:10.5px;color:var(--ink3);">('+v4E2(d.total)+' × '+d.dd+'/'+d.dm+' días tuyos)</span>':'')+'</td><td class="n mono" style="color:'+(d.t==='ing'?'var(--gn)':'var(--rd)')+';">'+(d.t==='ing'?'+':'−')+v4E2(d.imp)+'</td></tr>').join('');
+  const r=v20Res(ks,P), o=pid==='__gen'?Object.assign({ing:0,ebitda:-r.gen.opex,limpio:-r.gen.total},r.gen):r.porPiso[pid]||{ing:0,opex:0,inv:0,hip:0,ebitda:0,limpio:0};
+  v4Modal('🏠 '+v4Esc(nom)+' · '+(_v20Vista==='mes'?v20MesL(k):y),'<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;margin-bottom:10px;"><span>Ingresos <strong class="mono">'+v20E(o.ing)+'</strong></span><span>EBITDA <strong class="mono">'+v20E(o.ebitda)+'</strong></span><span>Limpio <strong class="mono">'+v20E(o.limpio)+'</strong></span></div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th class="n">Importe</th></tr></thead><tbody>'+(filas||'<tr><td colspan="4" style="color:var(--ink3);">Sin movimientos en este periodo.</td></tr>')+'</tbody></table></div>'
+    +'<div style="font-size:10.5px;color:var(--ink3);margin-top:8px;">Datos de RentaControl (solo lectura). Para cambiar algo, hazlo allí.</div>','');
+}
+// Saldo por cuenta (tarjeta del panel)
+function v20HtmlCuentasMini(C){
+  const L=C.rc.filter(o=>!o.tarjeta).map(o=>({nom:o.c.nom+' 🔗', s:o.saldo})).concat(C.pers.map(o=>({nom:(IC_CTA[o.c.tipo]||'🏦')+' '+o.c.nom, s:o.saldo})));
+  if(!L.length) return '<div class="empty" style="padding:16px;"><p>Añade tus cuentas</p></div>';
+  const mx=Math.max(1,...L.map(x=>Math.abs(x.s||0)));
+  return L.map(x=>'<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;gap:8px;"><span>'+v4Esc(x.nom)+'</span><span class="mono" style="font-weight:600;color:'+(x.s===null?'var(--ink3)':x.s>=0?'var(--gn)':'var(--rd)')+';">'+(x.s===null?'sin saldo':eur(x.s))+'</span></div>'
+    +'<div class="pbar"><div class="pbar-fill" style="width:'+pctBar(Math.abs(x.s||0),mx)+'%;background:'+((x.s||0)>=0?'var(--gn)':'var(--rd)')+';"></div></div></div>').join('')
+    +'<div style="font-size:10.5px;color:var(--ink3);">🔗 = cuenta de RentaControl, con su mismo saldo y movimientos</div>';
+}
+
+// ── MIS PISOS ──
+function v20SetAnyo(y){ _v20Anyo=y; v20RenderPisos(); }
+function v20RenderPisos(){
+  const box=$i('pp-cont'); if(!box) return; const P=v20Pisos(), MV=v20MovsPers(), hoyK=v20Hoy().slice(0,7);
+  if(!P){ box.innerHTML=v20HtmlEstado()+'<div class="empty"><div class="empty-icon">🏠</div><p>Sin datos de tus pisos todavía.</p></div>'; return; }
+  const anyos=[...new Set(Object.keys(P.m).map(k=>k.slice(0,4)).concat([hoyK.slice(0,4)]))].filter(a=>a<=hoyK.slice(0,4)).sort().reverse();
+  if(!_v20Anyo||!anyos.includes(_v20Anyo)) _v20Anyo=hoyK.slice(0,4);
+  const y=_v20Anyo, ks=v20Meses(y,y===hoyK.slice(0,4)?hoyK:''), A=v20Res(ks,P,MV), props=P.props;
+  const nP=pid=>{ let n=0; ks.forEach(k=>{ if(P.dueno[pid]&&P.dueno[pid][k]>0) n++; }); return n; };
+  let h=v20HtmlEstado()+'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'+anyos.map(a=>'<button class="pill '+(a===y?'on':'')+'" onclick="v20SetAnyo(\''+a+'\')">'+a+'</button>').join('')+'</div>';
+  h+='<div class="g2 mb">'+props.map(p=>{ const o=A.porPiso[p.id]||{ing:0,opex:0,inv:0,hip:0,ebitda:0,limpio:0}, n=nP(p.id)||1;
+    return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><div class="card-title" style="margin:0;">🏠 '+v4Esc(p.nom)+'</div><span style="font-size:11px;color:var(--ink3);">'+(p.hoy?'hoy cobras tú sus rentas':'ya no es tuyo')+'</span></div>'
+      +'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px;">'
+      +[['EBITDA al mes',o.ebitda/n,1],['Limpio al mes',o.limpio/n,1],['Ingresos '+y,o.ing],['Explotación '+y,-o.opex],['EBITDA '+y,o.ebitda,1],['Hipoteca '+y,-o.hip],['Inversión '+y,-o.inv],['Limpio '+y,o.limpio,1]]
+        .map(([l,v,b])=>'<div style="background:var(--bg);border-radius:var(--r2);padding:8px 10px;"><div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px;">'+l+'</div><div class="mono" style="font-size:'+(b?'17':'14')+'px;font-weight:700;color:'+(v<-0.004?'var(--rd)':b?'var(--gn)':'var(--ink)')+';">'+v4E2(v)+' €</div></div>').join('')+'</div>'
+      +'<div style="font-size:10.5px;color:var(--ink3);margin-top:6px;">Medias sobre '+n+' mes'+(n===1?'':'es')+' de '+y+' en que fue tuyo.</div>'
+      +'<button class="btn btn-ghost btn-xs" style="margin-top:6px;" onclick="_v20Vista=\'anyo\';_v20K=\''+ks[ks.length-1]+'\';v20VerDet(\''+p.id+'\')">Ver cada cobro y gasto de '+y+'</button></div>'; }).join('')+'</div>';
+  // Tabla mes a mes
+  const cols=props.map(p=>'<th class="n">'+v4Esc(p.nom)+'<br><span style="font-weight:400;">EBITDA</span></th><th class="n">'+v4Esc(p.nom)+'<br><span style="font-weight:400;">Limpio</span></th>').join('');
+  const rows=ks.slice().reverse().map(k=>{ const r=v20Res(k,P,[]);
+    return '<tr style="cursor:pointer;" onclick="_v20K=\''+k+'\';_v20Vista=\'mes\';v20VerMes(\''+k+'\')"><td style="white-space:nowrap;">'+v20MesL(k)+(k===hoyK?' (hasta hoy)':'')+'</td>'
+      +props.map(p=>{ const o=r.porPiso[p.id]||{ebitda:0,limpio:0}; return '<td class="n mono">'+v4E2(o.ebitda)+'</td><td class="n mono" style="'+(o.limpio<-0.004?'color:var(--rd);':'')+'">'+v4E2(o.limpio)+'</td>'; }).join('')
+      +'<td class="n mono" style="font-weight:700;">'+v4E2(r.ebitda)+'</td><td class="n mono" style="font-weight:700;'+(r.limpio<-0.004?'color:var(--rd);':'')+'">'+v4E2(r.limpio)+'</td></tr>'; }).join('');
+  h+='<div class="card"><div class="card-title">📅 Mes a mes · '+y+'</div><div class="tbl-wrap"><table><thead><tr><th>Mes</th>'+cols+'<th class="n">Total<br><span style="font-weight:400;">EBITDA</span></th><th class="n">Total<br><span style="font-weight:400;">Limpio</span></th></tr></thead><tbody>'+rows
+    +'<tr class="v20-tot"><td style="font-weight:700;">Total '+y+'</td>'+props.map(p=>{ const o=A.porPiso[p.id]||{ebitda:0,limpio:0}; return '<td class="n mono" style="font-weight:700;">'+v4E2(o.ebitda)+'</td><td class="n mono" style="font-weight:700;">'+v4E2(o.limpio)+'</td>'; }).join('')+'<td class="n mono" style="font-weight:700;">'+v4E2(A.ebitda)+'</td><td class="n mono" style="font-weight:700;">'+v4E2(A.limpio)+'</td></tr>'
+    +'</tbody></table></div>'+(A.gen.total?'<div style="font-size:11px;color:var(--ink3);margin-top:6px;">Los totales incluyen '+v20E(A.gen.total)+' de gastos generales del alquiler (sin piso concreto).</div>':'')+'<div style="font-size:10.5px;color:var(--ink3);margin-top:6px;">Toca un mes para ver su detalle.</div></div>';
+  box.innerHTML=h;
+}
+function v20VerMes(k){ const P=v20Pisos(); if(!P) return; const r=v20Res(k,P,[]);
+  const filas=Object.values(r.porPiso).map(p=>'<tr style="cursor:pointer;" onclick="closeM(\'m-v4\');v20VerDet(\''+p.id+'\')"><td>'+v4Esc(p.nom)+'</td><td class="n mono">'+v4E2(p.ing)+'</td><td class="n mono">'+v4E2(-p.opex)+'</td><td class="n mono">'+v4E2(p.ebitda)+'</td><td class="n mono">'+v4E2(-p.hip)+'</td><td class="n mono">'+v4E2(-p.inv)+'</td><td class="n mono">'+v4E2(p.limpio)+'</td></tr>').join('');
+  v4Modal('📅 '+v20MesL(k)+' · tus pisos','<div class="tbl-wrap"><table><thead><tr><th>Piso</th><th class="n">Ingresos</th><th class="n">Explotación</th><th class="n">EBITDA</th><th class="n">Hipoteca</th><th class="n">Inversión</th><th class="n">Limpio</th></tr></thead><tbody>'+filas+'</tbody></table></div><div style="font-size:10.5px;color:var(--ink3);margin-top:8px;">Toca un piso para ver cada cobro y gasto.</div>',''); }
+
+// ── INGRESOS Y GASTOS: tus movimientos + (si quieres) lo de tus pisos, mes a mes ──
+function v20ConPisos(){ try{ return localStorage.getItem('pers-v20-pisos')!=='0'; }catch(e){ return true; } }
+function v20SetConPisos(on){ try{ localStorage.setItem('pers-v20-pisos',on?'1':'0'); }catch(e){} rMovs(); }
+function v20Virtuales(P){
+  if(!P) return []; const hoy=v20Hoy(), hoyK=hoy.slice(0,7), out=[], nom=pid=>pid==='__gen'?'Gastos generales del alquiler':((P.props.find(p=>p.id===pid)||{}).nom||'Piso');
+  Object.keys(P.m).forEach(k=>{ if(k>hoyK) return; const f=k===hoyK?hoy:v17FinMes(k), a=P.m[k];
+    Object.keys(a).forEach(pid=>{ const c=a[pid], ms=V17_MESES_L[+k.slice(5,7)-1];
+      const add=(t,v,con)=>{ v=v17R(v); if(Math.abs(v)<0.005) return; out.push({id:'v20|'+t+'|'+pid+'|'+k, v20:{t,pid,k}, tipo:(t==='ing')===(v>0)?'ingreso':'gasto', imp:Math.abs(v), fecha:f, con, cat:V20_CAT[t], ctaId:'', fis:t==='ing'?'cap_inm':'ninguno', notas:'Desde RentaControl (solo lectura)'}); };
+      if(pid!=='__gen') add('ing',c.ing,'🏠 '+nom(pid)+' · cobros de '+ms);
+      add('opex',c.opex,'🏠 '+nom(pid)+' · gastos de explotación de '+ms); add('hip',c.hip,'🏠 '+nom(pid)+' · hipoteca de '+ms); add('inv',c.inv,'🏠 '+nom(pid)+' · inversión de '+ms); }); });
+  return out;
+}
+function v20CtasVirt(){ const X=v20CtasRC(); return X?X.cs.map(o=>({id:'rc:'+o.id, nom:o.c.nom+' 🔗', tipo:o.tarjeta?'Tarjeta de crédito':'Cuenta corriente', v20:true})):[]; }
+rMovs=(function(prev){ return function(){
+  if(WS!=='personal') return prev.apply(this,arguments);
+  const real=D.movs, rc=D.cuentas, on=v20ConPisos(); let virt=[];
+  try{ virt=on?v20Virtuales(v20Pisos()):[]; }catch(e){ console.warn('v20Virtuales',e); }
+  D.movs=(real||[]).concat(virt); D.cuentas=(rc||[]).concat(v20CtasVirt());
+  try{ prev.apply(this,arguments); } finally{ D.movs=real; D.cuentas=rc; }
+  // Las líneas de RentaControl no se editan aquí: se marcan y se puede ver su detalle
+  document.querySelectorAll('#pm-tb button[onclick^="editMov(\'v20|"]').forEach(b=>{ const td=b.parentElement, id=(b.getAttribute('onclick').match(/editMov\('([^']+)'/)||[])[1]||'', p=id.split('|');
+    if(td) td.innerHTML='<button class="btn btn-ghost btn-xs" title="Ver cada cobro y gasto" onclick="v20DetVirt(\''+p[2]+'\',\''+p[3]+'\')">🏠 Ver</button>'; });
+  document.querySelectorAll('#pm-tb tr').forEach(tr=>{ if(tr.querySelector('button[onclick^="v20DetVirt"]')) tr.style.background='rgba(42,120,214,.035)'; });
+  // Interruptor de los pisos
+  const fb=document.querySelector('#sec-pMovs .fb'); if(fb&&!$i('v20-cp')){ const l=document.createElement('label'); l.id='v20-cp'; l.style.cssText='display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);cursor:pointer;white-space:nowrap;'; l.innerHTML='<input type="checkbox" style="width:auto;" onchange="v20SetConPisos(this.checked)"> 🏠 Incluir mis pisos (RentaControl)'; fb.appendChild(l); }
+  const cb=document.querySelector('#v20-cp input'); if(cb) cb.checked=on;
+}; })(rMovs);
+function v20DetVirt(pid,k){ _v20K=k; _v20Vista='mes'; v20VerDet(pid); }
+
+// ── CUENTAS ──
+const _v20CuentasBase=rCuentas;
+function v20RenderCuentas(){
+  if(WS!=='personal') return _v20CuentasBase();
+  const C=v20Cuentas(), hoy=v20Hoy(), X=v20CtasRC(), estado=v20HtmlEstado();
+  const tarj=C.pers.filter(o=>o.c.tipo==='Tarjeta de crédito').reduce((s,o)=>s+o.saldo,0);
+  $i('pc-kpis').innerHTML='<div style="flex-basis:100%;">'+estado+'</div>'
+    +'<div class="kpi" style="--kc:var(--gn);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Saldo total</div><div class="kpi-value">'+eur(C.total)+'</div><div class="kpi-sub">'+(C.rc.filter(o=>!o.tarjeta).length+C.pers.length)+' cuentas</div></div>'
+    +'<div class="kpi" style="--kc:var(--bl);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">En RentaControl</div><div class="kpi-value">'+eur(C.totalRC)+'</div><div class="kpi-sub">mismo saldo que allí</div></div>'
+    +'<div class="kpi" style="--kc:var(--pu);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Personal aún no en RentaControl</div><div class="kpi-value">'+(C.pend>0?'+':'')+eur(C.pend)+'</div><div class="kpi-sub">tus gastos e ingresos de aquí</div></div>'
+    +(C.dep>0?'<div class="kpi" style="--kc:var(--rd);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">De inquilinos</div><div class="kpi-value">'+eur(C.dep)+'</div><div class="kpi-sub">fianzas y reservas (no son tuyas)</div></div>':'')
+    +(tarj?'<div class="kpi" style="--kc:var(--rd);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Saldo tarjetas</div><div class="kpi-value">'+eur(tarj)+'</div></div>':'')
+    +'<div class="kpi" style="--kc:var(--bl);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Patrimonio neto</div><div class="kpi-value">'+eur(patrimonioNeto())+'</div></div>';
+  const g=$i('pc-grid'); const cards=[];
+  C.rc.forEach(o=>{ const c=o.c;
+    if(o.tarjeta){ const cg=X&&X.cs.find(z=>z.id===String(c.cargoId)); cards.push('<div class="card"><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;">💳 '+v4Esc(c.nom)+' <span class="badge badge-b">🔗 RentaControl</span></div><div style="font-size:12px;color:var(--ink3);margin-top:6px;">Tarjeta: lo que pagues con ella se resta de '+(cg?v4Esc(cg.c.nom):'su cuenta de cargo')+'.</div></div>'); return; }
+    const co=o.corte;
+    cards.push('<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;"><div><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;">🏦 '+v4Esc(c.nom)+'</div><div style="font-size:11px;color:var(--ink3);margin-top:2px;">'+v4Esc([c.banco,c.num?'····'+String(c.num).replace(/\s/g,'').slice(-4):''].filter(Boolean).join(' · '))+'</div></div><span class="badge badge-b">🔗 RentaControl</span></div>'
+      +(o.con?'<div style="font-family:\'Syne\',sans-serif;font-size:26px;font-weight:800;color:'+(o.saldo>=0?'var(--gn)':'var(--rd)')+';">'+v20E(o.saldo)+'</div>'
+        +'<div style="font-size:11.5px;color:var(--ink2);margin-top:6px;line-height:1.6;">En RentaControl: <strong class="mono">'+v20E(o.saldoRC)+'</strong>'+(o.pendMovs.length?'<br>'+(o.pend>=0?'+ ':'− ')+'<strong class="mono">'+v20E(Math.abs(o.pend))+'</strong> de '+o.pendMovs.length+' movimiento'+(o.pendMovs.length===1?'':'s')+' personal'+(o.pendMovs.length===1?'':'es')+' de aquí':'')+'</div>'
+        +'<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;">'+(co&&co.ajuste?'Último ajuste al saldo del banco en RentaControl: '+v4F2(co.fecha):'Saldo de partida en RentaControl: '+v4F2(c.saldoFecha))+(o.dentro.length?' · '+o.dentro.length+' movimiento'+(o.dentro.length===1?'':'s')+' personal'+(o.dentro.length===1?'':'es')+' anterior'+(o.dentro.length===1?'':'es')+' ya dentro de ese saldo':'')+'</div>'
+       :'<div style="font-size:12px;color:var(--ye);margin-top:4px;">Sin saldo de partida en RentaControl: ponlo allí (Cuentas y tarjetas) para ver el saldo.</div>')
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"><button class="btn btn-secondary btn-xs" onclick="v20VerMovsCta(\''+o.id+'\')">📋 Movimientos</button><button class="btn btn-ghost btn-xs" onclick="v20NuevoMov(\'gasto\',\'rc:'+o.id+'\')">− Gasto</button><button class="btn btn-ghost btn-xs" onclick="v20NuevoMov(\'ingreso\',\'rc:'+o.id+'\')">+ Ingreso</button></div></div>'); });
+  C.pers.forEach(o=>{ const c=o.c, nm=(D.movs||[]).filter(m=>m.ctaId==c.id).length;
+    cards.push('<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;">'+(IC_CTA[c.tipo]||'🏦')+' '+v4Esc(c.nom)+'</div><div style="font-size:11px;color:var(--ink3);margin-top:2px;">'+v4Esc(c.tipo||'')+(c.banco?' · '+v4Esc(c.banco):'')+'</div></div>'
+      +'<div style="display:flex;gap:4px;"><button class="btn btn-secondary btn-xs" onclick="editCuenta(\''+c.id+'\')">✏️</button><button class="btn btn-danger btn-xs" onclick="delCuenta(\''+c.id+'\')">🗑</button></div></div>'
+      +'<div style="font-family:\'Syne\',sans-serif;font-size:26px;font-weight:800;color:'+(o.saldo>=0?'var(--gn)':'var(--rd)')+';">'+eur(o.saldo,2)+'</div><div style="font-size:11px;color:var(--ink3);margin-top:4px;">Saldo inicial '+eur(c.saldo,2)+' · '+nm+' movimientos</div>'
+      +(X&&X.cs.some(z=>!z.tarjeta)?'<div style="font-size:11px;color:var(--ink2);margin-top:8px;">¿Es una de tus cuentas de RentaControl? <select onchange="v20Enlazar(\''+c.id+'\',this.value)" style="font-size:11px;"><option value="">No, es solo personal</option>'+X.cs.filter(z=>!z.tarjeta).map(z=>'<option value="'+z.id+'">Sí: '+v4Esc(z.c.nom)+'</option>').join('')+'</select></div>':'')+'</div>'); });
+  g.innerHTML=cards.length?cards.join(''):'<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🏦</div><p>Añade tus cuentas o pon tus cuentas en RentaControl a tu nombre</p></div>';
+}
+function v20Enlazar(id,rcId){ const c=(D.cuentas||[]).find(x=>x.id==id); if(!c||!rcId) return;
+  const n=(D.movs||[]).filter(m=>m.ctaId==id).length;
+  if(!confirm('Esta cuenta pasará a ser la de RentaControl: su saldo será el de allí y sus '+n+' movimiento'+(n===1?'':'s')+' personal'+(n===1?'':'es')+' se sumarán a ese saldo (los anteriores al saldo de partida o al último ajuste de RentaControl ya están dentro). ¿Seguir?')){ v20RenderCuentas(); return; }
+  c.rcId=rcId; c._upd=Date.now(); saveAndSync(); populateSels(); v20RenderCuentas(); toast('Cuenta enlazada con RentaControl'); }
+function v20NuevoMov(tipo,cta){ newMov(tipo); setTimeout(()=>{ const s=$i('mv-cta'); if(s){ s.value=cta; } },0); }
+// Movimientos de una cuenta de RentaControl: los suyos (iguales que allí) y los personales de aquí, con el saldo de cada día
+function v20VerMovsCta(id){
+  const X=v20CtasRC(); if(!X) return; const o=X.cs.find(z=>z.id===String(id)); if(!o) return; const c=o.c, hoy=v20Hoy(), MV=v20MovsPers();
+  const L=[];
+  X.fl.forEach(f=>{ if(f.cta!==c.id&&f.orig!==c.id) return; const cuenta=f.cta===c.id&&(!o.con||v9Cuenta(c,f)); L.push({fecha:f.fecha, ts:f.ts||0, txt:f.txt, imp:f.imp, rc:true, cuenta, tarjeta:f.orig&&f.orig!==f.cta}); });
+  const coHoy=v20Corte(c,hoy);
+  MV.forEach(m=>{ const r=v20RcDe(m.ctaId); if(!r||X.fin(r)!==c.id) return; L.push({fecha:m.fecha, ts:v20TsMov(m), txt:(m.tipo==='ingreso'?'Ingreso':'Gasto')+' personal · '+(m.con||'')+' · '+(m.cat||''), imp:(m.tipo==='ingreso'?1:-1)*(+m.imp||0), rc:false, cuenta:v20Cuenta(coHoy,m), m}); });
+  L.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.ts||0)-(b.ts||0));
+  // Saldo después de cada línea: el de RentaControl hasta ahí + lo personal que en esa fecha aún no estaba dentro de su saldo
+  // (un ajuste al saldo del banco absorbe lo personal anterior: por eso el saldo puede saltar en la línea del ajuste)
+  let sRC=o.con?+c.saldoIni:0; const pers=[];
+  const filas=L.map(x=>{ const fut=x.fecha>hoy; let sal='';
+    if(x.rc){ if(x.cuenta&&!fut) sRC=v17R(sRC+x.imp); } else pers.push(x);
+    if(o.con&&!fut&&(x.rc?x.cuenta:true)){ const co=v20Corte(c,x.fecha); sal=v4E2(v17R(sRC+pers.reduce((a,p)=>a+(v20Cuenta(co,p.m)?p.imp:0),0))); }
+    const nota=x.rc?(!x.cuenta?'(antes del saldo de partida)':''):(!x.cuenta?'(ya dentro del saldo de RentaControl'+(coHoy&&coHoy.ajuste?': ajuste del '+v4F2(coHoy.fecha):'')+')':'');
+    return '<tr style="'+(fut||!x.cuenta?'opacity:.6;':'')+(x.rc?'':'background:rgba(98,80,214,.05);')+'"><td style="white-space:nowrap;">'+v4F2(x.fecha)+(fut?' (futuro)':'')+'</td><td>'+(x.rc?'🏢 ':'👤 ')+v4Esc(x.txt)+(x.tarjeta?' <span style="font-size:10.5px;color:var(--ink3);">(con tarjeta)</span>':'')+(nota?' <span style="font-size:10.5px;color:var(--ink3);">'+nota+'</span>':'')+'</td><td class="mono" style="text-align:right;white-space:nowrap;color:'+(x.imp<0?'var(--rd)':'var(--gn)')+';">'+(x.imp>0?'+':'')+v4E2(x.imp)+'</td><td class="mono" style="text-align:right;">'+sal+'</td></tr>'; }).reverse().join('');
+  const C=v20Cuentas(), oc=C.rc.find(z=>z.id===String(id));
+  $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">📋 '+v4Esc(c.nom)+'</div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'
+    +'<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;line-height:1.6;">'+(o.con?'Saldo hoy: <strong class="mono">'+v20E(oc.saldo)+'</strong> = RentaControl <strong class="mono">'+v20E(oc.saldoRC)+'</strong>'+(oc.pend?' '+(oc.pend>0?'+':'−')+' personal <strong class="mono">'+v20E(Math.abs(oc.pend))+'</strong>':'')+'. Saldo de partida '+v4E2(c.saldoIni)+' € el '+v4F2(c.saldoFecha)+'.':'Sin saldo de partida en RentaControl.')+' 🏢 = de RentaControl · 👤 = apuntado aquí.</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Importe</th><th>Saldo</th></tr></thead><tbody>'+(filas||'<tr><td colspan="4" style="color:var(--ink3);">Sin movimientos.</td></tr>')+'</tbody></table></div>';
+  $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
+}
+
+// ── Selectores de cuenta: también tus cuentas de RentaControl ──
+populateSels=(function(prev){ return function(){ const r=prev.apply(this,arguments); if(WS!=='personal') return r;
+  try{ const X=v20CtasRC(), pers=(D.cuentas||[]).filter(c=>!(c.rcId&&X&&X.cs.some(o=>o.id==String(c.rcId))));
+    const rc=X&&X.cs.length?'<optgroup label="Tus cuentas de RentaControl">'+X.cs.map(o=>'<option value="rc:'+v4Esc(o.id)+'">'+v4Esc(o.c.nom+(o.tarjeta?' (tarjeta)':''))+' 🔗</option>').join('')+'</optgroup>':'';
+    const ps=pers.map(x=>'<option value="'+v4Esc(x.id)+'">'+v4Esc(x.nom)+'</option>').join('');
+    ['mv-cta','sb-cta'].forEach(id=>{ const e=$i(id); if(e){ const v=e.value; e.innerHTML='<option value="">— Sin cuenta —</option>'+rc+(ps?'<optgroup label="Cuentas solo personales">'+ps+'</optgroup>':''); e.value=v; } });
+    const f=$i('pm-cta-f'); if(f){ const v=f.value; f.innerHTML='<option value="">Todas las cuentas</option>'+rc+ps; f.value=v; }
+  }catch(e){ console.warn('v20 selects',e); } return r; }; })(populateSels);
+
+// ── CONFIGURACIÓN: quién eres en RentaControl ──
+const _v20CfgBase=rPCfg;
+function v20RenderCfg(){ try{ _v20CfgBase(); }catch(e){ console.warn(e); } if(WS!=='personal') return; const sec=$i('sec-pCfg'); if(!sec) return;
+  let b=$i('v20-cfg'); if(!b){ b=document.createElement('div'); b.id='v20-cfg'; b.className='card mb'; const ph=sec.querySelector('.ph'); sec.insertBefore(b,ph?ph.nextSibling:sec.firstChild); }
+  const R=v20RC(), yo=R?v20Yo(R):'';
+  b.innerHTML='<div class="card-title">🔗 RentaControl</div>'+v20HtmlEstado()
+    +(R?'<div class="fgrp" style="max-width:420px;"><label>Quién eres tú en RentaControl</label>'+v20SelYo()+'<div style="font-size:11px;color:var(--ink3);margin-top:4px;">'+(D.cfg.ownerYo?'Elegido a mano.':yo?'Detectado solo: '+v4Esc(v20NomRC(yo,R))+'.':'')+' Cuentan como tuyos los pisos cuyas rentas cobras (usufructo o pleno dominio) y las cuentas a tu nombre.</div></div>':'');
+}
+
+// Navegación: las pantallas nuevas
+RENDERS.pDash=v20RenderPanel; RENDERS.pPisos=v20RenderPisos; RENDERS.pMovs=rMovs; RENDERS.pCuentas=v20RenderCuentas; RENDERS.pCfg=v20RenderCfg;
+rCuentas=v20RenderCuentas;
+// Al conectar Drive en Personal, traer también lo último de RentaControl
+gdriveInit=(function(prev){ return async function(){ const r=await prev.apply(this,arguments); try{ if(WS==='personal') v20BajarEspejo(true); }catch(e){} return r; }; })(gdriveInit);
+// Al volver a la app, refrescar si hace rato
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&WS==='personal') v20BajarEspejo(false); });
+
+// Renta / IRPF y Patrimonio de Personal: con los datos de RentaControl cargados (antes solo con Drive conectado)
+RENDERS.pRenta=function(){ try{ cargarGentaury(); }catch(e){} return rRenta(); };
+RENDERS.pPatrimonio=function(){ try{ cargarGentaury(); }catch(e){} return rPatrimonio(); };
+// Estimación del IRPF de Personal: el capital inmobiliario (alquileres) va a la base GENERAL, no a la del ahorro
+// (arts. 45 y 46 LIRPF), y la escala del ahorro desde 2025 es 19/21/23/27/30 % con el último tramo a partir de 300.000 €
+// (Ley 7/2024: 200.000–300.000 al 27 %). Antes se sumaba a la del ahorro y el tramo del 27 % llegaba a 350.000.
+datosRenta=(function(prev){ return function(anyo){ const d=prev.apply(this,arguments); if(!d) return d;
+  const bg=d.baseGeneral+(d.capInm||0), ba=d.baseAhorro-(d.capInm||0); let ca=0, r=Math.max(0,ba);
+  for(const [lim,t] of [[6000,.19],[44000,.21],[150000,.23],[100000,.27],[Infinity,.30]]){ if(r<=0) break; const p=Math.min(r,lim); ca+=p*t; r-=p; }
+  const cg=Math.max(0,bg)*d.irpf/100; return Object.assign(d,{baseGeneral:bg, baseAhorro:ba, cuotaGeneral:cg, cuotaAhorro:ca, total:Math.max(0,cg+ca-d.dedCuota)}); }; })(datosRenta);
+if(WS==='personal') try{ cargarGentaury(); }catch(e){}
 
 </script>
 </body>
