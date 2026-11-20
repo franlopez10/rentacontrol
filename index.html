@@ -8872,7 +8872,7 @@ function rCartera(){
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px;">
         <span style="color:var(--gn);font-weight:600;">${eur(patBruto-deudaTotal)} (${patBruto>0?((patBruto-deudaTotal)/patBruto*100).toFixed(0):100}%)</span>
-        <span style="color:var(--rd);font-weight:600;">${eur(deudaTotal)} (${patBruto>0?(deudaTotal/patBruto*100).toFixed(0):0}%)</span>
+        <span style="color:var(--rd);font-weight:600;">${eur(deudaTotal)} (LTV ${patBruto>0?(deudaTotal/patBruto*100).toFixed(1):0}%)</span>
       </div>
       ${(()=>{
         const amort=(D.hipotecas||[]).reduce((s,h)=>s+capitalAmortizado(h),0);
@@ -8886,7 +8886,7 @@ function rCartera(){
     </div>
 
     <div style="font-family:'DM Mono',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:18px 0 8px;">Desglose por inmueble</div>
-    <div class="tbl-wrap"><table><thead><tr><th>Inmueble</th><th class="n">Ocupación</th><th class="n">Valor</th><th class="n">Deuda</th><th class="n">Neto</th><th class="n">Fact. bruta ${v17Anyo()}</th><th class="n">Fact. neta ${v17Anyo()}</th><th class="n">Dinero propio</th><th class="n">EBITDA/mes</th><th class="n">ROCE</th></tr></thead><tbody>
+    <div class="tbl-wrap"><table><thead><tr><th>Inmueble</th><th class="n">Ocupación</th><th class="n">Valor</th><th class="n">Deuda</th><th class="n">Neto</th><th class="n">Ingresos ${v21PerCorto()}</th><th class="n">Beneficio ${v21PerCorto()}</th><th class="n">Dinero propio</th><th class="n" title="Flujo de caja previsto al mes con los contratos de hoy: rentas + media de suministros cobrados − media de gastos del último año − cuotas de los préstamos">Previsto/mes</th><th class="n">ROCE</th></tr></thead><tbody>
     ${props.map(p=>{
       const va=valorActualizadoPiso(p);
       const valor=va.valor||parseFloat(p.tasacion||p.mercado||p.precio||0);
@@ -15600,7 +15600,7 @@ function v9MovToggle(){ const t=gi('mv9-tipo');
   else b.innerHTML=''; }
 function v9GuardarMov(ctaId){ const c=v9Cta(ctaId); if(!c) return; const t=gi('mv9-tipo'), f=gi('mv9-f'); if(!f){ toast('Indica la fecha',false); return; } if(f>v4Hoy()){ toast('La fecha no puede ser futura',false); return; }
   const m={id:uid(), tipo:t, fecha:f, concepto:gi('mv9-con')};
-  if(t==='ajuste'){ const s=v9SaldoCta(c,f), r=v9Num(gi('mv9-real')); if(s===null){ toast('Primero pon el saldo inicial de la cuenta',false); return; } if(!isFinite(r)){ toast('Escribe el saldo real',false); return; } m.imp=v9R2(r-s); if(!m.imp){ toast('No hay diferencia: el saldo ya cuadra'); closeM('m-v4'); return; } }
+  if(t==='ajuste'){ const s=v9SaldoCta(c,f), r=v9Num(gi('mv9-real')); if(s===null){ toast('Primero pon el saldo inicial de la cuenta',false); return; } if(!isFinite(r)){ toast('Escribe el saldo real',false); return; } m.imp=v9R2(r-s); m.real=v9R2(r); m.espIds=v21IdsPersonales(c,f); if(!m.imp){ toast('No hay diferencia: el saldo ya cuadra'); closeM('m-v4'); return; } }
   else { const imp=v9Num(gi('mv9-imp')); if(!(imp>0)){ toast('Escribe un importe positivo',false); return; } m.imp=t==='entrada'?v9R2(imp):-v9R2(imp);
     if(t==='traspaso'){ m.dest=gi('mv9-dest'); if(!m.dest){ toast('Elige la cuenta de destino',false); return; } m.imp=v9R2(imp); }
     if(t==='devfianza'){ m.coId=gi('mv9-co'); if(!m.coId){ toast('Elige el contrato',false); return; } } }
@@ -15611,7 +15611,7 @@ function v9VerMovs(ctaId){
   const xs=fl.filter(f=>(f.cta===c.id||f.orig===c.id)&&(!v9ConSaldo(c)||v9Cuenta(c,f))).sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.ts||0)-(b.ts||0));
   let s=v9ConSaldo(c)?+c.saldoIni:0;
   const filas=xs.map(f=>{ const fut=f.fecha>hoy, ok=f.cta===c.id; if(ok&&!fut) s=v9R2(s+f.imp);
-    const acc=f.src==='mov'?'<button class="btn btn-ghost btn-xs" onclick="v9BorrarMov(\''+c.id+'\',\''+f.id+'\')">🗑</button>':'<select style="font-size:10.5px;max-width:130px;" onchange="v9Reasignar(\''+f.src+'\',\''+f.id+'\',this.value)">'+v9OptsCta(f.auto?'':f.orig,true).replace('<option value="">—</option>','<option value="">'+(f.auto?'Automática':'—')+'</option>')+'</select>';
+    const acc=f.src==='mov'?'<button class="btn btn-ghost btn-xs" onclick="v9BorrarMov(\''+c.id+'\',\''+f.id+'\')">🗑</button>':f.src==='personal'?'<span style="font-size:10.5px;color:var(--ink3);" title="Se apuntó en Finanzas personales: se cambia allí">👤 Personal</span>':'<select style="font-size:10.5px;max-width:130px;" onchange="v9Reasignar(\''+f.src+'\',\''+f.id+'\',this.value)">'+v9OptsCta(f.auto?'':f.orig,true).replace('<option value="">—</option>','<option value="">'+(f.auto?'Automática':'—')+'</option>')+'</select>';
     return '<tr style="'+(fut?'opacity:.55;':'')+'"><td style="white-space:nowrap;">'+v4F2(f.fecha)+(fut?' (futuro)':'')+'</td><td>'+v4Esc(f.txt)+(f.orig&&f.orig!==f.cta?' <span style="font-size:10.5px;color:var(--ink3);">(con tarjeta)</span>':'')+'</td><td style="text-align:right;white-space:nowrap;color:'+(f.imp<0?'var(--rd)':'var(--gn)')+';">'+(f.imp>0?'+':'')+v4E2(f.imp)+'</td><td style="text-align:right;white-space:nowrap;">'+(v9ConSaldo(c)&&ok&&!fut?v4E2(s):'')+'</td><td>'+acc+'</td></tr>'; }).join('');
   const html='<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;">'+(v9ConSaldo(c)?'Saldo de partida: <strong>'+v4E2(c.saldoIni)+' €</strong> el '+v4F2(c.saldoFecha)+'. Saldo hoy: <strong>'+v4E2(v9SaldoCta(c,null,fl))+' €</strong>.':'<span style="color:var(--ye);">Sin saldo inicial: los movimientos se listan, pero no hay saldo.</span>')+' «Automática» = la cuenta del contrato o la cuenta principal del titular; cámbiala si se cobró o pagó por otra vía.</div>'
     +'<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Importe</th><th>Saldo</th><th>Cuenta</th></tr></thead><tbody>'+(filas||'<tr><td colspan="5" style="color:var(--ink3);">Sin movimientos desde el saldo de partida.</td></tr>')+'</tbody></table></div>';
@@ -16044,8 +16044,8 @@ function v12HtmlUnidad(u,M,hoy){
   const vtxt=u.firma?'Se paga en la firma ('+v4F2(u.V)+')':'Vence el '+v4F2(u.V);
   const dias=u.venc?v4Diff(u.V,hoy):0;
   const lin=u.L.map(l=>'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:4px 7px;border-radius:6px;margin-top:3px;background:'+(l.pag?'rgba(16,185,129,.10)':'rgba(120,120,120,.07)')+';">'
-    +'<span style="font-size:11px;color:'+(l.pag?'#059669':'var(--ink2)')+';min-width:0;">'+(l.pag?'✓':'○')+' '+v4Esc(v12TxtLinea(u,l,M))+(l.pag&&l.fecha?' <span style="color:var(--ink3);">· cobrado el '+v4F2(l.fecha)+'</span>':'')+(l.virtual?' <span style="color:var(--ink3);">· previsto</span>':'')+'</span>'
-    +'<span class="mono" style="font-size:11px;white-space:nowrap;color:'+(l.pag?'#059669':'var(--ink2)')+';">'+v4E2(l.imp)+' €</span></div>').join('');
+    +'<span style="font-size:11px;color:'+(l.pag?'#059669':'var(--ink2)')+';min-width:0;">'+(l.pag?'✓':'○')+' '+v4Esc(v12TxtLinea(u,l,M))+(l.pag&&l.fecha?' <span style="color:var(--ink3);">· cobrado el '+v4F2(l.fecha)+v21TxtCobro(l.rec)+'</span>':'')+(l.virtual?' <span style="color:var(--ink3);">· previsto</span>':'')+'</span>'
+    +'<span style="display:flex;gap:4px;align-items:center;">'+(l.pag&&l.rec&&l.rec.pdfData?'<button class="pdf-badge green" title="Ver el justificante" onclick="event.stopPropagation();openPdf(\''+v4Esc(l.rec.pdfData)+'\',\''+v4Esc(l.rec.pdfName||'justificante')+'\')">📎</button>':'')+'<span class="mono" style="font-size:11px;white-space:nowrap;color:'+(l.pag?'#059669':'var(--ink2)')+';">'+v4E2(l.imp)+' €</span></span></div>').join('');
   const abre=co?"v4Gestionar('"+co.id+"')":u.entero?"v4Gestionar('"+u.entero.id+"')":(u.inq?"openPerfil('"+u.inqId+"')":'');
   return '<div class="v12-u" data-u="'+v4Esc(u.key)+'" style="background:'+c.bg+';border:1.5px solid '+c.bd+';border-radius:10px;padding:11px 12px;min-width:0;">'
    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;"><div style="min-width:0;flex:1;'+(abre?'cursor:pointer;':'')+'"'+(abre?' onclick="'+abre+'"':'')+'>'
@@ -16120,7 +16120,7 @@ function v12PendCobroInq(u,M){ return u.L.filter(l=>!l.pag&&l.imp!==0&&!(l.rec&&
 // ── Reparto de lo cobrado entre las líneas (si falta, la línea se parte y lo que falta queda pendiente) ──
 function v12Partir(p,pagado){
   const r=Object.assign({},p,{id:uid(), con:/ \(resto\)$/.test(p.con||'')?p.con:(p.con||'Alquiler')+V12_RESTO, imp:v12R2((+p.imp)-pagado), estado:'pendiente', fecha:'', restoDe:p.id, notas:'Parte pendiente'+(p.mes?' de '+v4MesNom(p.mes)+' '+p.mes.slice(0,4):'')});
-  ['fechaOrden','ctaId','v12Cta','cicloMes','v12Ciclo','pdfData','pdfName','_upd','v4'].forEach(k=>delete r[k]);
+  ['fechaOrden','ctaId','v12Cta','cicloMes','v12Ciclo','pdfData','pdfName','_upd','v4','medio','v12Med','v12Just'].forEach(k=>delete r[k]);
   if(r.rep) r.rep=Object.assign({},r.rep,{personas:[], restoRep:true});
   p.imp=v12R2(pagado); D.pagos.push(r); return r;
 }
@@ -16162,7 +16162,7 @@ function v12AplicarCobro(co,M,o){
     bon={id:uid(),inqId:v4PagadorInq(co),coId:co.id,con:'Bonificación pago rápido',mes:M,imp:-V4_PENAL.descuento,estado:'pendiente',fecha:'',notas:'Pago ordenado en menos de 24 h desde el email (cláusula «Bonificación por rapidez»)',cicloMes:M}; D.pagos.push(bon); recs.unshift(bon); }
   const esperado=v12R2(recs.reduce((s,p)=>s+(+p.imp||0),0)), imp=(o.imp===null||o.imp===undefined||o.imp==='')?esperado:v12R2(o.imp);
   const r=v12Repartir(recs,imp,oD,o.cta||'');
-  r.pagados.forEach(p=>{ if(v12EsAlq(p)&&p.mes===M) p.fechaOrden=orden; if(!p.cicloMes){ p.cicloMes=M; p.v12Ciclo=true; } });
+  r.pagados.forEach(p=>{ if(v12EsAlq(p)&&p.mes===M) p.fechaOrden=orden; if(!p.cicloMes){ p.cicloMes=M; p.v12Ciclo=true; } v21MarcarCobro(p,o); });
   cic.orden=orden; cic.importePagado=imp; cic.dto=rapido; cic.esperado=esperado; if(o.cta) cic.cta=o.cta; else delete cic.cta;
   co.ciclos[M]=cic; v4Guardar(co);
   return {esperado, imp, falta:r.falta, sobra:r.sobra, rapido, tarde, V, firma, ids:r.pagados.map(p=>p.id)};
@@ -16175,7 +16175,7 @@ function v12AplicarCobroInq(u,M,o){
   if(rapido){ const bon={id:uid(),inqId:u.inqId,con:'Bonificación pago rápido',mes:M,imp:-V4_PENAL.descuento,estado:'pendiente',fecha:'',notas:'Pago ordenado en menos de 24 h desde el email (cláusula «Bonificación por rapidez»)',cicloMes:M}; D.pagos.push(bon); recs.unshift(bon); }
   const esperado=v12R2(recs.reduce((s,p)=>s+(+p.imp||0),0)), imp=(o.imp===null||o.imp===undefined||o.imp==='')?esperado:v12R2(o.imp);
   const r=v12Repartir(recs,imp,o.fecha,o.cta||'');
-  r.pagados.forEach(p=>{ if(p.mes!==M&&!p.cicloMes){ p.cicloMes=M; p.v12Ciclo=true; } });
+  r.pagados.forEach(p=>{ if(p.mes!==M&&!p.cicloMes){ p.cicloMes=M; p.v12Ciclo=true; } v21MarcarCobro(p,o); });
   if(u.inq&&(o.email||o.orden||u.entero)){ const due=u.entero||u.inq; due.ciclos=Object.assign({},due.ciclos||{}); const cic=Object.assign({},due.ciclos[M]||{});
     if(o.email&&!cic.email) cic.email=o.email; cic.orden=o.orden||(o.fecha+'T12:00'); cic.importePagado=imp; cic.dto=rapido; cic.esperado=esperado; due.ciclos[M]=cic; due._upd=Date.now(); }
   saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){}
@@ -16186,7 +16186,7 @@ function v12AplicarCobroInq(u,M,o){
 function v12Deshacer(key,M,sinConfirmar){
   const u=v12UnidadMes(key,M); if(!u) return;
   if(!sinConfirmar&&typeof confirm==='function'&&!confirm('¿Deshacer el cobro de '+v12MesTxt(M)+' de '+u.nom+'? Las líneas cobradas vuelven a quedar pendientes.')) return;
-  const volver=p=>{ p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; delete p.cobTs; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } };
+  const volver=p=>{ p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; delete p.cobTs; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } v21DesmarcarCobro(p); };
   if(u.co){ const co=u.co, ids=[co.inqId,co.inqId2].filter(Boolean);
     (D.pagos||[]).forEach(p=>{ if(!v12Pag(p)||v12EsDep(p)) return; const mio=(p.coId===co.id||ids.includes(p.inqId))&&v12RecDeCo(p,co,p.mes); if(!mio) return;
       if((v12EsAlq(p)&&p.mes===M)||p.cicloMes===M||(p.pen&&p.pen.coId===co.id&&p.pen.mes===M)||(p.mes===M&&!p.cicloMes)) volver(p); });
@@ -16219,7 +16219,7 @@ function v12Cobro(key,M,soloIds){
   const lin=lineas.map((l,i)=>'<label style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:5px 8px;border-radius:7px;background:var(--bg);margin-top:4px;font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer;">'
     +'<span style="display:flex;gap:7px;align-items:center;min-width:0;"><input type="checkbox" id="v12c-l'+i+'" style="width:auto;"'+(!soloIds||soloIds.includes(l.key)?' checked':'')+' onchange="v12CobroCalc()"> '+v4Esc(v12TxtLinea(u,l,M))+'</span>'
     +'<span class="mono" style="white-space:nowrap;">'+v4E2(l.imp)+' €</span></label>').join('');
-  const ctaDef=(co&&co.ctaId)||'';
+  const ctaDef=v21CtaCobro(u,'transferencia');
   const html='<div style="font-size:12px;color:var(--ink3);margin-bottom:8px;">'+v4Esc(u.nom)+' · Hab. '+v4Esc(u.hab||'?')+' · '+v4Esc(((D.props||[]).find(p=>p.id==u.propId)||{}).nom||'')+'</div>'
    +'<div style="font-size:12px;margin-bottom:6px;"><strong>'+v4Esc(v12MesTxt(M))+'</strong> · '+(firma?'se paga en la firma ('+v4F2(V)+')':'vence el '+v4F2(V)+(co?' (último día para ordenar el pago)':''))+'</div>'
    +'<div class="form-section" style="margin-top:6px;">Qué se cobra</div>'+lin
@@ -16230,11 +16230,14 @@ function v12Cobro(key,M,soloIds){
         +(bonoInq?'<div class="fgrp"><label>Email del pago enviado el (para el descuento de 5 €)</label><input type="datetime-local" id="v12c-email" value="'+v4Esc(cic.email||'')+'" oninput="v12CobroCalc()"></div>'
           +'<div class="fgrp"><label>Hora en que ordenó el pago</label><input type="time" id="v12c-hora" oninput="v12CobroCalc()"></div>':''))
    +'<div class="fgrp"><label>Importe recibido (€)</label><input type="number" step="0.01" inputmode="decimal" id="v12c-imp" oninput="this.dataset.manual=\'1\';v12CobroCalc()"></div>'
-   +'<div class="fgrp"><label>Cuenta donde entra</label><select id="v12c-cta">'+v12OptsCtas(ctaDef)+'</select></div></div>'
+   +'<div class="fgrp"><label>Forma de pago</label><select id="v12c-medio" onchange="v21MedioCobro()"><option value="transferencia">🏦 Transferencia</option><option value="bizum">📱 Bizum</option><option value="efectivo">💶 Efectivo</option></select></div>'
+   +'<div class="fgrp"><label>Cuenta donde entra</label><select id="v12c-cta" onchange="this.dataset.manual=\'1\';v21MedioCobro()">'+v21OptsCtas(ctaDef)+'</select></div></div>'
+   +'<div id="v12c-medio-info" style="font-size:11px;color:var(--ink3);line-height:1.5;margin-top:4px;"></div>'
+   +'<div class="fgrp" style="margin-top:8px;"><label>Justificante del ingreso (PDF o foto)</label><div class="pdf-upload-zone" id="v12c-just-zone" onclick="document.getElementById(\'v12c-just\').click()"><input type="file" id="v12c-just" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload(\'v12c-just\',\'v12c-just-zone\',\'v12c-just-data\')"><input type="hidden" id="v12c-just-data"><input type="hidden" id="v12c-just-name"><span class="pdf-upload-label">📎 Adjuntar el justificante (con su concepto)</span></div></div>'
    +'<div id="v12c-res" style="margin-top:8px;"></div>'
    +(co&&!firma?'<div style="font-size:10.5px;color:var(--ink3);line-height:1.55;margin-top:6px;">Cuenta la fecha en que el inquilino ordena el pago, no la de llegada. Si la orden es como máximo 24 h después del email y en plazo, se descuentan 5 €; si es posterior al '+v4F2(V)+', se suman 20 € de penalización (cláusula penal).</div>':'');
   v4Modal('💶 Registrar cobro',html,'<button class="btn btn-primary" onclick="v12GuardarCobro()">Guardar cobro</button>');
-  v12CobroCalc();
+  v21MedioCobro(); v12CobroCalc();
 }
 function v12CobroSel(){ const x=_v12Cobro; return x?x.lineas.filter((l,i)=>{ const c=$i('v12c-l'+i); return c&&c.checked; }):[]; }
 function v12CobroCalc(){
@@ -16255,15 +16258,16 @@ function v12GuardarCobro(){
   const x=_v12Cobro; if(!x) return; const sel=v12CobroSel(); if(!sel.length){ v4Msg('v12c-res','Marca al menos una línea.','r'); return; }
   const u=v12UnidadMes(x.key,x.M); if(!u){ toast('No encuentro ese cobro',false); return; }
   const impS=gi('v12c-imp'), imp=impS===''?null:v12R2(impS.replace(',','.')); if(imp!==null&&!(imp>=0)){ v4Msg('v12c-res','El importe no es válido.','r'); return; }
-  const cta=gi('v12c-cta'), keys=sel.map(l=>l.key); let r;
+  const cta=gi('v12c-cta'), keys=sel.map(l=>l.key), medio=$i('v12c-medio')?gi('v12c-medio'):'', just=$i('v12c-just-data')?gi('v12c-just-data'):'', justName=$i('v12c-just-name')?gi('v12c-just-name'):''; let r;
+  if(just&&!/^(drive:|data:)/.test(just)){ v4Msg('v12c-res','El justificante aún se está subiendo: espera un momento.','r'); return; }
   if(u.co){ const orden=gi('v12c-orden'), email=$i('v12c-email')?gi('v12c-email'):undefined;
     if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(orden)){ v4Msg('v12c-res','Indica la fecha y la hora del pago.','r'); return; }
     if(email&&orden<email){ v4Msg('v12c-res','La orden de pago no puede ser anterior al envío del email. Revisa las fechas.','r'); return; }
-    r=v12AplicarCobro(u.co,x.M,{orden, email, imp, cta, sel:keys});
+    r=v12AplicarCobro(u.co,x.M,{orden, email, imp, cta, sel:keys, medio, just, justName});
   } else { const fecha=gi('v12c-fecha'); if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ v4Msg('v12c-res','Indica la fecha del cobro.','r'); return; }
     const email=$i('v12c-email')?gi('v12c-email'):'', hora=$i('v12c-hora')?gi('v12c-hora'):'', orden=hora?fecha+'T'+hora:'';
     if(email&&orden&&orden<email){ v4Msg('v12c-res','La orden de pago no puede ser anterior al envío del email. Revisa las fechas.','r'); return; }
-    r=v12AplicarCobroInq(u,x.M,{fecha, imp, cta, sel:keys, email, orden}); }
+    r=v12AplicarCobroInq(u,x.M,{fecha, imp, cta, sel:keys, email, orden, medio, just, justName}); }
   _v12Cobro=null; closeM('m-v4'); v12RefrescarPagos();
   toast((r.falta>0.004?'Cobro parcial guardado · faltan '+v4E2(r.falta)+' €':'Cobro guardado · '+v4E2(r.imp)+' €'+(r.rapido?' (con el descuento de 5 €)':'')+(r.tarde?' (fuera de plazo: penalización de 20 €)':'')+(r.sobra?' · '+v4E2(r.sobra)+' € de más':''))+v15SufijoCuenta('pago',r.ids||[]));
 }
@@ -16309,7 +16313,7 @@ function rPagos(){
      +'<button class="btn btn-danger btn-xs" title="Eliminar" onclick="v12BorrarRec(\''+p.id+'\')">🗑</button></td></tr>'; }).join('')+(list.length>600?'<tr><td colspan="8" style="font-size:11px;color:var(--ink3);">Se muestran 600 de '+list.length+'. Filtra por mes para ver el resto.</td></tr>':'');
 }
 function cobrar(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p||!p.mes) return; v12Cobro(v12UnidadKey(p,p.mes),p.mes,[p.id]); }
-function v12DeshacerRec(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p) return; if(p.con==='Bonificación pago rápido'){ D.pagos=D.pagos.filter(x=>x!==p); } else { p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; delete p.cobTs; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } }
+function v12DeshacerRec(id){ const p=(D.pagos||[]).find(x=>x.id==id); if(!p) return; if(p.con==='Bonificación pago rápido'){ D.pagos=D.pagos.filter(x=>x!==p); } else { p.estado='pendiente'; p.fecha=''; delete p.fechaOrden; delete p.cobTs; if(p.v12Cta){ delete p.ctaId; delete p.v12Cta; } if(p.v12Ciclo){ delete p.cicloMes; delete p.v12Ciclo; } v21DesmarcarCobro(p); }
   if(v12EsAlq(p)&&p.mes){ const iq=v4Inq(p.inqId); if(iq&&iq.ciclos&&iq.ciclos[p.mes]&&iq.ciclos[p.mes].orden){ const c=Object.assign({},iq.ciclos[p.mes]); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete c[k]); iq.ciclos=Object.assign({},iq.ciclos,{[p.mes]:c}); iq._upd=Date.now(); }
     const co=v4CoDeInq(p.inqId,p.mes); if(co&&co.ciclos&&co.ciclos[p.mes]&&co.ciclos[p.mes].orden){ const c=Object.assign({},co.ciclos[p.mes]); ['orden','importePagado','dto','esperado','cta'].forEach(k=>delete c[k]); co.ciclos=Object.assign({},co.ciclos,{[p.mes]:c}); co._upd=Date.now(); } }
   v12Fusionar(); saveAndSync(); try{ v4RefrescarAvisos(); }catch(e){} v12RefrescarPagos(); toast('Vuelve a estar pendiente'); }
@@ -17896,7 +17900,7 @@ rFacturas=(function(prev){ return function(){ const r=prev.apply(this,arguments)
 // ── Cuenta de cobro ──
 // Por orden: la del contrato (si se eligió) → la del piso (si se eligió en la ventana del mensaje) → la indicada por el
 // propietario para ese piso (Molina: Trade Republic; Alcalde 25: Unicaja) → la principal de quien disfruta el piso.
-function v19Pista(p){ const t=((p&&p.nom)||'')+' '+((p&&p.dir)||''); if(/molina/i.test(t)) return /trade\s*republic/i; if(/alcalde/i.test(t)) return /unicaja/i; return null; }
+function v19Pista(p){ const t=((p&&p.nom)||'')+' '+((p&&p.dir)||''); if(/molina/i.test(t)) return /trade\s*republic/i; if(/alcalde/i.test(t)) return /unicaja/i; if(/santa\s*ana/i.test(t)) return /trade\s*republic/i; return null; }
 function v19Cuentas(){ return (D.ctasBanc||[]).filter(c=>(c.tipo||'cuenta')!=='tarjeta'); }
 function v19CuentaPiso(p){
   const cs=v19Cuentas(); if(!p) return {cta:null, origen:''};
@@ -18538,6 +18542,8 @@ function v20NomRC(id,R){ R=R||v20RC(); const o=R&&(R.propietarios||[]).find(x=>x
 //  · hipoteca: cuotas registradas (intereses y capital);
 //  · inversión: mejoras, muebles y electrodomésticos, gastos de compra y reformas (lo que se amortiza);
 //  · explotación: todo lo demás (suministros, comunidad, IBI, seguros, reparaciones, gestoría…).
+// v4.20: misma clasificación que el Dashboard (v22Clase) y los suministros que pagan los inquilinos no son ingreso: bajan
+// el gasto (lo repartido de una factura, en el mes de esa factura). Limpio = «En el bolsillo» del Dashboard.
 // EBITDA = ingresos − explotación. Limpio = ingresos − explotación − inversión − hipoteca (lo que queda en el bolsillo).
 const V20_INV=['mejora','amort10','amort3'];
 function v20EsInv(x,src){ if(src==='gasto') return x.cat==='Reformas'||V20_INV.includes(x.ded); return V20_INV.includes(fiscalKey(x.ded)); }
@@ -18551,12 +18557,19 @@ function v20Pisos(){
     const out={yo, m:{}, det:{}, pids:new Set(), sinPiso:0};
     const cel=(k,pid)=>{ const a=out.m[k]||(out.m[k]={}); return a[pid]||(a[pid]={ing:0,opex:0,inv:0,hip:0}); };
     const det=(k,o)=>{ (out.det[k]=out.det[k]||[]).push(o); };
+    // v4.20: lo que pagan los inquilinos de suministros no es ingreso: lo repartido de una factura va con esa factura
+    // (le baja el gasto en su mes) y lo demás cobrado de suministros baja los gastos de explotación (mismo criterio que el
+    // Dashboard de RentaControl: «Limpio» aquí = «En el bolsillo» allí)
+    const VV=v22Vinculos(hoy);
     (R.pagos||[]).forEach(p=>{
       if(!p||p.estado!=='pagado'||!/^\d{4}-\d{2}/.test(p.mes||'')||v12EsDep(p)) return; const imp=+p.imp||0; if(!imp) return;
+      if(VV.usadas.has(p)) return;
       const k=p.mes.slice(0,7), inq=inqP.get(String(p.inqId)), pid=String(p.propId||(inq&&inq.propId)||'');
       if(!pid||!pById.has(pid)){ out.sinPiso++; return; }
-      const f=frac(pid,k); if(!f.dd) return; const v=imp*f.dd/f.dm; cel(k,pid).ing+=v; out.pids.add(pid);
-      det(k,{pid, t:'ing', imp:v, total:imp, dd:f.dd, dm:f.dm, fecha:p.fecha||'', txt:(p.con||'Cobro')+' · '+(inq?((inq.nom||'')+' '+(inq.ap||'')).trim():'')});
+      const f=frac(pid,k); if(!f.dd) return; const v=imp*f.dd/f.dm, quien=inq?((inq.nom||'')+' '+(inq.ap||'')).trim():'';
+      if(v22EsSumPago(p)){ cel(k,pid).opex-=v; out.pids.add(pid); det(k,{pid, t:'opex', imp:-v, total:imp, dd:f.dd, dm:f.dm, fecha:p.fecha||'', txt:(p.con||'Suministros')+' · '+quien+' (te lo paga el inquilino)'}); return; }
+      cel(k,pid).ing+=v; out.pids.add(pid);
+      det(k,{pid, t:'ing', imp:v, total:imp, dd:f.dd, dm:f.dm, fecha:p.fecha||'', txt:(p.con||'Cobro')+' · '+quien});
     });
     const gasto=(x,src)=>{
       if(!x) return; const f=x.fecha||x.fPago, imp=+x.imp||0; if(!/^\d{4}-\d{2}-\d{2}/.test(f||'')||f>hoy||!imp) return;
@@ -18565,9 +18578,13 @@ function v20Pisos(){
       if(src==='gasto'){ const h=x.cat==='Hipoteca'?(R.hipotecas||[]).find(h=>h.propId==x.propId):null; tit=(h&&h.ownerId)||x.titular||(pid?dis(pid,f):''); }
       else tit=x.titular||x.ownerId||(pid?dis(pid,f):'');
       if(String(tit)!==yo) return;
-      const tipo=src==='gasto'&&x.cat==='Hipoteca'?'hip':v20EsInv(x,src)?'inv':'opex', k=f.slice(0,7), cp=pid||'__gen';
-      cel(k,cp)[tipo]+=imp; if(pid) out.pids.add(pid);
-      det(k,{pid:cp, t:tipo, imp, fecha:f, txt:src==='gasto'?(x.cat||'Gasto')+(x.desc?' · '+x.desc:''):'Factura · '+(x.con||'')+(x.emp?' · '+x.emp:'')});
+      const c=v22Clase(x,src), tipo=['int','cap','cuo'].includes(c.t)?'hip':c.t==='inv'?'inv':'opex', k=f.slice(0,7), cp=pid||'__gen';
+      let net=imp, nota='';
+      if(src==='compra'&&c.t==='sum'){ const o=VV.fact.get(String(x.id)); if(o&&o.ent) return;
+        const cob=o?o.ls.filter(p=>p.estado==='pagado').reduce((s,p)=>s+(+p.imp||0),0):0; if(cob){ net=imp-cob; nota=' (factura '+v4E2(imp)+' − '+v4E2(cob)+' que te pagan los inquilinos)'; } }
+      if(!net) return;
+      cel(k,cp)[tipo]+=net; if(pid) out.pids.add(pid);
+      det(k,{pid:cp, t:tipo, imp:net, fecha:f, txt:(src==='gasto'?(x.cat||'Gasto')+(x.desc?' · '+x.desc:''):'Factura · '+(x.con||'')+(x.emp?' · '+x.emp:''))+nota});
     };
     (R.gastos||[]).forEach(g=>gasto(g,'gasto')); (R.compras||[]).forEach(x=>gasto(x,'compra'));
     // Pisos que son (o han sido) tuyos, aunque aún no tengan movimientos
@@ -18622,17 +18639,18 @@ function v20CtasRC(){
       saldoRC:v9ConSaldo(c)?v9SaldoCta(c,hoy,fl):null, flujos:fl.filter(f=>f.cta===c.id||f.orig===c.id)}))};
   });
 }
+// Desde v4.20 las cuentas son espejo: RentaControl ya cuenta los movimientos personales hechos con sus cuentas (v21Espejo),
+// así que el saldo aquí es EXACTAMENTE el de RentaControl. Lo personal anterior a un «Ajuste al saldo real del banco» que
+// RentaControl no conocía al hacer el ajuste ya estaba en ese saldo y no se vuelve a contar (se enseña como «ya dentro»).
 function v20Cuentas(){
-  const X=v20CtasRC(), hoy=v4Hoy(), MV=v20MovsPers(); const out={rc:[], pers:[], total:0, totalRC:0, pend:0, dep:0, sinSaldo:[]};
+  const X=v20CtasRC(), MV=v20MovsPers(); const out={rc:[], pers:[], total:0, totalRC:0, pend:0, nPers:0, dep:0, sinSaldo:[]};
   if(X){
-    X.cs.forEach(o=>{ if(o.tarjeta){ out.rc.push(Object.assign({},o,{pendMovs:[], pend:0, saldo:null})); return; }
-      const co=v20Corte(o.c,hoy);
-      const ms=MV.filter(m=>{ const r=v20RcDe(m.ctaId); return r&&X.fin(r)===o.id; });
-      const cuentan=ms.filter(m=>m.fecha<=hoy&&v20Cuenta(co,m)), dentro=ms.filter(m=>m.fecha<=hoy&&!v20Cuenta(co,m));
-      const pend=v17R(cuentan.reduce((s,m)=>s+(m.tipo==='ingreso'?1:-1)*(+m.imp||0),0));
-      const saldo=o.con?v17R(o.saldoRC+pend):null;
-      out.rc.push(Object.assign({},o,{corte:co, pendMovs:cuentan, dentro, pend, saldo}));
-      if(o.con){ out.total+=saldo; out.totalRC+=o.saldoRC; out.pend+=pend; } else out.sinSaldo.push(o.c.nom);
+    X.cs.forEach(o=>{ if(o.tarjeta){ out.rc.push(Object.assign({},o,{incl:[], dentro:[], pend:0, saldo:null})); return; }
+      const ms=MV.filter(m=>{ const r=v20RcDe(m.ctaId); return r&&X.fin(r)===o.id; }), fp=new Map(o.flujos.filter(f=>f.src==='personal'&&f.cta===o.id).map(f=>[f.id,f]));
+      const incl=ms.filter(m=>{ const f=fp.get(String(m.id)); return f&&(!o.con||v9Cuenta(o.c,f)); }), dentro=ms.filter(m=>!incl.includes(m));
+      const pend=v17R(incl.filter(m=>m.fecha<=v4Hoy()).reduce((s,m)=>s+(m.tipo==='ingreso'?1:-1)*(+m.imp||0),0));
+      out.rc.push(Object.assign({},o,{incl, dentro, pend, saldo:o.con?o.saldoRC:null, corte:v20Corte(o.c,v4Hoy())}));
+      if(o.con){ out.total+=o.saldoRC; out.totalRC+=o.saldoRC; out.pend+=pend; out.nPers+=incl.length; } else out.sinSaldo.push(o.c.nom);
     });
     out.dep=v17R(X.deps.reduce((s,d)=>s+d.imp,0)); out.deps=X.deps;
   }
@@ -18641,19 +18659,15 @@ function v20Cuentas(){
   out.total=v17R(out.total); out.totalRC=v17R(out.totalRC); out.pend=v17R(out.pend);
   return out;
 }
-// Saldo de todas tus cuentas a final de un día (para la gráfica)
+// Saldo de todas tus cuentas a final de un día (para la gráfica): el de RentaControl (con lo personal) + las solo personales
 function v20SaldoEn(t,X,MV){
   let s=0, hay=false;
-  if(X) X.cs.forEach(o=>{ if(o.tarjeta||!o.con||o.c.saldoFecha>t) return; hay=true;
-    let v=v9SaldoCta(o.c,t,X.fl)||0; const co=v20Corte(o.c,t);
-    MV.forEach(m=>{ const r=v20RcDe(m.ctaId); if(!r||X.fin(r)!==o.id||m.fecha>t||!v20Cuenta(co,m)) return; v+=(m.tipo==='ingreso'?1:-1)*(+m.imp||0); });
-    s+=v; });
+  if(X) X.cs.forEach(o=>{ if(o.tarjeta||!o.con||o.c.saldoFecha>t) return; hay=true; s+=v9SaldoCta(o.c,t,X.fl)||0; });
   (D.cuentas||[]).forEach(c=>{ if(c.tipo==='Tarjeta de crédito'||(c.rcId&&X&&X.cs.some(o=>o.id==String(c.rcId)))) return;
     const alta=(v15TsId(c.id)?new Date(v15TsId(c.id)).v12Dia():''); if(alta&&alta>t) return; hay=true;
     s+=(+c.saldo||0)+MV.filter(m=>m.ctaId==c.id&&m.fecha<=t).reduce((a,m)=>a+(m.tipo==='ingreso'?1:-1)*(+m.imp||0),0); });
   return hay?v17R(s):null;
 }
-// Liquidez total de Personal: tus cuentas de RentaControl (con lo personal) + las cuentas solo personales
 totalLiquido=function(){ try{ return v20Cuentas().total; }catch(e){ return (D.cuentas||[]).filter(c=>c.tipo!=='Tarjeta de crédito').reduce((s,c)=>s+saldoCuenta(c.id),0); } };
 // Propiedades que computan como tuyas: las que hoy te dan las rentas (usufructo o pleno dominio)
 function propsDeYo(){ if(!G) return []; const yo=v20Yo(G); if(!yo) return []; const hoy=v4Hoy(); return (G.props||[]).filter(p=>{ let t=''; const D0=D; try{ D=G; t=String(titularidadDia(p.id,hoy).disfrute||p.ownerId||''); }catch(e){ t=String(p.ownerId||''); } finally{ D=D0; } return t===yo; }); }
@@ -19253,7 +19267,7 @@ function v20HtmlOrigen(P,MV){
   const sel=v=>'<button type="button" class="pill '+(_v20Vista===v[0]?'on':'')+'" onclick="v20SetVista(\''+v[0]+'\')">'+v[1]+'</button>';
   return '<div class="card mb"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;"><div class="card-title" style="margin:0;">💼 De dónde sale tu dinero · '+tit+'</div><div style="display:flex;gap:6px;flex-wrap:wrap;">'+[['mes','Este mes'],['media','Media al mes'],['anyo','Total del año']].map(sel).join('')+'</div></div>'
     +'<div class="tbl-wrap"><table><thead><tr><th>Origen</th><th class="n">Ingresos</th><th class="n">Explotación</th><th class="n">EBITDA</th><th class="n">Hipoteca</th><th class="n">Inversión</th><th class="n">Limpio</th></tr></thead><tbody>'+filas.join('')+'</tbody></table></div>'
-    +'<div style="font-size:10.5px;color:var(--ink3);line-height:1.55;margin-top:8px;">EBITDA = ingresos − gastos de explotación (suministros, comunidad, IBI, seguros, reparaciones…). Limpio = lo que queda en el bolsillo: EBITDA − cuotas de hipoteca (intereses y capital) − inversión (muebles, mejoras, gastos de compra). De los pisos cuenta solo lo tuyo: los cobros desde que te corresponden las rentas (si cambia a mitad de mes, por días, art. 474 del Código Civil) y los gastos que pagas tú. Toca un piso para ver el detalle.</div>'
+    +'<div style="font-size:10.5px;color:var(--ink3);line-height:1.55;margin-top:8px;">Ingresos = lo cobrado, sin fianzas ni lo que los inquilinos pagan de suministros. EBITDA = ingresos − gastos de explotación (comunidad, IBI, seguros, reparaciones… y de los suministros solo tu parte: la factura menos lo que te pagan los inquilinos). Limpio = lo que queda en el bolsillo: EBITDA − cuotas de hipoteca (intereses y capital) − inversión (muebles, mejoras, gastos de compra). Es lo mismo que «En el bolsillo» en el Dashboard de RentaControl. De los pisos cuenta solo lo tuyo: los cobros desde que te corresponden las rentas (si cambia a mitad de mes, por días, art. 474 del Código Civil) y los gastos que pagas tú. Toca un piso para ver el detalle.</div>'
     +(avisos.length?'<div class="alert alert-y" style="margin-top:8px;font-size:11.5px;line-height:1.5;">'+avisos.join('<br>')+'</div>':'')+'</div>';
 }
 function v20IrMovs(cat){ v20Ir('pMovs'); setTimeout(()=>{ const s=$i('pm-cat-f'); if(s){ s.value=cat; try{ rMovs(); }catch(e){} } },0); }
@@ -19263,7 +19277,7 @@ function v20VerDet(pid){
   const it=[]; ks.forEach(kk=>(P.det[kk]||[]).forEach(d=>{ if(d.pid===pid) it.push(Object.assign({k:kk},d)); }));
   it.sort((a,b)=>a.k.localeCompare(b.k)||(a.t==='ing'?-1:1)||String(a.fecha).localeCompare(String(b.fecha)));
   const nom=pid==='__gen'?'Gastos generales del alquiler':((P.props.find(p=>p.id===pid)||{}).nom||'Piso'), et={ing:'Cobro',opex:'Explotación',hip:'Hipoteca',inv:'Inversión'};
-  const filas=it.map(d=>'<tr><td style="white-space:nowrap;">'+(d.t==='ing'?v17MesTxt(d.k,true):v4F2(d.fecha))+'</td><td>'+et[d.t]+'</td><td>'+v4Esc(d.txt)+(d.t==='ing'&&d.dd<d.dm?' <span style="font-size:10.5px;color:var(--ink3);">('+v4E2(d.total)+' × '+d.dd+'/'+d.dm+' días tuyos)</span>':'')+'</td><td class="n mono" style="color:'+(d.t==='ing'?'var(--gn)':'var(--rd)')+';">'+(d.t==='ing'?'+':'−')+v4E2(d.imp)+'</td></tr>').join('');
+  const filas=it.map(d=>'<tr><td style="white-space:nowrap;">'+(d.t==='ing'?v17MesTxt(d.k,true):v4F2(d.fecha))+'</td><td>'+et[d.t]+'</td><td>'+v4Esc(d.txt)+(d.t==='ing'&&d.dd<d.dm?' <span style="font-size:10.5px;color:var(--ink3);">('+v4E2(d.total)+' × '+d.dd+'/'+d.dm+' días tuyos)</span>':'')+'</td><td class="n mono" style="color:'+((d.t==='ing')===(d.imp>=0)?'var(--gn)':'var(--rd)')+';">'+((d.t==='ing')===(d.imp>=0)?'+':'−')+v4E2(Math.abs(d.imp))+'</td></tr>').join('');
   const r=v20Res(ks,P), o=pid==='__gen'?Object.assign({ing:0,ebitda:-r.gen.opex,limpio:-r.gen.total},r.gen):r.porPiso[pid]||{ing:0,opex:0,inv:0,hip:0,ebitda:0,limpio:0};
   v4Modal('🏠 '+v4Esc(nom)+' · '+(_v20Vista==='mes'?v20MesL(k):y),'<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;margin-bottom:10px;"><span>Ingresos <strong class="mono">'+v20E(o.ing)+'</strong></span><span>EBITDA <strong class="mono">'+v20E(o.ebitda)+'</strong></span><span>Limpio <strong class="mono">'+v20E(o.limpio)+'</strong></span></div>'
     +'<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th class="n">Importe</th></tr></thead><tbody>'+(filas||'<tr><td colspan="4" style="color:var(--ink3);">Sin movimientos en este periodo.</td></tr>')+'</tbody></table></div>'
@@ -19348,8 +19362,8 @@ function v20RenderCuentas(){
   const tarj=C.pers.filter(o=>o.c.tipo==='Tarjeta de crédito').reduce((s,o)=>s+o.saldo,0);
   $i('pc-kpis').innerHTML='<div style="flex-basis:100%;">'+estado+'</div>'
     +'<div class="kpi" style="--kc:var(--gn);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Saldo total</div><div class="kpi-value">'+eur(C.total)+'</div><div class="kpi-sub">'+(C.rc.filter(o=>!o.tarjeta).length+C.pers.length)+' cuentas</div></div>'
-    +'<div class="kpi" style="--kc:var(--bl);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">En RentaControl</div><div class="kpi-value">'+eur(C.totalRC)+'</div><div class="kpi-sub">mismo saldo que allí</div></div>'
-    +'<div class="kpi" style="--kc:var(--pu);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Personal aún no en RentaControl</div><div class="kpi-value">'+(C.pend>0?'+':'')+eur(C.pend)+'</div><div class="kpi-sub">tus gastos e ingresos de aquí</div></div>'
+    +'<div class="kpi" style="--kc:var(--bl);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Cuentas de RentaControl</div><div class="kpi-value">'+eur(C.totalRC)+'</div><div class="kpi-sub">el mismo saldo en las dos partes</div></div>'
+    +'<div class="kpi" style="--kc:var(--pu);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Personal en esas cuentas</div><div class="kpi-value">'+(C.pend>0?'+':'')+eur(C.pend)+'</div><div class="kpi-sub">'+C.nPers+' movimiento'+(C.nPers===1?'':'s')+' de aquí, también en RentaControl</div></div>'
     +(C.dep>0?'<div class="kpi" style="--kc:var(--rd);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">De inquilinos</div><div class="kpi-value">'+eur(C.dep)+'</div><div class="kpi-sub">fianzas y reservas (no son tuyas)</div></div>':'')
     +(tarj?'<div class="kpi" style="--kc:var(--rd);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Saldo tarjetas</div><div class="kpi-value">'+eur(tarj)+'</div></div>':'')
     +'<div class="kpi" style="--kc:var(--bl);flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">Patrimonio neto</div><div class="kpi-value">'+eur(patrimonioNeto())+'</div></div>';
@@ -19359,8 +19373,8 @@ function v20RenderCuentas(){
     const co=o.corte;
     cards.push('<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;"><div><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;">🏦 '+v4Esc(c.nom)+'</div><div style="font-size:11px;color:var(--ink3);margin-top:2px;">'+v4Esc([c.banco,c.num?'····'+String(c.num).replace(/\s/g,'').slice(-4):''].filter(Boolean).join(' · '))+'</div></div><span class="badge badge-b">🔗 RentaControl</span></div>'
       +(o.con?'<div style="font-family:\'Syne\',sans-serif;font-size:26px;font-weight:800;color:'+(o.saldo>=0?'var(--gn)':'var(--rd)')+';">'+v20E(o.saldo)+'</div>'
-        +'<div style="font-size:11.5px;color:var(--ink2);margin-top:6px;line-height:1.6;">En RentaControl: <strong class="mono">'+v20E(o.saldoRC)+'</strong>'+(o.pendMovs.length?'<br>'+(o.pend>=0?'+ ':'− ')+'<strong class="mono">'+v20E(Math.abs(o.pend))+'</strong> de '+o.pendMovs.length+' movimiento'+(o.pendMovs.length===1?'':'s')+' personal'+(o.pendMovs.length===1?'':'es')+' de aquí':'')+'</div>'
-        +'<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;">'+(co&&co.ajuste?'Último ajuste al saldo del banco en RentaControl: '+v4F2(co.fecha):'Saldo de partida en RentaControl: '+v4F2(c.saldoFecha))+(o.dentro.length?' · '+o.dentro.length+' movimiento'+(o.dentro.length===1?'':'s')+' personal'+(o.dentro.length===1?'':'es')+' anterior'+(o.dentro.length===1?'':'es')+' ya dentro de ese saldo':'')+'</div>'
+        +'<div style="font-size:11.5px;color:var(--ink2);margin-top:6px;line-height:1.6;">🔁 Mismo saldo en RentaControl'+(o.incl.length?' · incluye '+o.incl.length+' movimiento'+(o.incl.length===1?'':'s')+' personal'+(o.incl.length===1?'':'es')+' de aquí ('+(o.pend>=0?'+':'−')+v20E(Math.abs(o.pend))+')':'')+'</div>'
+        +'<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;">'+(co&&co.ajuste?'Último ajuste al saldo del banco: '+v4F2(co.fecha):'Saldo de partida: '+v4F2(c.saldoFecha))+(o.dentro.length?' · '+o.dentro.length+' movimiento'+(o.dentro.length===1?'':'s')+' personal'+(o.dentro.length===1?'':'es')+' anterior'+(o.dentro.length===1?'':'es')+' ya dentro de ese saldo del banco':'')+'</div>'
        :'<div style="font-size:12px;color:var(--ye);margin-top:4px;">Sin saldo de partida en RentaControl: ponlo allí (Cuentas y tarjetas) para ver el saldo.</div>')
       +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"><button class="btn btn-secondary btn-xs" onclick="v20VerMovsCta(\''+o.id+'\')">📋 Movimientos</button><button class="btn btn-ghost btn-xs" onclick="v20NuevoMov(\'gasto\',\'rc:'+o.id+'\')">− Gasto</button><button class="btn btn-ghost btn-xs" onclick="v20NuevoMov(\'ingreso\',\'rc:'+o.id+'\')">+ Ingreso</button></div></div>'); });
   C.pers.forEach(o=>{ const c=o.c, nm=(D.movs||[]).filter(m=>m.ctaId==c.id).length;
@@ -19378,22 +19392,16 @@ function v20NuevoMov(tipo,cta){ newMov(tipo); setTimeout(()=>{ const s=$i('mv-ct
 // Movimientos de una cuenta de RentaControl: los suyos (iguales que allí) y los personales de aquí, con el saldo de cada día
 function v20VerMovsCta(id){
   const X=v20CtasRC(); if(!X) return; const o=X.cs.find(z=>z.id===String(id)); if(!o) return; const c=o.c, hoy=v20Hoy(), MV=v20MovsPers();
-  const L=[];
-  X.fl.forEach(f=>{ if(f.cta!==c.id&&f.orig!==c.id) return; const cuenta=f.cta===c.id&&(!o.con||v9Cuenta(c,f)); L.push({fecha:f.fecha, ts:f.ts||0, txt:f.txt, imp:f.imp, rc:true, cuenta, tarjeta:f.orig&&f.orig!==f.cta}); });
-  const coHoy=v20Corte(c,hoy);
-  MV.forEach(m=>{ const r=v20RcDe(m.ctaId); if(!r||X.fin(r)!==c.id) return; L.push({fecha:m.fecha, ts:v20TsMov(m), txt:(m.tipo==='ingreso'?'Ingreso':'Gasto')+' personal · '+(m.con||'')+' · '+(m.cat||''), imp:(m.tipo==='ingreso'?1:-1)*(+m.imp||0), rc:false, cuenta:v20Cuenta(coHoy,m), m}); });
+  const L=o.flujos.map(f=>({fecha:f.fecha, ts:f.ts||0, txt:f.txt, imp:f.imp, src:f.src, cuenta:f.cta===c.id&&(!o.con||v9Cuenta(c,f)), tarjeta:f.orig&&f.orig!==f.cta}));
+  const ids=new Set(o.flujos.filter(f=>f.src==='personal').map(f=>f.id));
+  MV.forEach(m=>{ const r=v20RcDe(m.ctaId); if(!r||X.fin(r)!==c.id||ids.has(String(m.id))) return; L.push({fecha:m.fecha, ts:v20TsMov(m), txt:'👤 Personal · '+(m.cat||'')+(m.con?' · '+m.con:''), imp:(m.tipo==='ingreso'?1:-1)*(+m.imp||0), src:'personal', cuenta:false, dentro:true}); });
   L.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.ts||0)-(b.ts||0));
-  // Saldo después de cada línea: el de RentaControl hasta ahí + lo personal que en esa fecha aún no estaba dentro de su saldo
-  // (un ajuste al saldo del banco absorbe lo personal anterior: por eso el saldo puede saltar en la línea del ajuste)
-  let sRC=o.con?+c.saldoIni:0; const pers=[];
-  const filas=L.map(x=>{ const fut=x.fecha>hoy; let sal='';
-    if(x.rc){ if(x.cuenta&&!fut) sRC=v17R(sRC+x.imp); } else pers.push(x);
-    if(o.con&&!fut&&(x.rc?x.cuenta:true)){ const co=v20Corte(c,x.fecha); sal=v4E2(v17R(sRC+pers.reduce((a,p)=>a+(v20Cuenta(co,p.m)?p.imp:0),0))); }
-    const nota=x.rc?(!x.cuenta?'(antes del saldo de partida)':''):(!x.cuenta?'(ya dentro del saldo de RentaControl'+(coHoy&&coHoy.ajuste?': ajuste del '+v4F2(coHoy.fecha):'')+')':'');
-    return '<tr style="'+(fut||!x.cuenta?'opacity:.6;':'')+(x.rc?'':'background:rgba(98,80,214,.05);')+'"><td style="white-space:nowrap;">'+v4F2(x.fecha)+(fut?' (futuro)':'')+'</td><td>'+(x.rc?'🏢 ':'👤 ')+v4Esc(x.txt)+(x.tarjeta?' <span style="font-size:10.5px;color:var(--ink3);">(con tarjeta)</span>':'')+(nota?' <span style="font-size:10.5px;color:var(--ink3);">'+nota+'</span>':'')+'</td><td class="mono" style="text-align:right;white-space:nowrap;color:'+(x.imp<0?'var(--rd)':'var(--gn)')+';">'+(x.imp>0?'+':'')+v4E2(x.imp)+'</td><td class="mono" style="text-align:right;">'+sal+'</td></tr>'; }).reverse().join('');
-  const C=v20Cuentas(), oc=C.rc.find(z=>z.id===String(id));
+  let s=o.con?+c.saldoIni:0;
+  const filas=L.map(x=>{ const fut=x.fecha>hoy; if(x.cuenta&&!fut&&o.con) s=v17R(s+x.imp);
+    const nota=x.dentro?'(ya estaba en el saldo del banco del ajuste)':!x.cuenta?'(antes del saldo de partida)':'';
+    return '<tr style="'+(fut||!x.cuenta?'opacity:.6;':'')+(x.src==='personal'?'background:rgba(98,80,214,.05);':'')+'"><td style="white-space:nowrap;">'+v4F2(x.fecha)+(fut?' (futuro)':'')+'</td><td>'+(x.src==='personal'?'':'🏢 ')+v4Esc(x.txt)+(x.tarjeta?' <span style="font-size:10.5px;color:var(--ink3);">(con tarjeta)</span>':'')+(nota?' <span style="font-size:10.5px;color:var(--ink3);">'+nota+'</span>':'')+'</td><td class="mono" style="text-align:right;white-space:nowrap;color:'+(x.imp<0?'var(--rd)':'var(--gn)')+';">'+(x.imp>0?'+':'')+v4E2(x.imp)+'</td><td class="mono" style="text-align:right;">'+(o.con&&x.cuenta&&!fut?v4E2(s):'')+'</td></tr>'; }).reverse().join('');
   $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">📋 '+v4Esc(c.nom)+'</div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'
-    +'<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;line-height:1.6;">'+(o.con?'Saldo hoy: <strong class="mono">'+v20E(oc.saldo)+'</strong> = RentaControl <strong class="mono">'+v20E(oc.saldoRC)+'</strong>'+(oc.pend?' '+(oc.pend>0?'+':'−')+' personal <strong class="mono">'+v20E(Math.abs(oc.pend))+'</strong>':'')+'. Saldo de partida '+v4E2(c.saldoIni)+' € el '+v4F2(c.saldoFecha)+'.':'Sin saldo de partida en RentaControl.')+' 🏢 = de RentaControl · 👤 = apuntado aquí.</div>'
+    +'<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;line-height:1.6;">'+(o.con?'Saldo hoy: <strong class="mono">'+v20E(o.saldoRC)+'</strong>, el mismo que en RentaControl. Saldo de partida '+v4E2(c.saldoIni)+' € el '+v4F2(c.saldoFecha)+'.':'Sin saldo de partida en RentaControl.')+' 🏢 = de RentaControl · 👤 = apuntado aquí (también sale allí).</div>'
     +'<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Importe</th><th>Saldo</th></tr></thead><tbody>'+(filas||'<tr><td colspan="4" style="color:var(--ink3);">Sin movimientos.</td></tr>')+'</tbody></table></div>';
   $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
 }
@@ -19435,6 +19443,441 @@ datosRenta=(function(prev){ return function(anyo){ const d=prev.apply(this,argum
   for(const [lim,t] of [[6000,.19],[44000,.21],[150000,.23],[100000,.27],[Infinity,.30]]){ if(r<=0) break; const p=Math.min(r,lim); ca+=p*t; r-=p; }
   const cg=Math.max(0,bg)*d.irpf/100; return Object.assign(d,{baseGeneral:bg, baseAhorro:ba, cuotaGeneral:cg, cuotaAhorro:ca, total:Math.max(0,cg+ca-d.dedCuota)}); }; })(datosRenta);
 if(WS==='personal') try{ cargarGentaury(); }catch(e){}
+
+// ══════════════════════════════════════════════════════════════
+// v4.20 · 1) Cuentas espejo: lo que apuntas en Personal con una cuenta de RentaControl cambia también su saldo en RentaControl.
+//          2) Cobros: forma de pago (transferencia, Bizum o efectivo), cuenta del piso y justificante.
+//          3) Dashboard: resultados mensuales o anuales (ingresos totales − gastos totales).
+// ══════════════════════════════════════════════════════════════
+
+// ── 1. Cuentas espejo ──
+// Los movimientos personales (Finanzas personales) hechos con una cuenta de RentaControl son movimientos de esa cuenta:
+// entran en su saldo, en la liquidez y en la gráfica de RentaControl, igual que en Personal. No son gastos de los pisos.
+// Datos de Personal vistos desde RentaControl: la copia del dispositivo fusionada con la de Drive (gana lo más reciente).
+let _v21Loc={raw:null,obj:null}, _v21Esp={obj:null,t:0,cargando:false,err:''}, _v21Mez={a:null,b:null,obj:null};
+function v21Pers(){
+  if(WS==='personal') return _v20P||D;
+  let raw=null; try{ raw=localStorage.getItem(WS_CFG.personal.key); }catch(e){}
+  let L=null;
+  if(raw&&raw.length>20){ if(raw!==_v21Loc.raw){ let o=null; try{ o=JSON.parse(raw); }catch(e){ o=null; } _v21Loc={raw,obj:o}; } L=_v21Loc.obj; } else _v21Loc={raw:null,obj:null};
+  const E=_v21Esp.obj; if(!L&&!E) return null; if(!E) return L; if(!L) return E;
+  if(_v21Mez.a===L&&_v21Mez.b===E) return _v21Mez.obj;
+  const o=Object.assign({},E,L,fusionar(L,E)); _v21Mez={a:L,b:E,obj:o}; return o;
+}
+async function v21BajarPers(forzar){
+  if(WS!=='gentaury'||!gToken||!gFolderId||_v21Esp.cargando) return false;
+  if(!forzar&&_v21Esp.obj&&Date.now()-_v21Esp.t<120000) return false;
+  _v21Esp.cargando=true; let ok=false;
+  try{
+    const q=encodeURIComponent("name='"+WS_CFG.personal.backup+"' and '"+gFolderId+"' in parents and trashed=false");
+    const res=await gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)');
+    if(res&&res.files&&res.files.length){
+      const url='https://www.googleapis.com/drive/v3/files/'+res.files[0].id+'?alt=media';
+      let r=await fetch(url,{headers:{Authorization:'Bearer '+gToken},cache:'no-store'});
+      if(r.status===401&&await renovarTokenAhora()) r=await fetch(url,{headers:{Authorization:'Bearer '+gToken},cache:'no-store'});
+      if(r.ok){ const txt=await r.text(); if(txt&&txt.trim().length>20){ _v21Esp.obj=JSON.parse(txt); _v21Esp.t=Date.now(); _v21Esp.err=''; ok=true; } } else _v21Esp.err='Google Drive respondió '+r.status;
+    }
+  }catch(e){ _v21Esp.err=e.message||String(e); }
+  finally{ _v21Esp.cargando=false; }
+  if(ok) v21Refrescar(); return ok;
+}
+function v21Refrescar(){ if(WS!=='gentaury') return; const n=document.querySelector('.nav-item.on'), s=n&&n.dataset.s; if((s==='dash'||s==='ctasbanc')&&RENDERS[s]) try{ RENDERS[s](); }catch(e){ console.warn(e); }
+  try{ if($i('drawer')&&$i('drawer').classList.contains('open')&&window._v9DrwCta) v9VerMovs(window._v9DrwCta); }catch(e){} }
+// Cuenta de RentaControl de un movimiento personal ('' si es de una cuenta solo personal)
+function v21CtaRC(P,ctaId){ const s=String(ctaId||''); if(s.startsWith('rc:')) return s.slice(3); const c=((P&&P.cuentas)||[]).find(x=>String(x.id)===s); return c&&c.rcId?String(c.rcId):''; }
+function v21Ajustes(c){ return (c.movs||[]).filter(a=>a&&a.tipo==='ajuste'&&a.fecha).map(a=>({a, f:a.fecha, ts:v15TsId(a.id)||0})).sort((x,y)=>x.f.localeCompare(y.f)||x.ts-y.ts); }
+// Un «Ajuste al saldo real del banco» fija el saldo de ese día con lo que dice el banco. Lo personal de ese día o anterior ya
+// estaba en el banco: si RentaControl no lo tenía en cuenta al hacer el ajuste (ajustes anteriores a esta versión, o
+// movimientos apuntados después con fecha anterior), el ajuste ya lo incluye y no se vuelve a sumar. El primer ajuste con
+// fecha igual o posterior a la del movimiento decide: lo incluye si estaba en su lista (espIds).
+function v21Absorbido(aj,m){ const A=aj.find(x=>x.f>=m.fecha); if(!A) return false; return !(Array.isArray(A.a.espIds)&&A.a.espIds.includes(String(m.id))); }
+function v21Espejo(out){
+  const P=v21Pers(); if(!P||!Array.isArray(P.movs)||!P.movs.length) return;
+  const ctas=new Map(v9Ctas().map(c=>[String(c.id),c])), ajC=new Map();
+  P.movs.forEach(m=>{
+    if(!m||(m.tipo!=='ingreso'&&m.tipo!=='gasto')) return; const imp=+m.imp||0; if(!imp||!/^\d{4}-\d{2}-\d{2}$/.test(m.fecha||'')) return;
+    const rc=v21CtaRC(P,m.ctaId); if(!rc||!ctas.has(rc)) return;
+    const fin=String(v9Final(rc)||rc), c=ctas.get(fin); if(!c) return;
+    let aj=ajC.get(fin); if(!aj){ aj=v21Ajustes(c); ajC.set(fin,aj); }
+    if(v21Absorbido(aj,m)) return;
+    out.push({cta:fin, orig:rc, fecha:m.fecha, imp:v9R2((m.tipo==='ingreso'?1:-1)*imp), tipo:'personal', txt:'👤 Personal · '+(m.cat||(m.tipo==='ingreso'?'Ingreso':'Gasto'))+(m.con?' · '+m.con:''), src:'personal', id:String(m.id), auto:false, ts:+m.ts||v15TsId(m.id)||0});
+  });
+}
+v9Flujos=(function(prev){ return function(){ const out=prev.apply(this,arguments); try{ v21Espejo(out); }catch(e){ console.warn('v21Espejo',e); } return out; }; })(v9Flujos);
+// Al hacer un ajuste: lo personal que ya está dentro del saldo calculado (para no quitarlo después)
+function v21IdsPersonales(c,f){ try{ const aj=v21Ajustes(c), prev=aj.filter(x=>x.f<=f).pop(), desde=prev?prev.f:(c.saldoFecha||'');
+  return v9Flujos().filter(x=>x.src==='personal'&&x.cta===String(c.id)&&x.fecha<=f&&x.fecha>=desde&&(!v9ConSaldo(c)||v9Cuenta(c,x))).map(x=>x.id); }catch(e){ return []; } }
+gdriveInit=(function(prev){ return async function(){ const r=await prev.apply(this,arguments); try{ if(WS==='gentaury') v21BajarPers(true); }catch(e){} return r; }; })(gdriveInit);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&WS==='gentaury') v21BajarPers(false); });
+
+// ── 2. Cobros: forma de pago, cuenta del piso y justificante ──
+// Transferencia y Bizum: a la cuenta del piso (la del contrato si se eligió; si no, la del piso: Molina y Santa Ana 19 →
+// Trade Republic; Alcalde 25 → Unicaja). Efectivo: la cuenta de efectivo de quien cobra las rentas, o ninguna.
+function v21PropU(u){ return (D.props||[]).find(p=>p.id==u.propId)||null; }
+function v21CtaCobro(u,medio){
+  if(medio==='efectivo'){ let tit=''; try{ tit=v9TitProp(u.propId,v4Hoy()); }catch(e){} const e=v9CtaDef(tit,'efectivo'); return e?String(e.id):'__no'; }
+  const dueno=u.co||u.entero||null; if(dueno&&dueno.ctaId&&v9Cta(dueno.ctaId)) return String(dueno.ctaId);
+  const r=v19CuentaPiso(v21PropU(u)); return r&&r.cta?String(r.cta.id):'';
+}
+function v21NomCta(c){ return c?(c.nom||c.banco||'Cuenta')+(c.titularId?' · '+(v19NomTitular(c.titularId)||nombreC(c.titularId)):''):''; }
+function v21OptsCtas(sel){ const cs=v9Ctas().filter(c=>c.tipo!=='tarjeta'); sel=String(sel||'');
+  return '<option value="">Automática (la principal de quien cobra)</option>'+cs.map(c=>'<option value="'+v4Esc(c.id)+'"'+(String(c.id)===sel?' selected':'')+'>'+v4Esc(v21NomCta(c)+(c.tipo==='efectivo'?' (efectivo)':''))+'</option>').join('')
+    +'<option value="__no"'+(sel==='__no'?' selected':'')+'>Ninguna: efectivo en mano</option>'; }
+function v21MedioCobro(){
+  const x=_v12Cobro; if(!x) return; const u=v12UnidadMes(x.key,x.M); if(!u) return; const m=gi('v12c-medio')||'transferencia', s=$i('v12c-cta'), info=$i('v12c-medio-info'); if(!s) return;
+  if(s.dataset.manual!=='1') s.value=v21CtaCobro(u,m);
+  const def=v21CtaCobro(u,'transferencia'), c=s.value&&s.value!=='__no'?v9Cta(s.value):null, cd=def?v9Cta(def):null, p=v21PropU(u), t=[];
+  if(m==='transferencia'){ t.push(c?'Transferencia a <strong>'+v4Esc(v21NomCta(c))+'</strong>'+(c.num?' ('+v4Esc(v19FmtIban(c.num))+')':''):'⚠️ Elige la cuenta en la que ha entrado.');
+    if(cd&&c&&String(c.id)!==String(cd.id)) t.push('⚠️ No es la cuenta de '+v4Esc(p?p.nom:'este piso')+' ('+v4Esc(v21NomCta(cd))+'). Comprueba en el justificante a qué cuenta llegó.'); }
+  else if(m==='bizum') t.push('El Bizum entra en la cuenta que tengas asociada a tu móvil'+(c?': <strong>'+v4Esc(v21NomCta(c))+'</strong>. Cámbiala si no es esa.':'. Elígela.'));
+  else { t.push(s.value==='__no'?'En efectivo: no pasa por ninguna cuenta (no cambia ningún saldo).':'En efectivo, a <strong>'+v4Esc(v21NomCta(c))+'</strong>.');
+    t.push('Al cobrar en efectivo hay que darle recibo al inquilino (art. 17.4 LAU).'); }
+  if(info) info.innerHTML=t.join('<br>');
+}
+function v21MarcarCobro(p,o){ if(!o||!p) return; if(o.medio){ p.medio=o.medio; p.v12Med=true; } if(o.just&&(!p.pdfData||p.v12Just)){ p.pdfData=o.just; p.pdfName=o.justName||'justificante'; p.v12Just=true; } }
+function v21DesmarcarCobro(p){ if(!p) return; if(p.v12Med){ delete p.medio; delete p.v12Med; } if(p.v12Just){ delete p.pdfData; delete p.pdfName; delete p.v12Just; } }
+const V21_MEDIO={transferencia:'transferencia',bizum:'Bizum',efectivo:'efectivo'};
+function v21TxtCobro(p){ if(!p) return ''; const c=p.ctaId&&p.ctaId!=='__no'?v9Cta(p.ctaId):null; return (p.medio?' · '+V21_MEDIO[p.medio]:'')+(c?' → '+(c.nom||c.banco||'cuenta'):p.ctaId==='__no'?' (sin cuenta)':''); }
+
+// ── 3. Dashboard: resultados del mes o del año ──
+// Ingresos totales = lo cobrado (en el mes al que corresponde, sin fianzas ni garantías); gastos totales = todas las facturas y
+// gastos hasta hoy (cuotas de hipoteca completas incluidas); resultado = ingresos − gastos. Mismos datos que la gráfica.
+let _v21Per={modo:'anual', y:'', k:''};
+try{ const s=JSON.parse(localStorage.getItem('rc-dash-per')||'{}'); if(s&&(s.modo==='mensual'||s.modo==='anual')) _v21Per.modo=s.modo; }catch(e){}
+function v21Per(){
+  const kH=v4Hoy().slice(0,7), yH=kH.slice(0,4), men=_v21Per.modo==='mensual';
+  const y=/^\d{4}$/.test(_v21Per.y)&&_v21Per.y<=yH?_v21Per.y:yH, k=/^\d{4}-\d{2}$/.test(_v21Per.k)&&_v21Per.k<=kH?_v21Per.k:kH;
+  const Y=men?k.slice(0,4):y;
+  return {men, y:Y, k, kH, actual:men?k===kH:y===yH, en:men?(x=>x===k):(x=>x.slice(0,4)===y&&x<=kH),
+    txt:men?v17MesTxt(k,true)+(k===kH?' (hasta hoy)':''):y+(y===yH?' (de enero a '+V17_MESES_L[+kH.slice(5,7)-1]+')':''), corto:men?v17MesTxt(k,false):y};
+}
+function v21PerCorto(){ return v21Per().corto; }
+function v21SetPer(modo,v){ if(modo) _v21Per.modo=modo; if(v!==undefined&&v!==null){ if(_v21Per.modo==='mensual') _v21Per.k=v; else _v21Per.y=v; }
+  try{ localStorage.setItem('rc-dash-per',JSON.stringify({modo:_v21Per.modo})); }catch(e){} try{ RENDERS.dash(); }catch(e){ console.warn(e); } }
+v17Fact=function(){
+  const P=v21Per(), M=v17Movs(); let bruta=0,gastos=0,hip=0,pend=0;
+  Object.keys(M.ing).forEach(k=>{ if(P.en(k)) bruta+=M.ing[k]; });
+  Object.keys(M.gas).forEach(k=>{ if(P.en(k)) gastos+=M.gas[k]; });
+  Object.keys(M.gasH).forEach(k=>{ if(P.en(k)) hip+=M.gasH[k]; });
+  Object.keys(M.pend).forEach(k=>{ if(P.en(k)) pend+=M.pend[k]; });
+  const faltan=v17CuotasFaltan(P.y).filter(f=>!P.men||f.mes===P.k);
+  return {anyo:P.y, hasta:P.men?P.k:(P.actual?P.kH:P.y+'-12'), per:P, bruta:v17R(bruta), gastos:v17R(gastos), hip:v17R(hip), neta:v17R(bruta-gastos), pend:v17R(pend), faltan};
+};
+v17FactPiso=function(p){ const P=v21Per(), M=v17Movs(); let b=0,g=0;
+  Object.keys(M.ingP).forEach(x=>{ const i=x.lastIndexOf('|'), pid=x.slice(0,i), k=x.slice(i+1); if(pid==String(p.id)&&P.en(k)) b+=M.ingP[x]; });
+  Object.keys(M.gasP).forEach(x=>{ const i=x.lastIndexOf('|'), pid=x.slice(0,i), k=x.slice(i+1); if(pid==String(p.id)&&P.en(k)) g+=M.gasP[x]; });
+  return {bruta:v17R(b), gastos:v17R(g), neta:v17R(b-g)}; };
+v17NotaSinPiso=function(){ const P=v21Per(), M=v17Movs(), ids=new Set((D.props||[]).map(p=>String(p.id))); let b=0,g=0;
+  Object.keys(M.ingP).forEach(x=>{ const i=x.lastIndexOf('|'), pid=x.slice(0,i), k=x.slice(i+1); if(!ids.has(pid)&&P.en(k)) b+=M.ingP[x]; });
+  Object.keys(M.gasP).forEach(x=>{ const i=x.lastIndexOf('|'), pid=x.slice(0,i), k=x.slice(i+1); if(!ids.has(pid)&&P.en(k)) g+=M.gasP[x]; });
+  if(!(Math.abs(b)>=0.005)&&!(Math.abs(g)>=0.005)) return '';
+  return '<div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.5;">En '+v4Esc(P.txt)+' hay '+[g?eur(g)+' de gastos':'',b?eur(b)+' de cobros':''].filter(Boolean).join(' y ')+' sin piso asignado: cuentan en los totales de arriba, pero no en los de cada piso.</div>'; };
+function v21Ctrl(P){
+  const seg=(m,t)=>'<button type="button" onclick="v21SetPer(\''+m+'\')" style="border:0;padding:5px 12px;border-radius:6px;font:600 12px var(--font,inherit);cursor:pointer;background:'+((P.men?'mensual':'anual')===m?'var(--card)':'transparent')+';color:var(--ink);box-shadow:'+((P.men?'mensual':'anual')===m?'0 1px 3px rgba(0,0,0,.12)':'none')+';">'+t+'</button>';
+  const prev=P.men?v17MesMenos(P.k,1):String(+P.y-1), next=P.men?v17SigMes(P.k):String(+P.y+1), hayNext=P.men?next<=P.kH:next<=P.kH.slice(0,4);
+  const nav='<button type="button" class="btn btn-ghost btn-xs" onclick="v21SetPer(null,\''+prev+'\')" aria-label="Anterior">‹</button><strong style="font-size:13px;min-width:120px;text-align:center;">'+v4Esc(P.men?v17MesTxt(P.k,true).replace(/^./,c=>c.toUpperCase()):P.y)+'</strong>'
+    +'<button type="button" class="btn btn-ghost btn-xs" onclick="v21SetPer(null,\''+next+'\')"'+(hayNext?'':' disabled style="opacity:.35;"')+' aria-label="Siguiente">›</button>'
+    +(P.actual?'':'<button type="button" class="btn btn-ghost btn-xs" onclick="v21SetPer(null,\''+(P.men?P.kH:P.kH.slice(0,4))+'\')">Hoy</button>');
+  return '<div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px 12px;flex-wrap:wrap;margin:4px 0 -2px;">'
+    +'<div style="font:600 10px \'DM Mono\',monospace;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);">Resultados · '+v4Esc(P.txt)+'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><div style="display:inline-flex;background:var(--bg2,rgba(0,0,0,.05));border-radius:8px;padding:3px;gap:2px;">'+seg('mensual','Mensual')+seg('anual','Anual')+'</div><div style="display:flex;align-items:center;gap:4px;">'+nav+'</div></div></div>';
+}
+v17Cajas=function(o){
+  const lq=o.lq||{on:false}, F=v17Fact(), P=F.per, faltan=F.faltan.length;
+  const sub=(t,st)=>'<div class="cb-sub"'+(st?' style="'+st+'"':'')+'>'+t+'</div>', wn='white-space:normal;line-height:1.35;';
+  const ltv=o.patBruto>0?o.deudaTotal/o.patBruto*100:0, cuando=P.men?'en '+v17MesTxt(P.k,true):'en '+P.y;
+  return '<div class="cartera-grid">'
+    // Fila 1 · Balance (hoy)
+    +v17Caja('Patrimonio bruto',eur(o.patBruto+(lq.on?lq.saldo:0)),lq.on?v9SubBruto(o.patBruto,lq):sub('valor de los inmuebles'))
+    +v17Caja('Patrimonio neto',eur(o.patNeto+(lq.on?lq.neta:0)),sub('−'+eur(o.deudaTotal)+' hipotecas'+v9SubNeto(lq),wn),{vc:'var(--gn)'})
+    +(lq.on?v17Caja('Liquidez en cuentas',eur(lq.saldo),sub('neta '+eur(lq.neta)+' (sin fianzas ni reservas)'),{click:"v9Ir('ctasbanc')"})
+           :v17Caja('Liquidez en cuentas','—',sub('pon el saldo de tus cuentas'),{click:"v9Ir('ctasbanc')",vc:'var(--ink3)'}))
+    +v17Caja('% Financiación (LTV)',(o.patBruto>0?ltv.toFixed(1):'0')+'%',sub('deuda sobre patrimonio'),{vc:o.patBruto>0&&ltv>70?'var(--rd)':'var(--ye)'})
+    // Fila 2 · Resultados del mes o del año
+    +v21Ctrl(P)
+    +v17Caja('Ingresos totales',eur(F.bruta),sub('cobrado '+cuando+(F.pend>0?' · '+eur(F.pend)+' pendiente de cobro':''),wn),
+      {vc:'var(--gn)',title:'Todo lo cobrado '+cuando+' (rentas, suministros, penalizaciones…), en el mes al que corresponde. No incluye fianzas ni garantías, que son depósitos.'})
+    +v17Caja('Gastos totales',eur(F.gastos),sub('facturas y gastos'+(F.hip>0?' · hipotecas '+eur(F.hip):''),wn)+(faltan?sub('⚠️ falta'+(faltan===1?'':'n')+' '+faltan+' cuota'+(faltan===1?'':'s')+' de hipoteca por registrar',wn+'color:var(--rd);'):''),
+      {vc:'var(--rd)',click:faltan?"v9Ir('hipotecas')":'',title:'Todas las facturas y gastos '+cuando+' hasta hoy, incluidas las cuotas de hipoteca completas (intereses y capital).'+(faltan?' Faltan por registrar: '+F.faltan.map(f=>f.nom+' '+v17MesTxt(f.mes,true)).join(', ')+'.':'')})
+    +v17Caja('Ingresos − gastos',eur(F.neta),sub(eur(F.bruta)+' − '+eur(F.gastos)+(P.actual?' · hasta hoy':''),wn),{vc:F.neta>=0?'var(--gn)':'var(--rd)',title:'Lo que queda en el bolsillo '+cuando+': ingresos totales − gastos totales.'})
+    +(o.roce!==null&&o.roce!==undefined&&isFinite(o.roce)
+      ?v17Caja('ROCE cartera',o.roce.toFixed(1)+'%',sub('EBITDA '+eur(o.ebitdaMes)+'/mes'+(o.rentB!==null&&o.rentB!==undefined?' · rent. bruta '+o.rentB.toFixed(1)+'%':''),'color:rgba(255,255,255,.8);'+wn),{bg:'background:linear-gradient(135deg,var(--acc),#7c3aed);',lc:'rgba(255,255,255,.75)',vc:'#fff',title:'EBITDA mensual previsto: '+eur(o.ingMes)+' ingresos − '+eur(o.gasMes)+' gastos − '+eur(o.cuoMes)+' cuotas.'})
+      :v17Caja('EBITDA mensual',eur(o.ebitdaMes)+'<span class="cb-u">/mes</span>',sub(eur(o.ingMes)+' ingresos − '+eur(o.gasMes)+' gastos − '+eur(o.cuoMes)+' cuotas',wn),{vc:o.ebitdaMes>=0?'var(--gn)':'var(--rd)'}))
+    +'</div>';
+};
+
+// ══════════════════════════════════════════════════════════════
+// v4.20 · Resultados del Dashboard: ingresos, gastos reales, beneficio y lo que queda en el bolsillo
+// ──────────────────────────────────────────────────────────────
+// · INGRESOS = lo cobrado en el mes al que corresponde (rentas y otros cobros). No cuentan las fianzas ni las garantías
+//   (depósitos que se devuelven) ni lo que los inquilinos pagan de suministros (no es un ingreso: te devuelven una factura).
+// · GASTOS (reales) = explotación + intereses. Explotación: comunidad, IBI y tasas, seguros, mantenimiento, gestoría… y de los
+//   suministros solo TU parte (cada factura de luz, agua, gas o internet menos lo que se reparte a los inquilinos, cobrado o
+//   pendiente; las del piso entero con los suministros a cargo de los arrendatarios no son tuyas).
+//   No son gasto: el capital de la hipoteca (tu deuda baja y tu patrimonio sube lo mismo) ni las inversiones (mejoras,
+//   muebles y electrodomésticos, gastos de compra y del préstamo: se amortizan en Fiscal; mismo criterio que el ROCE).
+// · BENEFICIO = ingresos − gastos (antes del IRPF). RESULTADO DE EXPLOTACIÓN (EBITDA) = ingresos − explotación.
+// · EN EL BOLSILLO = beneficio − capital de la hipoteca − inversiones − suministros que adelantas (repartidos y aún sin
+//   cobrar) = todo lo cobrado − todo lo pagado. Es el dinero que de verdad te queda.
+// Cobros por el mes al que corresponden; facturas y gastos por su fecha (hasta hoy). Lo que el inquilino paga de una factura
+// cuenta en el mes de esa factura. La gráfica, las cajas, la tabla de pisos y el desglose salen de las mismas líneas.
+// ══════════════════════════════════════════════════════════════
+const V22_GRUPOS=['Suministros (tu parte)','Comunidad','IBI, basura y tasas','Seguros','Mantenimiento y reparaciones','Limpieza','Gestoría, anuncios y servicios','Otros gastos'];
+const V22_T=['ren','otr','pen','sumF','sumR','sumP','sumS','sumSP','sumE','exp','int','cuo','cap','inv'];
+const V22_INV_DED=['mejora','amort10','amort3'];
+let _v22Cache=null;
+function v22Txt(x,src){ return src==='gasto'?((x.desc||'')+' '+(x.notas||'')+' '+(x.prov||'')):((x.con||'')+' '+(x.emp||'')+' '+(x.notas||'')); }
+// ¿Cobro de suministros? (líneas del reparto o conceptos de luz, agua, gas, internet o «suministros»; «Gastos…» no es gas)
+function v22EsSumPago(p){
+  if(!p) return false; if(p.rep) return true; const c=String(p.con||'').trim(); if(!c||c==='Alquiler'||/^gastos?\b/i.test(c)) return false;
+  if(/suministro/i.test(c)) return true; let t=''; try{ t=v4TipoSum(c); }catch(e){} return V4_SUMINISTROS.includes(t);
+}
+function v22Grupo(x,src,catF){
+  const c=src==='gasto'?String(x.cat||''):'', t=v22Txt(x,src).toLowerCase();
+  if(c==='Comunidad'||/comunidad|administrador de fincas|derrama/.test(t)) return 'Comunidad';
+  if(c==='IBI'||c==='Impuestos'||/\bibi\b|basura|residuos|\btasa|impuesto|tributo|\biae\b/.test(t)) return 'IBI, basura y tasas';
+  if(c==='Seguros'||/seguro|p[oó]liza/.test(t)) return 'Seguros';
+  if(/limpieza|limpiador/.test(t)) return 'Limpieza';
+  if(c==='Mantenimiento'||catF==='D'||/repar|manten|fontaner|electricist|cerrajer|pintur|aver[ií]a|caldera|termo|persiana/.test(t)) return 'Mantenimiento y reparaciones';
+  if(c==='Gestoría'||catF==='I'||/gestor|abogad|asesor|notar|agencia|inmobiliari|anuncio|idealista|fotocasa|comisi[oó]n|certificado/.test(t)) return 'Gestoría, anuncios y servicios';
+  return 'Otros gastos';
+}
+// Qué es cada factura o gasto: int (intereses), cap (capital de la hipoteca), cuo (cuota sin desglosar), inv (inversión),
+// sum (suministro), exp (explotación, con su grupo)
+function v22Clase(x,src){
+  let catF='E'; try{ catF=catFDe(x,src); }catch(e){}
+  const d=src==='gasto'?String(x.desc||''):String(x.con||''), t=v22Txt(x,src);
+  let hip=src==='gasto'?x.cat==='Hipoteca':catF==='F';
+  if(!hip&&src!=='gasto'){ try{ hip=v4EsCuotaHipo({catF, ref:x, con:x.con||''}); }catch(e){} }
+  if(hip){
+    if(/inter[eé]s/i.test(d)) return {t:'int', catF};
+    if(/amortizaci[oó]n|capital|devoluci[oó]n/i.test(t)) return {t:'cap', catF};
+    if(catF==='F'||(src==='gasto'&&x.ded==='si')||/inter[eé]s/i.test(t)) return {t:'int', catF};
+    return {t:'cuo', catF};
+  }
+  if(src==='gasto'&&(x.cat==='Reformas'||V22_INV_DED.includes(x.ded))) return {t:'inv', catF};
+  if(['A','B','C','G','K'].includes(catF)) return {t:'inv', catF};
+  if(catF==='D'){ const p=(D.props||[]).find(q=>q.id==x.propId); if(p){ let pa=''; try{ pa=v4PrimerAlquiler(p); }catch(e){} if(!pa||(x.fecha&&x.fecha<pa)) return {t:'inv', catF}; } }
+  if(src==='gasto'&&x.cat==='Suministros') return {t:'sum', catF};
+  if(src!=='gasto'){ let tp=null; try{ tp=v18Tipo(x); }catch(e){} if(tp) return {t:'sum', catF, tp}; }
+  return {t:'exp', catF, g:v22Grupo(x,src,catF)};
+}
+// Facturas de suministros contadas (con fecha hasta hoy) y las líneas de reparto de cada una (las del reparto automático
+// por factura, o las del reparto manual por su clave). Las del piso entero con suministros a cargo de los arrendatarios: ent.
+function v22Vinculos(hoy){
+  hoy=hoy||v4Hoy(); const porC=new Map(), porK=new Map(), fact=new Map(), usadas=new Set();
+  const push=(m,k,p)=>{ let a=m.get(k); if(!a){ a=[]; m.set(k,a); } a.push(p); };
+  (D.pagos||[]).forEach(p=>{ if(!p||!p.rep||v12EsDep(p)) return; if(p.rep.compraId) push(porC,String(p.rep.compraId),p); else if(p.rep.facKey) push(porK,String(p.rep.facKey),p); });
+  (D.compras||[]).forEach(x=>{
+    if(!x) return; const f=x.fecha||x.fPago; if(!/^\d{4}-\d{2}-\d{2}/.test(f||'')||f>hoy||!(+x.imp)) return;
+    const c=v22Clase(x,'compra'); if(c.t!=='sum') return;
+    let ls=(porC.get(String(x.id))||[]).filter(p=>!usadas.has(p));
+    if(!ls.length&&x.propId&&x.pIni&&x.pFin&&c.tp){ try{ ls=(porK.get(v18Key(x,c.tp))||[]).filter(p=>!usadas.has(p)); }catch(e){} }
+    let ent=false; if(!ls.length&&x.propId&&/^\d{4}-\d{2}-\d{2}$/.test(x.pIni||'')&&/^\d{4}-\d{2}-\d{2}$/.test(x.pFin||'')&&x.pFin>=x.pIni){ try{ ent=!!v18EnteroInq(x); }catch(e){} }
+    ls.forEach(p=>usadas.add(p)); fact.set(String(x.id),{x, ls, ent});
+  });
+  return {fact, usadas};
+}
+// Todas las líneas: {k: mes, f: fecha, pid: piso, t: tipo, g: grupo, imp, txt}
+function v22Lineas(){
+  if(_v22Cache) return _v22Cache;
+  const hoy=v4Hoy(), V=v22Vinculos(hoy), out=[], inqs=new Map((D.inqs||[]).map(i=>[String(i.id),i]));
+  const okF=f=>/^\d{4}-\d{2}-\d{2}/.test(f||'')&&f<=hoy, nomI=i=>i?((i.nom||'')+' '+(i.ap||'')).trim():'';
+  (D.gastos||[]).forEach(g=>{ if(!g) return; const f=g.fecha||g.fPago, imp=+g.imp||0; if(!okF(f)||!imp) return; const c=v22Clase(g,'gasto');
+    out.push({k:f.slice(0,7), f, pid:String(g.propId||''), t:c.t==='sum'?'sumF':c.t, g:c.g||'', imp, txt:(g.cat||'Gasto')+(g.desc?' · '+g.desc:''), src:'gasto', id:g.id}); });
+  (D.compras||[]).forEach(x=>{ if(!x) return; const f=x.fecha||x.fPago, imp=+x.imp||0; if(!okF(f)||!imp) return;
+    const c=v22Clase(x,'compra'), k=f.slice(0,7), pid=String(x.propId||''), txt='Factura · '+(x.con||'')+(x.emp?' · '+x.emp:'');
+    if(c.t!=='sum'){ out.push({k,f,pid,t:c.t,g:c.g||'',imp,txt,src:'compra',id:x.id}); return; }
+    const o=V.fact.get(String(x.id));
+    if(o&&o.ent){ out.push({k,f,pid,t:'sumE',imp,txt:txt+' · la pagan los arrendatarios del piso entero',src:'compra',id:x.id}); return; }
+    out.push({k,f,pid,t:'sumF',imp,txt,src:'compra',id:x.id});
+    (o?o.ls:[]).forEach(p=>{ const v=+p.imp||0; if(!v) return; const pag=p.estado==='pagado';
+      out.push({k,f,pid,t:pag?'sumR':'sumP',imp:v,txt:(p.con||'Suministro')+' · '+nomI(inqs.get(String(p.inqId)))+' · '+(pag?'cobrado':'pendiente de cobro')+(p.mes?' (pago de '+v17MesTxt(p.mes.slice(0,7),true)+')':''),src:'pago',id:p.id}); });
+  });
+  (D.pagos||[]).forEach(p=>{ if(!p||V.usadas.has(p)||!/^\d{4}-\d{2}/.test(p.mes||'')||v12EsDep(p)) return; const imp=+p.imp||0; if(!imp) return;
+    const k=p.mes.slice(0,7), i=inqs.get(String(p.inqId)), pid=String(p.propId||(i&&i.propId)||''), pag=p.estado==='pagado', txt=(p.con||'Cobro')+' · '+nomI(i);
+    if(v22EsSumPago(p)) out.push({k,f:p.fecha||'',pid,t:pag?'sumS':'sumSP',imp,txt,src:'pago',id:p.id});
+    else out.push({k,f:p.fecha||'',pid,t:pag?(v12EsAlq(p)?'ren':'otr'):'pen',imp,txt,src:'pago',id:p.id});
+  });
+  return out;
+}
+// Totales de un conjunto de líneas
+function v22Tot(L,filt){
+  const r={grp:{}, n:0}; V22_T.forEach(t=>r[t]=0);
+  (L||[]).forEach(l=>{ if(filt&&!filt(l)) return; r[l.t]+=l.imp; r.n++; if(l.t==='exp') r.grp[l.g]=(r.grp[l.g]||0)+l.imp; });
+  V22_T.forEach(t=>r[t]=v17R(r[t])); Object.keys(r.grp).forEach(g=>r.grp[g]=v17R(r.grp[g]));
+  r.ing=v17R(r.ren+r.otr);
+  r.sum=v17R(r.sumF-r.sumR-r.sumP-r.sumS);                 // suministros: tu parte
+  r.expl=v17R(r.exp+r.sum); r.fin=v17R(r.int+r.cuo); r.gas=v17R(r.expl+r.fin);
+  r.ebitda=v17R(r.ing-r.expl); r.ben=v17R(r.ing-r.gas); r.adel=r.sumP; r.bol=v17R(r.ben-r.cap-r.inv-r.adel);
+  r.inqPagan=v17R(r.sumR+r.sumP+r.sumS+r.sumE);
+  r.cobrado=v17R(r.ren+r.otr+r.sumR+r.sumS); r.pagado=v17R(r.exp+r.sumF+r.int+r.cuo+r.cap+r.inv);
+  return r;
+}
+// Rejilla mensual para la gráfica (mismas líneas)
+v17Movs=function(){
+  const L=v22Lineas(), byK=new Map(), byPK=new Map(), push=(m,k,l)=>{ let a=m.get(k); if(!a){ a=[]; m.set(k,a); } a.push(l); };
+  L.forEach(l=>{ push(byK,l.k,l); push(byPK,l.pid+'|'+l.k,l); });
+  const ing={},gas={},gasH={},pend={},bol={},ingP={},gasP={},bolP={};
+  byK.forEach((ls,k)=>{ const T=v22Tot(ls); if(T.ing) ing[k]=T.ing; if(T.gas) gas[k]=T.gas; if(T.fin) gasH[k]=T.fin; if(T.pen) pend[k]=T.pen; if(T.bol) bol[k]=T.bol; });
+  byPK.forEach((ls,pk)=>{ const T=v22Tot(ls); ingP[pk]=T.ing; gasP[pk]=T.gas; bolP[pk]=T.bol; });
+  return {ing,gas,gasH,pend,bol,ingP,gasP,bolP};
+};
+// Mismas cuentas en un solo paso por cada pintado del resumen
+rCartera=(function(prev){ return function(){ _v22Cache=null; try{ _v22Cache=v22Lineas(); }catch(e){ console.warn('v22Lineas',e); _v22Cache=null; } try{ return prev.apply(this,arguments); } finally{ _v22Cache=null; } }; })(rCartera);
+
+// ── Periodo (mensual o anual): resultados, por piso y sin piso ──
+v17Fact=function(){
+  const P=v21Per(), T=v22Tot(v22Lineas(),l=>P.en(l.k)), faltan=v17CuotasFaltan(P.y).filter(f=>!P.men||f.mes===P.k);
+  return {anyo:P.y, hasta:P.men?P.k:(P.actual?P.kH:P.y+'-12'), per:P, T, bruta:T.ing, gastos:T.gas, neta:T.ben, bol:T.bol, hip:T.fin, pend:T.pen, faltan};
+};
+v17FactPiso=function(p){ const P=v21Per(), T=v22Tot(v22Lineas(),l=>l.pid===String(p.id)&&P.en(l.k)); return {bruta:T.ing, gastos:T.gas, neta:T.ben, bol:T.bol, T}; };
+v17NotaSinPiso=function(){
+  const P=v21Per(), ids=new Set((D.props||[]).map(p=>String(p.id))), T=v22Tot(v22Lineas(),l=>!ids.has(l.pid)&&P.en(l.k));
+  const g=T.gas, b=T.ing, o=v17R(T.cap+T.inv);
+  if(!(Math.abs(b)>=0.005)&&!(Math.abs(g)>=0.005)&&!(Math.abs(o)>=0.005)) return '';
+  return '<div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.5;">En '+v4Esc(P.txt)+' hay '+[g?eur(g)+' de gastos':'',b?eur(b)+' de cobros':'',o?eur(o)+' de capital o inversiones':''].filter(Boolean).join(' y ')+' sin piso asignado: cuentan en los totales de arriba, pero no en los de cada piso.</div>';
+};
+
+// ── Gráfica: mismos nombres que las cajas ──
+(function(){ const s=id=>V17_SER.find(x=>x.id===id), set=(id,nom,desc)=>{ const x=s(id); if(x){ if(nom) x.nom=nom; if(desc) x.desc=desc; } };
+  set('ing','Ingresos','Cobrado de ese mes (sin fianzas ni garantías ni lo que pagan los inquilinos de suministros)');
+  set('gas','Gastos','Gastos reales del mes: explotación (de los suministros, solo tu parte) e intereses. Sin el capital de la hipoteca ni las inversiones');
+  set('ben','Beneficio','Ingresos − gastos del mes (antes del IRPF)');
+  set('accB','Ingresos del año','Cobrado desde el 1 de enero');
+  set('accN','Beneficio del año','Ingresos − gastos desde el 1 de enero');
+})();
+
+// ── Cajas del resumen ──
+function v22Pct(a,b){ return b>0?(a/b*100).toFixed(0)+' %':''; }
+v21Ctrl=function(P){
+  const on=m=>(P.men?'mensual':'anual')===m;
+  const seg=(m,t)=>'<button type="button" aria-pressed="'+on(m)+'" onclick="v21SetPer(\''+m+'\')" style="border:0;padding:6px 13px;border-radius:6px;font:600 12px \'DM Sans\',sans-serif;cursor:pointer;background:'+(on(m)?'var(--card)':'transparent')+';color:'+(on(m)?'var(--ink)':'var(--ink2)')+';box-shadow:'+(on(m)?'0 1px 3px rgba(0,0,0,.12)':'none')+';">'+t+'</button>';
+  const prev=P.men?v17MesMenos(P.k,1):String(+P.y-1), next=P.men?v17SigMes(P.k):String(+P.y+1), hayNext=P.men?next<=P.kH:next<=P.kH.slice(0,4);
+  const nav='<button type="button" class="btn btn-ghost btn-xs" onclick="v21SetPer(null,\''+prev+'\')" aria-label="Periodo anterior">‹</button><strong style="font-size:13px;min-width:112px;text-align:center;">'+v4Esc(P.men?v17MesTxt(P.k,true).replace(/^./,c=>c.toUpperCase()):P.y)+'</strong>'
+    +'<button type="button" class="btn btn-ghost btn-xs" onclick="v21SetPer(null,\''+next+'\')"'+(hayNext?'':' disabled style="opacity:.35;"')+' aria-label="Periodo siguiente">›</button>'
+    +(P.actual?'':'<button type="button" class="btn btn-ghost btn-xs" onclick="v21SetPer(null,\''+(P.men?P.kH:P.kH.slice(0,4))+'\')">Hoy</button>');
+  return '<div id="v22-ctrl" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px 12px;flex-wrap:wrap;margin:4px 0 -2px;">'
+    +'<div style="font:600 10px \'DM Mono\',monospace;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);">Resultados · '+v4Esc(P.txt)+'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><div role="group" aria-label="Ver por meses o por años" style="display:inline-flex;background:var(--bg2,rgba(0,0,0,.05));border-radius:8px;padding:3px;gap:2px;">'+seg('mensual','Mensual')+seg('anual','Anual')+'</div><div style="display:flex;align-items:center;gap:4px;">'+nav+'</div>'
+    +'<button type="button" id="v22-ver" class="btn btn-ghost btn-xs" onclick="v22VerDesglose()" style="font-weight:600;">🔎 Ver desglose</button></div></div>';
+};
+v17Cajas=function(o){
+  const lq=o.lq||{on:false}, F=v17Fact(), P=F.per, T=F.T, faltan=F.faltan.length;
+  const sub=(t,st)=>'<div class="cb-sub"'+(st?' style="'+st+'"':'')+'>'+t+'</div>', wn='white-space:normal;line-height:1.35;', mu=wn+'color:var(--ink3);font-size:10px;margin-top:3px;';
+  const ltv=o.patBruto>0?o.deudaTotal/o.patBruto*100:0, cuando=P.men?'en '+v17MesTxt(P.k,true):'en '+P.y, D_="v22VerDesglose()";
+  const avisoCuotas=faltan?sub('⚠️ falta'+(faltan===1?'':'n')+' '+faltan+' cuota'+(faltan===1?'':'s')+' de hipoteca por registrar',wn+'color:var(--rd);'):'';
+  const noCuentan=[T.inqPagan?eur(T.inqPagan)+' de suministros que pagan los inquilinos':'',T.cap?eur(T.cap)+' de capital de la hipoteca':'',T.inv?eur(T.inv)+' de inversiones':''].filter(Boolean);
+  const bolsillo=[T.cap?'− '+eur(T.cap)+' de capital de hipoteca':'',T.inv?'− '+eur(T.inv)+' de inversiones':'',T.adel?'− '+eur(T.adel)+' de suministros por cobrar':''].filter(Boolean);
+  const flujo='flujo previsto '+eur(o.ebitdaMes)+'/mes'+(o.rentB!==null&&o.rentB!==undefined&&isFinite(o.rentB)?' · rent. bruta '+o.rentB.toFixed(1)+'%':'');
+  const tFlujo='Flujo de caja previsto al mes con los contratos de hoy: '+eur(o.ingMes)+' de ingresos − '+eur(o.gasMes)+' de gastos (media del último año) − '+eur(o.cuoMes)+' de cuotas de los préstamos.';
+  return '<div class="cartera-grid">'
+    // Fila 1 · Hoy
+    +v17Caja('Patrimonio bruto',eur(o.patBruto+(lq.on?lq.saldo:0)),lq.on?v9SubBruto(o.patBruto,lq):sub('valor de los inmuebles'))
+    +v17Caja('Patrimonio neto',eur(o.patNeto+(lq.on?lq.neta:0)),sub('−'+eur(o.deudaTotal)+' hipotecas (LTV '+(o.patBruto>0?ltv.toFixed(1):'0')+'%)'+v9SubNeto(lq),wn),{vc:'var(--gn)'})
+    +(lq.on?v17Caja('Liquidez en cuentas',eur(lq.saldo),sub('neta '+eur(lq.neta)+' (sin fianzas ni reservas)'),{click:"v9Ir('ctasbanc')"})
+           :v17Caja('Liquidez en cuentas','—',sub('pon el saldo de tus cuentas'),{click:"v9Ir('ctasbanc')",vc:'var(--ink3)'}))
+    +(o.roce!==null&&o.roce!==undefined&&isFinite(o.roce)
+      ?v17Caja('ROCE cartera',o.roce.toFixed(1)+'%',sub(flujo,'color:rgba(255,255,255,.8);'+wn),{bg:'background:linear-gradient(135deg,var(--acc),#7c3aed);',lc:'rgba(255,255,255,.75)',vc:'#fff',title:'ROCE = flujo de caja previsto × 12 ÷ dinero propio invertido. '+tFlujo})
+      :v17Caja('Flujo previsto',eur(o.ebitdaMes)+'<span class="cb-u">/mes</span>',sub('con los contratos de hoy',wn),{vc:o.ebitdaMes>=0?'var(--gn)':'var(--rd)',title:tFlujo}))
+    // Fila 2 · Resultados del mes o del año
+    +v21Ctrl(P)
+    +v17Caja('Ingresos',eur(T.ing),sub('cobrado '+cuando+(T.pen>0?' · '+eur(T.pen)+' pendiente de cobro':''),wn),
+      {vc:'var(--gn)',click:D_,title:'Todo lo cobrado '+cuando+' en el mes al que corresponde: rentas '+eur(T.ren,2)+(T.otr?' y otros cobros '+eur(T.otr,2):'')+'. No cuentan las fianzas ni las garantías (depósitos) ni lo que pagan los inquilinos de suministros (te devuelven facturas). Pulsa para ver el desglose.'})
+    +v17Caja('Gastos',eur(T.gas),sub('explotación '+eur(T.expl)+' · intereses '+eur(T.fin),wn)+(noCuentan.length?sub('no cuentan: '+noCuentan.join(' · '),mu):'')+avisoCuotas,
+      {vc:'var(--rd)',click:D_,title:'Gastos reales '+cuando+' hasta hoy: explotación (comunidad, IBI, seguros, mantenimiento… y de los suministros solo tu parte) e intereses de la hipoteca. No son gasto lo que pagan los inquilinos, el capital de la hipoteca (pasa a ser patrimonio) ni las inversiones.'+(faltan?' Faltan cuotas de hipoteca por registrar: '+F.faltan.map(f=>f.nom+' '+v17MesTxt(f.mes,true)).join(', ')+'.':'')+' Pulsa para ver el desglose.'})
+    +v17Caja('Beneficio',eur(T.ben),sub('ingresos − gastos · antes del IRPF'+(T.ing>0&&T.ben>0?' · '+v22Pct(T.ben,T.ing)+' de lo cobrado':''),wn),
+      {vc:T.ben>=0?'var(--gn)':'var(--rd)',click:D_,title:'Lo que ganas '+cuando+': '+eur(T.ing,2)+' de ingresos − '+eur(T.gas,2)+' de gastos. Antes del IRPF. Pulsa para ver el desglose.'})
+    +v17Caja('En el bolsillo',eur(T.bol),sub(bolsillo.length?eur(T.ben)+' de beneficio '+bolsillo.join(' '):'= beneficio: sin capital de hipoteca ni inversiones',wn)+(T.cap?sub('🏠 +'+eur(T.cap)+' de patrimonio',wn+'color:var(--gn);'):'')+avisoCuotas,
+      {vc:T.bol>=0?'var(--gn)':'var(--rd)',click:D_,title:'El dinero que de verdad te queda '+cuando+': todo lo cobrado ('+eur(T.cobrado,2)+') − todo lo pagado ('+eur(T.pagado,2)+'). Es el beneficio menos el capital de la hipoteca, las inversiones y los suministros que adelantas. Pulsa para ver el desglose.'})
+    +'</div>';
+};
+
+// ── Desglose ──
+function v22Fmt(v){ v=v17R(v); return (v<0?'−':'')+eur(Math.abs(v),2); }
+function v22NotaSum(T){
+  const p=[]; if(T.sumF) p.push('facturas '+eur(T.sumF,2)); const rep=v17R(T.sumR+T.sumP);
+  if(rep) p.push('− lo que pagan los inquilinos '+eur(rep,2)+(T.sumP?' ('+eur(T.sumR,2)+' cobrado, '+eur(T.sumP,2)+' pendiente)':''));
+  if(T.sumS) p.push('− suministros cobrados sin su factura '+eur(T.sumS,2));
+  return p.join(' ');
+}
+function v22Cascada(T){
+  const R=[], row=(c,l,v,sg,n)=>R.push({c,l,v,sg,n});
+  row('h','Ingresos',T.ing,'+');
+  row('d','Rentas',T.ren); if(T.otr) row('d','Otros cobros (penalizaciones, servicios…)',T.otr);
+  row('h','Gastos de explotación',T.expl,'-');
+  const gs=V22_GRUPOS.concat(Object.keys(T.grp).filter(g=>!V22_GRUPOS.includes(g)));
+  gs.forEach(g=>{ const v=g===V22_GRUPOS[0]?T.sum:(T.grp[g]||0); if(Math.abs(v)>=0.005||(g===V22_GRUPOS[0]&&(T.sumF||T.sumS))) row('d',g,v,null,g===V22_GRUPOS[0]?v22NotaSum(T):''); });
+  row('s','Resultado de explotación (EBITDA)',T.ebitda);
+  const hayHip=(D.hipotecas||[]).length>0;
+  if(T.int||hayHip) row('h','Intereses de la hipoteca',T.int,'-');
+  if(T.cuo) row('h','Cuotas de hipoteca sin desglosar',T.cuo,'-','⚠️ Regístralas en Hipotecas con su recibo para separar intereses (gasto) y capital (patrimonio). Mientras, cuentan enteras como gasto.');
+  row('t','Beneficio (antes del IRPF)',T.ben);
+  if(T.cap||hayHip) row('h','Capital de la hipoteca',T.cap,'-','No es un gasto: tu deuda baja y tu patrimonio sube lo mismo. Pero el dinero sale de la cuenta.');
+  if(T.inv) row('h','Inversiones',T.inv,'-','Mejoras, muebles y electrodomésticos, gastos de compra y del préstamo. No son gasto del mes (se amortizan en Fiscal), pero el dinero sale.');
+  if(T.adel) row('h','Suministros que adelantas',T.adel,'-','Repartidos a los inquilinos y aún sin cobrar. Cuando los cobres, sube lo que queda en el bolsillo.');
+  row('t','En el bolsillo',T.bol);
+  return R;
+}
+const V22_ET={ren:'Renta',otr:'Otro cobro',pen:'Pendiente de cobro',sumF:'Suministro (factura)',sumR:'Lo paga el inquilino',sumP:'Lo pagará el inquilino',sumS:'Suministro cobrado',sumSP:'Suministro sin cobrar',sumE:'Pagan los arrendatarios',int:'Intereses',cuo:'Cuota sin desglosar',cap:'Capital (patrimonio)',inv:'Inversión'};
+// Signo de cada línea en «lo que te queda»: + entra, − sale, 0 no cuenta
+const V22_SG={ren:1,otr:1,pen:0,sumF:-1,sumR:1,sumP:0,sumS:1,sumSP:0,sumE:0,exp:-1,int:-1,cuo:-1,cap:-1,inv:-1};
+function v22Nav(d){ const P=v21Per(); let v;
+  if(d==='hoy') v=P.men?P.kH:P.kH.slice(0,4); else if(P.men) v=d<0?v17MesMenos(P.k,1):v17SigMes(P.k); else v=String(+P.y+d);
+  if(P.men?v>P.kH:v>P.kH.slice(0,4)) return; v21SetPer(null,v); v22VerDesglose(); }
+function v22Modo(m){ v21SetPer(m); v22VerDesglose(); }
+function v22VerDesglose(){
+  _v22Cache=null; const L=v22Lineas(); _v22Cache=L;
+  try{
+    const P=v21Per(), en=l=>P.en(l.k), T=v22Tot(L,en), faltan=v17CuotasFaltan(P.y).filter(f=>!P.men||f.mes===P.k), cuando=P.men?v17MesTxt(P.k,true):P.y;
+    const ctl='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 12px;">'
+      +'<div style="display:inline-flex;background:var(--bg2,rgba(0,0,0,.05));border-radius:8px;padding:3px;gap:2px;">'+[['mensual','Mensual'],['anual','Anual']].map(([m,t])=>{ const on=(P.men?'mensual':'anual')===m; return '<button type="button" onclick="v22Modo(\''+m+'\')" style="border:0;padding:5px 12px;border-radius:6px;font:600 12px \'DM Sans\',sans-serif;cursor:pointer;background:'+(on?'var(--card)':'transparent')+';color:'+(on?'var(--ink)':'var(--ink2)')+';box-shadow:'+(on?'0 1px 3px rgba(0,0,0,.12)':'none')+';">'+t+'</button>'; }).join('')+'</div>'
+      +'<button type="button" class="btn btn-ghost btn-xs" onclick="v22Nav(-1)" aria-label="Periodo anterior">‹</button><strong style="font-size:13px;min-width:110px;text-align:center;">'+v4Esc(String(cuando).replace(/^./,c=>c.toUpperCase()))+'</strong>'
+      +'<button type="button" class="btn btn-ghost btn-xs" onclick="v22Nav(1)"'+((P.men?v17SigMes(P.k)<=P.kH:String(+P.y+1)<=P.kH.slice(0,4))?'':' disabled style="opacity:.35;"')+' aria-label="Periodo siguiente">›</button>'
+      +(P.actual?'':'<button type="button" class="btn btn-ghost btn-xs" onclick="v22Nav(\'hoy\')">Hoy</button>')+'</div>';
+    // Cascada
+    const fil=v22Cascada(T).map(r=>{
+      const v=r.sg==='-'?-r.v:r.v, st=r.c==='t'?'font-weight:700;font-size:14.5px;border-top:2px solid var(--ink2);background:var(--bg);':r.c==='s'?'font-weight:600;font-size:13.5px;border-top:1px solid var(--line2);':r.c==='h'?'font-weight:600;font-size:13.5px;border-top:1px solid var(--line);':'font-size:12px;color:var(--ink2);';
+      const col=r.c==='t'||r.c==='s'?(r.v>=0?'var(--gn)':'var(--rd)'):r.c==='d'?'var(--ink2)':(v>0?'var(--gn)':v<0?'var(--rd)':'var(--ink2)');
+      return '<div class="v22-f v22-'+r.c+'" style="display:flex;align-items:flex-start;gap:10px;padding:7px 8px 7px '+(r.c==='d'?'24px':'8px')+';'+st+'">'
+        +'<div style="flex:1;min-width:0;">'+(r.c==='h'&&r.sg==='-'?'− ':r.c==='s'||r.c==='t'?'= ':'')+v4Esc(r.l)+(r.n?'<div style="font-size:10.5px;font-weight:400;color:var(--ink3);line-height:1.45;margin-top:2px;">'+v4Esc(r.n)+'</div>':'')+'</div>'
+        +'<div class="mono" style="flex:none;white-space:nowrap;text-align:right;color:'+col+';">'+v22Fmt(r.c==='d'?r.v:v)+'</div></div>';
+    }).join('');
+    const cuadre='<div style="font-size:11px;color:var(--ink3);margin:6px 2px 0;line-height:1.5;">Comprobación: todo lo cobrado '+v22Fmt(T.cobrado)+' − todo lo pagado '+v22Fmt(T.pagado)+' = <strong style="color:var(--ink);">'+v22Fmt(v17R(T.cobrado-T.pagado))+'</strong> en el bolsillo'+(Math.abs(v17R(T.cobrado-T.pagado)-T.bol)<0.015?' ✓':'')+'</div>';
+    // Lo que no cuenta
+    const no=[];
+    if(T.inqPagan) no.push('💡 <strong>Suministros que pagan los inquilinos: '+eur(T.inqPagan,2)+'</strong> — no son ingreso ni gasto tuyo'+(T.sumR+T.sumP?' ('+eur(v17R(T.sumR+T.sumP),2)+' repartido de las facturas'+(T.sumP?', '+eur(T.sumP,2)+' aún sin cobrar':'')+')':'')+(T.sumS?' · '+eur(T.sumS,2)+' cobrado sin su factura en Facturas':'')+(T.sumE?' · '+eur(T.sumE,2)+' de facturas del piso entero que pagan los arrendatarios':'')+'.');
+    if(T.cap) no.push('🏠 <strong>Patrimonio ganado: '+eur(T.cap,2)+'</strong> de capital de hipoteca devuelto: tu deuda baja y tu patrimonio neto sube lo mismo.');
+    if(T.pen) no.push('⏳ <strong>Pendiente de cobro: '+eur(T.pen,2)+'</strong> de rentas y otros cobros de '+v4Esc(cuando)+'. Cuando lo marques como cobrado, sumará aquí en su mes.');
+    if(T.sumSP) no.push('⏳ '+eur(T.sumSP,2)+' de suministros pendientes de cobrar sin su factura en Facturas.');
+    no.push('🔒 Las fianzas y garantías no cuentan: son depósitos que se devuelven.');
+    no.push('🧾 El beneficio es antes del IRPF. La amortización fiscal del piso y de los muebles no es dinero que salga: se calcula en Fiscal.');
+    if(faltan.length) no.push('<span style="color:var(--rd);">⚠️ Faltan cuotas de hipoteca por registrar ('+faltan.map(f=>v4Esc(f.nom)+' '+v17MesTxt(f.mes,true)).join(', ')+'): hasta que las registres, faltan sus intereses en los gastos y su capital en el bolsillo.</span>');
+    // Por piso
+    const props=D.props||[], ids=new Set(props.map(p=>String(p.id))), cols=['ing','gas','ben','cap','inv','bol'];
+    const fila=(nom,X,b)=>'<tr'+(b?' style="font-weight:700;border-top:2px solid var(--line2);"':'')+'><td style="white-space:nowrap;">'+nom+'</td>'+cols.map(c=>{ const v=c==='cap'||c==='inv'||c==='gas'?-X[c]:X[c]; return '<td class="n mono" style="color:'+(c==='ing'?'var(--gn)':c==='gas'?'var(--rd)':(c==='ben'||c==='bol')?(v>=0?'var(--gn)':'var(--rd)'):'var(--ink2)')+';">'+((c==='cap'||c==='inv')&&!X[c]?'—':v22Fmt(v))+'</td>'; }).join('')+'</tr>';
+    let filasP=props.map(p=>fila(v4Esc(p.nom||'Piso'),v22Tot(L,l=>l.pid===String(p.id)&&en(l))));
+    const Ts=v22Tot(L,l=>!ids.has(l.pid)&&en(l)); if(Ts.n) filasP.push(fila('<span style="color:var(--ink3);">Sin piso</span>',Ts));
+    filasP.push(fila('Total',T,true));
+    const tablaP='<div class="tbl-wrap"><table><thead><tr><th>Piso</th><th class="n">Ingresos</th><th class="n">Gastos</th><th class="n">Beneficio</th><th class="n">Capital hip.</th><th class="n">Inversiones</th><th class="n">En el bolsillo</th></tr></thead><tbody>'+filasP.join('')+'</tbody></table></div>';
+    // Movimientos
+    const nomP=pid=>{ const p=props.find(x=>String(x.id)===pid); return p?p.nom||'Piso':'—'; };
+    const ms=L.filter(en).sort((a,b)=>(a.f||a.k+'-01').localeCompare(b.f||b.k+'-01')||a.t.localeCompare(b.t));
+    const filasM=ms.map(l=>{ const s=V22_SG[l.t], v=s*l.imp;
+      return '<tr'+(s?'':' style="color:var(--ink3);"')+'><td style="white-space:nowrap;">'+(l.f?v4F2(l.f):v17MesTxt(l.k,false))+'</td><td>'+v4Esc(l.txt)+'</td><td style="white-space:nowrap;">'+v4Esc(nomP(l.pid))+'</td><td style="white-space:nowrap;">'+v4Esc(l.t==='exp'?l.g:V22_ET[l.t]||l.t)+'</td><td class="n mono" style="white-space:nowrap;color:'+(s?(v>=0?'var(--gn)':'var(--rd)'):'var(--ink3)')+';">'+(s?(v>=0?'+':'−')+eur(Math.abs(l.imp),2):'('+eur(l.imp,2)+')')+'</td></tr>'; }).join('');
+    const tablaM='<details style="margin-top:14px;"'+(ms.length<=25?' open':'')+'><summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink2);">📋 Cada cobro y cada gasto ('+ms.length+')</summary>'
+      +'<div class="tbl-wrap" style="max-height:420px;overflow:auto;margin-top:8px;"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Piso</th><th>Cuenta como</th><th class="n">Importe</th></tr></thead><tbody>'+(filasM||'<tr><td colspan="5" style="color:var(--ink3);">Sin movimientos en este periodo.</td></tr>')+'</tbody></table></div>'
+      +'<div style="font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.5;">Entre paréntesis y en gris, lo que no suma ni resta (pendiente, o lo que pagan los inquilinos y aún no han pagado). Los cobros van en el mes al que corresponden; las facturas y gastos, por su fecha.</div></details>';
+    const h='<div style="font:600 10px \'DM Mono\',monospace;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin:16px 0 6px;">';
+    v4Modal('📊 Resultados · '+v4Esc(P.txt),ctl
+      +'<div id="v22-cascada" style="border-bottom:1px solid var(--line);">'+fil+'</div>'+cuadre
+      +h+'Lo que no cuenta como ingreso ni como gasto</div><div style="font-size:11.5px;line-height:1.6;color:var(--ink2);">'+no.map(x=>'<div style="margin:3px 0;">'+x+'</div>').join('')+'</div>'
+      +h+'Por piso</div>'+tablaP+tablaM,'');
+  } finally { _v22Cache=null; }
+}
+
+// ── Tabla de pisos y su explicación: «flujo previsto» en lugar de «EBITDA» (resta las cuotas: no es EBITDA) ──
+v4HtmlDetalleRoce=(function(prev){ return function(){ return String(prev.apply(this,arguments)).replace(/el EBITDA mensual/g,'el flujo previsto al mes').replace(/EBITDA mensual/g,'Flujo previsto al mes').replace(/EBITDA/g,'flujo previsto'); }; })(v4HtmlDetalleRoce);
 
 </script>
 </body>
