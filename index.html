@@ -18574,11 +18574,10 @@ function v20Pisos(){
     const gasto=(x,src)=>{
       if(!x) return; const f=x.fecha||x.fPago, imp=+x.imp||0; if(!/^\d{4}-\d{2}-\d{2}/.test(f||'')||f>hoy||!imp) return;
       const pid=x.propId&&pById.has(String(x.propId))?String(x.propId):'';
-      let tit='';
-      if(src==='gasto'){ const h=x.cat==='Hipoteca'?(R.hipotecas||[]).find(h=>h.propId==x.propId):null; tit=(h&&h.ownerId)||x.titular||(pid?dis(pid,f):''); }
-      else tit=x.titular||x.ownerId||(pid?dis(pid,f):'');
+      // v4.21: el mismo titular que el Dashboard (la hipoteca, de quien la paga según Hipotecas)
+      const c=v22Clase(x,src), tit=v22Titular(x,src,pid,f,c,dis);
       if(String(tit)!==yo) return;
-      const c=v22Clase(x,src), tipo=['int','cap','cuo'].includes(c.t)?'hip':c.t==='inv'?'inv':'opex', k=f.slice(0,7), cp=pid||'__gen';
+      const tipo=['int','cap','cuo'].includes(c.t)?'hip':c.t==='inv'?'inv':'opex', k=f.slice(0,7), cp=pid||'__gen';
       let net=imp, nota='';
       if(src==='compra'&&c.t==='sum'){ const o=VV.fact.get(String(x.id)); if(o&&o.ent) return;
         const cob=o?o.ls.filter(p=>p.estado==='pagado').reduce((s,p)=>s+(+p.imp||0),0):0; if(cob){ net=imp-cob; nota=' (factura '+v4E2(imp)+' − '+v4E2(cob)+' que te pagan los inquilinos)'; } }
@@ -19678,26 +19677,49 @@ function v22Vinculos(hoy){
   });
   return {fact, usadas};
 }
-// Todas las líneas: {k: mes, f: fecha, pid: piso, t: tipo, g: grupo, imp, txt}
+// v4.21 · De quién es cada cosa (para filtrar por propietario). Mismo criterio que Finanzas personales:
+// · cobros: de quien disfruta el piso (pleno dominio o usufructo) cada día; si en un mes cambia (p. ej. empieza un usufructo)
+//   se reparten por días (art. 474 CC: los frutos civiles se entienden percibidos día por día);
+// · hipoteca (intereses, capital o cuota): de quien la paga = el titular de esa hipoteca en Hipotecas;
+// · demás facturas y gastos: el titular indicado en el gasto o, si no hay, quien disfruta el piso ese día;
+// · lo que el inquilino paga de una factura: de quien pagó esa factura.
+function v22Dis(pid,iso,pById){ const p=pById?pById.get(String(pid)):(D.props||[]).find(x=>String(x.id)===String(pid)); try{ return String(titularidadDia(pid,iso).disfrute||(p&&p.ownerId)||''); }catch(e){ return String((p&&p.ownerId)||''); } }
+function v22HipDe(x){ const m=/\[cuota:([^:\]]+):/.exec(String(x&&x.notas||'')); let h=m?(D.hipotecas||[]).find(q=>String(q.id)===m[1]):null; if(!h&&x&&x.propId) h=(D.hipotecas||[]).find(q=>q.propId==x.propId); return h||null; }
+function v22Titular(x,src,pid,f,c,dis){
+  const esHip=(src==='gasto'&&x.cat==='Hipoteca')||(src!=='gasto'&&c&&['int','cap','cuo'].includes(c.t)&&/hipotec/i.test(v22Txt(x,src)));
+  if(esHip){ const h=v22HipDe(x), expl=src!=='gasto'&&x.titular&&!x.titularAuto; if(h&&h.ownerId&&!expl) return String(h.ownerId); }
+  const t=src==='gasto'?x.titular:(x.titular||x.ownerId); if(t) return String(t);
+  return pid?dis(pid,f):'';
+}
+// Todas las líneas: {k: mes, f: fecha, pid: piso, own: propietario, t: tipo, g: grupo, imp, txt}
 function v22Lineas(){
   if(_v22Cache) return _v22Cache;
-  const hoy=v4Hoy(), V=v22Vinculos(hoy), out=[], inqs=new Map((D.inqs||[]).map(i=>[String(i.id),i]));
+  const hoy=v4Hoy(), V=v22Vinculos(hoy), out=[], inqs=new Map((D.inqs||[]).map(i=>[String(i.id),i])), pById=new Map((D.props||[]).map(p=>[String(p.id),p]));
   const okF=f=>/^\d{4}-\d{2}-\d{2}/.test(f||'')&&f<=hoy, nomI=i=>i?((i.nom||'')+' '+(i.ap||'')).trim():'';
+  const dis=(pid,iso)=>v22Dis(pid,iso,pById), pidOk=pid=>pid&&pById.has(String(pid))?String(pid):'';
+  // Quién disfruta cada piso cada día del mes
+  const rc=new Map(), reparto=(pid,k)=>{ const ck=pid+'|'+k; let r=rc.get(ck); if(r) return r;
+    const y=+k.slice(0,4), m=+k.slice(5,7), dm=new Date(y,m,0).getDate(), dd=new Map();
+    for(let d=1;d<=dm;d++){ const o=dis(pid,k+'-'+String(d).padStart(2,'0')); dd.set(o,(dd.get(o)||0)+1); }
+    r={dm, parts:[...dd.entries()].sort((a,b)=>a[0].localeCompare(b[0]))}; rc.set(ck,r); return r; };
+  const cobro=o=>{ const pid=pidOk(o.pid); if(!pid){ o.own=''; out.push(o); return; }
+    const R=reparto(pid,o.k); if(R.parts.length===1){ o.own=R.parts[0][0]; out.push(o); return; }
+    let acc=0; R.parts.forEach(([own,dd],i)=>{ const v=i===R.parts.length-1?o.imp-acc:o.imp*dd/R.dm; acc+=v; out.push(Object.assign({},o,{own,imp:v,dias:dd,dm:R.dm,total:o.imp})); }); };
   (D.gastos||[]).forEach(g=>{ if(!g) return; const f=g.fecha||g.fPago, imp=+g.imp||0; if(!okF(f)||!imp) return; const c=v22Clase(g,'gasto');
-    out.push({k:f.slice(0,7), f, pid:String(g.propId||''), t:c.t==='sum'?'sumF':c.t, g:c.g||'', imp, txt:(g.cat||'Gasto')+(g.desc?' · '+g.desc:''), src:'gasto', id:g.id}); });
+    out.push({k:f.slice(0,7), f, pid:String(g.propId||''), own:v22Titular(g,'gasto',pidOk(g.propId),f,c,dis), t:c.t==='sum'?'sumF':c.t, g:c.g||'', imp, txt:(g.cat||'Gasto')+(g.desc?' · '+g.desc:''), src:'gasto', id:g.id}); });
   (D.compras||[]).forEach(x=>{ if(!x) return; const f=x.fecha||x.fPago, imp=+x.imp||0; if(!okF(f)||!imp) return;
-    const c=v22Clase(x,'compra'), k=f.slice(0,7), pid=String(x.propId||''), txt='Factura · '+(x.con||'')+(x.emp?' · '+x.emp:'');
-    if(c.t!=='sum'){ out.push({k,f,pid,t:c.t,g:c.g||'',imp,txt,src:'compra',id:x.id}); return; }
+    const c=v22Clase(x,'compra'), k=f.slice(0,7), pid=String(x.propId||''), own=v22Titular(x,'compra',pidOk(x.propId),f,c,dis), txt='Factura · '+(x.con||'')+(x.emp?' · '+x.emp:'');
+    if(c.t!=='sum'){ out.push({k,f,pid,own,t:c.t,g:c.g||'',imp,txt,src:'compra',id:x.id}); return; }
     const o=V.fact.get(String(x.id));
-    if(o&&o.ent){ out.push({k,f,pid,t:'sumE',imp,txt:txt+' · la pagan los arrendatarios del piso entero',src:'compra',id:x.id}); return; }
-    out.push({k,f,pid,t:'sumF',imp,txt,src:'compra',id:x.id});
+    if(o&&o.ent){ out.push({k,f,pid,own,t:'sumE',imp,txt:txt+' · la pagan los arrendatarios del piso entero',src:'compra',id:x.id}); return; }
+    out.push({k,f,pid,own,t:'sumF',imp,txt,src:'compra',id:x.id});
     (o?o.ls:[]).forEach(p=>{ const v=+p.imp||0; if(!v) return; const pag=p.estado==='pagado';
-      out.push({k,f,pid,t:pag?'sumR':'sumP',imp:v,txt:(p.con||'Suministro')+' · '+nomI(inqs.get(String(p.inqId)))+' · '+(pag?'cobrado':'pendiente de cobro')+(p.mes?' (pago de '+v17MesTxt(p.mes.slice(0,7),true)+')':''),src:'pago',id:p.id}); });
+      out.push({k,f,pid,own,t:pag?'sumR':'sumP',imp:v,txt:(p.con||'Suministro')+' · '+nomI(inqs.get(String(p.inqId)))+' · '+(pag?'cobrado':'pendiente de cobro')+(p.mes?' (pago de '+v17MesTxt(p.mes.slice(0,7),true)+')':''),src:'pago',id:p.id}); });
   });
   (D.pagos||[]).forEach(p=>{ if(!p||V.usadas.has(p)||!/^\d{4}-\d{2}/.test(p.mes||'')||v12EsDep(p)) return; const imp=+p.imp||0; if(!imp) return;
     const k=p.mes.slice(0,7), i=inqs.get(String(p.inqId)), pid=String(p.propId||(i&&i.propId)||''), pag=p.estado==='pagado', txt=(p.con||'Cobro')+' · '+nomI(i);
-    if(v22EsSumPago(p)) out.push({k,f:p.fecha||'',pid,t:pag?'sumS':'sumSP',imp,txt,src:'pago',id:p.id});
-    else out.push({k,f:p.fecha||'',pid,t:pag?(v12EsAlq(p)?'ren':'otr'):'pen',imp,txt,src:'pago',id:p.id});
+    if(v22EsSumPago(p)) cobro({k,f:p.fecha||'',pid,t:pag?'sumS':'sumSP',imp,txt,src:'pago',id:p.id});
+    else cobro({k,f:p.fecha||'',pid,t:pag?(v12EsAlq(p)?'ren':'otr'):'pen',imp,txt,src:'pago',id:p.id});
   });
   return out;
 }
@@ -19829,12 +19851,12 @@ function v22Modo(m){ v21SetPer(m); v22VerDesglose(); }
 function v22VerDesglose(){
   _v22Cache=null; const L=v22Lineas(); _v22Cache=L;
   try{
-    const P=v21Per(), en=l=>P.en(l.k), T=v22Tot(L,en), faltan=v17CuotasFaltan(P.y).filter(f=>!P.men||f.mes===P.k), cuando=P.men?v17MesTxt(P.k,true):P.y;
+    const P=v21Per(), FL=v23Fil(), en=l=>P.en(l.k)&&v23Pasa(l,FL), T=v22Tot(L,en), faltan=v23Faltan(P,FL), cuando=P.men?v17MesTxt(P.k,true):P.y, tf=v23TxtFil(FL);
     const ctl='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 12px;">'
       +'<div style="display:inline-flex;background:var(--bg2,rgba(0,0,0,.05));border-radius:8px;padding:3px;gap:2px;">'+[['mensual','Mensual'],['anual','Anual']].map(([m,t])=>{ const on=(P.men?'mensual':'anual')===m; return '<button type="button" onclick="v22Modo(\''+m+'\')" style="border:0;padding:5px 12px;border-radius:6px;font:600 12px \'DM Sans\',sans-serif;cursor:pointer;background:'+(on?'var(--card)':'transparent')+';color:'+(on?'var(--ink)':'var(--ink2)')+';box-shadow:'+(on?'0 1px 3px rgba(0,0,0,.12)':'none')+';">'+t+'</button>'; }).join('')+'</div>'
       +'<button type="button" class="btn btn-ghost btn-xs" onclick="v22Nav(-1)" aria-label="Periodo anterior">‹</button><strong style="font-size:13px;min-width:110px;text-align:center;">'+v4Esc(String(cuando).replace(/^./,c=>c.toUpperCase()))+'</strong>'
       +'<button type="button" class="btn btn-ghost btn-xs" onclick="v22Nav(1)"'+((P.men?v17SigMes(P.k)<=P.kH:String(+P.y+1)<=P.kH.slice(0,4))?'':' disabled style="opacity:.35;"')+' aria-label="Periodo siguiente">›</button>'
-      +(P.actual?'':'<button type="button" class="btn btn-ghost btn-xs" onclick="v22Nav(\'hoy\')">Hoy</button>')+'</div>';
+      +(P.actual?'':'<button type="button" class="btn btn-ghost btn-xs" onclick="v22Nav(\'hoy\')">Hoy</button>')+v23Selects(FL,'v22VerDesglose()')+'</div>';
     // Cascada
     const fil=v22Cascada(T).map(r=>{
       const v=r.sg==='-'?-r.v:r.v, st=r.c==='t'?'font-weight:700;font-size:14.5px;border-top:2px solid var(--ink2);background:var(--bg);':r.c==='s'?'font-weight:600;font-size:13.5px;border-top:1px solid var(--line2);':r.c==='h'?'font-weight:600;font-size:13.5px;border-top:1px solid var(--line);':'font-size:12px;color:var(--ink2);';
@@ -19850,34 +19872,145 @@ function v22VerDesglose(){
     if(T.cap) no.push('🏠 <strong>Patrimonio ganado: '+eur(T.cap,2)+'</strong> de capital de hipoteca devuelto: tu deuda baja y tu patrimonio neto sube lo mismo.');
     if(T.pen) no.push('⏳ <strong>Pendiente de cobro: '+eur(T.pen,2)+'</strong> de rentas y otros cobros de '+v4Esc(cuando)+'. Cuando lo marques como cobrado, sumará aquí en su mes.');
     if(T.sumSP) no.push('⏳ '+eur(T.sumSP,2)+' de suministros pendientes de cobrar sin su factura en Facturas.');
+    v23Notas(L,P,FL).forEach(x=>no.push(x));
     no.push('🔒 Las fianzas y garantías no cuentan: son depósitos que se devuelven.');
     no.push('🧾 El beneficio es antes del IRPF. La amortización fiscal del piso y de los muebles no es dinero que salga: se calcula en Fiscal.');
     if(faltan.length) no.push('<span style="color:var(--rd);">⚠️ Faltan cuotas de hipoteca por registrar ('+faltan.map(f=>v4Esc(f.nom)+' '+v17MesTxt(f.mes,true)).join(', ')+'): hasta que las registres, faltan sus intereses en los gastos y su capital en el bolsillo.</span>');
     // Por piso
     const props=D.props||[], ids=new Set(props.map(p=>String(p.id))), cols=['ing','gas','ben','cap','inv','bol'];
     const fila=(nom,X,b)=>'<tr'+(b?' style="font-weight:700;border-top:2px solid var(--line2);"':'')+'><td style="white-space:nowrap;">'+nom+'</td>'+cols.map(c=>{ const v=c==='cap'||c==='inv'||c==='gas'?-X[c]:X[c]; return '<td class="n mono" style="color:'+(c==='ing'?'var(--gn)':c==='gas'?'var(--rd)':(c==='ben'||c==='bol')?(v>=0?'var(--gn)':'var(--rd)'):'var(--ink2)')+';">'+((c==='cap'||c==='inv')&&!X[c]?'—':v22Fmt(v))+'</td>'; }).join('')+'</tr>';
-    let filasP=props.map(p=>fila(v4Esc(p.nom||'Piso'),v22Tot(L,l=>l.pid===String(p.id)&&en(l))));
-    const Ts=v22Tot(L,l=>!ids.has(l.pid)&&en(l)); if(Ts.n) filasP.push(fila('<span style="color:var(--ink3);">Sin piso</span>',Ts));
-    filasP.push(fila('Total',T,true));
-    const tablaP='<div class="tbl-wrap"><table><thead><tr><th>Piso</th><th class="n">Ingresos</th><th class="n">Gastos</th><th class="n">Beneficio</th><th class="n">Capital hip.</th><th class="n">Inversiones</th><th class="n">En el bolsillo</th></tr></thead><tbody>'+filasP.join('')+'</tbody></table></div>';
+    const cab=c0=>'<div class="tbl-wrap"><table><thead><tr><th>'+c0+'</th><th class="n">Ingresos</th><th class="n">Gastos</th><th class="n">Beneficio</th><th class="n">Capital hip.</th><th class="n">Inversiones</th><th class="n">En el bolsillo</th></tr></thead><tbody>';
+    const enP=l=>P.en(l.k)&&(!FL.own||l.own===FL.own), TP=v22Tot(L,enP);
+    let filasP=props.map(p=>{ const X=v22Tot(L,l=>l.pid===String(p.id)&&enP(l)); return (FL.own&&!X.n)?'':fila((FL.pid===String(p.id)?'▸ ':'')+v4Esc(p.nom||'Piso'),X); }).filter(Boolean);
+    const Ts=v22Tot(L,l=>!ids.has(l.pid)&&enP(l)); if(Ts.n) filasP.push(fila('<span style="color:var(--ink3);">Sin piso</span>',Ts));
+    filasP.push(fila('Total'+(FL.own?' · '+v4Esc(v23NomOwn(FL.own)):''),TP,true));
+    const tablaP=cab('Piso')+filasP.join('')+'</tbody></table></div>';
+    const enO=l=>P.en(l.k)&&(!FL.pid||l.pid===FL.pid), TO=v22Tot(L,enO), owns=v23Owners();
+    let filasO=owns.map(o=>{ const X=v22Tot(L,l=>l.own===String(o.id)&&enO(l)); return X.n?fila((FL.own===String(o.id)?'▸ ':'')+v4Esc(o.alias||o.nom||'Propietario'),X):''; }).filter(Boolean);
+    const To=v22Tot(L,l=>!owns.some(o=>String(o.id)===l.own)&&enO(l)); if(To.n) filasO.push(fila('<span style="color:var(--ink3);">Sin propietario</span>',To));
+    filasO.push(fila('Total'+(FL.pid?' · '+v4Esc(((props.find(p=>String(p.id)===FL.pid)||{}).nom)||''):''),TO,true));
+    const tablaO=owns.length>1||To.n?cab('Propietario')+filasO.join('')+'</tbody></table></div>':'';
     // Movimientos
     const nomP=pid=>{ const p=props.find(x=>String(x.id)===pid); return p?p.nom||'Piso':'—'; };
     const ms=L.filter(en).sort((a,b)=>(a.f||a.k+'-01').localeCompare(b.f||b.k+'-01')||a.t.localeCompare(b.t));
     const filasM=ms.map(l=>{ const s=V22_SG[l.t], v=s*l.imp;
-      return '<tr'+(s?'':' style="color:var(--ink3);"')+'><td style="white-space:nowrap;">'+(l.f?v4F2(l.f):v17MesTxt(l.k,false))+'</td><td>'+v4Esc(l.txt)+'</td><td style="white-space:nowrap;">'+v4Esc(nomP(l.pid))+'</td><td style="white-space:nowrap;">'+v4Esc(l.t==='exp'?l.g:V22_ET[l.t]||l.t)+'</td><td class="n mono" style="white-space:nowrap;color:'+(s?(v>=0?'var(--gn)':'var(--rd)'):'var(--ink3)')+';">'+(s?(v>=0?'+':'−')+eur(Math.abs(l.imp),2):'('+eur(l.imp,2)+')')+'</td></tr>'; }).join('');
+      return '<tr'+(s?'':' style="color:var(--ink3);"')+'><td style="white-space:nowrap;">'+(l.f?v4F2(l.f):v17MesTxt(l.k,false))+'</td><td>'+v4Esc(l.txt)+(l.dias?'<span style="color:var(--ink3);font-size:10.5px;"> · '+l.dias+' de '+l.dm+' días de '+v4Esc(v23NomOwn(l.own)||'nadie')+' (de '+eur(l.total,2)+')</span>':'')+'</td><td style="white-space:nowrap;">'+v4Esc(nomP(l.pid))+'</td><td style="white-space:nowrap;">'+v4Esc(v23NomOwn(l.own)||'—')+'</td><td style="white-space:nowrap;">'+v4Esc(l.t==='exp'?l.g:V22_ET[l.t]||l.t)+'</td><td class="n mono" style="white-space:nowrap;color:'+(s?(v>=0?'var(--gn)':'var(--rd)'):'var(--ink3)')+';">'+(s?(v>=0?'+':'−')+eur(Math.abs(l.imp),2):'('+eur(l.imp,2)+')')+'</td></tr>'; }).join('');
     const tablaM='<details style="margin-top:14px;"'+(ms.length<=25?' open':'')+'><summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink2);">📋 Cada cobro y cada gasto ('+ms.length+')</summary>'
-      +'<div class="tbl-wrap" style="max-height:420px;overflow:auto;margin-top:8px;"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Piso</th><th>Cuenta como</th><th class="n">Importe</th></tr></thead><tbody>'+(filasM||'<tr><td colspan="5" style="color:var(--ink3);">Sin movimientos en este periodo.</td></tr>')+'</tbody></table></div>'
+      +'<div class="tbl-wrap" style="max-height:420px;overflow:auto;margin-top:8px;"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Piso</th><th>De</th><th>Cuenta como</th><th class="n">Importe</th></tr></thead><tbody>'+(filasM||'<tr><td colspan="6" style="color:var(--ink3);">Sin movimientos en este periodo.</td></tr>')+'</tbody></table></div>'
       +'<div style="font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.5;">Entre paréntesis y en gris, lo que no suma ni resta (pendiente, o lo que pagan los inquilinos y aún no han pagado). Los cobros van en el mes al que corresponden; las facturas y gastos, por su fecha.</div></details>';
     const h='<div style="font:600 10px \'DM Mono\',monospace;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);margin:16px 0 6px;">';
-    v4Modal('📊 Resultados · '+v4Esc(P.txt),ctl
+    v4Modal('📊 Resultados · '+v4Esc(P.txt)+(tf?' · '+v4Esc(tf):''),ctl
       +'<div id="v22-cascada" style="border-bottom:1px solid var(--line);">'+fil+'</div>'+cuadre
       +h+'Lo que no cuenta como ingreso ni como gasto</div><div style="font-size:11.5px;line-height:1.6;color:var(--ink2);">'+no.map(x=>'<div style="margin:3px 0;">'+x+'</div>').join('')+'</div>'
-      +h+'Por piso</div>'+tablaP+tablaM,'');
+      +(tablaO?h+'Por propietario'+(FL.pid?' (solo este piso)':'')+'</div>'+tablaO:'')
+      +h+'Por piso'+(FL.own?' (solo lo de '+v4Esc(v23NomOwn(FL.own))+')':'')+'</div>'+tablaP+tablaM,'');
   } finally { _v22Cache=null; }
 }
 
 // ── Tabla de pisos y su explicación: «flujo previsto» en lugar de «EBITDA» (resta las cuotas: no es EBITDA) ──
 v4HtmlDetalleRoce=(function(prev){ return function(){ return String(prev.apply(this,arguments)).replace(/el EBITDA mensual/g,'el flujo previsto al mes').replace(/EBITDA mensual/g,'Flujo previsto al mes').replace(/EBITDA/g,'flujo previsto'); }; })(v4HtmlDetalleRoce);
+
+// ══════════════════════════════════════════════════════════════
+// v4.21 · Dashboard: filtrar los resultados por propietario y por piso
+// ──────────────────────────────────────────────────────────────
+// Junto a Mensual / Anual: «👤 Todos los propietarios / Fran / Mamá…» y «🏠 Todos los pisos / Molina…».
+// Cada cobro y cada gasto es de quien lo cobra o lo paga (v22Titular / v22Lineas): las rentas, de quien disfruta el piso
+// (pleno dominio o usufructo, por días si cambia en el mes); la hipoteca, de quien la paga (su titular en Hipotecas); los
+// demás gastos, de su titular o, si no hay, de quien disfruta el piso. Así, con el usufructo, las rentas y los gastos del
+// piso son del usufructuario y la hipoteca de quien la paga (la nuda propietaria), y cada uno ve su beneficio real.
+// Filtran: las cajas de resultados, el desglose, las columnas del periodo de la tabla de pisos (por propietario) y los
+// ingresos, gastos y beneficio de la gráfica. No filtran: patrimonio, deuda, liquidez, ROCE ni los indicadores de arriba.
+// Con «Todos» las cifras son exactamente las de antes (la suma de todos los propietarios).
+// ══════════════════════════════════════════════════════════════
+let _v23F={own:'',pid:''};
+try{ const s=JSON.parse(localStorage.getItem('rc-dash-fil')||'null'); if(s&&typeof s==='object'){ _v23F.own=String(s.own||''); _v23F.pid=String(s.pid||''); } }catch(e){}
+function v23Owners(){ return (D.propietarios||[]).filter(o=>o&&o.id!==undefined&&o.id!==null&&o.id!==''); }
+function v23NomOwn(id){ if(!id) return ''; const o=(D.propietarios||[]).find(x=>String(x.id)===String(id)); return o?(o.alias||o.nom||'Propietario'):''; }
+function v23Fil(){ const F={own:_v23F.own||'', pid:_v23F.pid||''};
+  if(F.own&&!v23Owners().some(o=>String(o.id)===F.own)) F.own=''; if(F.pid&&!(D.props||[]).some(p=>String(p.id)===F.pid)) F.pid=''; return F; }
+function v23Pasa(l,F){ return !F||((!F.own||l.own===F.own)&&(!F.pid||l.pid===F.pid)); }
+function v23TxtFil(F){ F=F||v23Fil(); const p=F.pid?(D.props||[]).find(x=>String(x.id)===F.pid):null; return [F.own?v23NomOwn(F.own):'', p?(p.nom||'Piso'):''].filter(Boolean).join(' · '); }
+function v23SetFil(k,v){ if(k!=='own'&&k!=='pid') return; _v23F[k]=String(v||''); try{ localStorage.setItem('rc-dash-fil',JSON.stringify(_v23F)); }catch(e){} try{ if(typeof RENDERS!=='undefined'&&RENDERS.dash) RENDERS.dash(); }catch(e){ console.warn('v23SetFil',e); } }
+function v23Quitar(after){ _v23F={own:'',pid:''}; try{ localStorage.setItem('rc-dash-fil',JSON.stringify(_v23F)); }catch(e){} try{ RENDERS.dash(); }catch(e){} if(after) try{ (new Function(after))(); }catch(e){} }
+// De quién es cada hipoteca (para el aviso de cuotas que faltan)
+function v23OwnHip(h,iso){ return h&&h.ownerId?String(h.ownerId):(h?v22Dis(h.propId,iso):''); }
+function v23Faltan(P,F){ return v17CuotasFaltan(P.y).filter(f=>{ if(P.men&&f.mes!==P.k) return false; if(F.pid&&String(f.propId)!==F.pid) return false;
+  if(F.own){ const h=(D.hipotecas||[]).find(x=>String(x.id)===String(f.hipId)); if(v23OwnHip(h,v17FinMes(f.mes))!==F.own) return false; } return true; }); }
+// Desplegables (sufijo para no repetir ids entre el resumen y el desglose)
+function v23Selects(F,after,suf){
+  suf=suf||''; const owns=v23Owners(), props=D.props||[], on=after?after.replace(/"/g,'&quot;'):'';
+  const st='font:600 12px \'DM Sans\',sans-serif;padding:5px 8px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--ink);max-width:230px;cursor:pointer;';
+  const so=owns.length>1?'<select id="v23-own'+suf+'" aria-label="Propietario" title="Ver solo lo que cobra y paga este propietario" onchange="v23SetFil(\'own\',this.value);'+on+'" style="'+st+(F.own?'border-color:var(--acc);':'')+'"><option value="">👤 Todos los propietarios</option>'
+    +owns.map(o=>'<option value="'+v4Esc(String(o.id))+'"'+(F.own===String(o.id)?' selected':'')+'>👤 '+v4Esc(o.alias||o.nom||'Propietario')+'</option>').join('')+'</select>':'';
+  const sp=props.length>1?'<select id="v23-pid'+suf+'" aria-label="Piso" title="Ver solo este piso" onchange="v23SetFil(\'pid\',this.value);'+on+'" style="'+st+(F.pid?'border-color:var(--acc);':'')+'"><option value="">🏠 Todos los pisos</option>'
+    +props.map(p=>'<option value="'+v4Esc(String(p.id))+'"'+(F.pid===String(p.id)?' selected':'')+'>🏠 '+v4Esc(p.nom||'Piso')+'</option>').join('')+'</select>':'';
+  const qx=(F.own||F.pid)?'<button type="button" class="btn btn-ghost btn-xs" id="v23-quitar'+suf+'" onclick="v23Quitar(\''+(after||'').replace(/'/g,"\\'")+'\')" title="Ver toda la cartera">✕ Quitar filtro</button>':'';
+  return so+sp+qx;
+}
+// Notas del desglose: quién paga cada hipoteca, rentas repartidas por días y lo que no es de nadie
+function v23Notas(L,P,F){
+  const out=[], props=D.props||[], nomP=id=>{ const p=props.find(x=>String(x.id)===String(id)); return p?(p.nom||'Piso'):'—'; };
+  const hs=(D.hipotecas||[]).filter(h=>!F.pid||String(h.propId)===F.pid);
+  if(hs.length) out.push('🏦 <strong>Hipotecas</strong>: '+hs.map(h=>v4Esc(nomP(h.propId))+' → '+(h.ownerId?'la paga '+v4Esc(v23NomOwn(h.ownerId)||'su titular'):'<span style="color:var(--rd);">sin titular en Hipotecas</span> (cuenta para quien cobra las rentas: '+v4Esc(v23NomOwn(v22Dis(h.propId,v4Hoy()))||'nadie')+')')).join(' · ')+'. Sus intereses y su capital son de quien la paga.');
+  const rep=new Map(); L.forEach(l=>{ if(!l.dias||!P.en(l.k)||(F.pid&&l.pid!==F.pid)) return; const ck=l.pid+'|'+l.k; let r=rep.get(ck); if(!r){ r={pid:l.pid,k:l.k,d:new Map()}; rep.set(ck,r); } r.d.set(l.own,l.dias); });
+  if(rep.size) out.push('📅 <strong>Rentas repartidas por días</strong> porque cambió quién disfruta el piso (art. 474 CC): '+[...rep.values()].map(r=>v4Esc(nomP(r.pid))+' en '+v17MesTxt(r.k,true)+' ('+[...r.d.entries()].map(([o,d])=>d+' días '+v4Esc(v23NomOwn(o)||'sin titular')).join(', ')+')').join(' · ')+'.');
+  if(F.own){ const ids=new Set(v23Owners().map(o=>String(o.id))), S=v22Tot(L,l=>P.en(l.k)&&!ids.has(l.own)&&(!F.pid||l.pid===F.pid));
+    if(S.n) out.push('⚠️ <strong>'+eur(Math.abs(S.cobrado)+Math.abs(S.pagado),2)+' de movimientos sin propietario</strong> (cobros sin piso, o gastos sin piso ni titular): no salen en ningún propietario, solo en «Todos».'); }
+  return out;
+}
+
+// ── Mismas cuentas, con el filtro ──
+v17Movs=function(F){
+  if(F===undefined) F=v23Fil(); const L=v22Lineas(), byK=new Map(), byPK=new Map(), push=(m,k,l)=>{ let a=m.get(k); if(!a){ a=[]; m.set(k,a); } a.push(l); };
+  L.forEach(l=>{ if(F&&!v23Pasa(l,F)) return; push(byK,l.k,l); push(byPK,l.pid+'|'+l.k,l); });
+  const ing={},gas={},gasH={},pend={},bol={},ingP={},gasP={},bolP={};
+  byK.forEach((ls,k)=>{ const T=v22Tot(ls); if(T.ing) ing[k]=T.ing; if(T.gas) gas[k]=T.gas; if(T.fin) gasH[k]=T.fin; if(T.pen) pend[k]=T.pen; if(T.bol) bol[k]=T.bol; });
+  byPK.forEach((ls,pk)=>{ const T=v22Tot(ls); ingP[pk]=T.ing; gasP[pk]=T.gas; bolP[pk]=T.bol; });
+  return {ing,gas,gasH,pend,bol,ingP,gasP,bolP,F};
+};
+// Los indicadores de arriba (Ingresos / Gastos del mes) son siempre de toda la cartera
+v17MesIngGas=function(k){ const M=v17Movs(null); return {ing:v17R(M.ing[k]), gas:v17R(M.gas[k])}; };
+v17Fact=function(){
+  const P=v21Per(), F=v23Fil(), T=v22Tot(v22Lineas(),l=>P.en(l.k)&&v23Pasa(l,F)), faltan=v23Faltan(P,F);
+  return {anyo:P.y, hasta:P.men?P.k:(P.actual?P.kH:P.y+'-12'), per:P, fil:F, T, bruta:T.ing, gastos:T.gas, neta:T.ben, bol:T.bol, hip:T.fin, pend:T.pen, faltan};
+};
+v17FactPiso=function(p){ const P=v21Per(), F=v23Fil(), T=v22Tot(v22Lineas(),l=>l.pid===String(p.id)&&P.en(l.k)&&(!F.own||l.own===F.own)); return {bruta:T.ing, gastos:T.gas, neta:T.ben, bol:T.bol, T}; };
+v17NotaSinPiso=function(){
+  const P=v21Per(), F=v23Fil(), ids=new Set((D.props||[]).map(p=>String(p.id))), T=v22Tot(v22Lineas(),l=>!ids.has(l.pid)&&P.en(l.k)&&(!F.own||l.own===F.own));
+  const g=T.gas, b=T.ing, o=v17R(T.cap+T.inv);
+  if(!(Math.abs(b)>=0.005)&&!(Math.abs(g)>=0.005)&&!(Math.abs(o)>=0.005)) return '';
+  return '<div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.5;">En '+v4Esc(P.txt)+(F.own?' ('+v4Esc(v23NomOwn(F.own))+')':'')+' hay '+[g?eur(g)+' de gastos':'',b?eur(b)+' de cobros':'',o?eur(o)+' de capital o inversiones':''].filter(Boolean).join(' y ')+' sin piso asignado: cuentan en los totales de arriba, pero no en los de cada piso.</div>';
+};
+// Cabeceras de la tabla de pisos: periodo y, si hay filtro, de quién
+v21PerCorto=function(){ const F=v23Fil(); return v21Per().corto+(F.own?' · '+v23NomOwn(F.own):''); };
+
+// ── Control: Mensual / Anual + periodo + propietario + piso + desglose ──
+v21Ctrl=function(P){
+  const F=v23Fil(), tf=v23TxtFil(F), on=m=>(P.men?'mensual':'anual')===m;
+  const seg=(m,t)=>'<button type="button" aria-pressed="'+on(m)+'" onclick="v21SetPer(\''+m+'\')" style="border:0;padding:6px 13px;border-radius:6px;font:600 12px \'DM Sans\',sans-serif;cursor:pointer;background:'+(on(m)?'var(--card)':'transparent')+';color:'+(on(m)?'var(--ink)':'var(--ink2)')+';box-shadow:'+(on(m)?'0 1px 3px rgba(0,0,0,.12)':'none')+';">'+t+'</button>';
+  const prev=P.men?v17MesMenos(P.k,1):String(+P.y-1), next=P.men?v17SigMes(P.k):String(+P.y+1), hayNext=P.men?next<=P.kH:next<=P.kH.slice(0,4);
+  const nav='<button type="button" class="btn btn-ghost btn-xs" onclick="v21SetPer(null,\''+prev+'\')" aria-label="Periodo anterior">‹</button><strong style="font-size:13px;min-width:112px;text-align:center;">'+v4Esc(P.men?v17MesTxt(P.k,true).replace(/^./,c=>c.toUpperCase()):P.y)+'</strong>'
+    +'<button type="button" class="btn btn-ghost btn-xs" onclick="v21SetPer(null,\''+next+'\')"'+(hayNext?'':' disabled style="opacity:.35;"')+' aria-label="Periodo siguiente">›</button>'
+    +(P.actual?'':'<button type="button" class="btn btn-ghost btn-xs" onclick="v21SetPer(null,\''+(P.men?P.kH:P.kH.slice(0,4))+'\')">Hoy</button>');
+  return '<div id="v22-ctrl" style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px 12px;flex-wrap:wrap;margin:4px 0 -2px;">'
+    +'<div id="v23-tit" style="font:600 10px \'DM Mono\',monospace;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);">Resultados · '+v4Esc(P.txt)+(tf?' · <span style="color:var(--acc);">'+v4Esc(tf)+'</span>':'')+'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><div role="group" aria-label="Ver por meses o por años" style="display:inline-flex;background:var(--bg2,rgba(0,0,0,.05));border-radius:8px;padding:3px;gap:2px;">'+seg('mensual','Mensual')+seg('anual','Anual')+'</div><div style="display:flex;align-items:center;gap:4px;">'+nav+'</div>'
+    +'<div id="v23-fil" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+v23Selects(F,'','')+'</div>'
+    +'<button type="button" id="v22-ver" class="btn btn-ghost btn-xs" onclick="v22VerDesglose()" style="font-weight:600;">🔎 Ver desglose</button></div></div>';
+};
+// Desglose: desplegables con sufijo propio
+v23Selects=(function(prev){ return function(F,after,suf){ return prev(F,after,suf!==undefined?suf:(after?'-m':'')); }; })(v23Selects);
+
+// ── Gráfica: avisa de que ingresos, gastos y beneficio van filtrados ──
+v17Render=(function(prev){ return function(){
+  const r=prev.apply(this,arguments);
+  try{ const box=$i('d-evol'), hero=$i('v17-hero'); let n=$i('v23-gnota'); const tf=v23TxtFil();
+    if(!box||!hero){ return r; }
+    if(!tf){ if(n) n.remove(); return r; }
+    if(!n){ n=document.createElement('div'); n.id='v23-gnota'; n.style.cssText='font-size:11.5px;color:var(--ink2);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:4px 0 6px;line-height:1.45;'; hero.parentNode.insertBefore(n,hero); }
+    n.innerHTML='🔎 Ingresos, gastos y beneficio: solo <strong>'+v4Esc(tf)+'</strong> (filtro de Resultados). Patrimonio, deuda y liquidez son de toda la cartera. <button type="button" class="btn btn-ghost btn-xs" onclick="v23Quitar()">✕ Quitar filtro</button>';
+  }catch(e){ console.warn('v23 nota gráfica',e); }
+  return r; }; })(v17Render);
 
 </script>
 </body>
