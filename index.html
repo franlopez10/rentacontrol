@@ -1856,7 +1856,7 @@ td .name-link:hover{border-bottom-color:var(--acc);}
   <input type="hidden" id="pa-id">
   <div class="fg">
     <div class="fgrp fgf"><label>Inquilino</label><select id="pa-i"></select></div>
-    <div class="fgrp"><label>Concepto</label><select id="pa-c"><option>Alquiler</option><option>Fianza</option><option>Garantía adicional</option><option>Suministros</option><option>Penalización</option><option>Otros</option></select></div>
+    <div class="fgrp"><label>Concepto</label><select id="pa-c"><option>Alquiler</option><option>Fianza</option><option>Garantía adicional</option><option>Suministros</option><option>Penalización</option><option>ITP (modelo 600)</option><option>Otros</option></select></div>
     <div class="fgrp"><label>Mes correspondiente</label><input id="pa-m" type="month"></div>
     <div class="fgrp"><label>Importe (€)</label><input id="pa-imp" type="number" step="0.01" inputmode="decimal" placeholder="350"></div>
     <div class="fgrp"><label>Estado</label><select id="pa-e"><option value="pagado">✅ Cobrado</option><option value="pendiente">⏳ Pendiente de cobro</option></select></div>
@@ -10336,8 +10336,9 @@ function v2CalcAnyo(y,items,bolsa,cfg){
   const noDed=(c,it,imp,motivo)=>{ if(imp>0.005) P(c||it.titular||'_').noDed.push({it,imp,motivo}); };
 
   // 1. Ingresos: año por exigibilidad (art. 14.1.a LIRPF); titular por días disfrutados (art. 474 CC)
+  // v4.24: el ITP que devuelve el inquilino es ingreso (art. 22.2 LIRPF) y el 600 pagado, gasto deducible; sin la factura del 600 apuntada, ninguno de los dos cuenta (suplido)
   (D.pagos||[]).forEach(pg=>{
-    if(!pg.mes||/fianza|garant/i.test(pg.con||'')) return;
+    if(!pg.mes||/fianza|garant/i.test(pg.con||'')||(typeof v26ItpFuera==='function'?v26ItpFuera(pg):String(pg.con||'').trim()==='ITP (modelo 600)')) return;
     if(v2ExigIso(pg.mes,cfg,pg).slice(0,4)!==String(y)) return;
     const inq=(D.inqs||[]).find(i=>i.id==pg.inqId); if(!inq||!inq.propId) return;
     const p=props.find(x=>x.id==inq.propId); if(!p) return;
@@ -18003,7 +18004,7 @@ function v19Email(d){
     if(pg.rep) return v4LineaSuministro(Object.assign({},pg.rep,{importeHab:pg.imp}),pg.rep.hab||d.hab)+atr;
     return '- '+(V19_NOMSUM[v4TipoSum(pg.con)]||pg.con)+(pg.notas==='Auto'||pg.virtual?' (cuota mensual)':'')+': '+v4E2(pg.imp)+' euros.'+atr;
   });
-  const otr=d.otras.map(pg=>'- Otras cantidades pendientes ('+v19Otra(pg).toLowerCase()+'): '+v4E2(pg.imp)+' euros.');
+  const otr=d.otras.map(pg=>(typeof v25EsITP==='function'&&v25EsITP(pg))?'- '+v19Otra(pg)+': '+v4E2(pg.imp)+' euros.':'- Otras cantidades pendientes ('+v19Otra(pg).toLowerCase()+'): '+v4E2(pg.imp)+' euros.');
   const intro=d.sum.length?'Incluye '+(d.renta>0?'la renta de '+ms+' y ':'')+'los suministros pendientes'+(d.sum.some(x=>x.rep)?', calculados por personas-día según el contrato'+(conFac?' (adjunto las facturas)':''):'')+':'
     :(d.renta>0?'Incluye la renta de '+ms+':':'Incluye:');
   const t=['Hola '+v19Saludo(d)+':','',
@@ -18564,7 +18565,7 @@ function v20Pisos(){
     const VV=v22Vinculos(hoy);
     (R.pagos||[]).forEach(p=>{
       if(!p||p.estado!=='pagado'||!/^\d{4}-\d{2}/.test(p.mes||'')||v12EsDep(p)) return; const imp=+p.imp||0; if(!imp) return;
-      if(VV.usadas.has(p)) return;
+      if(VV.usadas.has(p)||v25EsITP(p)) return;   // v4.23: el ITP del inquilino es un suplido, no un ingreso
       const k=p.mes.slice(0,7), inq=inqP.get(String(p.inqId)), pid=String(p.propId||(inq&&inq.propId)||'');
       if(!pid||!pById.has(pid)){ out.sinPiso++; return; }
       const f=frac(pid,k); if(!f.dd) return; const v=imp*f.dd/f.dm, quien=inq?((inq.nom||'')+' '+(inq.ap||'')).trim():'';
@@ -18580,6 +18581,7 @@ function v20Pisos(){
       if(String(tit)!==yo) return;
       const tipo=['int','cap','cuo'].includes(c.t)?'hip':c.t==='inv'?'inv':'opex', k=f.slice(0,7), cp=pid||'__gen';
       let net=imp, nota='';
+      if(src==='compra'&&x.itpPagoId&&typeof v26PagoDe==='function'){ const pg=v26PagoDe(x); if(pg&&pg.estado==='pagado'){ net=imp-(+pg.imp||0); nota=' (te lo devuelve '+v26NomInq(pg.inqId)+')'; } }
       if(src==='compra'&&c.t==='sum'){ const o=VV.fact.get(String(x.id)); if(o&&o.ent) return;
         const cob=o?o.ls.filter(p=>p.estado==='pagado').reduce((s,p)=>s+(+p.imp||0),0):0; if(cob){ net=imp-cob; nota=' (factura '+v4E2(imp)+' − '+v4E2(cob)+' que te pagan los inquilinos)'; } }
       if(!net) return;
@@ -19790,8 +19792,9 @@ v17Cajas=function(o){
   const sub=(t,st)=>'<div class="cb-sub"'+(st?' style="'+st+'"':'')+'>'+t+'</div>', wn='white-space:normal;line-height:1.35;', mu=wn+'color:var(--ink3);font-size:10px;margin-top:3px;';
   const ltv=o.patBruto>0?o.deudaTotal/o.patBruto*100:0, cuando=P.men?'en '+v17MesTxt(P.k,true):'en '+P.y, D_="v22VerDesglose()";
   const avisoCuotas=faltan?sub('⚠️ falta'+(faltan===1?'':'n')+' '+faltan+' cuota'+(faltan===1?'':'s')+' de hipoteca por registrar',wn+'color:var(--rd);'):'';
-  const noCuentan=[T.inqPagan?eur(T.inqPagan)+' de suministros que pagan los inquilinos':'',T.cap?eur(T.cap)+' de capital de la hipoteca':'',T.inv?eur(T.inv)+' de inversiones':''].filter(Boolean);
-  const bolsillo=[T.cap?'− '+eur(T.cap)+' de capital de hipoteca':'',T.inv?'− '+eur(T.inv)+' de inversiones':'',T.adel?'− '+eur(T.adel)+' de suministros por cobrar':''].filter(Boolean);
+  const itpInq=v17R((T.itpR||0)+(T.itpP||0));
+  const noCuentan=[T.inqPagan?eur(T.inqPagan)+' de suministros que pagan los inquilinos':'',itpInq?eur(itpInq)+' de ITP que pagan los inquilinos':'',T.cap?eur(T.cap)+' de capital de la hipoteca':'',T.inv?eur(T.inv)+' de inversiones':''].filter(Boolean);
+  const bolsillo=[T.cap?'− '+eur(T.cap)+' de capital de hipoteca':'',T.inv?'− '+eur(T.inv)+' de inversiones':'',T.adel?'− '+eur(T.adel)+' de '+((T.itpP||0)>0.004?((T.sumP||0)>0.004?'suministros e ITP':'ITP'):'suministros')+' por cobrar':''].filter(Boolean);
   const flujo='flujo previsto '+eur(o.ebitdaMes)+'/mes'+(o.rentB!==null&&o.rentB!==undefined&&isFinite(o.rentB)?' · rent. bruta '+o.rentB.toFixed(1)+'%':'');
   const tFlujo='Flujo de caja previsto al mes con los contratos de hoy: '+eur(o.ingMes)+' de ingresos − '+eur(o.gasMes)+' de gastos (media del último año) − '+eur(o.cuoMes)+' de cuotas de los préstamos.';
   return '<div class="cartera-grid">'
@@ -19838,7 +19841,7 @@ function v22Cascada(T){
   row('t','Beneficio (antes del IRPF)',T.ben);
   if(T.cap||hayHip) row('h','Capital de la hipoteca',T.cap,'-','No es un gasto: tu deuda baja y tu patrimonio sube lo mismo. Pero el dinero sale de la cuenta.');
   if(T.inv) row('h','Inversiones',T.inv,'-','Mejoras, muebles y electrodomésticos, gastos de compra y del préstamo. No son gasto del mes (se amortizan en Fiscal), pero el dinero sale.');
-  if(T.adel) row('h','Suministros que adelantas',T.adel,'-','Repartidos a los inquilinos y aún sin cobrar. Cuando los cobres, sube lo que queda en el bolsillo.');
+  if(T.adel){ const it=(T.itpP||0)>0.004, su=(T.sumP||0)>0.004; row('h',(su&&it?'Suministros e ITP':it?'ITP':'Suministros')+' que adelantas',T.adel,'-',(it&&!su?'Pagado en nombre del inquilino':'Repartidos a los inquilinos')+' y aún sin cobrar. Cuando los cobres, sube lo que queda en el bolsillo.'); }
   row('t','En el bolsillo',T.bol);
   return R;
 }
@@ -20078,6 +20081,177 @@ v4ChipSinContrato=(function(prev){ return function(inq,coViejo){
   try{ const ini=coViejo&&(coViejo.ini||v4F(coViejo)); if(ini&&ini>v4Hoy()){ const nom=v4Esc(((inq&&inq.nom||'')+' '+(inq&&inq.ap||'')).trim()||'el inquilino');
     return v4ChipTxt('var(--ye)','contrato de '+nom+' registrado: entrada el '+v4F2(ini)+(coViejo.pisoEntero?' (piso entero)':''),'v4Gestionar(\''+coViejo.id+'\')'); } }catch(e){}
   return prev.apply(this,arguments); }; })(v4ChipSinContrato);
+
+// ══════════════════════════════════════════════════════════════
+// v4.23 · ITP (modelo 600) del inquilino cobrado con el pago mensual
+// ──────────────────────────────────────────────────────────────
+// En los contratos temporales el sujeto pasivo del ITP es el inquilino (AU10). Fran lo presenta y lo paga en su nombre
+// como su representante (cláusula del ITP del contrato, art. 46 LGT) y lo recupera en el siguiente pago mensual.
+// Pagos → «+ Cobro o cargo suelto» → Concepto «ITP (modelo 600)», mes del pago en que se cobra e importe exacto.
+// · Pagos: sale como una línea más del mes (se cobra con «Registrar cobro» junto a la renta).
+// · Email y WhatsApp del pago: «ITP del contrato (modelo 600), que presenté y pagué en su nombre».
+// · Sin la factura del 600 apuntada (v4.24), no es ingreso ni gasto en el Dashboard, Finanzas personales ni Fiscal:
+//   es el impuesto del inquilino que se le adelantó y que devuelve (un suplido). Con la factura, ver p35.js.
+// ══════════════════════════════════════════════════════════════
+const V25_ITP='ITP (modelo 600)';
+function v25EsITP(p){ return !!p&&String(p.con||'').trim()===V25_ITP; }
+// Mensajes del pago
+v19Otra=(function(prev){ return function(pg){ return v25EsITP(pg)?'ITP del contrato (modelo 600), que presenté y pagué en su nombre':prev.apply(this,arguments); }; })(v19Otra);
+// Dashboard: fuera de ingresos; aparte en el desglose
+['supC','supP'].forEach(t=>{ if(!V22_T.includes(t)) V22_T.push(t); });
+V22_ET.supC='ITP del inquilino (devuelto)'; V22_ET.supP='ITP del inquilino (por cobrar)'; V22_SG.supC=0; V22_SG.supP=0;
+v22Lineas=(function(prev){ return function(){
+  if(_v22Cache) return _v22Cache;
+  const L=prev.apply(this,arguments), ids=new Set((D.pagos||[]).filter(v25EsITP).map(p=>String(p.id)));
+  if(ids.size) L.forEach(l=>{ if(l.src==='pago'&&ids.has(String(l.id))&&(l.t==='ren'||l.t==='otr'||l.t==='pen')) l.t=l.t==='pen'?'supP':'supC'; });
+  return L; }; })(v22Lineas);
+v23Notas=(function(prev){ return function(L,P,F){
+  const out=prev.apply(this,arguments);
+  try{ const T=v22Tot(L,l=>P.en(l.k)&&v23Pasa(l,F)&&(l.t==='supC'||l.t==='supP'));
+    if(T.n) out.push('🧾 <strong>ITP de los inquilinos (modelo 600): '+eur(v17R(T.supC+T.supP),2)+'</strong>'+(T.supP?' ('+eur(T.supC,2)+' devuelto, '+eur(T.supP,2)+' por cobrar)':' devuelto')+'. No es ingreso: es su impuesto, que se pagó en su nombre y devuelven con el pago mensual.'); }catch(e){}
+  return out; }; })(v23Notas);
+
+// ══════════════════════════════════════════════════════════════
+// v4.24 · ITP (modelo 600): el pago que haces tú va a Facturas, a la cuenta o tarjeta y a Fiscal
+// ──────────────────────────────────────────────────────────────
+// En «+ Cobro o cargo suelto» con el concepto «ITP (modelo 600)» aparece «Pago del modelo 600»:
+//   ☑ Ya lo he pagado · fecha de pago · cuenta o tarjeta con la que pagaste · justificante del 600.
+// Al guardar se crea (o actualiza) la factura en Facturas, enlazada con el cargo al inquilino:
+//   · su importe sale de esa cuenta o tarjeta (con la tarjeta, de su cuenta de cargo) → baja el saldo;
+//   · es de quien alquila el piso (titular del alquiler ese día), que es quien recibe lo que el inquilino devuelve;
+//   · Fiscal: gasto deducible (gasto corriente, tributo), y lo que el inquilino devuelve cuenta como ingreso íntegro
+//     (art. 22.2 LIRPF: «importe que por todos los conceptos deba satisfacer el arrendatario»). Lo repercutido al
+//     inquilino es ingreso y a la vez gasto deducible (criterio de la DGT, p. ej. V2690-20): se compensan.
+//     Sin la factura del 600 apuntada, ni el gasto ni lo devuelto cuentan (son un suplido).
+//   · Dashboard: como los suministros repercutidos. La factura no es gasto tuyo si el inquilino la paga; si aún no la ha
+//     pagado, la adelantas tú (sale de «En el bolsillo» hasta que la cobres).
+// Borrar el cargo borra su factura; desmarcar «Ya lo he pagado» también.
+// ══════════════════════════════════════════════════════════════
+function v26Fac(p){ if(!p||!p.itpFac) return null; return (D.compras||[]).find(x=>String(x.id)===String(p.itpFac)&&String(x.itpPagoId||'')===String(p.id))||null; }
+function v26PagoDe(x){ if(!x||!x.itpPagoId) return null; return (D.pagos||[]).find(p=>String(p.id)===String(x.itpPagoId)&&v25EsITP(p))||null; }
+// Fiscal: el ITP devuelto solo queda fuera si no hay factura del 600 apuntada (entonces es un suplido puro)
+function v26ItpFuera(pg){ return v25EsITP(pg)&&!v26Fac(pg); }
+function v26NomInq(id){ const i=(D.inqs||[]).find(x=>x.id==id); return i?((i.nom||'')+' '+(i.ap||'')).trim():'el inquilino'; }
+
+// ── Formulario ──
+function v26HtmlBloque(){
+  return '<div id="v26-itp" class="fgrp fgf" style="display:none;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;background:var(--bg);">'
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:4px;">🧾 Pago del modelo 600</div>'
+    +'<div style="font-size:11px;color:var(--ink3);line-height:1.45;margin-bottom:8px;">El ITP es del inquilino: tú lo presentas y lo pagas en su nombre, y él te lo devuelve con este cargo. Si ya lo has pagado, se apunta solo en <strong>Facturas</strong> y se resta del saldo de la cuenta o tarjeta con la que pagaste. En Fiscal, el 600 es gasto deducible y lo que te devuelve, ingreso: se compensan.</div>'
+    +'<label for="v26-pag" style="display:flex;align-items:center;gap:8px;font:600 13px \'DM Sans\',sans-serif;text-transform:none;letter-spacing:0;color:var(--ink);cursor:pointer;margin:0 0 8px;"><input type="checkbox" id="v26-pag" onchange="v26Toggle()" style="width:18px;height:18px;flex:none;margin:0;accent-color:var(--acc);"><span>Ya lo he pagado</span></label>'
+    +'<div id="v26-dat" style="display:none;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    +'<div><label>Fecha de pago</label><input type="date" id="v26-f"></div>'
+    +'<div><label>Pagado con (cuenta o tarjeta)</label><select id="v26-cta"></select></div></div>'
+    +'<div style="margin-top:8px;"><label>Justificante de pago del 600 (PDF o foto)</label><div class="pdf-upload-zone" id="v26-pdf-zone" onclick="document.getElementById(\'v26-pdf\').click()">'
+    +'<input type="file" id="v26-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload(\'v26-pdf\',\'v26-pdf-zone\',\'v26-pdf-data\')"><input type="hidden" id="v26-pdf-data"><input type="hidden" id="v26-pdf-name">'
+    +'<span class="pdf-upload-label">📎 Haz clic para adjuntar el justificante</span></div></div>'
+    +'<div id="v26-info" style="font-size:11px;color:var(--ink2);margin-top:6px;line-height:1.45;"></div></div></div>';
+}
+function v26Asegurar(){
+  if($i('v26-itp')) return;
+  const ref=$i('pa-pdf-zone'), cont=ref?ref.closest('.fgrp'):null, fg=cont?cont.parentNode:document.querySelector('#m-pa .fg');
+  if(!fg) return; const d=document.createElement('div'); d.innerHTML=v26HtmlBloque(); const el=d.firstChild;
+  if(cont) fg.insertBefore(el,cont); else fg.appendChild(el);
+  const c=$i('pa-c'); if(c&&!c.dataset.v26){ c.dataset.v26='1'; c.addEventListener('change',v26Toggle); }
+}
+function v26Toggle(){
+  const b=$i('v26-itp'); if(!b) return; const on=gi('pa-c')===V25_ITP; b.style.display=on?'':'none';
+  const dat=$i('v26-dat'), pag=$i('v26-pag'); if(dat) dat.style.display=(on&&pag&&pag.checked)?'':'none';
+  if(on&&pag&&pag.checked){ if(!gi('v26-f')) $i('v26-f').value=v4Hoy(); }
+  v26Info();
+}
+function v26Info(){ const e=$i('v26-info'); if(!e) return; const c=v9Cta(gi('v26-cta'));
+  e.textContent=c?(c.tipo==='tarjeta'?'Se resta de «'+((v9Cta(c.cargoId)||{}).nom||'su cuenta de cargo')+'» (cuenta de cargo de la tarjeta «'+c.nom+'»).':'Se resta del saldo de «'+c.nom+'».'):'Elige con qué pagaste para que se reste del saldo.'; }
+newPago=(function(prev){ return function(id){
+  const r=prev.apply(this,arguments);
+  try{ v26Asegurar(); const p=id?(D.pagos||[]).find(x=>x.id==id):null, x=p?v26Fac(p):null;
+    $i('v26-pag').checked=!!x; $i('v26-f').value=x?(x.fPago||x.fecha||''):''; $i('v26-cta').innerHTML=v9OptsCta(x?x.ctaId:'');
+    $i('v26-cta').onchange=v26Info; $i('v26-pdf-data').value=''; $i('v26-pdf-name').value='';
+    const z=$i('v26-pdf-zone'), zl=z?z.querySelector('.pdf-upload-label'):null; if(z) z.classList.toggle('has-file',!!(x&&x.pdfData)); if(zl) zl.textContent=x&&x.pdfData?'📎 '+(x.pdfName||'justificante')+' (ya adjunto; pulsa para cambiarlo)':'📎 Haz clic para adjuntar el justificante';
+    const fi=$i('v26-pdf'); if(fi) fi.value='';
+    v26Toggle(); }catch(e){ console.warn('v26 newPago',e); }
+  return r; }; })(newPago);
+addPago=(function(prev){ return function(){
+  const esITP=gi('pa-c')===V25_ITP, pag=esITP&&$i('v26-pag')&&$i('v26-pag').checked;
+  const F={f:gi('v26-f'), cta:gi('v26-cta'), pdf:gi('v26-pdf-data'), pdfName:gi('v26-pdf-name')};
+  if(pag){
+    if(!F.f){ toast('Pon la fecha en que pagaste el 600',false); return; }
+    if(F.f>v4Hoy()){ toast('La fecha de pago del 600 no puede ser futura',false); return; }
+    if(!F.cta){ toast('Elige la cuenta o tarjeta con la que pagaste el 600',false); return; }
+    if(F.pdf&&!/^(drive:|data:)/.test(F.pdf)){ toast('El justificante aún se está subiendo: espera un momento',false); return; }
+  }
+  const ed=gi('pa-id'), antes=new Set((D.pagos||[]).map(x=>x.id)), abierto=()=>{ const m=$i('m-pa'); return m&&m.classList.contains('open'); };
+  const r=prev.apply(this,arguments);
+  try{
+    const p=ed?(D.pagos||[]).find(x=>x.id==ed):(D.pagos||[]).find(x=>!antes.has(x.id));
+    if(!p||(abierto()&&!ed&&!p)) return r;
+    v26Sync(p,pag?F:null);
+  }catch(e){ console.warn('v26 addPago',e); toast('No se pudo apuntar la factura del 600: '+(e&&e.message||e),false); }
+  return r; }; })(addPago);
+// Crea, actualiza o quita la factura del 600 enlazada al cargo
+function v26Sync(p,F){
+  let x=(D.compras||[]).find(c=>String(c.itpPagoId||'')===String(p.id))||null; const meses=new Set();
+  if(!v25EsITP(p)||!F){
+    if(x){ D.compras=D.compras.filter(c=>c!==x); if(x.fecha) meses.add(x.fecha.slice(0,7)); delete p.itpFac; meses.forEach(m=>{ try{ renumerarFacturasMes(m); }catch(e){} }); saveAndSync(); try{ rCompras(); }catch(e){} try{ rCtasBanc(); }catch(e){} toast('Factura del 600 quitada de Facturas'); }
+    return null;
+  }
+  const inq=(D.inqs||[]).find(i=>i.id==p.inqId)||{}, pid=String(p.propId||inq.propId||''), c=v9Cta(F.cta);
+  // Devengo del ITP = firma del contrato: es el día que cuenta en Fiscal (la habitación ya es del inquilino ese día)
+  let co=null; try{ co=v4CoDeInq(p.inqId); }catch(e){} const dev=(co&&(co.firma||co.ini))||F.f;
+  const tit=pid?v22Dis(pid,dev):'';
+  const campos={con:'ITP modelo 600 · '+v26NomInq(p.inqId), emp:'Agencia Tributaria de la Región de Murcia (ATRM)', fecha:F.f, fPago:F.f, imp:v12R2(+p.imp||0),
+    cat:'Otros', propId:pid, hab:String((co&&co.hab)||inq.hab||''), pIni:dev, pFin:dev, pago:c&&c.tipo==='tarjeta'?'Tarjeta':'Transferencia', ctaId:F.cta, catF:'E', catFAuto:false, ded:'corriente', tipoDoc:'recibo',
+    titular:tit, ownerId:tit, titularAuto:true,
+    notas:'ITP (modelo 600, AU10) del contrato de '+v26NomInq(p.inqId)+', pagado en su nombre como representante; lo devuelve con el pago de '+v4MesNom(p.mes||'')+'. Se compensa: lo devuelto es ingreso y esto, gasto deducible.',
+    itpPagoId:p.id, situacion:''};
+  if(x){ if(x.fecha) meses.add(x.fecha.slice(0,7)); Object.assign(x,campos); x._upd=Date.now(); }
+  else { x=Object.assign({id:uid(), creado:Date.now(), pdfData:'', pdfName:''},campos); D.compras.push(x); }
+  if(F.pdf){ x.pdfData=F.pdf; x.pdfName=F.pdfName||'justificante_600.pdf'; }
+  p.itpFac=x.id; meses.add(x.fecha.slice(0,7));
+  meses.forEach(m=>{ try{ renumerarFacturasMes(m); }catch(e){} });
+  saveAndSync(); try{ rCompras(); }catch(e){} try{ rCtasBanc(); }catch(e){}
+  toast('Factura del 600 apuntada en Facturas'+(c?' · sale de «'+(c.tipo==='tarjeta'?((v9Cta(c.cargoId)||{}).nom||c.nom):c.nom)+'»':''));
+  return x;
+}
+// Borrar el cargo borra su factura; borrar la factura deja el cargo sin factura
+v12BorrarRec=(function(prev){ return function(id){
+  const p=(D.pagos||[]).find(x=>x.id==id), x=p?v26Fac(p):null; const r=prev.apply(this,arguments);
+  if(x&&!(D.pagos||[]).includes(p)){ D.compras=(D.compras||[]).filter(c=>c!==x); try{ if(x.fecha) renumerarFacturasMes(x.fecha.slice(0,7)); }catch(e){} saveAndSync(); try{ rCompras(); }catch(e){} toast('Eliminado, con su factura del 600'); }
+  return r; }; })(v12BorrarRec);
+delCompra=(function(prev){ return function(id){
+  const x=(D.compras||[]).find(c=>c.id===id), p=x?v26PagoDe(x):null; const r=prev.apply(this,arguments);
+  if(p&&!(D.compras||[]).includes(x)){ delete p.itpFac; saveAndSync(); }
+  return r; }; })(delCompra);
+
+// ── Dashboard: la factura del 600 y lo que devuelve el inquilino, como un suministro repercutido ──
+['itpF','itpR','itpP'].forEach(t=>{ if(!V22_T.includes(t)) V22_T.push(t); });
+V22_ET.itpF='ITP pagado en su nombre (600)'; V22_ET.itpR='ITP devuelto por el inquilino'; V22_ET.itpP='ITP por cobrar al inquilino';
+V22_SG.itpF=-1; V22_SG.itpR=1; V22_SG.itpP=0;
+v22Lineas=(function(prev){ return function(){
+  if(_v22Cache) return _v22Cache;
+  const L=prev.apply(this,arguments);
+  const fac=new Map((D.compras||[]).filter(x=>x.itpPagoId&&v26PagoDe(x)).map(x=>[String(x.id),x]));
+  if(!fac.size) return L;
+  const lf=new Map(); L.forEach(l=>{ if(l.src==='compra'&&fac.has(String(l.id))){ l.t='itpF'; l.g=''; lf.set(String(l.id),l); } });
+  const quitar=new Set();
+  L.forEach((l,i)=>{ if(l.src!=='pago'||(l.t!=='supC'&&l.t!=='supP')) return; const p=(D.pagos||[]).find(x=>String(x.id)===String(l.id)); const fl=p&&p.itpFac?lf.get(String(p.itpFac)):null; if(!fl) return;
+    if(l.dias&&l!==L.find(z=>z.src==='pago'&&String(z.id)===String(l.id))){ quitar.add(i); return; }   // un cargo repartido por días cuenta una vez, con la factura
+    Object.assign(l,{t:l.t==='supC'?'itpR':'itpP', k:fl.k, f:fl.f, pid:fl.pid, own:fl.own, imp:(l.dias?(+p.imp||0):l.imp), txt:'ITP (modelo 600) · '+v26NomInq(p.inqId)+' · '+(l.t==='supC'?'devuelto':'por cobrar')+(p.mes?' (pago de '+v17MesTxt(p.mes,true)+')':'')}); delete l.dias; delete l.dm; delete l.total; });
+  if(quitar.size){ const out=L.filter((l,i)=>!quitar.has(i)); L.length=0; out.forEach(l=>L.push(l)); }
+  return L; }; })(v22Lineas);
+v22Tot=(function(prev){ return function(L,filt){
+  const r=prev.apply(this,arguments); ['itpF','itpR','itpP'].forEach(t=>{ r[t]=v17R(r[t]||0); });
+  r.itp=v17R(r.itpF-r.itpR-r.itpP);
+  if(Math.abs(r.itp)>=0.005) r.grp['ITP no devuelto por el inquilino']=v17R((r.grp['ITP no devuelto por el inquilino']||0)+r.itp);
+  r.expl=v17R(r.expl+r.itp); r.gas=v17R(r.gas+r.itp); r.ebitda=v17R(r.ing-r.expl); r.ben=v17R(r.ing-r.gas);
+  r.adel=v17R(r.adel+r.itpP); r.bol=v17R(r.ben-r.cap-r.inv-r.adel);
+  r.cobrado=v17R(r.cobrado+r.itpR); r.pagado=v17R(r.pagado+r.itpF);
+  return r; }; })(v22Tot);
+v23Notas=(function(prev){ return function(L,P,F){
+  const out=prev.apply(this,arguments);
+  try{ const T=v22Tot(L,l=>P.en(l.k)&&v23Pasa(l,F)&&(l.t==='itpF'||l.t==='itpR'||l.t==='itpP'));
+    if(T.n) out.push('🧾 <strong>ITP pagado en nombre de los inquilinos: '+eur(T.itpF,2)+'</strong> (facturas del 600) · devuelto '+eur(T.itpR,2)+(T.itpP?' · por cobrar '+eur(T.itpP,2):'')+'. No es gasto tuyo si te lo devuelven; mientras no, lo adelantas tú.'); }catch(e){}
+  return out; }; })(v23Notas);
 
 </script>
 </body>
