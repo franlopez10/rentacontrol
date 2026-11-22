@@ -3451,7 +3451,8 @@ function rHabs(){
       const iqH=iqs.filter(i=>v16NumHab(i.hab)===num&&!(rsv&&i.estado==='RESERVADO'&&rsvIds.includes(i.id))).sort((a,b)=>(b.estado==='ACTIVO')-(a.estado==='ACTIVO'));
       const inq=iqH[0], inq2=iqH[1];
       const cfg=cfgAll[num]||{tipo:'individual',plazas:1,precio:0};
-      const est=ent14?'occ':inq?(inq.estado==='RESERVADO'?'res':'occ'):(rsv?'res':'free');
+      const fut16=(!ent14&&!inq&&!rsv)?o16.entFut:null;
+      const est=ent14?'occ':inq?(inq.estado==='RESERVADO'?'res':'occ'):((rsv||fut16)?'res':'free');
       const col=est==='occ'?'var(--gn)':est==='res'?'var(--ye)':'var(--rd)';
       const label=ent14?'Piso entero':est==='occ'?'Ocupada':est==='res'?'Reservada':'Libre';
       const esDoble=cfg.tipo==='doble';
@@ -3462,8 +3463,8 @@ function rHabs(){
           <span style="font-size:8.5px;font-family:'DM Mono',monospace;color:${col};text-transform:uppercase;letter-spacing:.6px;">${label}</span>
         </div>
         ${ent14?v14HtmlHabEntero(ent14):''}
-        <div class="room-name" style="${ent14?'display:none;':''}font-size:12px;${inq||rsv?'cursor:pointer;':''}" ${inq?`onclick="openPerfil('${inq.id}')"`:(rsv?`onclick="v4GestionarReserva('${rsv.id}')"`:'')}>${inq?inq.nom+' '+(inq.ap||'')+(inq2?' y '+inq2.nom+' '+(inq2.ap||''):''):(rsv?v4Esc(v4NomRes(rsv)):'Disponible')}</div>
-        ${inq?`<div style="font-size:10px;color:var(--ink3);margin-top:2px;">Desde ${fD(inq.ini)} · ${inq.alq||0}€/mes</div>`:''}
+        <div class="room-name" style="${ent14?'display:none;':''}font-size:12px;${inq||rsv||fut16?'cursor:pointer;':''}" ${inq?`onclick="openPerfil('${inq.id}')"`:(rsv?`onclick="v4GestionarReserva('${rsv.id}')"`:(fut16?`onclick="v4Gestionar('${fut16.id}')"`:''))}>${inq?inq.nom+' '+(inq.ap||'')+(inq2?' y '+inq2.nom+' '+(inq2.ap||''):''):(rsv?v4Esc(v4NomRes(rsv)):(fut16?'🏠 '+v4Esc(v4NombresCompletos(fut16)):'Disponible'))}</div>
+        ${v24LineaHab(p,num,inq,rsv,est,fut16)}
         <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;">
           <div class="hab-tipo" role="group" aria-label="Tipo de habitación">
             <button type="button" class="${!esDoble?'on':''}" onclick="editHabCfg('${p.id}',${num},'tipo','individual')" title="1 persona">👤 Individual</button>
@@ -20011,6 +20012,72 @@ v17Render=(function(prev){ return function(){
     n.innerHTML='🔎 Ingresos, gastos y beneficio: solo <strong>'+v4Esc(tf)+'</strong> (filtro de Resultados). Patrimonio, deuda y liquidez son de toda la cartera. <button type="button" class="btn btn-ghost btn-xs" onclick="v23Quitar()">✕ Quitar filtro</button>';
   }catch(e){ console.warn('v23 nota gráfica',e); }
   return r; }; })(v17Render);
+
+// ══════════════════════════════════════════════════════════════
+// v4.22 · Habitaciones reservadas: fecha de entrada en la tarjeta (como el «Desde…» de las alquiladas)
+// ──────────────────────────────────────────────────────────────
+// Fecha de entrada de una habitación reservada, por este orden:
+//  1. Reserva (oferta) activa de esa habitación: la fecha P de firma y entrada, con su prórroga o adelanto si lo hay
+//     (en las ofertas v20261114 la firma es el día de entrada), y su hora prevista.
+//  2. Inquilino RESERVADO con contrato registrado en ese piso: el inicio del contrato (o la firma).
+//  3. Inquilino RESERVADO con reserva activa a su nombre: la P de esa reserva.
+//  4. Si no, la fecha de entrada de la ficha del inquilino.
+//  5. Piso alquilado entero más adelante: el inicio de ese contrato.
+// Si la fecha ya pasó y sigue reservada, sale en rojo: falta registrar la entrada o el contrato.
+// ══════════════════════════════════════════════════════════════
+function v24EntradaHab(p,num,inq,rsv,fut){
+  const hoy=v4Hoy(), pid=p&&p.id;
+  if(rsv&&!(inq&&inq.estado==='ACTIVO')) return {f:v4ResP(rsv)||'', h:rsv.Phora||'', renta:parseFloat(rsv.renta)||0, de:'la reserva', click:"v4GestionarReserva('"+rsv.id+"')"};
+  if(inq&&inq.estado==='RESERVADO'){
+    const ent=c=>c.ini||v4F(c)||'';
+    const cs=(D.conts||[]).filter(c=>(c.inqId==inq.id||c.inqId2==inq.id)&&c.propId==pid&&ent(c)&&(c.pisoEntero||String(v4Hab(c))===String(num))).sort((a,b)=>ent(a).localeCompare(ent(b)));
+    const c=cs.find(x=>ent(x)>=hoy)||cs[cs.length-1];
+    if(c) return {f:ent(c), h:'', renta:parseFloat(c.r)||parseFloat(inq.alq)||0, entero:!!c.pisoEntero, de:c.pisoEntero?'el contrato del piso entero':'el contrato', click:"v4Gestionar('"+c.id+"')"};
+    const r=(D.reservas||[]).find(x=>v4ResActiva(x)&&(x.inqId==inq.id||x.inqId2==inq.id));
+    if(r) return {f:v4ResP(r)||'', h:r.Phora||'', renta:parseFloat(r.renta)||parseFloat(inq.alq)||0, de:'la reserva', click:"v4GestionarReserva('"+r.id+"')"};
+    return {f:inq.ini||'', h:'', renta:parseFloat(inq.alq)||0, de:'la ficha', click:"openPerfil('"+inq.id+"')"};
+  }
+  if(fut) return {f:fut.ini||'', h:'', renta:parseFloat(fut.r)||0, entero:true, de:'el contrato del piso entero', click:"v4Gestionar('"+fut.id+"')"};
+  return null;
+}
+// Línea bajo el nombre: «Desde…» (alquilada) o «Entrada…» (reservada)
+function v24LineaHab(p,num,inq,rsv,est,fut){
+  if(est!=='res') return inq?'<div style="font-size:10px;color:var(--ink3);margin-top:2px;">Desde '+fD(inq.ini)+' · '+(inq.alq||0)+'€/mes</div>':'';
+  const E=v24EntradaHab(p,num,inq,rsv,fut); if(!E) return '';
+  const ren=E.renta>0?' · '+(Math.round(E.renta*100)%100?v4E2(E.renta):Math.round(E.renta))+'€/mes'+(E.entero?' el piso':''):'';
+  if(!E.f) return '<div class="v24-ent" style="font-size:10px;color:var(--ye);font-weight:600;margin-top:2px;">Entrada: sin fecha'+ren+'</div>';
+  const d=v4Diff(v4Hoy(),E.f), pas=d<0;
+  return '<div class="v24-ent" style="font-size:10px;color:'+(pas?'var(--rd)':'var(--ye)')+';font-weight:600;margin-top:2px;line-height:1.4;" title="Fecha de entrada según '+v4Esc(E.de)+(pas?'. Ya pasó y sigue reservada: registra la entrada o el contrato.':'')+'">'
+    +'Entrada '+v4F2(E.f)+(E.h?' a las '+v4Esc(E.h):'')+' <span style="font-weight:400;">('+v4Cuando(d)+')</span>'+ren+'</div>';
+}
+// Propiedades: «Reservada: H3 (entrada 01/12)»
+function v24ResLista(p,o){
+  if(!o||!o.res||!o.res.length) return '';
+  const fut=o.entFut||null;
+  return o.res.map(n=>{
+    const rsv=v4ResDeHab(p.id,n), ids=rsv?[rsv.inqId,rsv.inqId2].filter(Boolean):[];
+    const inq=(D.inqs||[]).filter(i=>i.propId==p.id&&v16NumHab(i.hab)===n&&(i.estado==='RESERVADO'||i.estado==='ACTIVO')&&!(rsv&&i.estado==='RESERVADO'&&ids.includes(i.id))).sort((a,b)=>(b.estado==='ACTIVO')-(a.estado==='ACTIVO'))[0];
+    const E=v24EntradaHab(p,n,inq,rsv,fut);
+    return 'H'+n+(E&&E.f?' (entrada '+v4F2(E.f).slice(0,5)+')':'');
+  }).join(', ');
+}
+// v16EstHabs recuerda su piso (sin salir en JSON) para poder poner las fechas en la lista de reservadas
+v16EstHabs=(function(prev){ return function(p,iso){ const o=prev.apply(this,arguments); try{ Object.defineProperty(o,'_p',{value:p,enumerable:false,configurable:true}); }catch(e){} return o; }; })(v16EstHabs);
+v16HtmlOcupProp=function(o){
+  let res=''; if(o.res.length){ let l=''; try{ l=o._p?v24ResLista(o._p,o):''; }catch(e){ l=''; } res='Reservada'+(o.res.length===1?'':'s')+': '+(l||o.res.map(n=>'H'+n).join(', ')); }
+  const lista=(o.ent?'':[o.occ.length?'Ocupada'+(o.occ.length===1?'':'s')+': '+o.occ.map(n=>'H'+n).join(', '):'',res].filter(Boolean).join(' · '));
+  return '<div style="font-size:11px;color:var(--ink3);margin-bottom:5px;line-height:1.5;">'+v16TxtOcup(o)+'</div>'
+    +v16Barra(o)
+    +(lista?'<div style="font-size:10px;color:var(--ink3);margin-top:5px;">'+lista+'</div>':'')
+    +(o.entFut?'<div style="font-size:10px;color:var(--ye);margin-top:4px;">🏠 Alquilado entero a partir del '+v4F2(o.entFut.ini)+'</div>':'')
+    +(o.sinHab.length?'<div style="font-size:10px;color:var(--rd);margin-top:4px;">⚠ '+v16Pl(o.sinHab.length,'inquilino activo','inquilinos activos')+' sin habitación válida de este piso ('+o.sinHab.map(i=>v4Esc((i.nom||'')+' '+(i.ap||'')).trim()).join(', ')+'): no se cuenta'+(o.sinHab.length===1?'':'n')+'. Corrige la habitación en su ficha.</div>':'');
+};
+
+// «Siguiente paso» de una habitación con inquilino RESERVADO cuyo contrato empieza más adelante: no «terminó», sino «entra el…»
+v4ChipSinContrato=(function(prev){ return function(inq,coViejo){
+  try{ const ini=coViejo&&(coViejo.ini||v4F(coViejo)); if(ini&&ini>v4Hoy()){ const nom=v4Esc(((inq&&inq.nom||'')+' '+(inq&&inq.ap||'')).trim()||'el inquilino');
+    return v4ChipTxt('var(--ye)','contrato de '+nom+' registrado: entrada el '+v4F2(ini)+(coViejo.pisoEntero?' (piso entero)':''),'v4Gestionar(\''+coViejo.id+'\')'); } }catch(e){}
+  return prev.apply(this,arguments); }; })(v4ChipSinContrato);
 
 </script>
 </body>
