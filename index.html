@@ -20253,6 +20253,72 @@ v23Notas=(function(prev){ return function(L,P,F){
     if(T.n) out.push('🧾 <strong>ITP pagado en nombre de los inquilinos: '+eur(T.itpF,2)+'</strong> (facturas del 600) · devuelto '+eur(T.itpR,2)+(T.itpP?' · por cobrar '+eur(T.itpP,2):'')+'. No es gasto tuyo si te lo devuelven; mientras no, lo adelantas tú.'); }catch(e){}
   return out; }; })(v23Notas);
 
+// ══════════════════════════════════════════════════════════════
+// v4.25 · Cuentas y tarjetas: justificante (PDF o foto) de cada movimiento
+// ──────────────────────────────────────────────────────────────
+// · «+ Movimiento» (entrada, salida, traspaso, devolución de fianza, ajuste al saldo del banco): «Justificante (PDF o
+//   foto)». Se sube a tu Google Drive; sin Drive, solo archivos pequeños, guardados en el dispositivo (como el resto).
+// · En los movimientos de la cuenta (📋): 📎 abre el justificante. En los movimientos manuales, «📎+» añade uno después,
+//   y desde el mismo sitio se cambia o se quita. Los cobros, facturas y gastos con PDF también muestran su 📎.
+// ══════════════════════════════════════════════════════════════
+function v27Zona(pre,txt){ return '<div class="pdf-upload-zone" id="'+pre+'-pdf-zone" onclick="document.getElementById(\''+pre+'-pdf\').click()">'
+  +'<input type="file" id="'+pre+'-pdf" accept=".pdf,image/*" style="display:none;" onchange="handlePdfUpload(\''+pre+'-pdf\',\''+pre+'-pdf-zone\',\''+pre+'-pdf-data\')">'
+  +'<input type="hidden" id="'+pre+'-pdf-data"><input type="hidden" id="'+pre+'-pdf-name"><span class="pdf-upload-label">'+txt+'</span></div>'; }
+function v27Listo(v){ return !v||/^(drive:|data:)/.test(v); }
+// Formulario del movimiento
+v9FormMov=(function(prev){ return function(ctaId,tipo){
+  const r=prev.apply(this,arguments);
+  try{ if(!$i('mv9-pdf-zone')){ const ref=$i('mv9-prev'), g=ref?ref.closest('.fgrp'):null; if(g){ const d=document.createElement('div'); d.className='fgrp fgf'; d.innerHTML='<label>Justificante (PDF o foto, opcional)</label>'+v27Zona('mv9','📎 Haz clic para adjuntar el justificante'); g.parentNode.insertBefore(d,g); } } }catch(e){ console.warn('v27 form',e); }
+  return r; }; })(v9FormMov);
+v9GuardarMov=(function(prev){ return function(ctaId){
+  const pdf=gi('mv9-pdf-data'), name=gi('mv9-pdf-name');
+  if(!v27Listo(pdf)){ toast('El justificante aún se está subiendo: espera un momento',false); return; }
+  const c=v9Cta(ctaId), antes=new Set(((c&&c.movs)||[]).map(m=>m.id));
+  const r=prev.apply(this,arguments);
+  if(pdf&&c){ const m=(c.movs||[]).find(x=>!antes.has(x.id)); if(m){ m.pdfData=pdf; m.pdfName=name||'justificante.pdf'; c._upd=Date.now(); saveAndSync(); try{ rCtasBanc(); }catch(e){} } }
+  return r; }; })(v9GuardarMov);
+// Dónde está el registro de cada línea de la cuenta
+function v27Mov(mid){ for(const c of (D.ctasBanc||[])){ const m=(c.movs||[]).find(x=>String(x.id)===String(mid)); if(m) return {c,m}; } return null; }
+function v27Rec(src,id){
+  if(src==='mov'){ const o=v27Mov(id); return o?o.m:null; }
+  const col=src==='pago'?D.pagos:src==='compra'?D.compras:src==='gasto'?D.gastos:null;
+  return col?(col.find(x=>String(x.id)===String(id))||null):null;
+}
+function v27VerJust(src,id){ const x=v27Rec(src,id); if(!x||!x.pdfData){ toast('Sin justificante adjunto',false); return; } openPdf(x.pdfData,x.pdfName||'justificante.pdf'); }
+// Añadir, cambiar o quitar el justificante de un movimiento manual
+function v27AdjMov(mid){
+  const o=v27Mov(mid); if(!o) return; const m=o.m;
+  v4Modal('📎 Justificante · '+v4Esc((m.concepto||({entrada:'Entrada',salida:'Salida',traspaso:'Traspaso',devfianza:'Devolución de fianza',ajuste:'Ajuste al saldo del banco'})[m.tipo]||'Movimiento')+' · '+v4F2(m.fecha)),
+    '<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;">'+v4Esc(o.c.nom)+' · '+(m.imp>0?'+':'')+v4E2(m.imp)+' €'+(m.pdfData?' · ahora: <a href="#" onclick="event.preventDefault();v27VerJust(\'mov\',\''+m.id+'\')">📎 '+v4Esc(m.pdfName||'justificante')+'</a>':'')+'</div>'
+    +v27Zona('mj27',m.pdfData?'📎 Haz clic para cambiarlo':'📎 Haz clic para adjuntar el justificante'),
+    (m.pdfData?'<button class="btn btn-ghost" onclick="v27QuitarAdj(\''+m.id+'\')">Quitar justificante</button>':'')+'<button class="btn btn-primary" onclick="v27GuardarAdj(\''+m.id+'\')">Guardar</button>');
+}
+function v27GuardarAdj(mid){
+  const o=v27Mov(mid); if(!o) return; const pdf=gi('mj27-pdf-data'), name=gi('mj27-pdf-name');
+  if(!pdf){ toast('Adjunta el justificante',false); return; } if(!v27Listo(pdf)){ toast('El justificante aún se está subiendo: espera un momento',false); return; }
+  o.m.pdfData=pdf; o.m.pdfName=name||'justificante.pdf'; o.c._upd=Date.now(); saveAndSync(); closeM('m-v4'); try{ rCtasBanc(); }catch(e){} if(window._v9DrwCta&&$i('drawer')&&$i('drawer').classList.contains('open')) v9VerMovs(window._v9DrwCta); toast('Justificante guardado');
+}
+function v27QuitarAdj(mid){
+  const o=v27Mov(mid); if(!o||!confirm('¿Quitar el justificante de este movimiento? (si está en tu Drive, el archivo sigue allí)')) return;
+  delete o.m.pdfData; delete o.m.pdfName; o.c._upd=Date.now(); saveAndSync(); closeM('m-v4'); if(window._v9DrwCta&&$i('drawer')&&$i('drawer').classList.contains('open')) v9VerMovs(window._v9DrwCta); toast('Justificante quitado');
+}
+// Movimientos de la cuenta, con su 📎
+v9VerMovs=function(ctaId){
+  const c=v9Cta(ctaId); if(!c) return; window._v9DrwCta=ctaId; const fl=v9Flujos(), hoy=v4Hoy();
+  const xs=fl.filter(f=>(f.cta===c.id||f.orig===c.id)&&(!v9ConSaldo(c)||v9Cuenta(c,f))).sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.ts||0)-(b.ts||0));
+  let s=v9ConSaldo(c)?+c.saldoIni:0;
+  const filas=xs.map(f=>{ const fut=f.fecha>hoy, ok=f.cta===c.id; if(ok&&!fut) s=v9R2(s+f.imp);
+    const rec=v27Rec(f.src,f.id), clip=rec&&rec.pdfData?' <button class="btn btn-ghost btn-xs v27-clip" title="Ver justificante: '+v4Esc(rec.pdfName||'')+'" onclick="v27VerJust(\''+f.src+'\',\''+f.id+'\')">📎</button>':'';
+    const acc=f.src==='mov'?'<button class="btn btn-ghost btn-xs v27-adj" title="'+(rec&&rec.pdfData?'Cambiar o quitar el justificante':'Adjuntar justificante')+'" onclick="v27AdjMov(\''+f.id+'\')">'+(rec&&rec.pdfData?'📎✎':'📎+')+'</button><button class="btn btn-ghost btn-xs" onclick="v9BorrarMov(\''+c.id+'\',\''+f.id+'\')">🗑</button>'
+      :f.src==='personal'?'<span style="font-size:10.5px;color:var(--ink3);" title="Se apuntó en Finanzas personales: se cambia allí">👤 Personal</span>'
+      :'<select style="font-size:10.5px;max-width:130px;" onchange="v9Reasignar(\''+f.src+'\',\''+f.id+'\',this.value)">'+v9OptsCta(f.auto?'':f.orig,true).replace('<option value="">—</option>','<option value="">'+(f.auto?'Automática':'—')+'</option>')+'</select>';
+    return '<tr style="'+(fut?'opacity:.55;':'')+'"><td style="white-space:nowrap;">'+v4F2(f.fecha)+(fut?' (futuro)':'')+'</td><td>'+v4Esc(f.txt)+(f.orig&&f.orig!==f.cta?' <span style="font-size:10.5px;color:var(--ink3);">(con tarjeta)</span>':'')+clip+'</td><td style="text-align:right;white-space:nowrap;color:'+(f.imp<0?'var(--rd)':'var(--gn)')+';">'+(f.imp>0?'+':'')+v4E2(f.imp)+'</td><td style="text-align:right;white-space:nowrap;">'+(v9ConSaldo(c)&&ok&&!fut?v4E2(s):'')+'</td><td style="white-space:nowrap;">'+acc+'</td></tr>'; }).join('');
+  const html='<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;">'+(v9ConSaldo(c)?'Saldo de partida: <strong>'+v4E2(c.saldoIni)+' €</strong> el '+v4F2(c.saldoFecha)+'. Saldo hoy: <strong>'+v4E2(v9SaldoCta(c,null,fl))+' €</strong>.':'<span style="color:var(--ye);">Sin saldo inicial: los movimientos se listan, pero no hay saldo.</span>')+' «Automática» = la cuenta del contrato o la cuenta principal del titular; cámbiala si se cobró o pagó por otra vía. 📎 = justificante.</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Importe</th><th>Saldo</th><th>Cuenta</th></tr></thead><tbody>'+(filas||'<tr><td colspan="5" style="color:var(--ink3);">Sin movimientos desde el saldo de partida.</td></tr>')+'</tbody></table></div>';
+  $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">📋 '+v4Esc(c.nom)+'</div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'+html;
+  $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
+};
+
 </script>
 </body>
 </html>
