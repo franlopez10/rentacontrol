@@ -10007,7 +10007,7 @@ const APP_VERSION = '2026.05.22';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {
-      reg.update();
+      reg.update().catch(()=>{});
       // Si detecta versión nueva, recarga automáticamente
       reg.addEventListener('updatefound', () => {
         const sw = reg.installing;
@@ -10020,7 +10020,7 @@ if ('serviceWorker' in navigator) {
         });
       });
       // Comprobar actualizaciones cada vez que se abre la app
-      setInterval(() => reg.update(), 60000);
+      setInterval(() => reg.update().catch(()=>{}), 60000);
     }).catch(err => console.log('SW error:', err));
   });
 }
@@ -19376,7 +19376,7 @@ function v20RenderCuentas(){
     cards.push('<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;"><div><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;">🏦 '+v4Esc(c.nom)+'</div><div style="font-size:11px;color:var(--ink3);margin-top:2px;">'+v4Esc([c.banco,c.num?'····'+String(c.num).replace(/\s/g,'').slice(-4):''].filter(Boolean).join(' · '))+'</div></div><span class="badge badge-b">🔗 RentaControl</span></div>'
       +(o.con?'<div style="font-family:\'Syne\',sans-serif;font-size:26px;font-weight:800;color:'+(o.saldo>=0?'var(--gn)':'var(--rd)')+';">'+v20E(o.saldo)+'</div>'
         +'<div style="font-size:11.5px;color:var(--ink2);margin-top:6px;line-height:1.6;">🔁 Mismo saldo en RentaControl'+(o.incl.length?' · incluye '+o.incl.length+' movimiento'+(o.incl.length===1?'':'s')+' personal'+(o.incl.length===1?'':'es')+' de aquí ('+(o.pend>=0?'+':'−')+v20E(Math.abs(o.pend))+')':'')+'</div>'
-        +'<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;">'+(co&&co.ajuste?'Último ajuste al saldo del banco: '+v4F2(co.fecha):'Saldo de partida: '+v4F2(c.saldoFecha))+(o.dentro.length?' · '+o.dentro.length+' movimiento'+(o.dentro.length===1?'':'s')+' personal'+(o.dentro.length===1?'':'es')+' anterior'+(o.dentro.length===1?'':'es')+' ya dentro de ese saldo del banco':'')+'</div>'
+        +'<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;">'+(co&&co.ajuste?'📌 Último saldo fijado con el banco: '+v4F2(co.fecha)+(co.hora?' a las '+co.hora:''):'Saldo de partida: '+v4F2(c.saldoFecha)+(co&&co.hora?' a las '+co.hora:''))+(o.dentro.length?' · '+o.dentro.length+' movimiento'+(o.dentro.length===1?'':'s')+' personal'+(o.dentro.length===1?'':'es')+' anterior'+(o.dentro.length===1?'':'es')+' ya dentro de ese saldo del banco':'')+'</div>'
        :'<div style="font-size:12px;color:var(--ye);margin-top:4px;">Sin saldo de partida en RentaControl: ponlo allí (Cuentas y tarjetas) para ver el saldo.</div>')
       +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"><button class="btn btn-secondary btn-xs" onclick="v20VerMovsCta(\''+o.id+'\')">📋 Movimientos</button><button class="btn btn-ghost btn-xs" onclick="v20NuevoMov(\'gasto\',\'rc:'+o.id+'\')">− Gasto</button><button class="btn btn-ghost btn-xs" onclick="v20NuevoMov(\'ingreso\',\'rc:'+o.id+'\')">+ Ingreso</button></div></div>'); });
   C.pers.forEach(o=>{ const c=o.c, nm=(D.movs||[]).filter(m=>m.ctaId==c.id).length;
@@ -20318,6 +20318,953 @@ v9VerMovs=function(ctaId){
   $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">📋 '+v4Esc(c.nom)+'</div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'+html;
   $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
 };
+
+// ══════════════════════════════════════════════════════════════
+// v4.26 · 1/4 · Saldos fijados con fecha Y HORA
+// ──────────────────────────────────────────────────────────────
+// Un saldo que escribes (saldo de partida de la cuenta o «Ajuste al saldo real del banco») queda fijado en un momento:
+// día y hora. Lo que pasó ANTES de ese momento ya está dentro de ese saldo; lo de DESPUÉS se suma o se resta.
+// Puedes fijar el saldo a las 17:00 y otra vez a las 20:00 del mismo día: cada uno manda desde su hora.
+//
+// Momento de cada movimiento:
+//   · con hora escrita → ese día a esa hora;
+//   · sin hora y apuntado ese mismo día → la hora a la que lo apuntaste;
+//   · sin hora y apuntado otro día → al final de su día (si ese día fijaste un saldo, la app te pide la hora);
+//   · cobros y movimientos antiguos sin hora de registro → al principio de su día (como hasta ahora).
+// Un ajuste vale lo que dijo el banco: su importe es «saldo real − saldo que tenía la app justo antes», y se recalcula
+// si después apuntas algo de antes de ese momento (así nunca se cuenta dos veces).
+//
+// Corrige: lo apuntado en Personal después de un ajuste del mismo día no sumaba (se daba por incluido en el ajuste),
+// y la fecha de un movimiento nuevo en Personal salía en el día 1 del mes que tuvieras elegido en la lista.
+// ══════════════════════════════════════════════════════════════
+
+// ── Momentos ──
+function v26Hhmm(d){ d=d||new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function v26HoraOk(h){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(h||'')); }
+// Hora escrita en un formulario: solo cuenta si la has tocado tú (si no, manda la hora exacta a la que lo apuntas)
+function v26HoraForm(id){ const e=$i(id); if(!e) return ''; return e.dataset.auto==='0'?String(e.value||'').trim():''; }
+// Milisegundos de un día a una hora (hora local). fin: hasta el último milisegundo de ese minuto (o del día, sin hora)
+function v26Ms(iso,hhmm,fin){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(iso||'').slice(0,10))) return 0; iso=String(iso).slice(0,10);
+  const h=v26HoraOk(hhmm)?hhmm:(fin?'23:59':'00:00');
+  return new Date(iso+'T'+h+(fin?':59.999':':00.000')).getTime();
+}
+function v26HoraDe(ms,iso){ if(!ms) return ''; const d=new Date(ms); return (!iso||d.v12Dia()===iso)?v26Hhmm(d):''; }
+// Momento de un movimiento de una cuenta (ver arriba)
+function v26Mom(f){
+  if(!f||!f.fecha) return 0;
+  if(f.hora&&v26HoraOk(f.hora)) return v26Ms(f.fecha,f.hora,!!f.ajuste);
+  const ts=+f.ts||0, d0=v26Ms(f.fecha,'00:00',false), d1=v26Ms(f.fecha,'',true);
+  if(!ts) return d0; if(ts<d0) return d0; if(ts>d1) return d1; return ts;
+}
+// Momento del saldo de partida de la cuenta
+const _v26AC=new WeakMap();   // el momento del saldo de partida de cada cuenta (se calcula una vez; se usa miles de veces)
+function v26AnclaIni(c){
+  if(!c||!c.saldoFecha) return null; const k=c.saldoFecha+'|'+(c.saldoHora||'')+'|'+(c.saldoTs||''), m=_v26AC.get(c); if(m&&m.k===k) return m.v;
+  const v=v26AnclaIni0(c); _v26AC.set(c,{k,v}); return v;
+}
+function v26AnclaIni0(c){
+  if(c.saldoHora&&v26HoraOk(c.saldoHora)) return v26Ms(c.saldoFecha,c.saldoHora,true);
+  const ts=+c.saldoTs||0, d0=v26Ms(c.saldoFecha,'00:00',false), d1=v26Ms(c.saldoFecha,'',true);
+  return ts&&ts>=d0&&ts<=d1?ts:d1;
+}
+// Hora (texto) a la que quedó fijado el saldo de partida
+function v26HoraIni(c){ if(!c||!c.saldoFecha) return ''; if(v26HoraOk(c.saldoHora)) return c.saldoHora; const a=v26AnclaIni(c); return a===v26Ms(c.saldoFecha,'',true)?'':v26HoraDe(a,c.saldoFecha); }
+// Un movimiento cambia el saldo si es posterior al momento del saldo de partida
+v9Cuenta=function(c,f){ if(!c||!c.saldoFecha) return false; const a=v26AnclaIni(c); return (f&&f.mom!==undefined?f.mom:v26Mom(f))>a; };
+
+// ── Movimientos: hora, ajustes con su saldo real y orden ──
+function v26PersMovs(){ try{ const P=v21Pers(); return P&&Array.isArray(P.movs)?P.movs:[]; }catch(e){ return []; } }
+function v26Ajustar(out){
+  const movs=new Map(); v9Ctas().forEach(c=>(c.movs||[]).forEach(m=>{ if(m&&m.id) movs.set(String(m.id),m); }));
+  // Un saldo fijado que cuadraba (importe 0) también es un saldo fijado: entra en la lista para mandar desde su momento
+  const hay=new Set(out.filter(f=>f.src==='mov').map(f=>String(f.id)));
+  v9Ctas().forEach(c=>(c.movs||[]).forEach(m=>{ if(!m||m.tipo!=='ajuste'||!m.fecha||hay.has(String(m.id))||v26Legado(m)) return;
+    out.push({cta:c.id, orig:c.id, fecha:m.fecha, imp:0, tipo:'ajuste', txt:'Ajuste al saldo del banco'+(m.concepto?' · '+m.concepto:''), src:'mov', id:m.id, auto:false, ts:v15TsId(m.id)}); }));
+  let pm=null;
+  out.forEach(f=>{
+    if(f.src==='mov'){ const m=movs.get(String(f.id)); if(m){ if(v26HoraOk(m.hora)) f.hora=m.hora;
+      if(m.tipo==='ajuste'&&!v26Legado(m)){ f.ajuste=true; f.real=v9R2(+m.real); f.impGuardado=f.imp; } } }
+    else if(f.src==='personal'){ if(!pm){ pm=new Map(); v26PersMovs().forEach(m=>{ if(m&&m.id) pm.set(String(m.id),m); }); } const m=pm.get(String(f.id)); if(m&&v26HoraOk(m.hora)) f.hora=m.hora; }
+    f.mom=v26Mom(f);
+  });
+  // Cada ajuste: saldo real − saldo de la app justo antes de su momento (con todo lo apuntado hasta hoy)
+  const por=new Map(); out.forEach(f=>{ if(f.cta&&f.cta!=='__no'){ let a=por.get(f.cta); if(!a){ a=[]; por.set(f.cta,a); } a.push(f); } });
+  por.forEach((fs,cid)=>{ if(!fs.some(f=>f.ajuste)) return; const c=v9Cta(cid); if(!c||!v9ConSaldo(c)) return;
+    const xs=fs.filter(f=>v9Cuenta(c,f)).sort(v26Orden); let s=+c.saldoIni;
+    xs.forEach(f=>{ if(f.ajuste){ f.imp=v9R2(f.real-s); f.antes=v9R2(s); s=f.real; } else s=v9R2(s+f.imp); }); });
+  return out;
+}
+// Orden en la cuenta: por momento; a igual momento, primero los movimientos y después el saldo fijado
+function v26Orden(a,b){ return (a.mom-b.mom)||((a.ajuste?1:0)-(b.ajuste?1:0))||((a.ts||0)-(b.ts||0)); }
+// Ajustes de antes de v4.20 (sin «saldo real» guardado): su importe es fijo y lo personal de esa fecha o anterior ya estaba
+// en el banco (regla de v4.20, igual que hasta ahora). Los ajustes con saldo real mandan desde su momento: lo personal ya no
+// se «absorbe» por fechas (eso hacía que lo apuntado después de un ajuste del mismo día no sumara).
+function v26Legado(a){ return !(a&&a.real!==undefined&&a.real!==null&&a.real!==''&&isFinite(+a.real)); }
+v21Absorbido=function(aj,m){ const A=aj.find(x=>x.f>=m.fecha); if(!A||!v26Legado(A.a)) return false; return !(Array.isArray(A.a.espIds)&&A.a.espIds.includes(String(m.id))); };
+v9Flujos=(function(prev){ return function(){ const out=prev.apply(this,arguments); try{ v26Ajustar(out); }catch(e){ console.warn('v26Ajustar',e); } return out; }; })(v9Flujos);
+// Saldo de la app en un momento exacto (para el ajuste)
+function v26SaldoEn(c,ms,fl){ if(!v9ConSaldo(c)) return null; fl=fl||v9Flujos(); let s=+c.saldoIni; fl.forEach(f=>{ if(f.cta===c.id&&v9Cuenta(c,f)&&f.mom<=ms) s+=f.imp; }); return v9R2(s); }
+// Saldos fijados de una cuenta (el de partida y los ajustes), del más antiguo al más reciente
+function v26Anclas(c,fl){
+  if(!v9ConSaldo(c)) return []; const out=[{tipo:'ini', fecha:c.saldoFecha, hora:v26HoraIni(c), ms:v26AnclaIni(c), saldo:v9R2(+c.saldoIni)}];
+  fl=fl||v9Flujos(); fl.filter(f=>f.ajuste&&f.cta===c.id&&v9Cuenta(c,f)).sort(v26Orden).forEach(f=>out.push({tipo:'ajuste', fecha:f.fecha, hora:f.hora||v26HoraDe(f.mom,f.fecha)||'', ms:f.mom, saldo:f.real, id:f.id}));
+  return out.sort((a,b)=>a.ms-b.ms);
+}
+function v26Ultima(c,fl){ const a=v26Anclas(c,fl); return a.length?a[a.length-1]:null; }
+function v26TxtAncla(a){ return v4F2(a.fecha)+(a.hora?' a las '+a.hora:'')+' ('+v4E2(a.saldo)+' €)'; }
+// Momento que tendría un movimiento nuevo apuntado ahora
+function v26MomNuevo(fecha,hora){ const hoy=v4Hoy(); if(v26HoraOk(hora)) return v26Ms(fecha,hora,false); return fecha===hoy?Date.now():(fecha<hoy?v26Ms(fecha,'',true):v26Ms(fecha,'00:00',false)); }
+// ¿Hay un saldo fijado ese mismo día? (entonces hace falta la hora para saber si ya estaba dentro)
+function v26AnclasDia(c,fecha,fl){ return v26Anclas(c,fl).filter(a=>a.fecha===fecha); }
+// Comprobación al guardar un movimiento: false = no guardar
+function v26ComprobarMov(c,fecha,hora,que){
+  if(!c||!v9ConSaldo(c)||!fecha) return true; const hoy=v4Hoy(), fl=v9Flujos();
+  if(hora&&!v26HoraOk(hora)){ toast('La hora no es válida (HH:MM)',false); return false; }
+  if(fecha===hoy&&hora&&hora>v26Hhmm()){ toast('La hora no puede ser posterior a ahora',false); return false; }
+  const dia=v26AnclasDia(c,fecha,fl);
+  if(!hora&&fecha!==hoy&&dia.length){ toast('El '+v4F2(fecha)+' fijaste el saldo de «'+c.nom+'» '+dia.map(a=>a.hora?'a las '+a.hora:'(sin hora)').join(' y ')+': escribe la hora de '+(que||'este movimiento')+' para saber si ya estaba dentro de ese saldo',false); return false; }
+  if(fecha>hoy) return true;
+  const ms=v26MomNuevo(fecha,hora), u=v26Ultima(c,fl);
+  if(u&&ms<=u.ms) return confirm('⚠️ '+((que||'Este movimiento').replace(/^./,x=>x.toUpperCase()))+' ('+v4F2(fecha)+(hora?' a las '+hora:'')+') es anterior al saldo que fijaste de «'+c.nom+'» el '+v26TxtAncla(u)+'.\n\nSe da por incluido en ese saldo y NO lo cambiará.\n\nAceptar = guardarlo así · Cancelar = corregir la fecha o la hora');
+  return true;
+}
+
+// ── «+ Movimiento» de Cuentas y tarjetas: hora ──
+function v26PintarHora(pre,lbl,val){ const f=$i(pre+'-f')||$i(pre+'-fecha'); if(!f||$i(pre+'-h')) return; const g=f.closest('.fgrp'); if(!g) return;
+  const d=document.createElement('div'); d.className='fgrp'; d.id=pre+'-h-grp';
+  d.innerHTML='<label id="'+pre+'-h-lbl">'+lbl+'</label><input id="'+pre+'-h" type="time" value="'+(val||'')+'">';
+  g.parentNode.insertBefore(d,g.nextSibling); return d; }
+v9FormMov=(function(prev){ return function(ctaId,tipo){
+  const r=prev.apply(this,arguments);
+  try{ v26PintarHora('mv9','Hora',v26Hhmm()); const h=$i('mv9-h'), f=$i('mv9-f');
+    if(h){ h.dataset.auto='1'; h.addEventListener('input',()=>{ h.dataset.auto='0'; v9MovToggle(); }); }
+    if(f) f.addEventListener('input',()=>{ if(h&&h.dataset.auto==='1') h.value=f.value===v4Hoy()?v26Hhmm():''; v9MovToggle(); });
+    let p=$i('mv9-h-pista'); if(!p){ const ref=$i('mv9-prev'); if(ref){ p=document.createElement('div'); p.id='mv9-h-pista'; p.style.cssText='font-size:11.5px;color:var(--ink2);line-height:1.5;margin-top:4px;'; ref.parentNode.insertBefore(p,ref.nextSibling); } }
+    v9MovToggle(); }catch(e){ console.warn('v26 hora mov',e); }
+  return r; }; })(v9FormMov);
+v9MovToggle=(function(prev){ return function(){
+  const r=prev.apply(this,arguments);
+  try{ const t=gi('mv9-tipo'), c=v9Cta(window._v9MovCta), f=gi('mv9-f'), h=v26HoraForm('mv9-h'), lbl=$i('mv9-h-lbl'), b=$i('mv9-prev'), p=$i('mv9-h-pista');
+    if(lbl) lbl.textContent=t==='ajuste'?'Hora del saldo del banco':'Hora'+(f&&f!==v4Hoy()?' (si la sabes)':'');
+    if(!c) return r;
+    if(t==='ajuste'&&b){ if(!v9ConSaldo(c)) b.innerHTML='<span style="color:var(--ye);">Primero pon el saldo inicial de la cuenta.</span>';
+      else { const ms=v26MomAjuste(f,h), s=v26SaldoEn(c,ms), real=v9Num(gi('mv9-real'));
+        b.innerHTML='Saldo según la app el '+v4F2(f)+(h?' a las '+h:f===v4Hoy()?' ahora ('+v26Hhmm()+')':' al final del día')+': <strong>'+v4E2(s)+' €</strong>'+(isFinite(real)?' · diferencia: <strong>'+v4E2(v9R2(real-s))+' €</strong>':'')
+          +'<br><span style="color:var(--ink3);">Queda fijado en ese momento: lo de antes ya está dentro; lo que apuntes después se suma o se resta.</span>'; } }
+    if(p){ const dia=f?v26AnclasDia(c,f):[]; p.innerHTML=t!=='ajuste'&&dia.length?'🕐 '+(f===v4Hoy()?'Hoy':'Ese día')+' fijaste el saldo a las '+dia.map(a=>a.hora?'<strong>'+a.hora+'</strong>':'(sin hora)').join(' y ')+': si este movimiento fue antes, ya estaba dentro del saldo. Pon la hora real.':''; }
+  }catch(e){ console.warn('v26 toggle',e); }
+  return r; }; })(v9MovToggle);
+function v26MomAjuste(f,h){ const hoy=v4Hoy(); if(v26HoraOk(h)) return v26Ms(f,h,true); return f===hoy?Date.now():v26Ms(f,'',true); }
+v9GuardarMov=(function(prev){ return function(ctaId){
+  const c=v9Cta(ctaId); if(!c) return prev.apply(this,arguments);
+  const t=gi('mv9-tipo'), f=gi('mv9-f'), h=v26HoraForm('mv9-h');
+  if(t==='ajuste') return v26GuardarAjuste(c,f,h);
+  if(f&&f<=v4Hoy()&&v9Num(gi('mv9-imp'))>0&&!v26ComprobarMov(c,f,h,'este movimiento')) return;
+  const antes=new Set((c.movs||[]).map(m=>m.id)); const r=prev.apply(this,arguments);
+  const m=(c.movs||[]).find(x=>!antes.has(x.id));
+  if(m&&h&&v26HoraOk(h)){ m.hora=h; c._upd=Date.now(); saveAndSync(); try{ rCtasBanc(); }catch(e){} }
+  return r; }; })(v9GuardarMov);
+// «Ajuste al saldo real del banco»: fija el saldo en ese momento (también si ya cuadraba)
+function v26GuardarAjuste(c,f,h){
+  if(!f){ toast('Indica la fecha',false); return; } if(f>v4Hoy()){ toast('La fecha no puede ser futura',false); return; }
+  if(h&&!v26HoraOk(h)){ toast('La hora no es válida (HH:MM)',false); return; }
+  if(f===v4Hoy()&&h&&h>v26Hhmm()){ toast('La hora no puede ser posterior a ahora',false); return; }
+  if(!v9ConSaldo(c)){ toast('Primero pon el saldo inicial de la cuenta',false); return; }
+  const r=v9Num(gi('mv9-real')); if(!isFinite(r)){ toast('Escribe el saldo real',false); return; }
+  const pdf=gi('mv9-pdf-data'), name=gi('mv9-pdf-name'); if(!v27Listo(pdf)){ toast('El justificante aún se está subiendo: espera un momento',false); return; }
+  const hh=h, ms=v26MomAjuste(f,hh);
+  if(ms<=v26AnclaIni(c)){ toast('Ese momento es anterior al saldo de partida de la cuenta ('+v4F2(c.saldoFecha)+(v26HoraIni(c)?' '+v26HoraIni(c):'')+'): cambia el saldo de partida en «Editar cuenta»',false); return; }
+  const s=v26SaldoEn(c,ms), m={id:uid(), tipo:'ajuste', fecha:f, concepto:gi('mv9-con'), imp:v9R2(r-s), real:v9R2(r)};
+  if(hh) m.hora=hh; try{ m.espIds=v21IdsPersonales(c,f); }catch(e){}
+  if(pdf){ m.pdfData=pdf; m.pdfName=name||'justificante.pdf'; }
+  c.movs=(c.movs||[]).concat([m]); c._upd=Date.now(); saveAndSync(); closeM('m-v4'); try{ rCtasBanc(); }catch(e){}
+  toast('📌 Saldo de '+c.nom+' fijado: '+v4E2(r)+' € el '+v4F2(f)+(hh?' a las '+hh:f===v4Hoy()?' a las '+v26Hhmm():'')+(m.imp?' (ajuste '+(m.imp>0?'+':'')+v4E2(m.imp)+' €)':' (cuadraba con la app)'));
+}
+
+// ── «Editar cuenta»: hora del saldo ──
+function v26CampoHoraCta(){ const f=$i('cb-sfecha'); if(!f) return; if(!$i('cb-shora')){ const g=f.closest('.fgrp'); if(!g) return;
+    const d=document.createElement('div'); d.className='fgrp'; d.dataset.cb9='saldo'; d.innerHTML='<label>Hora de ese saldo</label><input id="cb-shora" type="time">';
+    g.parentNode.insertBefore(d,g.nextSibling); const l=g.querySelector('label'); if(l) l.textContent='Saldo a fecha de (lo que pase después se suma o se resta)';
+    const h=$i('cb-shora'), s=$i('cb-saldo'); h.addEventListener('input',()=>{ h.dataset.auto='0'; });
+    const auto=()=>{ if(h.dataset.auto==='1'&&f.value===v4Hoy()) h.value=v26Hhmm(); else if(h.dataset.auto==='1'&&f.value!==v4Hoy()) h.value=''; };
+    f.addEventListener('input',auto); if(s) s.addEventListener('input',auto); }
+  try{ v9CtaToggle(); }catch(e){} }
+v2NuevaCta=(function(prev){ return function(){ v26CampoHoraCta(); const r=prev.apply(this,arguments); const h=$i('cb-shora'); if(h){ h.value=v26Hhmm(); h.dataset.auto='1'; } return r; }; })(v2NuevaCta);
+v2EditCta=(function(prev){ return function(id){ v26CampoHoraCta(); const r=prev.apply(this,arguments); const c=v9Cta(id), h=$i('cb-shora'); if(h){ h.value=c?v26HoraIni(c):''; h.dataset.auto=c&&v26HoraOk(c.saldoHora)?'0':'1'; } return r; }; })(v2EditCta);
+v2GuardarCta=(function(prev){ return function(){
+  const id=gi('cb-id'), h=v26HoraForm('cb-shora'), sf=gi('cb-sfecha'), tipo=$i('cb-tipo')?$i('cb-tipo').value:'cuenta';
+  if(tipo!=='tarjeta'&&h){ if(!v26HoraOk(h)){ toast('La hora del saldo no es válida (HH:MM)',false); return; } if(sf===v4Hoy()&&h>v26Hhmm()){ toast('La hora del saldo no puede ser posterior a ahora',false); return; } }
+  const antes=new Set(v9Ctas().map(c=>c.id)), c0=id?v9Cta(id):null, prevS=c0?{ini:String(c0.saldoIni),f:c0.saldoFecha,h:c0.saldoHora||''}:null;
+  const r=prev.apply(this,arguments);
+  const m=$i('m-ctab'); if(m&&m.classList.contains('open')) return r;   // no se guardó (faltan datos)
+  const c=id?v9Cta(id):v9Ctas().find(x=>!antes.has(x.id)); if(!c) return r;
+  if(c.tipo==='tarjeta'||!c.saldoFecha){ if(c.saldoHora){ delete c.saldoHora; c._upd=Date.now(); saveAndSync(); } return r; }
+  const cambiaSaldo=!prevS||prevS.ini!==String(c.saldoIni)||prevS.f!==c.saldoFecha;
+  if(h&&(cambiaSaldo||prevS.h!==h)){ c.saldoHora=h; c.saldoTs=v26Ms(c.saldoFecha,h,true); c._upd=Date.now(); saveAndSync(); try{ rCtasBanc(); }catch(e){} }
+  else if(!h&&cambiaSaldo&&c.saldoHora){ delete c.saldoHora; c._upd=Date.now(); saveAndSync(); try{ rCtasBanc(); }catch(e){} }
+  return r; }; })(v2GuardarCta);
+
+// ── Mensaje al guardar un cobro, factura o gasto: con el último saldo fijado ──
+v15TxtFlujo=(function(prev){ return function(f){
+  try{ if(f&&f.cta&&f.cta!=='__no'){ const c=v9Cta(f.cta); if(c&&v9ConSaldo(c)&&f.fecha<=v4Hoy()){ const fl=v9Flujos(), g=fl.find(x=>x.src===f.src&&String(x.id)===String(f.id)&&x.cta===f.cta)||f, mom=g.mom!==undefined?g.mom:v26Mom(g), u=v26Ultima(c,fl);
+      const tar=f.orig&&f.orig!==f.cta?v9Cta(f.orig):null, nom='«'+c.nom+'»'+(tar?' (con la tarjeta '+tar.nom+')':'');
+      if(u&&mom<=u.ms) return ' · no cambia el saldo de '+nom+': el '+(f.imp<0?'pago':'cobro')+' ('+v4F2(f.fecha)+(g.hora?' '+g.hora:'')+') es anterior '+(u.tipo==='ini'?'al saldo de partida ('+v4F2(u.fecha)+')'+(u.hora?' fijado a las '+u.hora:''):'al saldo fijado con el banco el '+v26TxtAncla(u))+', que ya lo incluye'; } } }catch(e){ console.warn(e); }
+  return prev.apply(this,arguments); }; })(v15TxtFlujo);
+
+// Hora que se enseña en la lista: la escrita, o la del momento si se sabe (no la de «final del día»)
+function v26HoraFila(f){ if(!f||!f.fecha) return ''; if(v26HoraOk(f.hora)) return f.hora; const m=f.mom!==undefined?f.mom:v26Mom(f);
+  if(!m||m===v26Ms(f.fecha,'',true)||m===v26Ms(f.fecha,'00:00',false)) return ''; return v26HoraDe(m,f.fecha); }
+// ── Movimientos de la cuenta (📋): con la hora y los saldos fijados ──
+v9VerMovs=function(ctaId){
+  const c=v9Cta(ctaId); if(!c) return; window._v9DrwCta=ctaId; const fl=v9Flujos(), hoy=v4Hoy(), con=v9ConSaldo(c);
+  const xs=fl.filter(f=>(f.cta===c.id||f.orig===c.id)&&(!con||v9Cuenta(c,f))).sort(v26Orden);
+  let s=con?+c.saldoIni:0;
+  const hora=f=>{ const h=v26HoraFila(f); return h?' <span style="color:var(--ink3);font-size:10.5px;">'+h+'</span>':''; };
+  const filas=xs.map(f=>{ const fut=f.fecha>hoy, ok=f.cta===c.id; if(ok&&!fut) s=v9R2(s+f.imp);
+    const rec=v27Rec(f.src,f.id), clip=rec&&rec.pdfData?' <button class="btn btn-ghost btn-xs v27-clip" title="Ver justificante: '+v4Esc(rec.pdfName||'')+'" onclick="v27VerJust(\''+f.src+'\',\''+f.id+'\')">📎</button>':'';
+    const acc=f.src==='mov'?'<button class="btn btn-ghost btn-xs v27-adj" title="'+(rec&&rec.pdfData?'Cambiar o quitar el justificante':'Adjuntar justificante')+'" onclick="v27AdjMov(\''+f.id+'\')">'+(rec&&rec.pdfData?'📎✎':'📎+')+'</button><button class="btn btn-ghost btn-xs" onclick="v9BorrarMov(\''+c.id+'\',\''+f.id+'\')">🗑</button>'
+      :f.src==='personal'?'<span style="font-size:10.5px;color:var(--ink3);" title="Se apuntó en Finanzas personales: se cambia allí">👤 Personal</span>'
+      :'<select style="font-size:10.5px;max-width:130px;" onchange="v9Reasignar(\''+f.src+'\',\''+f.id+'\',this.value)">'+v9OptsCta(f.auto?'':f.orig,true).replace('<option value="">—</option>','<option value="">'+(f.auto?'Automática':'—')+'</option>')+'</select>';
+    const txt=f.ajuste?'📌 Saldo fijado con el banco: <strong>'+v4E2(f.real)+' €</strong>'+(f.antes!==undefined?' <span style="font-size:10.5px;color:var(--ink3);">(la app tenía '+v4E2(f.antes)+' €)</span>':'')+(rec&&rec.concepto?' · '+v4Esc(rec.concepto):''):v4Esc(f.txt);
+    return '<tr class="'+(f.ajuste?'v26-ancla':'')+'" style="'+(fut?'opacity:.55;':'')+(f.ajuste?'background:rgba(98,80,214,.06);':'')+'"><td style="white-space:nowrap;">'+v4F2(f.fecha)+hora(f)+(fut?' (futuro)':'')+'</td><td>'+txt+(f.orig&&f.orig!==f.cta?' <span style="font-size:10.5px;color:var(--ink3);">(con tarjeta)</span>':'')+clip+'</td><td style="text-align:right;white-space:nowrap;color:'+(f.imp<0?'var(--rd)':'var(--gn)')+';">'+(f.imp>0?'+':'')+v4E2(f.imp)+'</td><td style="text-align:right;white-space:nowrap;">'+(con&&ok&&!fut?v4E2(s):'')+'</td><td style="white-space:nowrap;">'+acc+'</td></tr>'; }).join('');
+  const hi=v26HoraIni(c), u=con?v26Ultima(c,fl):null;
+  const html='<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;line-height:1.6;">'+(con?'Saldo de partida: <strong>'+v4E2(c.saldoIni)+' €</strong> el '+v4F2(c.saldoFecha)+(hi?' a las '+hi:'')+'. Saldo hoy: <strong>'+v4E2(v9SaldoCta(c,null,fl))+' €</strong>.'+(u&&u.tipo==='ajuste'?' Último saldo fijado con el banco: '+v26TxtAncla(u)+'.':''):'<span style="color:var(--ye);">Sin saldo inicial: los movimientos se listan, pero no hay saldo.</span>')+' «Automática» = la cuenta del contrato o la cuenta principal del titular; cámbiala si se cobró o pagó por otra vía. 📎 = justificante. 📌 = saldo fijado con el banco: lo anterior ya está dentro.</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Importe</th><th>Saldo</th><th>Cuenta</th></tr></thead><tbody>'+(filas||'<tr><td colspan="5" style="color:var(--ink3);">Sin movimientos desde el saldo de partida.</td></tr>')+'</tbody></table></div>';
+  $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">📋 '+v4Esc(c.nom)+'</div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'+html;
+  $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
+};
+
+// ══ Finanzas personales ══
+// Movimiento nuevo: fecha de hoy (no el día 1 del mes elegido en la lista) y la hora de ahora
+function v26CampoHoraPers(){ if($i('mv-hora')) return; v26PintarHora('mv','Hora (si la sabes)','');
+  const g=$i('mv-hora-grp')||($i('mv-h')&&$i('mv-h').closest('.fgrp')); const h=$i('mv-h'); if(h){ h.id='mv-hora'; }
+  const f=$i('mv-fecha'), hh=$i('mv-hora'); if(f&&hh){ hh.addEventListener('input',()=>{ hh.dataset.auto='0'; }); f.addEventListener('input',()=>{ if(hh.dataset.auto==='1') hh.value=f.value===v4Hoy()?v26Hhmm():''; v26PistaPers(); }); }
+  const c=$i('mv-cta'); if(c) c.addEventListener('change',v26PistaPers);
+  if(g&&!$i('mv-hora-pista')){ const p=document.createElement('div'); p.id='mv-hora-pista'; p.className='fgrp fgf'; p.style.cssText='font-size:11.5px;color:var(--ink2);line-height:1.5;'; g.parentNode.insertBefore(p,g.nextSibling); } }
+newMov=(function(prev){ return function(tipo){ v26CampoHoraPers(); const r=prev.apply(this,arguments); try{ const f=$i('mv-fecha'), h=$i('mv-hora'); if(f) f.value=v4Hoy(); if(h){ h.value=v26Hhmm(); h.dataset.auto='1'; } v26PistaPers(); }catch(e){} return r; }; })(newMov);
+editMov=(function(prev){ return function(id){ v26CampoHoraPers(); const r=prev.apply(this,arguments); try{ const m=(D.movs||[]).find(x=>x.id==id), h=$i('mv-hora'); if(h){ const ts=m?(+m.ts||v15TsId(m.id)):0; h.value=m&&v26HoraOk(m.hora)?m.hora:(m?v26HoraDe(ts,m.fecha):''); h.dataset.auto=m&&v26HoraOk(m.hora)?'0':'1'; } v26PistaPers(); }catch(e){} return r; }; })(editMov);
+// Cuenta de RentaControl (con los datos de RentaControl) de una cuenta elegida en Personal
+function v26CtaRCPers(ctaId,fn){ const rc=v20RcDe(ctaId); if(!rc) return null; try{ return v20EnRC(R=>{ const fin=String(v9Final(rc)||rc), c=v9Cta(fin); return c?fn(c):null; }); }catch(e){ return null; } }
+function v26PistaPers(){ const p=$i('mv-hora-pista'); if(!p) return; const f=gi('mv-fecha'), cta=gi('mv-cta');
+  const t=v26CtaRCPers(cta,c=>{ if(!v9ConSaldo(c)) return ''; const dia=v26AnclasDia(c,f); return dia.length?'🕐 '+(f===v4Hoy()?'Hoy':'El '+v4F2(f))+' fijaste el saldo de «'+v4Esc(c.nom)+'» '+dia.map(a=>a.hora?'a las <strong>'+a.hora+'</strong>':'sin hora').join(' y ')+' (en RentaControl): si esto fue antes, ya estaba dentro de ese saldo. Pon la hora real.':''; });
+  p.innerHTML=t?'<span>'+t+'</span>':''; p.style.display=t?'':'none'; }
+saveMov=(function(prev){ return function(){
+  const editId=gi('mv-edit-id'), h=v26HoraForm('mv-hora'), f=gi('mv-fecha'), cta=gi('mv-cta'), tipo=$i('mv-tipo')?$i('mv-tipo').value:'';
+  if(gi('mv-con')&&gn('mv-imp')){
+    if(h&&!v26HoraOk(h)){ toast('La hora no es válida (HH:MM)',false); return; }
+    const m0=editId?(D.movs||[]).find(x=>x.id==editId):null;
+    const mira=!m0||m0.fecha!==f||(m0.hora||'')!==h||String(m0.ctaId||'')!==String(cta||'')||String(m0.tipo||'')!==String(tipo||'');
+    if(mira){ const ok=v26CtaRCPers(cta,c=>v26ComprobarMov(c,f,h,tipo==='ingreso'?'este ingreso':'este gasto')); if(ok===false) return; }
+  }
+  const antes=new Set((D.movs||[]).map(m=>m.id)); const r=prev.apply(this,arguments);
+  const m=editId?(D.movs||[]).find(x=>x.id==editId):(D.movs||[]).find(x=>!antes.has(x.id));
+  if(m&&(m.hora||'')!==h){ if(h) m.hora=h; else delete m.hora; saveAndSync(); try{ rMovs(); }catch(e){} }
+  return r; }; })(saveMov);
+
+// Último saldo fijado de una cuenta de RentaControl hasta un día (para «Personal · Cuentas»)
+v20Corte=function(c,t){ if(!c) return null; const a=[];
+  if(c.saldoFecha&&c.saldoFecha<=t) a.push({fecha:c.saldoFecha, ts:v26AnclaIni(c), hora:v26HoraIni(c), ajuste:false, saldo:v9R2(+c.saldoIni)});
+  (c.movs||[]).forEach(m=>{ if(!m||m.tipo!=='ajuste'||!m.fecha||m.fecha>t) return; const f={fecha:m.fecha, ts:v15TsId(m.id), hora:v26HoraOk(m.hora)?m.hora:'', ajuste:true}, ms=v26Mom(f);
+    if(c.saldoFecha&&!(ms>v26AnclaIni(c))) return; a.push({fecha:m.fecha, ts:ms, hora:v26HoraFila(Object.assign(f,{mom:ms})), ajuste:true, legado:v26Legado(m), saldo:v26Legado(m)?undefined:v9R2(+m.real)}); });
+  a.sort((x,y)=>x.ts-y.ts); return a.length?a[a.length-1]:null; };
+v20Cuenta=function(co,m){ if(!co) return true; const ms=+m.ts||v15TsId(m.id)||0, f={fecha:m.fecha, ts:ms, hora:m.hora}; return v26Mom(f)>co.ts; };
+// Cuentas en Personal: «incluye» = lo personal posterior al último saldo fijado; «ya dentro» = lo anterior
+v20Cuentas=function(){
+  const X=v20CtasRC(), MV=v20MovsPers(); const out={rc:[], pers:[], total:0, totalRC:0, pend:0, nPers:0, dep:0, sinSaldo:[]};
+  if(X){
+    X.cs.forEach(o=>{ if(o.tarjeta){ out.rc.push(Object.assign({},o,{incl:[], dentro:[], pend:0, saldo:null})); return; }
+      const ms=MV.filter(m=>{ const r=v20RcDe(m.ctaId); return r&&X.fin(r)===o.id; }), fp=new Map(o.flujos.filter(f=>f.src==='personal'&&f.cta===o.id).map(f=>[f.id,f]));
+      const corte=v20EnRC(()=>v20Corte(o.c,v4Hoy())), lim=corte?corte.ts:-Infinity;
+      const incl=ms.filter(m=>{ const f=fp.get(String(m.id)); return f&&(!o.con||(f.mom>lim&&v20EnRC(()=>v9Cuenta(o.c,f)))); }), dentro=ms.filter(m=>!incl.includes(m));
+      const pend=v17R(incl.filter(m=>m.fecha<=v4Hoy()).reduce((s,m)=>s+(m.tipo==='ingreso'?1:-1)*(+m.imp||0),0));
+      out.rc.push(Object.assign({},o,{incl, dentro, pend, saldo:o.con?o.saldoRC:null, corte}));
+      if(o.con){ out.total+=o.saldoRC; out.totalRC+=o.saldoRC; out.pend+=pend; out.nPers+=incl.length; } else out.sinSaldo.push(o.c.nom);
+    });
+    out.dep=v17R(X.deps.reduce((s,d)=>s+d.imp,0)); out.deps=X.deps;
+  }
+  (D.cuentas||[]).forEach(c=>{ if(c.rcId&&X&&X.cs.some(o=>o.id==String(c.rcId))) return; const s=saldoCuenta(c.id); out.pers.push({c, saldo:s});
+    if(c.tipo!=='Tarjeta de crédito') out.total+=s; });
+  out.total=v17R(out.total); out.totalRC=v17R(out.totalRC); out.pend=v17R(out.pend);
+  return out;
+};
+// Movimientos de una cuenta de RentaControl vistos desde Personal: con la hora y los saldos fijados
+v20VerMovsCta=function(id){
+  const X=v20CtasRC(); if(!X) return; const o=X.cs.find(z=>z.id===String(id)); if(!o) return; const c=o.c, hoy=v20Hoy();
+  const L=o.flujos.map(f=>Object.assign({},f,{cuenta:!o.con||v9Cuenta(c,f)}));
+  const ids=new Set(o.flujos.filter(f=>f.src==='personal').map(f=>String(f.id)));
+  v20MovsPers().forEach(m=>{ const r=v20RcDe(m.ctaId); if(!r||X.fin(r)!==c.id||ids.has(String(m.id))) return; const x={fecha:m.fecha, ts:v20TsMov(m), hora:v26HoraOk(m.hora)?m.hora:'', txt:'👤 Personal · '+(m.cat||'')+(m.con?' · '+m.con:''), imp:(m.tipo==='ingreso'?1:-1)*(+m.imp||0), src:'personal', cta:c.id, cuenta:false, dentro:true}; x.mom=v26Mom(x); L.push(x); });
+  L.sort(v26Orden);
+  let s=o.con?+c.saldoIni:0; const hi=v26HoraIni(c);
+  const filas=L.map(x=>{ const fut=x.fecha>hoy, ok=x.cta===c.id&&x.cuenta; if(ok&&!fut&&o.con) s=v17R(s+x.imp);
+    const h=v26HoraFila(x), nota=x.dentro?' <span style="font-size:10.5px;color:var(--ink3);">(ya estaba en el saldo del banco del ajuste)</span>':!x.cuenta?' <span style="font-size:10.5px;color:var(--ink3);">(antes del saldo de partida: ya estaba dentro)</span>':'';
+    const txt=x.ajuste?'📌 Saldo fijado con el banco: <strong>'+v4E2(x.real)+' €</strong>':(x.src==='personal'?'':'🏢 ')+v4Esc(x.txt);
+    return '<tr style="'+(fut||!x.cuenta?'opacity:.6;':'')+(x.src==='personal'?'background:rgba(98,80,214,.05);':'')+(x.ajuste?'background:rgba(98,80,214,.08);':'')+'"><td style="white-space:nowrap;">'+v4F2(x.fecha)+(h?' <span style="color:var(--ink3);font-size:10.5px;">'+h+'</span>':'')+(fut?' (futuro)':'')+'</td><td>'+txt+(x.orig&&x.orig!==x.cta?' <span style="font-size:10.5px;color:var(--ink3);">(con tarjeta)</span>':'')+nota+'</td><td class="mono" style="text-align:right;white-space:nowrap;color:'+(x.imp<0?'var(--rd)':'var(--gn)')+';">'+(x.imp>0?'+':'')+v4E2(x.imp)+'</td><td class="mono" style="text-align:right;">'+(o.con&&ok&&!fut?v4E2(s):'')+'</td></tr>'; }).reverse().join('');
+  const C=v20Cuentas(), oc=C.rc.find(z=>z.id===o.id), dentro=oc?oc.dentro.length:0;
+  $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">📋 '+v4Esc(c.nom)+'</div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'
+    +'<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;line-height:1.6;">'+(o.con?'Saldo hoy: <strong class="mono">'+v20E(o.saldoRC)+'</strong>, el mismo que en RentaControl. Saldo de partida '+v4E2(c.saldoIni)+' € el '+v4F2(c.saldoFecha)+(hi?' a las '+hi:'')+'.':'Sin saldo de partida en RentaControl.')+' 🏢 = de RentaControl · 👤 = apuntado aquí (también sale allí) · 📌 = saldo fijado con el banco (lo anterior ya está dentro).'+(dentro?' '+dentro+' movimiento'+(dentro===1?'':'s')+' personal'+(dentro===1?'':'es')+' anterior'+(dentro===1?'':'es')+' al último saldo fijado ya está'+(dentro===1?'':'n')+' dentro de ese saldo.':'')+'</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Importe</th><th>Saldo</th></tr></thead><tbody>'+(filas||'<tr><td colspan="4" style="color:var(--ink3);">Sin movimientos.</td></tr>')+'</tbody></table></div>';
+  $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
+};
+
+// ── Rapidez: mientras se pinta una pantalla, los movimientos de las cuentas se calculan una sola vez ──
+// (solo durante el pintado, que no cambia datos; si cambian los pisos, los datos o lo de Personal, se recalculan)
+const _v26F={on:0, k:null, v:null};
+function v26ClaveFl(){ let n=0; try{ v9Ctas().forEach(c=>{ n+=(c.movs||[]).length; }); }catch(e){} let P=null; try{ P=v21Pers(); }catch(e){}
+  return [WS, D, D.props, D.pagos, D.compras, D.gastos, D.reservas, D.ctasBanc, (D.pagos||[]).length, (D.compras||[]).length, (D.gastos||[]).length, (D.reservas||[]).length, (D.provisiones||[]).length, (D.ctasBanc||[]).length, n, P, P&&P.movs, P&&P.cuentas, P&&P.movs?P.movs.length:0, P&&P.cuentas?P.cuentas.length:0, v4Hoy()]; }
+function v26MismaClave(a,b){ if(!a||!b||a.length!==b.length) return false; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return false; return true; }
+v9Flujos=(function(prev){ return function(){
+  if(!_v26F.on) return prev.apply(this,arguments);
+  const k=v26ClaveFl(); if(_v26F.v&&v26MismaClave(k,_v26F.k)) return _v26F.v.slice();
+  const out=prev.apply(this,arguments); _v26F.k=k; _v26F.v=out; return out.slice(); }; })(v9Flujos);
+function v26AlPintar(fn){ return function(){ _v26F.on++; try{ return fn.apply(this,arguments); } finally{ if(!--_v26F.on){ _v26F.v=null; _v26F.k=null; } } }; }
+// (solo en RentaControl: en Personal las pantallas cambian sus cuentas un momento mientras pintan)
+rDash=v26AlPintar(rDash); rCtasBanc=v26AlPintar(rCtasBanc); RENDERS.ctasbanc=rCtasBanc;
+
+// ══════════════════════════════════════════════════════════════
+// v4.26 · 2/4 · Arranque inmediato y sincronización rápida, constante y segura
+// ──────────────────────────────────────────────────────────────
+// Por qué tardaba 30 s – 1 min y a veces enseñaba datos de hace semanas:
+//  · El permiso de Google dura 1 hora. Google exige un toque tuyo para renovarlo (lo dice su documentación: «a user
+//    gesture is required to request an access token»). La app intentaba renovarlo sola al abrir: el navegador bloqueaba la
+//    ventanita y, sin decir nada, se quedaba con lo guardado en el móvil (que puede ser de hace semanas).
+//  · Cuando sí había permiso, hacía 6 peticiones en fila (carpeta, hoja, buscar, bajar, buscar, subir), volcaba TODAS las
+//    pestañas del Google Sheet y solo después traía lo de Personal. Y cada 45 s volvía a bajar y subir todo.
+//  · Pintaba el Dashboard dos veces al arrancar.
+// Ahora:
+//  · Pinta una vez lo del dispositivo y avisa arriba de cuándo es («Actualizando…» o «Toca para actualizar»).
+//  · Sin permiso: el primer toque en cualquier sitio (o el botón del aviso) lo renueva y actualiza al momento.
+//  · Con permiso: 1 consulta pequeña (¿cambió el archivo?) + bajar solo si cambió; lo de Personal en paralelo.
+//    Sube solo si hay algo tuyo nuevo. El Google Sheet se vuelca después, como mucho cada 10 minutos.
+//  · Mira cada 15 s (con la app abierta) si otro dispositivo guardó algo, y al volver a la app.
+//  · Capas de seguridad: no sube nunca una copia con muchos menos datos que la de Drive; si la de Drive no se puede leer,
+//    la guarda aparte antes de sustituirla; comprueba el tamaño de lo subido; copias con fecha (4/4).
+// ══════════════════════════════════════════════════════════════
+const V26S={ver:{}, fid:{}, totR:{}, gen:0, tokPend:null, iniciando:null, hojaOk:{}, hojasT:0, hojasFirma:'', otroT:{}, forzar:false, estado:'', toqueT:0, avisoT:null};
+const V26_DRIVE='https://www.googleapis.com/drive/v3', V26_UP='https://www.googleapis.com/upload/drive/v3';
+function v26Key(n,ws){ return 'rc_v26_'+n+'_'+(ws||WS||'gentaury'); }
+function v26LSget(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function v26LSset(k,v){ try{ localStorage.setItem(k,String(v)); }catch(e){} }
+function v26LSdel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+function v26Exp(){ return +v26LSget('rc_auth_exp')||0; }
+function v26TokOk(margen){ return !!gToken&&v26Exp()>Date.now()+(margen===undefined?60000:margen); }
+function v26Es401(e){ return !!e&&(e.e401||/\b401\b|invalid_token|UNAUTHENTICATED|credential/i.test(String(e.message||e))); }
+function v26Err401(){ const e=new Error('El permiso de Google ha caducado'); e.e401=true; return e; }
+function v26FechaHora(ms){ if(!ms) return ''; const d=new Date(+ms), hoy=v4Hoy(), ay=fxAdd(hoy,-1), dia=d.v12Dia();
+  return (dia===hoy?'hoy':dia===ay?'ayer':v4F2(dia))+' a las '+v26Hhmm(d); }
+// Cuándo se actualizó por última vez con Drive lo que hay en este dispositivo (o, si no se sabe, el último cambio guardado)
+function v26DatosDe(ws){ const b=+v26LSget(v26Key('bajado',ws))||0; if(b) return b; let t=+(D&&D._cfgUpd)||0; try{ COLS.forEach(k=>(D[k]||[]).forEach(x=>{ if(x&&+x._upd>t) t=+x._upd; })); }catch(e){} return t; }
+
+// ── Huella de los datos (para saber si algo cambió sin comparar todo) ──
+function v26Firma(o){ if(!o) return ''; const p=[]; COLS.forEach(k=>{ const a=Array.isArray(o[k])?o[k]:[]; let s=0, z=0; a.forEach(r=>{ if(!r) return; const u=+r._upd||0; s+=u; if(!u) z+=JSON.stringify(r).length; }); p.push(a.length,s,z); });
+  const d=o._del||{}; let sd=0; Object.keys(d).forEach(k=>{ sd+=+d[k]||0; }); p.push(Object.keys(d).length,sd,+o._cfgUpd||0); return p.join('.'); }
+function v26Total(o){ let n=0; COLS.forEach(k=>{ n+=Array.isArray(o&&o[k])?o[k].length:0; }); return n; }
+
+// ── Permiso de Google (siempre con un toque: es lo que exige Google) ──
+function v26PedirToken(){
+  if(V26S.tokPend) return V26S.tokPend;
+  V26S.tokPend=new Promise(res=>{ let hecho=false; const fin=ok=>{ if(hecho) return; hecho=true; V26S.tokPend=null; res(ok); };
+    const go=()=>{ try{ if(!window.google||!google.accounts||!google.accounts.oauth2){ fin(false); return; }
+      const cli=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID, scope:'email profile '+SCOPES,
+        callback:r=>{ if(r&&r.access_token&&!r.error){ gToken=r.access_token; v26LSset('rc_auth_token',r.access_token); v26LSset('rc_auth_exp',Date.now()+(+r.expires_in||3600)*1000); fin(true); } else fin(false); },
+        error_callback:()=>fin(false)});
+      cli.requestAccessToken({prompt:''}); }catch(e){ console.warn('GIS',e); fin(false); } };
+    if(window.google&&window.google.accounts) go(); else loadGIS().then(go);
+    setTimeout(()=>fin(false),90000); });
+  return V26S.tokPend;
+}
+// Renovar sin un toque no funciona (el navegador bloquea la ventana de Google): en su lugar, el aviso y el primer toque
+renovarTokenSilencioso=function(){ v26SinPermiso(); };
+renovarTokenAhora=(function(prev){ return function(){ const ua=navigator.userActivation; if(ua&&ua.isActive===false){ v26SinPermiso(); return Promise.resolve(false); } return prev.apply(this,arguments).then(ok=>{ if(!ok) v26SinPermiso(); return ok; }); }; })(renovarTokenAhora);
+async function v26Reconectar(){
+  if(V26S.tokPend) return; v26Aviso('conectando'); const ok=await v26PedirToken();
+  if(ok){ try{ if(currentUser) currentUser.token=gToken; }catch(e){} await gdriveInit(); } else v26Aviso('token');
+}
+function v26SinPermiso(){ if(gToken&&v26TokOk(0)) return; if(V26S.estado!=='conectando') v26Aviso('token'); }
+// El primer toque en cualquier sitio renueva el permiso (Google lo exige así); como mucho una vez por minuto
+function v26AlTocar(ev){
+  try{ if(!currentUser||V26S.tokPend) return; const b=ev&&ev.target&&ev.target.closest?ev.target.closest('#v26-aviso'):null; if(b) return;   // el botón del aviso ya lo hace
+    const caduca=!v26TokOk(2*60000); if(!caduca) return; if(Date.now()-V26S.toqueT<60000) return; V26S.toqueT=Date.now(); v26Reconectar(); }catch(e){}
+}
+document.addEventListener('pointerdown',v26AlTocar,true); document.addEventListener('keydown',v26AlTocar,true);
+
+// ── Arranque: lo del dispositivo al momento (una sola vez) y Drive justo después ──
+checkExistingSession=function(){
+  const email=v26LSget('rc_auth_email'), token=v26LSget('rc_auth_token'), exp=v26Exp();
+  if(!(email&&ALLOWED_EMAILS.includes(email.toLowerCase()))) return false;
+  currentUser={email,token}; reiniciarInactividad();
+  try{ $i('login-screen').classList.add('hidden'); $i('login-loading').classList.remove('show'); }catch(e){}
+  try{ loadGIS(); }catch(e){}   // precarga: el toque abre la ventana de Google al instante
+  if(token&&exp>Date.now()+60000){ gToken=token; setTimeout(()=>{ v26Aviso('sync'); gdriveInit(); },0); }
+  else { gToken=null; setTimeout(()=>v26Aviso('token'),0); }
+  return true;   // el arranque (DOMContentLoaded) pinta el espacio una vez
+};
+gdriveConnect=async function(){ if(v26TokOk()) return gdriveInit(); return v26Reconectar(); };
+
+gdriveInit=async function(){
+  if(!gToken){ v26SinPermiso(); return; }
+  if(V26S.iniciando){ if(V26S.iniWs===WS) return V26S.iniciando; try{ await V26S.iniciando; }catch(e){} if(V26S.iniciando) return V26S.iniciando; }
+  const ws=WS; V26S.iniWs=ws;
+  V26S.iniciando=(async()=>{ try{
+      gSheetId=v26LSget('rc_gsheet_id_'+ws); gFolderId=v26LSget('rc_gfolder_id');
+      updateDriveUI('syncing'); v26Aviso('sync');
+      if(!gFolderId){ gFolderId=await gFindOrCreateFolder(); v26LSset('rc_gfolder_id',gFolderId); }
+      v26OtroEspacio(true);   // lo del otro espacio (cuentas espejo), a la vez
+      inicializarSnapshot();
+      const ok=await syncFull(false,{init:true});
+      if(WS!==ws) return;
+      if(ok){ updateDriveUI(true); arrancarAutoSync(); setTimeout(()=>v26Hojas(false),20000); setTimeout(()=>{ try{ v26Copias(); }catch(e){} },6000); }
+    }catch(e){ console.error('Drive init',e); if(v26Es401(e)){ gToken=null; v26SinPermiso(); } else { v26Aviso('error',e.message); updateDriveUI(false); } }
+    finally{ V26S.iniciando=null; } })();
+  return V26S.iniciando;
+};
+
+// ── Guardar: cada cambio real queda marcado como pendiente (también si se cierra la app antes de subirlo) ──
+// (se envuelve marcarCambios y no saveAndSync, para no perder lo que otras partes hacen al guardar, como el reparto de suministros)
+// Ojo: marcarCambios no cuenta como cambio un registro NUEVO (lo deja con _upd 0); aquí sí, para que se suba siempre.
+marcarCambios=(function(prev){ return function(){
+  let nuevo=false; try{ for(const k of COLS){ const a=D[k]||[]; for(let i=0;i<a.length;i++){ const r=a[i]; if(r&&r.id&&_snap[k+':'+r.id]===undefined){ nuevo=true; break; } } if(nuevo) break; } }catch(e){}
+  const h=prev.apply(this,arguments);
+  if(h||nuevo){ _hayCambiosSinSubir=true; V26S.gen++; v26LSset(v26Key('pend'),'1'); if(!gToken&&typeof currentUser!=='undefined'&&currentUser) setTimeout(v26SinPermiso,0); }
+  return h; }; })(marcarCambios);
+
+// ── Sincronizar: ¿cambió Drive? → bajar y fusionar → subir solo si hay algo nuevo de aquí ──
+async function v26MetaBackup(ws,nombre){
+  const campos='id,name,version,modifiedTime,size,trashed,parents';
+  let id=V26S.fid[ws]||v26LSget(v26Key('fid',ws));
+  if(id){ try{ const m=await gFetch(V26_DRIVE+'/files/'+id+'?fields='+campos);
+      if(m&&!m.trashed&&m.name===nombre&&(m.parents||[]).includes(gFolderId)){ V26S.fid[ws]=m.id; return m; } }catch(e){ if(v26Es401(e)) throw e; }
+    V26S.fid[ws]=null; v26LSdel(v26Key('fid',ws)); }
+  const buscar=async()=>{ const q=encodeURIComponent("name='"+nombre+"' and '"+gFolderId+"' in parents and trashed=false");
+    const r=await gFetch(V26_DRIVE+'/files?q='+q+'&orderBy=modifiedTime%20desc&fields=files('+campos+')'); return r&&r.files&&r.files.length?r.files[0]:null; };
+  let m=await buscar();
+  if(!m){ // ¿sigue existiendo la carpeta?
+    let viva=true; try{ const f=await gFetch(V26_DRIVE+'/files/'+gFolderId+'?fields=id,trashed'); viva=!!f&&!f.trashed; }catch(e){ if(v26Es401(e)) throw e; viva=false; }
+    if(!viva){ gFolderId=await gFindOrCreateFolder(); v26LSset('rc_gfolder_id',gFolderId); m=await buscar(); } }
+  if(m){ V26S.fid[ws]=m.id; v26LSset(v26Key('fid',ws),m.id); }
+  return m;
+}
+async function v26Bajar(id){
+  const url=V26_DRIVE+'/files/'+id+'?alt=media'; const r=await fetch(url,{headers:{Authorization:'Bearer '+gToken},cache:'no-store'});
+  if(r.status===401) throw v26Err401(); if(!r.ok) throw new Error('No se pudo bajar de Drive ('+r.status+')'); return r.text();
+}
+function v26Bytes(s){ try{ return new TextEncoder().encode(s).length; }catch(e){ return unescape(encodeURIComponent(s)).length; } }
+async function v26Subir(ws,nombre,id){
+  const json=JSON.stringify(D), n=v26Bytes(json); let res;
+  if(id) res=await fetch(V26_UP+'/files/'+id+'?uploadType=media&fields=id,version,size,modifiedTime',{method:'PATCH',headers:{Authorization:'Bearer '+gToken,'Content-Type':'application/json'},body:json});
+  else { const meta=JSON.stringify({name:nombre,parents:[gFolderId],mimeType:'application/json'}), bd='bd'+Date.now();
+    res=await fetch(V26_UP+'/files?uploadType=multipart&fields=id,version,size,modifiedTime',{method:'POST',headers:{Authorization:'Bearer '+gToken,'Content-Type':'multipart/related; boundary='+bd},
+      body:'--'+bd+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+meta+'\r\n--'+bd+'\r\nContent-Type: application/json\r\n\r\n'+json+'\r\n--'+bd+'--'}); }
+  if(res.status===401) throw v26Err401(); if(!res.ok) throw new Error('No se pudo guardar en Drive ('+res.status+')');
+  const o=await res.json();
+  if(o&&o.size!==undefined&&+o.size!==n){ const e=new Error('Drive guardó '+o.size+' bytes en vez de '+n+': se repite'); e.tam=true; throw e; }
+  return o;
+}
+// Capa de seguridad: nunca sustituir la copia de Drive por una con muchos menos datos (salvo que lo confirmes)
+function v26Guardia(local,remoto,ws){
+  if(V26S.forzar) return; const nl=v26Total(local), nr=remoto?v26Total(remoto):(V26S.totR[ws]||0);
+  if(nr>=20&&nl<nr*0.5){ const e=new Error('Este dispositivo tiene '+nl+' registros y Google Drive '+nr+'. No subo esta copia para no perder datos.'); e.bloqueo=true; throw e; }
+}
+async function v26Ciclo(ws,manual,opt,intento){
+  const nombre=(WS_CFG[ws]||WS_CFG.gentaury).backup, g0=V26S.gen; intento=intento||0;
+  const meta=await v26MetaBackup(ws,nombre);
+  const visto=!!(meta&&V26S.ver[ws]!==undefined&&String(meta.version)===String(V26S.ver[ws]));
+  let remoto=null, ilegible=false, vacio=false;
+  if(meta&&(!visto||manual||opt.init)){
+    const txt=await v26Bajar(meta.id);
+    if(!txt||!txt.trim()) vacio=true; else { try{ remoto=JSON.parse(txt); if(!remoto||typeof remoto!=='object'||Array.isArray(remoto)){ remoto=null; ilegible=true; } }catch(e){ ilegible=true; } }
+  }
+  if(WS!==ws) throw new Error('Se cambió de espacio durante la sincronización');
+  if(remoto){
+    const antes=v26Firma(D), fus=fusionar(D,remoto);
+    COLS.forEach(k=>D[k]=fus[k]); D._del=fus._del; D.cfg=fus.cfg; D._cfgUpd=fus._cfgUpd;
+    guardarLocal(); inicializarSnapshot();
+    V26S.ver[ws]=meta.version; V26S.totR[ws]=v26Total(remoto); v26LSset(v26Key('bajado',ws),Date.now());
+    if(v26Firma(D)!==antes) refrescarVista();
+  } else if(visto) v26LSset(v26Key('bajado',ws),Date.now());
+  const pend=_hayCambiosSinSubir||v26LSget(v26Key('pend',ws))==='1';
+  const subir=!meta||ilegible||vacio||pend||(remoto&&v26Firma(D)!==v26Firma(remoto));
+  if(subir){
+    v26Guardia(D,remoto,ws);
+    // Justo antes de subir: si otro dispositivo ha guardado mientras tanto, primero se trae y se fusiona (para no pisarlo)
+    if(meta&&intento<3){ try{ const m2=await gFetch(V26_DRIVE+'/files/'+meta.id+'?fields=version'); if(String(m2.version)!==String(remoto?meta.version:V26S.ver[ws])) return v26Ciclo(ws,false,{},intento+1); }catch(e){ if(v26Es401(e)) throw e; } }
+    if(ilegible&&meta){ try{ await v26CopiaArchivo(meta.id,nombre,'ilegible'); }catch(e){ console.warn('copia de la ilegible',e); } }
+    let o; try{ o=await v26Subir(ws,nombre,meta?meta.id:null); }catch(e){ if(e.tam) o=await v26Subir(ws,nombre,meta?meta.id:null); else throw e; }
+    V26S.fid[ws]=o.id; v26LSset(v26Key('fid',ws),o.id); V26S.ver[ws]=o.version; V26S.forzar=false; V26S.totR[ws]=v26Total(D);
+    v26LSset(v26Key('bajado',ws),Date.now()); clearTimeout(V26S.hojasProg); V26S.hojasProg=setTimeout(()=>v26Hojas(false),30000);
+  }
+  if(V26S.gen===g0){ _hayCambiosSinSubir=false; v26LSdel(v26Key('pend',ws)); } else _syncPendiente=true;
+  return {bajado:!!remoto, subido:subir};
+}
+syncFull=async function(manual,opt){
+  opt=opt||{}; const ws=WS;
+  if(!gToken||!gFolderId){ if(manual) toast(gToken?'Conecta primero con Google Drive':'Toca «Actualizar ahora» para renovar el permiso de Google',false); if(!gToken&&currentUser) v26SinPermiso(); return false; }
+  if(_syncEnCurso){ _syncPendiente=true; return false; }
+  _syncEnCurso=true; estadoSync('sync'); let ok=false;
+  try{
+    marcarCambios(); guardarLocal();
+    await v26Ciclo(ws,manual,opt);
+    if(WS!==ws) return false;
+    _ultimaSync=Date.now(); estadoSync('ok'); v26Aviso('ok'); ok=true;
+    if(manual){ toast('✓ Todo sincronizado con Google Drive'); v26Hojas(true); }
+  }catch(e){
+    console.warn('Sync pospuesto:',e&&e.message);
+    if(v26Es401(e)){ gToken=null; estadoSync(_hayCambiosSinSubir?'local':'ok'); v26SinPermiso(); }
+    else if(e&&e.bloqueo){ estadoSync('error','revisa la copia'); v26Aviso('bloqueo',e.message); }
+    else if(navigator.onLine===false){ estadoSync('local'); v26Aviso('offline'); }
+    else { estadoSync('pendiente'); v26Aviso('error',e&&e.message); setTimeout(()=>{ if(gToken&&(_hayCambiosSinSubir||!V26S.ver[ws])) syncFull(false); },15000); }
+  }finally{
+    _syncEnCurso=false;
+    if(_syncPendiente){ _syncPendiente=false; setTimeout(()=>syncFull(false),400); }
+  }
+  return ok;
+};
+// Bajar a la fuerza (botón): igual que sincronizar, pero bajando siempre
+pullFromDrive=async function(){ if(!gToken||!gFolderId){ toast('Conecta primero con Google Drive',false); return; } const ok=await syncFull(true); if(ok) toast('✓ Datos actualizados desde Google Drive'); };
+
+// ── Vigilancia: cada 15 s con la app abierta, al volver a ella y al recuperar la conexión ──
+arrancarAutoSync=function(){ clearInterval(gAutoSyncTimer); gAutoSyncTimer=setInterval(v26Sondeo,15000); };
+async function v26Sondeo(){
+  if(document.hidden||!currentUser) return;
+  if(!v26TokOk(20000)){ if(gToken){ gToken=null; } v26SinPermiso(); return; }
+  if(!gFolderId||_syncEnCurso||V26S.iniciando) return;
+  if(_hayCambiosSinSubir){ syncFull(false); return; }
+  const ws=WS, id=V26S.fid[ws]; if(!id||V26S.ver[ws]===undefined){ syncFull(false); return; }
+  try{ const m=await gFetch(V26_DRIVE+'/files/'+id+'?fields=version,trashed'); if(WS!==ws) return; if(m.trashed||String(m.version)!==String(V26S.ver[ws])) syncFull(false); }
+  catch(e){ if(v26Es401(e)){ gToken=null; v26SinPermiso(); } else syncFull(false); }
+  v26OtroEspacio(false); v26Hojas(false);
+}
+document.addEventListener('visibilitychange',()=>{ if(document.hidden||!currentUser) return; if(!v26TokOk(20000)){ gToken=v26TokOk(0)?gToken:null; v26SinPermiso(); } });
+window.addEventListener('online',()=>{ if(currentUser&&!gToken) v26SinPermiso(); });
+window.addEventListener('offline',()=>{ if(currentUser) v26Aviso('offline'); });
+
+// ── Lo del otro espacio (cuentas espejo): misma consulta pequeña; baja solo si cambió ──
+async function v26OtroEspacio(forzar){
+  if(!gToken||!gFolderId||!currentUser) return false; const otro=WS==='personal'?'gentaury':'personal', st=otro==='personal'?_v21Esp:_v20Esp;
+  if(st.cargando) return false; if(!forzar&&Date.now()-(V26S.otroT[otro]||0)<14000) return false;
+  st.cargando=true; V26S.otroT[otro]=Date.now(); let ok=false;
+  try{ const nombre=WS_CFG[otro].backup, meta=await v26MetaBackup(otro,nombre); if(!meta) return false;
+    if(!forzar&&st.obj&&String(meta.version)===String(V26S.ver['o_'+otro])) return false;
+    const txt=await v26Bajar(meta.id); if(txt&&txt.trim().length>20){ const o=JSON.parse(txt); st.obj=otro==='gentaury'?v20Norm(o):o; st.t=Date.now(); st.err=''; V26S.ver['o_'+otro]=meta.version; ok=true; } }
+  catch(e){ st.err=e.message||String(e); if(v26Es401(e)){ gToken=null; v26SinPermiso(); } }
+  finally{ st.cargando=false; }
+  if(ok) try{ if(otro==='personal') v21Refrescar(); else v20Refrescar(); }catch(e){}
+  return ok;
+}
+v21BajarPers=function(forzar){ if(WS!=='gentaury') return Promise.resolve(false); return v26OtroEspacio(!!forzar); };
+v20BajarEspejo=function(forzar){ if(WS!=='personal') return Promise.resolve(false); return v26OtroEspacio(!!forzar); };
+
+// ── Google Sheet: después, sin prisa, como mucho cada 10 minutos y solo si cambió algo ──
+async function v26Hojas(forzar){
+  if(!gToken||!gFolderId||gSyncing||_syncEnCurso) return; if(!forzar&&document.hidden) return;
+  const ws=WS, f=v26Firma(D); if(!forzar&&(f===V26S.hojasFirma||Date.now()-V26S.hojasT<600000)) return;
+  try{ if(!V26S.hojaOk[ws]){ gSheetId=gSheetId?await gVerifySheet(gSheetId):await gFindOrCreateSheet(); v26LSset('rc_gsheet_id_'+ws,gSheetId); V26S.hojaOk[ws]=true; }
+    if(WS!==ws) return; await volcarSheets(); V26S.hojasFirma=f; V26S.hojasT=Date.now(); }
+  catch(e){ console.warn('Volcado a Sheets pospuesto:',e.message); if(v26Es401(e)){ gToken=null; v26SinPermiso(); } }
+}
+irAEspacio=(function(prev){ return async function(ws){ V26S.hojasFirma=''; V26S.hojasT=0; return prev.apply(this,arguments); }; })(irAEspacio);
+
+// ── Aviso de arriba: de cuándo son los datos que ves y qué está pasando ──
+function v26Aviso(estado,detalle){
+  V26S.estado=estado; if(typeof document==='undefined') return;
+  let b=$i('v26-aviso'); const ws=WS||'gentaury';
+  if(!b){ const ct=$i('content'); if(!ct) return; b=document.createElement('div'); b.id='v26-aviso'; b.setAttribute('role','status'); b.setAttribute('aria-live','polite'); ct.parentNode.insertBefore(b,ct); }
+  clearTimeout(V26S.avisoT);
+  const de=v26DatosDe(ws), cuando=de?v26FechaHora(de):'', bj=+v26LSget(v26Key('bajado',ws))||0, viejo=!bj||Date.now()-bj>10*60000;
+  const st=(fondo,borde)=>'display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 14px;font-size:12.5px;line-height:1.45;background:'+fondo+';border-bottom:1px solid '+borde+';color:var(--ink);';
+  const btn=(t,f)=>'<button type="button" class="btn btn-primary btn-xs" style="margin-left:auto;" onclick="'+f+'">'+t+'</button>';
+  const datos=cuando?'Ves lo guardado en este dispositivo ('+(de===+v26LSget(v26Key('bajado',ws))?'actualizado con Drive '+cuando:'último cambio '+cuando)+').':'Ves lo guardado en este dispositivo.';
+  document.body.classList.toggle('v26-viejo',(estado==='sync'||estado==='token'||estado==='conectando')&&viejo);
+  if(estado==='ok'){ const era=b.style.display!=='none'&&b.innerHTML&&b.dataset.e!=='ok'; b.dataset.e='ok';
+    if(era){ b.style.cssText=st('rgba(16,185,129,.12)','rgba(16,185,129,.35)'); b.innerHTML='✓ Actualizado con Google Drive a las '+v26Hhmm(); V26S.avisoT=setTimeout(()=>{ b.style.display='none'; },2500); }
+    else b.style.display='none'; return; }
+  b.dataset.e=estado; b.style.display='';
+  if(estado==='sync'){ b.style.cssText=st('rgba(245,158,11,.12)','rgba(245,158,11,.35)'); b.innerHTML='<span>⏳ <strong>Actualizando con Google Drive…</strong> '+datos+'</span>'; }
+  else if(estado==='conectando'){ b.style.cssText=st('rgba(98,80,214,.10)','rgba(98,80,214,.3)'); b.innerHTML='<span>🔐 <strong>Conectando con Google…</strong> Si se abre una ventana de Google, elige tu cuenta.</span>'; }
+  else if(estado==='token'){ b.style.cssText=st('rgba(245,158,11,.14)','rgba(245,158,11,.4)'); b.innerHTML='<span>🔒 <strong>Toca para traer lo último de Google Drive.</strong> '+datos+' Google pide un toque tuyo cada hora para renovar el permiso.</span>'+btn('Actualizar ahora','v26Reconectar()'); }
+  else if(estado==='offline'){ b.style.cssText=st('rgba(100,116,139,.12)','rgba(100,116,139,.35)'); b.innerHTML='<span>📴 <strong>Sin conexión.</strong> '+datos+' Lo que cambies se guarda aquí y se subirá a Drive al volver la conexión.</span>'; }
+  else if(estado==='bloqueo'){ b.style.cssText=st('rgba(239,68,68,.12)','rgba(239,68,68,.4)'); b.innerHTML='<span>⛔ <strong>Copia de seguridad protegida.</strong> '+v4Esc(detalle||'')+' Si has borrado tú esos datos a propósito, confírmalo.</span>'+btn('Sí, los he borrado yo: subir','v26ForzarSubida()'); }
+  else { b.style.cssText=st('rgba(239,68,68,.10)','rgba(239,68,68,.35)'); b.innerHTML='<span>⚠️ <strong>No se pudo actualizar con Google Drive</strong>'+(detalle?' ('+v4Esc(String(detalle).slice(0,140))+')':'')+'. '+datos+' Se reintenta solo.</span>'+btn('Reintentar','syncFull(true)'); }
+}
+function v26ForzarSubida(){ if(!confirm('Se sustituirá la copia de Google Drive por la de este dispositivo (antes se guarda una copia con fecha de la de Drive). ¿Seguir?')) return; V26S.forzar=true;
+  (async()=>{ try{ const m=await v26MetaBackup(WS,(WS_CFG[WS]||WS_CFG.gentaury).backup); if(m) await v26CopiaArchivo(m.id,(WS_CFG[WS]||WS_CFG.gentaury).backup,'antes-de-sustituir'); }catch(e){} syncFull(true); })(); }
+// Estilo: mientras se actualiza con datos viejos, las cifras del resumen se ven tenues (para no fiarse de ellas)
+(function(){ try{ const s=document.createElement('style'); s.textContent='body.v26-viejo #d-cartera .cb-val,body.v26-viejo #d-kpis .kpi-value,body.v26-viejo #ctab-lista .kpi-value{opacity:.45;transition:opacity .3s;}#v26-aviso .btn{white-space:nowrap;}'; document.head.appendChild(s); }catch(e){} })();
+
+// ── Versión nueva de la app: el service worker avisa; se recarga sola si no estás escribiendo ──
+function v26Ocupado(){ const a=document.activeElement; if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true; return !!document.querySelector('.modal-overlay.open'); }
+function v26NuevaVersion(){ if(_hayCambiosSinSubir){ try{ guardarLocal(); }catch(e){} }
+  if(!v26Ocupado()){ location.reload(); return; }
+  let b=$i('v26-version'); if(b) return; b=document.createElement('div'); b.id='v26-version';
+  b.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:3000;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;';
+  b.innerHTML='✨ Hay una versión nueva de la app <button type="button" class="btn btn-primary btn-xs" onclick="location.reload()">Actualizar</button>'; document.body.appendChild(b); }
+try{ if(navigator.serviceWorker) navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.tipo==='nueva-version') v26NuevaVersion(); }); }catch(e){}
+
+// ══════════════════════════════════════════════════════════════
+// v4.26 · 3/4 · Copias de seguridad con fecha en tu Google Drive
+// ──────────────────────────────────────────────────────────────
+// Carpeta «RentaControl / Copias de seguridad» (en TU Drive; nada sale a otros servicios):
+//  · Cada día, antes del primer cambio que se sube, se copia la versión que había (= cómo quedó el día anterior):
+//    rentacontrol_backup_AAAA-MM-DD.json y personal_backup_AAAA-MM-DD.json. La copia la hace Drive (no se vuelve a subir).
+//  · Se guardan: todas las de los últimos 35 días, la primera de cada mes durante 2 años y las especiales (antes de
+//    restaurar, antes de sustituir, ilegible) durante 180 días. Las demás van a la papelera de Drive (30 días más).
+//  · Configuración → «Copias de seguridad»: estado de la sincronización, descargar una copia completa (RentaControl +
+//    Personal) y restaurar cualquier copia (antes de restaurar se guarda otra de lo que hay).
+// ══════════════════════════════════════════════════════════════
+const V26C={carpeta:null, diaHecho:{}, limpiado:'', cargando:false, lista:null};
+const V26_COPIAS='Copias de seguridad';
+function v26Base(nombre){ return String(nombre||'').replace(/\.json$/,''); }
+async function v26CarpetaCopias(){
+  if(V26C.carpeta&&V26C.carpeta.padre===gFolderId) return V26C.carpeta.id;
+  let id=v26LSget('rc_v26_copias_id');
+  if(id){ try{ const f=await gFetch(V26_DRIVE+'/files/'+id+'?fields=id,trashed,parents'); if(f&&!f.trashed&&(f.parents||[]).includes(gFolderId)){ V26C.carpeta={id,padre:gFolderId}; return id; } }catch(e){ if(v26Es401(e)) throw e; } }
+  const q=encodeURIComponent("name='"+V26_COPIAS+"' and mimeType='application/vnd.google-apps.folder' and '"+gFolderId+"' in parents and trashed=false");
+  const r=await gFetch(V26_DRIVE+'/files?q='+q+'&fields=files(id)');
+  if(r&&r.files&&r.files.length) id=r.files[0].id;
+  else { const c=await gFetch(V26_DRIVE+'/files',{method:'POST',body:JSON.stringify({name:V26_COPIAS,mimeType:'application/vnd.google-apps.folder',parents:[gFolderId]})}); id=c.id; }
+  v26LSset('rc_v26_copias_id',id); V26C.carpeta={id,padre:gFolderId}; return id;
+}
+// Copia (en Drive, sin volver a subir) de un archivo de datos: nombre_AAAA-MM-DD[_HHMM_motivo].json
+async function v26CopiaArchivo(fileId,nombre,motivo){
+  const car=await v26CarpetaCopias(), d=new Date(), dia=d.v12Dia();
+  const nom=v26Base(nombre)+'_'+dia+(motivo?'_'+v26Hhmm(d).replace(':','')+'_'+motivo:'')+'.json';
+  const o=await gFetch(V26_DRIVE+'/files/'+fileId+'/copy?fields=id,name,size,createdTime',{method:'POST',body:JSON.stringify({name:nom,parents:[car],description:'Copia de seguridad de RentaControl'+(motivo?' ('+motivo+')':'')})});
+  V26C.lista=null; return o;
+}
+// La copia del día (una por archivo y día): antes de subir el primer cambio del día
+async function v26CopiaDiaria(nombre,fileId){
+  const dia=v4Hoy(), k='rc_v26_copiadia_'+v26Base(nombre); if(V26C.diaHecho[nombre]===dia||v26LSget(k)===dia) return false;
+  const car=await v26CarpetaCopias(), q=encodeURIComponent("name='"+v26Base(nombre)+'_'+dia+".json' and '"+car+"' in parents and trashed=false");
+  const r=await gFetch(V26_DRIVE+'/files?q='+q+'&fields=files(id)');
+  if(!(r&&r.files&&r.files.length)) await v26CopiaArchivo(fileId,nombre,'');
+  V26C.diaHecho[nombre]=dia; v26LSset(k,dia); return true;
+}
+// Antes de subir: la copia del día de lo que había (si falla, se sube igual: la copia es una capa más, no un freno)
+v26Subir=(function(prev){ return async function(ws,nombre,id){ if(id){ try{ await v26CopiaDiaria(nombre,id); }catch(e){ if(v26Es401(e)) throw e; console.warn('Copia del día pospuesta',e.message); } } return prev.apply(this,arguments); }; })(v26Subir);
+// Qué copias se guardan
+function v26Conservar(files,hoy){
+  const keep=new Set(), lim35=fxAdd(hoy,-35), lim2a=fxAdd(hoy,-730), lim180=fxAdd(hoy,-180), primeras={};
+  files.forEach(f=>{ const m=String(f.name||'').match(/^(.*)_(\d{4}-\d{2}-\d{2})(?:_(\d{4})_([a-z\-]+))?\.json$/); if(!m){ keep.add(f.id); return; }
+    const [,base,dia,,motivo]=m; f._b=base; f._d=dia; f._m=motivo||'';
+    if(motivo){ if(dia>=lim180) keep.add(f.id); return; }
+    if(dia>=lim35) keep.add(f.id);
+    const mk=base+'|'+dia.slice(0,7); if(!primeras[mk]||dia<primeras[mk]._d) primeras[mk]=f; });
+  Object.values(primeras).forEach(f=>{ if(f._d>=lim2a) keep.add(f.id); });
+  return keep;
+}
+async function v26ListaCopias(){
+  const car=await v26CarpetaCopias(), out=[]; let tok='';
+  do{ const q=encodeURIComponent("'"+car+"' in parents and trashed=false");
+    const r=await gFetch(V26_DRIVE+'/files?q='+q+'&pageSize=1000&orderBy=name%20desc&fields=nextPageToken,files(id,name,size,createdTime)'+(tok?'&pageToken='+tok:''));
+    (r.files||[]).forEach(f=>out.push(f)); tok=r.nextPageToken||''; }while(tok);
+  V26C.lista=out; return out;
+}
+async function v26Limpiar(){
+  const hoy=v4Hoy(); if(V26C.limpiado===hoy||v26LSget('rc_v26_limpiado')===hoy) return 0;
+  const fs=await v26ListaCopias(), keep=v26Conservar(fs,hoy); let n=0;
+  for(const f of fs){ if(keep.has(f.id)) continue; try{ await gFetch(V26_DRIVE+'/files/'+f.id+'?fields=id',{method:'PATCH',body:JSON.stringify({trashed:true})}); n++; }catch(e){ if(v26Es401(e)) throw e; } }
+  V26C.limpiado=hoy; v26LSset('rc_v26_limpiado',hoy); V26C.lista=null; return n;
+}
+// Después de arrancar: la copia del día de los dos espacios y la limpieza
+async function v26Copias(){
+  if(!gToken||!gFolderId) return;
+  try{ for(const ws of ['gentaury','personal']){ const nombre=WS_CFG[ws].backup, m=await v26MetaBackup(ws,nombre); if(m) await v26CopiaDiaria(nombre,m.id); }
+    await v26Limpiar(); }
+  catch(e){ console.warn('Copias de seguridad pospuestas',e.message); if(v26Es401(e)){ gToken=null; v26SinPermiso(); } }
+}
+
+// ── Descargar una copia completa (las dos partes) a tu dispositivo ──
+function v26DescargarCopia(){
+  const leer=k=>{ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
+  const o={app:'RentaControl · Gentaury', version:'4.26', fecha:new Date().toISOString(), rentacontrol:WS==='gentaury'?D:leer(WS_CFG.gentaury.key), personal:WS==='personal'?D:leer(WS_CFG.personal.key)};
+  const blob=new Blob([JSON.stringify(o)],{type:'application/json'}), a=document.createElement('a'), d=new Date();
+  a.href=URL.createObjectURL(blob); a.download='rentacontrol_copia_completa_'+d.v12Dia()+'_'+v26Hhmm(d).replace(':','')+'.json'; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(e){} },2000);
+  toast('⬇️ Copia completa descargada (RentaControl + Personal)');
+}
+
+// ── Restaurar una copia de Drive (sustituye lo actual; antes guarda una copia de lo que hay) ──
+function v26Restaurado(cur,cop,t){
+  const out=Object.assign({},cop); out._del=Object.assign({},cur._del||{});
+  COLS.forEach(k=>{ const a=(Array.isArray(cop[k])?cop[k]:[]).filter(r=>r&&r.id!==undefined).map(r=>Object.assign({},r,{_upd:t})); out[k]=a;
+    const ids=new Set(a.map(r=>String(r.id))); a.forEach(r=>{ delete out._del[k+':'+r.id]; });
+    (cur[k]||[]).forEach(r=>{ if(r&&r.id!==undefined&&!ids.has(String(r.id))) out._del[k+':'+r.id]=t; }); });
+  out.cfg=cop.cfg||cur.cfg||{}; out._cfgUpd=t; return out;
+}
+async function v26Restaurar(fileId){
+  const f=(V26C.lista||[]).find(x=>x.id===fileId), nombre=(WS_CFG[WS]||WS_CFG.gentaury).backup;
+  if(!f||!String(f.name).startsWith(v26Base(nombre)+'_')){ toast('Esa copia no es de esta parte de la app',false); return; }
+  let cop=null; try{ cop=JSON.parse(await v26Bajar(fileId)); }catch(e){ toast('No se pudo leer la copia: '+e.message,false); return; }
+  if(!cop||typeof cop!=='object'||!COLS.some(k=>Array.isArray(cop[k]))){ toast('La copia no tiene datos válidos',false); return; }
+  const nc=v26Total(cop), na=v26Total(D), dia=(String(f.name).match(/(\d{4}-\d{2}-\d{2})/)||[])[1]||'';
+  if(!confirm('¿Restaurar la copia del '+v4F2(dia)+' ('+nc+' registros)?\n\nSustituye lo que hay ahora ('+na+' registros) en este dispositivo y en Google Drive. Antes se guarda una copia de lo actual en «Copias de seguridad».')) return;
+  try{ const m=await v26MetaBackup(WS,nombre); if(m) await v26CopiaArchivo(m.id,nombre,'antes-de-restaurar'); }
+  catch(e){ if(!confirm('No se pudo guardar la copia de lo actual ('+e.message+'). ¿Restaurar igualmente?')) return; }
+  const t=ahoraMonotono(), R=v26Restaurado(D,cop,t);
+  Object.keys(D).forEach(k=>{ if(!(k in R)) delete D[k]; }); Object.assign(D,R);
+  guardarLocal(); inicializarSnapshot(); _hayCambiosSinSubir=true; V26S.gen++; v26LSset(v26Key('pend'),'1'); V26S.forzar=true;
+  try{ v4InvalidarCaches(); }catch(e){} refrescarVista(); toast('♻️ Copia del '+v4F2(dia)+' restaurada · subiendo a Drive…');
+  await syncFull(true); try{ v26PintarCopias(); }catch(e){}
+}
+
+// ── Configuración: «🛡️ Copias de seguridad» ──
+function v26HtmlCopias(lista){
+  const nombre=(WS_CFG[WS]||WS_CFG.gentaury).backup, base=v26Base(nombre), ws=WS||'gentaury', b=+v26LSget(v26Key('bajado',ws))||0;
+  const est=!gToken?'<span style="color:var(--ye);">🔒 Sin permiso de Google ahora mismo: toca «Actualizar ahora» arriba.</span>':_syncEnCurso?'⏳ Sincronizando…':_hayCambiosSinSubir?'<span style="color:var(--ye);">Cambios pendientes de subir</span>':'<span style="color:var(--gn);">✓ Al día</span>';
+  const mias=(lista||[]).filter(f=>String(f.name).startsWith(base+'_')), otras=(lista||[]).filter(f=>!String(f.name).startsWith(base+'_'));
+  const fila=f=>{ const m=String(f.name).match(/_(\d{4}-\d{2}-\d{2})(?:_(\d{2})(\d{2})_([a-z\-]+))?\.json$/)||[], kb=f.size?Math.round(+f.size/1024).toLocaleString('es-ES')+' KB':'';
+    const mot={'antes-de-restaurar':'antes de restaurar','antes-de-sustituir':'antes de sustituir','ilegible':'no se podía leer'}[m[4]]||'';
+    return '<div class="v26-copia" style="display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line);"><div style="flex:1;min-width:150px;"><strong style="font-size:12.5px;">'+v4F2(m[1]||'')+(m[2]?' '+m[2]+':'+m[3]:'')+'</strong> <span style="font-size:11.5px;color:var(--ink3);">'+(mot?'<span class="badge badge-y">'+mot+'</span>':'copia del día')+(kb?' · '+kb:'')+'</span></div><button type="button" class="btn btn-ghost btn-xs" onclick="v26Restaurar(\''+f.id+'\')">♻️ Restaurar</button></div>'; };
+  return '<div class="card-title">🛡️ Copias de seguridad y sincronización</div>'
+    +'<div style="font-size:12.5px;color:var(--ink2);line-height:1.7;margin-bottom:10px;">Estado: '+est+'<br>Última actualización con Google Drive en este dispositivo: <strong>'+(b?v26FechaHora(b):'—')+'</strong> · '+v26Total(D).toLocaleString('es-ES')+' registros<br>'
+    +'Cada cambio se guarda al instante en este dispositivo y en menos de 1 segundo en tu Google Drive («RentaControl / '+v4Esc(nombre)+'»). La app mira cada 15 s si otro dispositivo guardó algo. Cada día se guarda una copia con fecha en «RentaControl / '+V26_COPIAS+'» (últimos 35 días y la primera de cada mes durante 2 años).</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><button type="button" class="btn btn-secondary btn-sm" onclick="syncFull(true)">🔄 Sincronizar ahora</button><button type="button" class="btn btn-secondary btn-sm" onclick="v26DescargarCopia()">⬇️ Descargar copia completa</button>'
+    +(gFolderId?'<button type="button" class="btn btn-ghost btn-sm" onclick="v26AbrirCopias()">📂 Abrir la carpeta en Drive</button>':'')+'<button type="button" class="btn btn-ghost btn-sm" onclick="v26PintarCopias(true)">↻ Ver copias</button></div>'
+    +(lista===null?'<div style="font-size:12px;color:var(--ink3);">Pulsa «Ver copias» para ver y restaurar las copias guardadas.</div>'
+      :lista===undefined?'<div style="font-size:12px;color:var(--ink3);">Cargando copias…</div>'
+      :'<div style="max-height:300px;overflow:auto;">'+(mias.map(fila).join('')||'<div style="font-size:12px;color:var(--ink3);">Aún no hay copias (la primera se hace hoy).</div>')+'</div>'
+        +(otras.length?'<div style="font-size:11px;color:var(--ink3);margin-top:6px;">Además hay '+otras.length+' copia'+(otras.length===1?'':'s')+' de la otra parte de la app (se restauran desde allí).</div>':''));
+}
+async function v26AbrirCopias(){ try{ const id=await v26CarpetaCopias(); window.open('https://drive.google.com/drive/folders/'+id,'_blank'); }catch(e){ toast('No se pudo abrir: '+e.message,false); } }
+async function v26PintarCopias(cargar){
+  const sec=$i(WS==='personal'?'sec-pCfg':'sec-cfg'); if(!sec) return; let c=$i('v26-copias');
+  if(!c){ c=document.createElement('div'); c.id='v26-copias'; c.className='card mb'; const ph=sec.querySelector('.ph'); sec.insertBefore(c,ph?ph.nextSibling:sec.firstChild); }
+  if(cargar&&gToken&&gFolderId){ c.innerHTML=v26HtmlCopias(undefined); try{ await v26ListaCopias(); }catch(e){ toast('No se pudieron ver las copias: '+e.message,false); } }
+  c.innerHTML=v26HtmlCopias(V26C.lista||null);
+}
+RENDERS.cfg=(function(prev){ return function(){ const r=prev.apply(this,arguments); try{ v26PintarCopias(false); }catch(e){ console.warn(e); } return r; }; })(RENDERS.cfg);
+RENDERS.pCfg=(function(prev){ return function(){ const r=prev.apply(this,arguments); try{ v26PintarCopias(false); }catch(e){ console.warn(e); } return r; }; })(RENDERS.pCfg);
+
+// ══════════════════════════════════════════════════════════════
+// v4.26 · 4/4 · Dashboard entero filtrado por propietario y por piso
+// ──────────────────────────────────────────────────────────────
+// El filtro (👤 propietario · 🏠 piso) está arriba del todo y cambia TODO el Dashboard: indicadores, patrimonio, deuda,
+// liquidez, ROCE, barras, tabla, gráfica y listas. Con «Todos» todo es exactamente como antes.
+// De cada propietario:
+//  · Valor de los pisos: SU parte. Pleno dominio, el 100 % (o su % si hay copropiedad). Usufructo vitalicio: 70 % si el
+//    usufructuario tiene menos de 20 años, 1 % menos por cada año más, mínimo 10 % (= 89 − edad); temporal: 2 % por cada
+//    año que queda (redondeado hacia arriba), máximo 70 %. Nuda propiedad: el resto (art. 26.a de la Ley 29/1987 del ISD,
+//    al que remiten el Impuesto sobre el Patrimonio y el ITP). Edad de hoy, con la fecha de nacimiento del usufructo; si no
+//    está, el % de la escritura.
+//  · Deuda: las hipotecas que paga (su titular en Hipotecas).
+//  · Liquidez: sus cuentas (menos las fianzas y reservas de sus inquilinos).
+//  · ROCE: su flujo de caja previsto × 12 ÷ dinero propio invertido en sus pisos. Su flujo: rentas y suministros de los
+//    pisos de los que cobra las rentas − sus gastos de esos pisos (los que tienen su nombre como titular o, sin titular,
+//    los de quien cobra) − las cuotas de las hipotecas que paga. Sus pisos: aquellos en los que tiene algún derecho
+//    (pleno dominio, usufructo o nuda propiedad), cobra las rentas o paga la hipoteca.
+// De un piso: su valor entero, sus hipotecas y su ROCE; la liquidez no es de un piso (las cuentas son de cada persona).
+// ══════════════════════════════════════════════════════════════
+function v26Fil(){ try{ return v23Fil(); }catch(e){ return {own:'',pid:''}; } }
+function v26Activo(F){ F=F||v26Fil(); return !!(F.own||F.pid); }
+// % del valor que vale hoy un usufructo (0–1)
+function v26PctUsuf(d,hoy){
+  if(!d) return null; hoy=hoy||v4Hoy();
+  if(d.tipo==='usufVit'){ if(d.fnacUsuf){ const e=edadEn(d.fnacUsuf,hoy); if(e!==null&&isFinite(e)) return {u:Math.max(10,Math.min(70,89-e))/100, txt:'vitalicio, '+e+' años → '+Math.max(10,Math.min(70,89-e))+' %'}; }
+    const p=parseFloat(d.pctUsuf); return p>0?{u:Math.min(100,p)/100, txt:'vitalicio, '+p+' % de la escritura'}:null; }
+  if(d.tipo==='usufTemp'){ if(d.hasta){ const dias=v4Diff(hoy,d.hasta)+1; if(dias<=0) return {u:0,txt:'terminado'}; const a=Math.ceil(dias/365.25); return {u:Math.min(70,2*a)/100, txt:'temporal, '+a+' año'+(a===1?'':'s')+' por delante → '+Math.min(70,2*a)+' %'}; }
+    const p=parseFloat(d.pctUsuf); return p>0?{u:Math.min(100,p)/100, txt:'temporal, '+p+' % de la escritura'}:null; }
+  return null;
+}
+// Parte del valor del piso que es de un propietario hoy (0–1) y por qué
+function v26Parte(p,own,hoy){
+  hoy=hoy||v4Hoy(); if(!own) return {s:1,txt:''};
+  const ds=derechosProp(p.id).filter(d=>(!d.desde||d.desde<=hoy)&&(!d.hasta||d.hasta>=hoy));
+  if(!ds.length){ const f=!p.fcompra||p.fcompra<=hoy; return String(p.ownerId)===own&&f?{s:1,txt:'pleno dominio'}:{s:0,txt:''}; }
+  const us=ds.find(d=>d.tipo==='usufVit'||d.tipo==='usufTemp'), U=us?v26PctUsuf(us,hoy):null; let s=0; const t=[];
+  ds.forEach(d=>{ if(String(d.ownerId)!==own) return; const pc=(parseFloat(d.pct)>0?parseFloat(d.pct):100)/100;
+    if(d.tipo==='pleno'){ s+=pc; t.push('pleno dominio'+(pc<1?' '+Math.round(pc*100)+' %':'')); }
+    else if(d.tipo==='usufVit'||d.tipo==='usufTemp'){ if(U){ s+=pc*U.u; t.push('usufructo '+U.txt); } else t.push('usufructo sin % (no se cuenta)'); }
+    else if(d.tipo==='nuda'){ const u=U?U.u:0; s+=pc*(1-u); t.push('nuda propiedad '+Math.round((1-u)*100)+' %'+(U?'':' (sin % de usufructo)')); } });
+  return {s:Math.max(0,Math.min(1,s)), txt:t.join(' · ')};
+}
+function v26HipsDe(own,pid){ const hoy=v4Hoy(); return (D.hipotecas||[]).filter(h=>(!pid||String(h.propId)===String(pid))&&(!own||v23OwnHip(h,hoy)===own)); }
+function v26HipViva(h){ return !(String(h.pend).trim()!==''&&parseFloat(h.pend)===0); }
+// Pisos que salen con el filtro
+function v26Pisos(F){
+  F=F||v26Fil(); const hoy=v4Hoy(), ps=D.props||[];
+  if(F.pid) return ps.filter(p=>String(p.id)===F.pid);
+  if(!F.own) return ps.slice();
+  return ps.filter(p=>v22Dis(p.id,hoy)===F.own||v26Parte(p,F.own,hoy).s>0||v26HipsDe(F.own,p.id).length>0);
+}
+// Pisos cuyas rentas cobra hoy (ocupación, indicadores de alquiler)
+function v26PisosRenta(F){ F=F||v26Fil(); const hoy=v4Hoy(); return v26Pisos(F).filter(p=>!F.own||v22Dis(p.id,hoy)===F.own); }
+// Gastos medios del piso que son de un propietario (mismo cálculo que v4GastosMesPiso, con su titular)
+function v26GastosMesDe(p,own,hoy){
+  hoy=hoy||v4Hoy(); const w=v4Ventana(p,hoy), conCuota=v4CuotaMesPiso(p)>0; let tot=0;
+  v4ItemsCache().filter(it=>it.propId==p.id&&!it.dup&&(+it.imp||0)>0&&!v4EsCapex(it,p)&&!(conCuota&&v4EsCuotaHipo(it))).forEach(it=>{
+    const quien=String(it.titular||'')||v22Dis(p.id,it.fecha||hoy); if(quien!==own) return;
+    const per=v4PeriodoGasto(it); if(!per) return; const len=v4Diff(per[0],per[1])+1, sol=v4Solape(per[0],per[1],w.ini,w.fin); if(!sol) return; tot+=(+it.imp)*sol/len; });
+  return Math.round(tot/w.meses*100)/100;
+}
+// Flujo previsto al mes de un piso para un propietario (o de todos)
+function v26Flujo(p,own){
+  const e=v4EbitdaPiso(p); if(!own) return {mes:e.mes, ing:e.ing.total, gas:e.gastos.mes, cuo:e.cuota};
+  const hoy=v4Hoy(), cobra=v22Dis(p.id,hoy)===own, ing=cobra?e.ing.total:0, gas=v26GastosMesDe(p,own,hoy);
+  const hs=(D.hipotecas||[]).filter(h=>h.propId==p.id);
+  const cuo=hs.length?Math.round(hs.filter(h=>v26HipViva(h)&&v23OwnHip(h,hoy)===own).reduce((s,h)=>s+(parseFloat(h.cuota)||0),0)*100)/100:(String(p.ownerId)===own?(parseFloat(p.hipo)||0):0);
+  return {mes:Math.round((ing-gas-cuo)*100)/100, ing, gas, cuo};
+}
+function v26Valor(p){ const va=valorActualizadoPiso(p); return va.valor||parseFloat(p.tasacion||p.mercado||p.precio||0); }
+function v26Deuda(p,own){
+  if(!own) return hipotecaPendiente(p);
+  const hs=(D.hipotecas||[]).filter(h=>h.propId==p.id); if(!hs.length) return String(p.ownerId)===own?(parseFloat(p.capital)||0):0;
+  return hs.filter(h=>v23OwnHip(h,v4Hoy())===own).reduce((s,h)=>s+(parseFloat(h.pend)||0),0);
+}
+// Liquidez de un propietario (sus cuentas y las fianzas y reservas de sus inquilinos)
+function v26Liq(F){
+  const L=v9Liquidez(); if(!F.own&&!F.pid) return L;
+  if(F.pid) return Object.assign({},L,{on:false, piso:true});
+  const own=F.own, cs=v9Ctas().filter(c=>(c.tipo||'cuenta')!=='tarjeta'&&String(c.titularId)===own), con=cs.filter(v9ConSaldo);
+  const saldo=v9R2(con.reduce((s,c)=>s+(v9SaldoCta(c,null,L.fl)||0),0)), deps=(L.deps||[]).filter(d=>String(d.tit)===own), dep=v9R2(deps.reduce((s,d)=>s+d.imp,0));
+  return {on:con.length>0, saldo, dep, neta:v9R2(saldo-dep), deps, porTit:{[own]:saldo}, sinSaldo:cs.filter(c=>!v9ConSaldo(c)), fl:L.fl, own};
+}
+function v26Totales(F){
+  F=F||v26Fil(); const own=F.own, props=v26Pisos(F), hoy=v4Hoy();
+  let patBruto=0, deudaTotal=0, dinero=0, ebitdaMes=0, ingMes=0, gasMes=0, cuoMes=0, factB=0, valRenta=0; const det=[];
+  props.forEach(p=>{ const val=v26Valor(p), pa=v26Parte(p,own,hoy), fl=v26Flujo(p,own), deu=v26Deuda(p,own), dp=dineroPropio(p);
+    patBruto+=val*pa.s; deudaTotal+=deu; dinero+=dp; ebitdaMes+=fl.mes; ingMes+=fl.ing; gasMes+=fl.gas; cuoMes+=fl.cuo;
+    if(!own||v22Dis(p.id,hoy)===own){ factB+=facturacionBrutaPiso(p); valRenta+=val; }
+    det.push({p, val, parte:pa, valor:val*pa.s, deuda:deu, dp, fl, roce:dp>0?fl.mes*12/dp*100:null}); });
+  if(own&&!F.pid){ // deuda de hipotecas que paga en pisos que no salen (no debería pasar, pero que no se pierda)
+    const ids=new Set(props.map(p=>String(p.id))); v26HipsDe(own,'').forEach(h=>{ if(!ids.has(String(h.propId))) deudaTotal+=parseFloat(h.pend)||0; }); }
+  const r=x=>Math.round(x*100)/100;
+  return {props, det, patBruto:r(patBruto), patNeto:r(patBruto-deudaTotal), deudaTotal:r(deudaTotal), dinero:r(dinero), ebitdaMes:r(ebitdaMes), ingMes:r(ingMes), gasMes:r(gasMes), cuoMes:r(cuoMes),
+    roce:dinero>0?ebitdaMes*12/dinero*100:null, rentB:valRenta>0?factB/valRenta*100:null};
+}
+// Texto corto de qué se está viendo
+// Calcular algo con solo unos pisos (sin que se cuelen cachés hechas con menos pisos)
+function v26ConProps(props,fn){ const P0=D.props, C0=_v22Cache; let fijada=false;
+  try{ if(!_v22Cache){ _v22Cache=v22Lineas(); fijada=true; } }catch(e){}
+  try{ v4InvalidarCaches(); }catch(e){} D.props=props;
+  try{ return fn(); } finally{ D.props=P0; try{ v4InvalidarCaches(); }catch(e){} if(fijada) _v22Cache=C0; } }
+function v26TxtVista(F){ F=F||v26Fil(); const p=F.pid?(D.props||[]).find(x=>String(x.id)===F.pid):null; return [F.own?v23NomOwn(F.own):'',p?(p.nom||'Piso'):''].filter(Boolean).join(' · '); }
+
+// ── Barra del filtro, arriba del todo ──
+function v26BarraFiltro(){
+  const sec=$i('sec-dash'); if(!sec) return; let b=$i('v26-fil');
+  if(!b){ b=document.createElement('div'); b.id='v26-fil'; const k=$i('d-kpis'); sec.insertBefore(b,k||sec.firstChild); }
+  const F=v26Fil(), on=v26Activo(F), sel=v23Selects(F,'','');
+  if(!sel){ b.style.display='none'; b.innerHTML=''; return; }
+  b.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:8px 12px;border-radius:10px;border:1px solid '+(on?'var(--acc)':'var(--line)')+';background:'+(on?'var(--acc-l)':'var(--card)')+';';
+  b.innerHTML='<span style="font:600 10px \'DM Mono\',monospace;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);">Ver</span>'+sel
+    +(on?'<span style="font-size:11.5px;color:var(--ink2);flex-basis:100%;line-height:1.45;">🔎 Todo el Dashboard es de <strong>'+v4Esc(v26TxtVista(F))+'</strong>'+(F.own?': su parte del valor, las hipotecas que paga, sus cuentas y su flujo.':'.')+'</span>':'');
+}
+// En «Resultados» ya no van los desplegables (están arriba); el título dice qué se ve
+v21Ctrl=(function(prev){ return function(P){ const h=prev.apply(this,arguments); return h.replace(/<div id="v23-fil"[^>]*>[\s\S]*?<\/div>(?=<button type="button" id="v22-ver")/,''); }; })(v21Ctrl);
+
+// ── Resumen de la cartera con el filtro ──
+function v26Cartera(){
+  const el=$i('d-cartera'); if(!el) return; const F=v26Fil(), own=F.own, T=v26Totales(F), props=T.props, hoy=v4Hoy();
+  if(!(D.props||[]).length){ el.style.display='none'; return; } el.style.display='block';
+  const pr=v26PisosRenta(F); let hT=0, hO=0, hR=0; pr.forEach(p=>{ hT+=parseInt(p.habs)||0; const o=v16EstHabs(p); hO+=o.occ.length; hR+=o.res.length; });
+  const pct=hT>0?Math.round(hO/hT*100):0, libres=hT-hO-hR, lq=v26Liq(F);
+  let tr=null; try{ tr=v26ConProps(pr,()=>v9StatsAlq()); }catch(e){ tr=null; }
+  const o={patBruto:T.patBruto, patNeto:T.patNeto, deudaTotal:T.deudaTotal, roce:T.roce, rentB:T.rentB, ebitdaMes:T.ebitdaMes, ingMes:T.ingMes, gasMes:T.gasMes, cuoMes:T.cuoMes, lq, tr};
+  const hs=v26HipsDe(own,F.pid), amort=hs.reduce((s,h)=>s+capitalAmortizado(h),0), nCu=hs.reduce((s,h)=>s+((h.cuotas||[]).length),0), intr=hs.reduce((s,h)=>s+(h.cuotas||[]).reduce((a,cu)=>a+parseFloat(cu.int||0),0),0);
+  const pB=T.patBruto, dT=T.deudaTotal, tv=v26TxtVista(F);
+  const nota=own?'<div style="font-size:11px;color:var(--ink3);line-height:1.55;margin:-4px 0 10px;">Valor: la parte de '+v4Esc(v23NomOwn(own))+' ('+T.det.map(d=>{ const pc=Math.round(d.parte.s*100)+' %', tx=d.parte.txt||'sin derechos'; return v4Esc(d.p.nom)+': '+tx+(d.parte.s>0&&d.parte.s<1&&!tx.endsWith(pc)?' = '+pc:''); }).join('; ')+'; art. 26.a de la Ley 29/1987 del ISD) · Deuda: las hipotecas que paga · Liquidez: sus cuentas · ROCE: su flujo previsto (sin las hipotecas que pagan otros) × 12 ÷ dinero propio de estos pisos (precio + inversiones − préstamos).</div>'
+    :F.pid?'<div style="font-size:11px;color:var(--ink3);line-height:1.55;margin:-4px 0 10px;">Valor, hipotecas y ROCE de este piso. La liquidez no se suma: las cuentas son de cada persona, no de un piso.</div>':'';
+  el.innerHTML='<div class="card-title">📊 Resumen · '+v4Esc(tv)+' · '+props.length+' inmueble'+(props.length!==1?'s':'')+'</div>'+nota
+    +v17Cajas(o)
+    +'<div style="margin-top:14px;"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-bottom:4px;"><span>Habitaciones ocupadas'+(own?' (pisos de los que cobra las rentas)':'')+'</span><span>Libres</span></div>'
+    +'<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line);"><div style="width:'+pct+'%;background:var(--gn);"></div><div style="width:'+(hT>0?hR/hT*100:0)+'%;background:var(--ye);"></div><div style="width:'+(hT>0?libres/hT*100:0)+'%;background:var(--line2);"></div></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px;"><span style="color:var(--gn);font-weight:600;">'+hO+' alquiladas ('+pct+'%)'+(hR?'<span style="color:var(--ye);"> · '+hR+' reservada'+(hR!==1?'s':'')+'</span>':'')+'</span><span style="color:var(--ink3);font-weight:600;">'+libres+' libre'+(libres!==1?'s':'')+'</span></div>'+v17LineaDias(tr)+'</div>'
+    +'<div style="margin-top:14px;"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-bottom:4px;"><span>'+(own?'Su parte (patrimonio neto)':'Tu parte (patrimonio neto)')+'</span><span>Financiado por bancos</span></div>'
+    +'<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line);"><div style="width:'+(pB>0?Math.max(0,(pB-dT)/pB*100):100)+'%;background:var(--gn);"></div><div style="width:'+(pB>0?Math.min(100,dT/pB*100):0)+'%;background:var(--rd);"></div></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px;"><span style="color:var(--gn);font-weight:600;">'+eur(pB-dT)+' ('+(pB>0?((pB-dT)/pB*100).toFixed(0):100)+'%)</span><span style="color:var(--rd);font-weight:600;">'+eur(dT)+' (LTV '+(pB>0?(dT/pB*100).toFixed(1):0)+'%)</span></div>'
+    +(amort>0||nCu>0?'<div style="margin-top:10px;padding:10px 12px;background:var(--gn-l,rgba(16,185,129,.08));border:1px solid rgba(16,185,129,.25);border-radius:var(--r2);font-size:11.5px;color:var(--ink2);line-height:1.6;">🏠 Con '+nCu+' cuota'+(nCu!==1?'s':'')+' pagada'+(nCu!==1?'s':'')+' ya '+(own?'ha':'has')+' convertido <strong style="color:var(--gn);">'+eur(amort)+'</strong> de deuda en patrimonio propio'+(intr>0?' · '+eur(intr)+' en intereses deducibles':'')+'.</div>':'')+'</div>'
+    +'<div style="font-family:\'DM Mono\',monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:18px 0 8px;">Desglose por inmueble'+(own?' · lo de '+v4Esc(v23NomOwn(own)):'')+'</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Inmueble</th><th class="n">Ocupación</th><th class="n">'+(own?'Su valor':'Valor')+'</th><th class="n">Deuda</th><th class="n">Neto</th><th class="n">Ingresos '+v21PerCorto()+'</th><th class="n">Beneficio '+v21PerCorto()+'</th><th class="n">Dinero propio</th><th class="n" title="Flujo de caja previsto al mes con los contratos de hoy">Previsto/mes</th><th class="n">ROCE</th></tr></thead><tbody>'
+    +T.det.map(d=>{ const p=d.p, f17=v17FactPiso(p), o16=v16EstHabs(p), tot=parseInt(p.habs)||0, oc=o16.occ.length, pc=tot>0?Math.round(oc/tot*100):0, cobra=!own||v22Dis(p.id,hoy)===own;
+      return '<tr><td style="font-weight:600;font-size:12px;">'+v4Esc(p.nom)+(own&&d.parte.s>0&&d.parte.s<1?' <span style="font-weight:400;font-size:10px;color:var(--ink3);">('+Math.round(d.parte.s*100)+' %)</span>':'')+'</td>'
+        +'<td class="n mono" style="white-space:nowrap;">'+(cobra?'<span style="font-weight:700;color:'+(pc>=90?'var(--gn)':pc>=70?'var(--ye)':'var(--rd)')+';">'+pc+'%</span> <span style="color:var(--ink3);font-size:10px;">'+oc+'/'+tot+'</span>':'<span style="color:var(--ink3);font-size:10px;">no cobra</span>')+'</td>'
+        +'<td class="n mono">'+eur(d.valor)+'</td><td class="n mono" style="color:var(--rd);">'+(d.deuda>0?eur(d.deuda):'–')+'</td><td class="n mono" style="font-weight:600;">'+eur(d.valor-d.deuda)+'</td>'
+        +'<td class="n mono">'+eur(f17.bruta)+'</td><td class="n mono" style="color:'+(f17.neta>=0?'var(--gn)':'var(--rd)')+';">'+eur(f17.neta)+'</td><td class="n mono">'+eur(d.dp)+'</td>'
+        +'<td class="n mono" style="color:'+(d.fl.mes>=0?'var(--gn)':'var(--rd)')+';">'+eur(d.fl.mes)+'</td><td class="n mono" style="font-weight:700;color:'+(d.roce!==null&&d.roce>=0?'var(--gn)':'var(--rd)')+';">'+(d.roce!==null?d.roce.toFixed(1)+'%':'–')+'</td></tr>'; }).join('')
+    +'</tbody></table></div>'+v17NotaSinPiso()+v4HtmlDetalleRoce(props)
+    +(own?'<div style="font-size:11px;color:var(--ink3);line-height:1.55;margin-top:6px;">En «Cómo se calculan…» cada piso sale entero; arriba y en la tabla, solo lo de '+v4Esc(v23NomOwn(own))+' (previsto/mes = '+T.det.map(d=>v4Esc(d.p.nom)+' '+v4E2(d.fl.ing)+' − '+v4E2(d.fl.gas)+' − '+v4E2(d.fl.cuo)).join(' · ')+').</div>':'');
+  v26AjustarCajas(el,F);
+}
+// Cajas de arriba: las mismas de siempre con los números del filtro; con un piso, la liquidez se cambia por su cuenta
+function v26AjustarCajas(el,F){
+  const tv=v26TxtVista(F); if(!tv||!el) return;
+  el.querySelectorAll('.cartera-box').forEach(bx=>{ const l=bx.querySelector('.cb-lbl'); if(!l) return; const t=l.textContent.trim();
+    if(t==='ROCE cartera'){ l.textContent='ROCE · '+tv; bx.title='ROCE de '+tv+' = flujo de caja previsto × 12 ÷ dinero propio invertido en '+(F.pid?'el piso':'sus pisos')+'. '+(bx.title||'').replace(/^ROCE = [^.]*\.\s*/,''); }
+    else if(t==='Flujo previsto') l.textContent='Flujo previsto · '+tv;
+    else if(t==='Liquidez en cuentas'&&F.pid){ const p=(D.props||[]).find(x=>String(x.id)===F.pid), rc=p?v19CuentaPiso(p):null, c=rc&&rc.cta, s=c&&v9ConSaldo(c)?v9SaldoCta(c):null;
+      const w=document.createElement('div'); w.innerHTML=v17Caja('Cuenta del piso',c&&s!==null?eur(s):'—','<div class="cb-sub" style="white-space:normal;line-height:1.35;">'+(c?v4Esc(c.nom)+(c.titularId?' ('+v4Esc(v23NomOwn(String(c.titularId))||'')+')':'')+' · no se suma: la cuenta no es solo de este piso':'sin cuenta asignada')+'</div>',{click:"v9Ir('ctasbanc')"});
+      bx.replaceWith(w.firstChild); } });
+}
+rCartera=(function(prev){ return function(){ if(!v26Activo()) return prev.apply(this,arguments);
+  _v22Cache=null; try{ _v22Cache=v22Lineas(); }catch(e){ _v22Cache=null; }
+  try{ return v26Cartera(); }catch(e){ console.warn('v26Cartera',e); return prev.apply(this,arguments); } finally{ _v22Cache=null; } }; })(rCartera);
+
+// ── Indicadores de arriba y listas con el filtro ──
+function v26Kpis(F){
+  const hoy=v4Hoy(), mes=hoy.slice(0,7), own=F.own, pr=v26PisosRenta(F), ids=new Set(v26Pisos(F).map(p=>String(p.id))), idsR=new Set(pr.map(p=>String(p.id)));
+  const L=v22Lineas(), T=v22Tot(L,l=>l.k===mes&&v23Pasa(l,F));
+  const inqP=new Map((D.inqs||[]).map(i=>[String(i.id),i])), pisoDe=pg=>{ const i=inqP.get(String(pg.inqId)); return String(pg.propId||(i&&i.propId)||''); };
+  const esMio=pg=>{ const pid=pisoDe(pg); if(!idsR.has(pid)) return false; return !own||v22Dis(pid,(pg.mes||mes)+'-15')===own; };
+  const paM=(D.pagos||[]).filter(p=>p.mes===mes&&!v12EsDep(p)&&esMio(p)), pen=(D.pagos||[]).filter(p=>p.estado!=='pagado'&&(!p.mes||p.mes<=mes)&&esMio(p)).reduce((s,p)=>s+(+p.imp||0),0);
+  const t16=v16Totales(pr), tH=t16.N, ocu=t16.occ, pc=tH?Math.round(ocu/tH*100):0;
+  const tvP=pr.reduce((s,p)=>s+parseFloat(p.precio||0),0), ingA=(D.inqs||[]).filter(i=>i.estado==='ACTIVO'&&idsR.has(String(i.propId))).reduce((s,i)=>s+parseFloat(i.alq||0),0)*12, yld=tvP>0?(ingA/tvP*100).toFixed(1):'–';
+  const k=(c,l,v,s)=>'<div class="kpi" style="--kc:'+c+';"><div class="kpi-accent"></div><div class="kpi-label">'+l+'</div><div class="kpi-value">'+v+'</div>'+(s?'<div class="kpi-sub">'+s+'</div>':'')+'</div>';
+  const tv=v26TxtVista(F);
+  return k('var(--gn)','Ingresos del mes',eur(T.ing),paM.filter(p=>p.estado==='pagado').length+' pagos · '+v4Esc(tv))
+    +k(pc>70?'var(--gn)':pc>40?'var(--ye)':'var(--rd)','Ocupación',pc+'%',ocu+'/'+tH+' habs'+(t16.res?' · '+v16Pl(t16.res,'reservada','reservadas'):''))
+    +k('var(--ye)','Pendiente cobro',eur(pen),'')+k('var(--rd)','Gastos del mes',eur(T.gas),v4Esc(tv))+k('var(--bl)','Rent. bruto',yld+'%',own?'Sus pisos':'Este piso');
+}
+function v26Listas(F){
+  const hoy=new Date(), hoyS=v4Hoy(), own=F.own, ids=new Set(v26Pisos(F).map(p=>String(p.id))), idsR=new Set(v26PisosRenta(F).map(p=>String(p.id)));
+  const inqP=new Map((D.inqs||[]).map(i=>[String(i.id),i])), pisoDe=pg=>{ const i=inqP.get(String(pg.inqId)); return String(pg.propId||(i&&i.propId)||''); };
+  const vac=t=>'<div class="empty" style="padding:16px;"><p>'+t+'</p></div>', nomP=id=>{ const p=(D.props||[]).find(x=>String(x.id)===String(id)); return p?p.nom:'–'; };
+  const pg=(D.pagos||[]).filter(p=>{ const pid=pisoDe(p); return idsR.has(pid)&&(!own||v22Dis(pid,(p.mes||hoyS.slice(0,7))+'-15')===own); }).slice().reverse().slice(0,6);
+  const h1=pg.length?pg.map(p=>{ const inq=inqP.get(String(p.inqId)), col=p.estado==='pagado'?'var(--gn)':p.estado==='atrasado'?'var(--rd)':'var(--ye)'; return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);"><span style="font-size:12px;">'+(p.estado==='pagado'?'✅':p.estado==='atrasado'?'🔴':'⏳')+' '+v4Esc(inq?inq.nom+' '+inq.ap:'?')+' · '+v4Esc(p.con||'Alquiler')+'</span><span class="mono" style="font-size:12px;color:'+col+';">'+eur(p.imp)+'</span></div>'; }).join(''):vac('Sin movimientos');
+  const h2=v26ConProps((D.props||[]).filter(p=>idsR.has(String(p.id))),()=>v16HtmlDashPisos());
+  const inc=(D.incs||[]).filter(i=>i.estado!=='resuelta'&&ids.has(String(i.propId))).slice(0,4);
+  const h3=inc.length?inc.map(i=>{ const c=i.pri==='alta'?'var(--rd)':i.pri==='media'?'var(--ye)':'var(--gn)'; return '<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);"><div style="width:7px;height:7px;border-radius:50%;background:'+c+';margin-top:5px;flex-shrink:0;"></div><div><div style="font-size:12px;">'+v4Esc(i.desc||'')+'</div><div style="font-size:10px;color:var(--ink3);">'+v4Esc(nomP(i.propId))+'</div></div></div>'; }).join(''):vac('Sin incidencias abiertas 🎉');
+  const cv=(D.inqs||[]).filter(i=>i.fin&&i.estado==='ACTIVO'&&idsR.has(String(i.propId))).map(i=>({i,d:Math.round((new Date(i.fin)-hoy)/86400000)})).filter(x=>x.d<=60&&x.d>=0).sort((a,b)=>a.d-b.d).slice(0,5);
+  const h4=cv.length?cv.map(({i,d})=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);"><div><div style="font-size:12px;font-weight:500;">'+v4Esc(i.nom+' '+i.ap)+'</div><div style="font-size:10px;color:var(--ink3);">'+v4Esc(nomP(i.propId))+'</div></div><span class="mono" style="font-size:12px;color:'+(d<14?'var(--rd)':'var(--ye)')+';">'+d+'d</span></div>').join(''):vac('Sin contratos por vencer');
+  const en7=fxAdd(hoyS,7), ag=(D.agenda||[]).filter(a=>!a.done&&(!a.propId||ids.has(String(a.propId))));
+  const todas=ag.filter(a=>a.fecha&&a.fecha<=en7).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).concat(ag.filter(a=>!a.fecha));
+  const h5=todas.length?todas.slice(0,8).map(a=>{ const venc=a.fecha&&a.fecha<hoyS, esHoy=a.fecha===hoyS, col=venc?'var(--rd)':esHoy?'var(--acc)':'var(--bl)', et=venc?'Atrasada':esHoy?'Hoy':(a.fecha?fD(a.fecha):'Sin fecha');
+    return '<div class="agenda-item"><div class="agenda-dot" style="background:'+col+';"></div><div style="flex:1;"><div style="font-size:12px;">'+v4Esc(a.titulo||'')+'</div><div style="font-size:10px;color:'+(venc?'var(--rd)':'var(--ink3)')+';">'+et+(a.tipo?' · '+v4Esc(a.tipo):'')+'</div></div><button class="btn btn-success btn-xs" onclick="toggleAgenda(\''+a.id+'\')" title="Completar">✓</button></div>'; }).join(''):vac('Sin tareas pendientes 🎉');
+  [['d-pagos',h1],['d-pisos',h2],['d-incs',h3],['d-conts',h4],['d-agenda',h5]].forEach(([id,h])=>{ const e=$i(id); if(e) e.innerHTML=h; });
+}
+rDash=(function(prev){ return function(){
+  const r=prev.apply(this,arguments);
+  try{ v26BarraFiltro(); const F=v26Fil(); if(v26Activo(F)){ const k=$i('d-kpis'); if(k) k.innerHTML=v26Kpis(F); v26Listas(F); } }catch(e){ console.warn('v26 dash',e); }
+  return r; }; })(rDash);
+
+// ── Gráfica con el filtro: patrimonio (su parte), deuda (sus hipotecas), liquidez (sus cuentas) y ocupación ──
+function v26DepsEn(t,own){
+  const dev={}, t60=fxAdd(t,-60); let s=0;
+  v9Ctas().forEach(c=>(c.movs||[]).forEach(m=>{ if(m.tipo==='devfianza'&&m.coId&&m.fecha&&(!dev[m.coId]||m.fecha<dev[m.coId])) dev[m.coId]=m.fecha; }));
+  (D.conts||[]).forEach(co=>{ const F=v4F(co); if(!F||F>t||(dev[co.id]&&dev[co.id]<=t)) return; if(String(v9TitProp(co.propId,F))!==own) return; const f=(parseFloat(co.f)||0)+(parseFloat(co.g)||0); if(!(f>0)) return; const L=co.llaves&&co.llaves.L; if(L&&L<t60) return; s+=f; });
+  (D.reservas||[]).forEach(r=>{ if(!r||r.coId||r.datosSuprimidos) return; const x=+r.senal||0, f=r.fechaPago||r.O; if(!(x>0)||!f||f>t) return; if(String(v9TitProp(r.propId,f))!==own) return;
+    if(!r.fin||r.fin>t){ s+=x; return; } if(!(r.devolucion&&r.devolucion.fecha&&r.devolucion.fecha<=t)) s+=v4ResImporteDev(r); });
+  return v17R(s);
+}
+v17Serie=(function(prev){ return function(){
+  const F=v26Fil(); if(!v26Activo(F)) return prev.apply(this,arguments);
+  const own=F.own, props=v26Pisos(F), pr=v26PisosRenta(F);
+  const S=v26ConProps(props,()=>prev.apply(this,arguments));   // meses, ingresos y gastos (ya filtrados), eventos
+  if(!S||!S.rows) return S;
+  const fl=v9Flujos(), ctas=v9Ctas().filter(c=>(c.tipo||'cuenta')!=='tarjeta'&&v9ConSaldo(c)&&(!own||String(c.titularId)===own)), T=v26Totales(F), lq=v26Liq(F), hoy=v4Hoy();
+  const hipDe=p=>{ const h=(D.hipotecas||[]).find(x=>x.propId==p.id); return h?v23OwnHip(h,hoy):String(p.ownerId||''); };
+  const ultCobro={}; (D.pagos||[]).forEach(p=>{ if(p.estado==='pagado'&&v12EsAlq(p)&&/^\d{4}-\d{2}/.test(p.mes||'')){ const f=v17FinMes(p.mes.slice(0,7)); if(!ultCobro[p.inqId]||f>ultCobro[p.inqId]) ultCobro[p.inqId]=f; } });
+  S.rows.forEach(r=>{ const t=r.t; let val=0, deu=0, liq=null, liqN=null, oc;
+    if(r.hoy){ val=T.patBruto; deu=T.deudaTotal; if(lq.on&&!F.pid){ liq=lq.saldo; liqN=lq.neta; } const t16=v16Totales(pr); oc={o:t16.occ,n:t16.N}; }
+    else { props.forEach(p=>{ val+=v17ValorEn(p,t)*v26Parte(p,own,t).s; if(!own||hipDe(p)===own) deu+=v17DeudaEn(p,t); });
+      if(!F.pid){ const cs=ctas.filter(c=>c.saldoFecha<=t); if(cs.length){ liq=v17R(cs.reduce((s,c)=>s+(v9SaldoCta(c,t,fl)||0),0)); liqN=v17R(liq-(own?v26DepsEn(t,own):v17DepsEn(t))); } }
+      oc=v26ConProps(pr,()=>v17OcuEn(t,ultCobro)); }
+    r.patB=v17R(val+(liq||0)); r.patN=v17R(val-deu+(liqN||0)); r.deuda=v17R(deu); r.liq=liq; r.ocu=oc.n?oc.o/oc.n*100:null; r.oO=oc.o; r.oN=oc.n; });
+  return S; }; })(v17Serie);
+// Nota de la gráfica: ahora todo va filtrado
+v17Render=(function(prev){ return function(){
+  const r=prev.apply(this,arguments);
+  try{ const n=$i('v23-gnota'), F=v26Fil(); if(n&&v26Activo(F)) n.innerHTML='🔎 Toda la gráfica es de <strong>'+v4Esc(v26TxtVista(F))+'</strong>'+(F.own?': patrimonio con su parte del valor, deuda de las hipotecas que paga, liquidez de sus cuentas, ocupación de los pisos de los que cobra e ingresos y gastos suyos.':': valor, hipotecas, ocupación, ingresos y gastos de este piso (la liquidez no es de un piso).')+' <button type="button" class="btn btn-ghost btn-xs" onclick="v23Quitar()">✕ Quitar filtro</button>'; }catch(e){ console.warn(e); }
+  return r; }; })(v17Render);
 
 </script>
 </body>
