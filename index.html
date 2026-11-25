@@ -9521,6 +9521,7 @@ async function volcarSheets() {
       {sheet:'Hipotecas', h:['ID','Piso','Propietario','Banco','Tipo','CapitalInicial','Pendiente','Cuota','DiaCobro','TipoResultante','Vinculaciones','CosteVincAnual','FechaFin'], rows:(D.hipotecas||[]).map(h=>{const p=D.props.find(x=>x.id==h.propId);return [h.id,p?p.nom:'',ownerNom(h.ownerId||(p?p.ownerId:'')),h.banco,h.tipo,h.ini,h.pend,h.cuota,h.dia,tipoResultante(h).toFixed(2)+'%',vinculaciones(h).join(', '),costeVincAnual(h),h.fin];})},
       {sheet:'Titularidad', h:['ID','Inmueble','Titular','Derecho','Desde','Hasta','%','ValorUsufructo%','Art24'], rows:(D.derechos||[]).map(d=>{const p=D.props.find(x=>x.id==d.propId);return [d.id,p?p.nom:'',ownerNom(d.ownerId),d.tipo,d.desde,d.hasta,d.pct,d.pctUsuf||'',d.gratuitoPariente?'SI':''];})},
       {sheet:'CuentasTarjetas', h:['ID','Nombre','Tipo','Entidad','Num','Titular'], rows:(D.ctasBanc||[]).map(x=>[x.id,x.nom,x.tipo,x.banco,x.num,ownerNom(x.titularId)])},
+      ...(typeof v28Hojas==='function'?(()=>{ try{ return v28Hojas(); }catch(e){ console.warn('v28Hojas',e); return []; } })():[]),
       {sheet:'Provisiones', h:['ID','Aporta','Gestiona','Fecha','Importe','Concepto'], rows:(D.provisiones||[]).map(x=>[x.id,ownerNom(x.aportante),ownerNom(x.gestor),x.fecha,x.imp,x.notas])},
       {sheet:'Visitas', h:['ID','Nombre','Telefono','Email','Fecha','Hora','Piso','Hab','Estado','Origen','Avisado','Notas'], rows:(D.visitas||[]).map(v=>{const p=D.props.find(x=>x.id==v.propId);return [v.id,v.nom,v.tel,v.email,v.fecha,v.hora,p?p.nom:'',v.hab,(VI_ESTADOS[v.est]||{}).et||v.est,v.origen,v.recordado,v.notas];})},
       {sheet:'Plantillas', h:['ID','Nombre','Tipo','Piso','Notas','TieneTexto','Documento'], rows:(D.plantillas||[]).map(p=>{const pr=D.props.find(x=>x.id==p.propId);return [p.id,p.nom,p.tipo,pr?pr.nom:'Todos',p.notas,p.texto?'SI':'NO',p.pdfName||''];})},
@@ -17200,7 +17201,8 @@ function v17Dom(p,R,i0,i1){
   // Un valor un poco por debajo de cero no reserva un paso entero de eje vacío
   if(mn<0&&-mn<step*0.5) a=mn-(mx-mn)*0.06;
   const comp=Math.max(Math.abs(a),Math.abs(b))>=1e4;
-  const fmt=v=>{ if(Math.abs(v)<1e-9) return '0'; if(!comp) return v17Num(v); const x=Math.abs(v);
+  const dec=step>=1?0:step>=0.5?1:2;   // v4.27: ejes con céntimos cuando los valores son pequeños (rendimiento de un fondo monetario)
+  const fmt=v=>{ if(Math.abs(v)<1e-9) return '0'; if(!comp) return v17Num(v,dec); const x=Math.abs(v);
     return x>=1e6?v17Num(v/1e6,x%1e6?1:0).replace(/,0$/,'')+'M':v17Num(v/1e3,x%1e3?1:0).replace(/,0$/,'')+'k'; };
   return {a,b,step,fmt};
 }
@@ -19789,23 +19791,25 @@ v21Ctrl=function(P){
 };
 v17Cajas=function(o){
   const lq=o.lq||{on:false}, F=v17Fact(), P=F.per, T=F.T, faltan=F.faltan.length;
+  let IV={on:false}; try{ if(typeof v28Pat==='function') IV=v28Pat(); }catch(e){ console.warn('v28Pat',e); } const iv=IV.on?IV.V:0;
   const sub=(t,st)=>'<div class="cb-sub"'+(st?' style="'+st+'"':'')+'>'+t+'</div>', wn='white-space:normal;line-height:1.35;', mu=wn+'color:var(--ink3);font-size:10px;margin-top:3px;';
   const ltv=o.patBruto>0?o.deudaTotal/o.patBruto*100:0, cuando=P.men?'en '+v17MesTxt(P.k,true):'en '+P.y, D_="v22VerDesglose()";
   const avisoCuotas=faltan?sub('⚠️ falta'+(faltan===1?'':'n')+' '+faltan+' cuota'+(faltan===1?'':'s')+' de hipoteca por registrar',wn+'color:var(--rd);'):'';
   const itpInq=v17R((T.itpR||0)+(T.itpP||0));
-  const noCuentan=[T.inqPagan?eur(T.inqPagan)+' de suministros que pagan los inquilinos':'',itpInq?eur(itpInq)+' de ITP que pagan los inquilinos':'',T.cap?eur(T.cap)+' de capital de la hipoteca':'',T.inv?eur(T.inv)+' de inversiones':''].filter(Boolean);
-  const bolsillo=[T.cap?'− '+eur(T.cap)+' de capital de hipoteca':'',T.inv?'− '+eur(T.inv)+' de inversiones':'',T.adel?'− '+eur(T.adel)+' de '+((T.itpP||0)>0.004?((T.sumP||0)>0.004?'suministros e ITP':'ITP'):'suministros')+' por cobrar':''].filter(Boolean);
+  const noCuentan=[T.inqPagan?eur(T.inqPagan)+' de suministros que pagan los inquilinos':'',itpInq?eur(itpInq)+' de ITP que pagan los inquilinos':'',T.cap?eur(T.cap)+' de capital de la hipoteca':'',T.inv?eur(T.inv)+' de inversiones en los pisos':''].filter(Boolean);
+  const bolsillo=[T.cap?'− '+eur(T.cap)+' de capital de hipoteca':'',T.inv?'− '+eur(T.inv)+' de inversiones en los pisos':'',T.adel?'− '+eur(T.adel)+' de '+((T.itpP||0)>0.004?((T.sumP||0)>0.004?'suministros e ITP':'ITP'):'suministros')+' por cobrar':''].filter(Boolean);
   const flujo='flujo previsto '+eur(o.ebitdaMes)+'/mes'+(o.rentB!==null&&o.rentB!==undefined&&isFinite(o.rentB)?' · rent. bruta '+o.rentB.toFixed(1)+'%':'');
   const tFlujo='Flujo de caja previsto al mes con los contratos de hoy: '+eur(o.ingMes)+' de ingresos − '+eur(o.gasMes)+' de gastos (media del último año) − '+eur(o.cuoMes)+' de cuotas de los préstamos.';
   return '<div class="cartera-grid">'
     // Fila 1 · Hoy
-    +v17Caja('Patrimonio bruto',eur(o.patBruto+(lq.on?lq.saldo:0)),lq.on?v9SubBruto(o.patBruto,lq):sub('valor de los inmuebles'))
-    +v17Caja('Patrimonio neto',eur(o.patNeto+(lq.on?lq.neta:0)),sub('−'+eur(o.deudaTotal)+' hipotecas (LTV '+(o.patBruto>0?ltv.toFixed(1):'0')+'%)'+v9SubNeto(lq),wn),{vc:'var(--gn)'})
+    +v17Caja('Patrimonio bruto',eur(o.patBruto+(lq.on?lq.saldo:0)+iv),IV.on?sub('inmuebles '+eur(o.patBruto)+(lq.on?' + liquidez '+eur(lq.saldo):'')+' + fondos y bolsa '+eur(iv),wn):lq.on?v9SubBruto(o.patBruto,lq):sub('valor de los inmuebles'))
+    +v17Caja('Patrimonio neto',eur(o.patNeto+(lq.on?lq.neta:0)+iv),sub('−'+eur(o.deudaTotal)+' hipotecas (LTV '+(o.patBruto>0?ltv.toFixed(1):'0')+'%)'+v9SubNeto(lq)+(IV.on?' · +'+eur(iv)+' fondos y bolsa':''),wn),{vc:'var(--gn)'})
     +(lq.on?v17Caja('Liquidez en cuentas',eur(lq.saldo),sub('neta '+eur(lq.neta)+' (sin fianzas ni reservas)'),{click:"v9Ir('ctasbanc')"})
            :v17Caja('Liquidez en cuentas','—',sub('pon el saldo de tus cuentas'),{click:"v9Ir('ctasbanc')",vc:'var(--ink3)'}))
     +(o.roce!==null&&o.roce!==undefined&&isFinite(o.roce)
       ?v17Caja('ROCE cartera',o.roce.toFixed(1)+'%',sub(flujo,'color:rgba(255,255,255,.8);'+wn),{bg:'background:linear-gradient(135deg,var(--acc),#7c3aed);',lc:'rgba(255,255,255,.75)',vc:'#fff',title:'ROCE = flujo de caja previsto × 12 ÷ dinero propio invertido. '+tFlujo})
       :v17Caja('Flujo previsto',eur(o.ebitdaMes)+'<span class="cb-u">/mes</span>',sub('con los contratos de hoy',wn),{vc:o.ebitdaMes>=0?'var(--gn)':'var(--rd)',title:tFlujo}))
+    +(IV.on?v28TiraPat(IV):'')
     // Fila 2 · Resultados del mes o del año
     +v21Ctrl(P)
     +v17Caja('Ingresos',eur(T.ing),sub('cobrado '+cuando+(T.pen>0?' · '+eur(T.pen)+' pendiente de cobro':''),wn),
@@ -19814,8 +19818,9 @@ v17Cajas=function(o){
       {vc:'var(--rd)',click:D_,title:'Gastos reales '+cuando+' hasta hoy: explotación (comunidad, IBI, seguros, mantenimiento… y de los suministros solo tu parte) e intereses de la hipoteca. No son gasto lo que pagan los inquilinos, el capital de la hipoteca (pasa a ser patrimonio) ni las inversiones.'+(faltan?' Faltan cuotas de hipoteca por registrar: '+F.faltan.map(f=>f.nom+' '+v17MesTxt(f.mes,true)).join(', ')+'.':'')+' Pulsa para ver el desglose.'})
     +v17Caja('Beneficio',eur(T.ben),sub('ingresos − gastos · antes del IRPF'+(T.ing>0&&T.ben>0?' · '+v22Pct(T.ben,T.ing)+' de lo cobrado':''),wn),
       {vc:T.ben>=0?'var(--gn)':'var(--rd)',click:D_,title:'Lo que ganas '+cuando+': '+eur(T.ing,2)+' de ingresos − '+eur(T.gas,2)+' de gastos. Antes del IRPF. Pulsa para ver el desglose.'})
-    +v17Caja('En el bolsillo',eur(T.bol),sub(bolsillo.length?eur(T.ben)+' de beneficio '+bolsillo.join(' '):'= beneficio: sin capital de hipoteca ni inversiones',wn)+(T.cap?sub('🏠 +'+eur(T.cap)+' de patrimonio',wn+'color:var(--gn);'):'')+avisoCuotas,
-      {vc:T.bol>=0?'var(--gn)':'var(--rd)',click:D_,title:'El dinero que de verdad te queda '+cuando+': todo lo cobrado ('+eur(T.cobrado,2)+') − todo lo pagado ('+eur(T.pagado,2)+'). Es el beneficio menos el capital de la hipoteca, las inversiones y los suministros que adelantas. Pulsa para ver el desglose.'})
+    +v17Caja('En el bolsillo',eur(T.bol),sub(bolsillo.length?eur(T.ben)+' de beneficio '+bolsillo.join(' '):'= beneficio: sin capital de hipoteca ni inversiones en los pisos',wn)+(T.cap?sub('🏠 +'+eur(T.cap)+' de patrimonio',wn+'color:var(--gn);'):'')+avisoCuotas,
+      {vc:T.bol>=0?'var(--gn)':'var(--rd)',click:D_,title:'El dinero que de verdad te queda '+cuando+': todo lo cobrado ('+eur(T.cobrado,2)+') − todo lo pagado ('+eur(T.pagado,2)+'). Es el beneficio menos el capital de la hipoteca, las inversiones en los pisos y los suministros que adelantas. Pulsa para ver el desglose.'})
+    +(IV.on?v28TiraRes(P,T):'')
     +'</div>';
 };
 
@@ -20402,7 +20407,7 @@ function v26Orden(a,b){ return (a.mom-b.mom)||((a.ajuste?1:0)-(b.ajuste?1:0))||(
 // se «absorbe» por fechas (eso hacía que lo apuntado después de un ajuste del mismo día no sumara).
 function v26Legado(a){ return !(a&&a.real!==undefined&&a.real!==null&&a.real!==''&&isFinite(+a.real)); }
 v21Absorbido=function(aj,m){ const A=aj.find(x=>x.f>=m.fecha); if(!A||!v26Legado(A.a)) return false; return !(Array.isArray(A.a.espIds)&&A.a.espIds.includes(String(m.id))); };
-v9Flujos=(function(prev){ return function(){ const out=prev.apply(this,arguments); try{ v26Ajustar(out); }catch(e){ console.warn('v26Ajustar',e); } return out; }; })(v9Flujos);
+v9Flujos=(function(prev){ return function(){ const out=prev.apply(this,arguments); try{ if(typeof v28Flujos==='function') v28Flujos(out); }catch(e){ console.warn('v28Flujos',e); } try{ v26Ajustar(out); }catch(e){ console.warn('v26Ajustar',e); } return out; }; })(v9Flujos);
 // Saldo de la app en un momento exacto (para el ajuste)
 function v26SaldoEn(c,ms,fl){ if(!v9ConSaldo(c)) return null; fl=fl||v9Flujos(); let s=+c.saldoIni; fl.forEach(f=>{ if(f.cta===c.id&&v9Cuenta(c,f)&&f.mom<=ms) s+=f.imp; }); return v9R2(s); }
 // Saldos fijados de una cuenta (el de partida y los ajustes), del más antiguo al más reciente
@@ -20525,6 +20530,7 @@ v9VerMovs=function(ctaId){
     const rec=v27Rec(f.src,f.id), clip=rec&&rec.pdfData?' <button class="btn btn-ghost btn-xs v27-clip" title="Ver justificante: '+v4Esc(rec.pdfName||'')+'" onclick="v27VerJust(\''+f.src+'\',\''+f.id+'\')">📎</button>':'';
     const acc=f.src==='mov'?'<button class="btn btn-ghost btn-xs v27-adj" title="'+(rec&&rec.pdfData?'Cambiar o quitar el justificante':'Adjuntar justificante')+'" onclick="v27AdjMov(\''+f.id+'\')">'+(rec&&rec.pdfData?'📎✎':'📎+')+'</button><button class="btn btn-ghost btn-xs" onclick="v9BorrarMov(\''+c.id+'\',\''+f.id+'\')">🗑</button>'
       :f.src==='personal'?'<span style="font-size:10.5px;color:var(--ink3);" title="Se apuntó en Finanzas personales: se cambia allí">👤 Personal</span>'
+      :f.src==='inv'?'<span style="font-size:10.5px;color:var(--ink3);cursor:pointer;" title="Compra, venta o dividendo de una inversión: se cambia en «📈 Fondos y bolsa»" onclick="closeDrw();v9Ir(\'inversiones\')">📈 Fondos y bolsa</span>'
       :'<select style="font-size:10.5px;max-width:130px;" onchange="v9Reasignar(\''+f.src+'\',\''+f.id+'\',this.value)">'+v9OptsCta(f.auto?'':f.orig,true).replace('<option value="">—</option>','<option value="">'+(f.auto?'Automática':'—')+'</option>')+'</select>';
     const txt=f.ajuste?'📌 Saldo fijado con el banco: <strong>'+v4E2(f.real)+' €</strong>'+(f.antes!==undefined?' <span style="font-size:10.5px;color:var(--ink3);">(la app tenía '+v4E2(f.antes)+' €)</span>':'')+(rec&&rec.concepto?' · '+v4Esc(rec.concepto):''):v4Esc(f.txt);
     return '<tr class="'+(f.ajuste?'v26-ancla':'')+'" style="'+(fut?'opacity:.55;':'')+(f.ajuste?'background:rgba(98,80,214,.06);':'')+'"><td style="white-space:nowrap;">'+v4F2(f.fecha)+hora(f)+(fut?' (futuro)':'')+'</td><td>'+txt+(f.orig&&f.orig!==f.cta?' <span style="font-size:10.5px;color:var(--ink3);">(con tarjeta)</span>':'')+clip+'</td><td style="text-align:right;white-space:nowrap;color:'+(f.imp<0?'var(--rd)':'var(--gn)')+';">'+(f.imp>0?'+':'')+v4E2(f.imp)+'</td><td style="text-align:right;white-space:nowrap;">'+(con&&ok&&!fut?v4E2(s):'')+'</td><td style="white-space:nowrap;">'+acc+'</td></tr>'; }).join('');
@@ -20611,7 +20617,8 @@ v20VerMovsCta=function(id){
 // (solo durante el pintado, que no cambia datos; si cambian los pisos, los datos o lo de Personal, se recalculan)
 const _v26F={on:0, k:null, v:null};
 function v26ClaveFl(){ let n=0; try{ v9Ctas().forEach(c=>{ n+=(c.movs||[]).length; }); }catch(e){} let P=null; try{ P=v21Pers(); }catch(e){}
-  return [WS, D, D.props, D.pagos, D.compras, D.gastos, D.reservas, D.ctasBanc, (D.pagos||[]).length, (D.compras||[]).length, (D.gastos||[]).length, (D.reservas||[]).length, (D.provisiones||[]).length, (D.ctasBanc||[]).length, n, P, P&&P.movs, P&&P.cuentas, P&&P.movs?P.movs.length:0, P&&P.cuentas?P.cuentas.length:0, v4Hoy()]; }
+  return [WS, D, D.props, D.pagos, D.compras, D.gastos, D.reservas, D.ctasBanc, (D.pagos||[]).length, (D.compras||[]).length, (D.gastos||[]).length, (D.reservas||[]).length, (D.provisiones||[]).length, (D.ctasBanc||[]).length, n, D.inversiones, v28N(), P, P&&P.movs, P&&P.cuentas, P&&P.movs?P.movs.length:0, P&&P.cuentas?P.cuentas.length:0, v4Hoy()]; }
+function v28N(){ let n=0; try{ (D.inversiones||[]).forEach(p=>{ n+=1+(p.movs||[]).length; }); }catch(e){} return n; }
 function v26MismaClave(a,b){ if(!a||!b||a.length!==b.length) return false; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return false; return true; }
 v9Flujos=(function(prev){ return function(){
   if(!_v26F.on) return prev.apply(this,arguments);
@@ -20976,7 +20983,7 @@ async function v26Copias(){
 // ── Descargar una copia completa (las dos partes) a tu dispositivo ──
 function v26DescargarCopia(){
   const leer=k=>{ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
-  const o={app:'RentaControl · Gentaury', version:'4.26', fecha:new Date().toISOString(), rentacontrol:WS==='gentaury'?D:leer(WS_CFG.gentaury.key), personal:WS==='personal'?D:leer(WS_CFG.personal.key)};
+  const o={app:'RentaControl · Gentaury', version:'4.27', fecha:new Date().toISOString(), rentacontrol:WS==='gentaury'?D:leer(WS_CFG.gentaury.key), personal:WS==='personal'?D:leer(WS_CFG.personal.key)};
   const blob=new Blob([JSON.stringify(o)],{type:'application/json'}), a=document.createElement('a'), d=new Date();
   a.href=URL.createObjectURL(blob); a.download='rentacontrol_copia_completa_'+d.v12Dia()+'_'+v26Hhmm(d).replace(':','')+'.json'; document.body.appendChild(a); a.click();
   setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(e){} },2000);
@@ -21162,7 +21169,7 @@ function v26Cartera(){
   const o={patBruto:T.patBruto, patNeto:T.patNeto, deudaTotal:T.deudaTotal, roce:T.roce, rentB:T.rentB, ebitdaMes:T.ebitdaMes, ingMes:T.ingMes, gasMes:T.gasMes, cuoMes:T.cuoMes, lq, tr};
   const hs=v26HipsDe(own,F.pid), amort=hs.reduce((s,h)=>s+capitalAmortizado(h),0), nCu=hs.reduce((s,h)=>s+((h.cuotas||[]).length),0), intr=hs.reduce((s,h)=>s+(h.cuotas||[]).reduce((a,cu)=>a+parseFloat(cu.int||0),0),0);
   const pB=T.patBruto, dT=T.deudaTotal, tv=v26TxtVista(F);
-  const nota=own?'<div style="font-size:11px;color:var(--ink3);line-height:1.55;margin:-4px 0 10px;">Valor: la parte de '+v4Esc(v23NomOwn(own))+' ('+T.det.map(d=>{ const pc=Math.round(d.parte.s*100)+' %', tx=d.parte.txt||'sin derechos'; return v4Esc(d.p.nom)+': '+tx+(d.parte.s>0&&d.parte.s<1&&!tx.endsWith(pc)?' = '+pc:''); }).join('; ')+'; art. 26.a de la Ley 29/1987 del ISD) · Deuda: las hipotecas que paga · Liquidez: sus cuentas · ROCE: su flujo previsto (sin las hipotecas que pagan otros) × 12 ÷ dinero propio de estos pisos (precio + inversiones − préstamos).</div>'
+  const nota=own?'<div style="font-size:11px;color:var(--ink3);line-height:1.55;margin:-4px 0 10px;">Valor: la parte de '+v4Esc(v23NomOwn(own))+' ('+T.det.map(d=>{ const pc=Math.round(d.parte.s*100)+' %', tx=d.parte.txt||'sin derechos'; return v4Esc(d.p.nom)+': '+tx+(d.parte.s>0&&d.parte.s<1&&!tx.endsWith(pc)?' = '+pc:''); }).join('; ')+'; art. 26.a de la Ley 29/1987 del ISD) · Deuda: las hipotecas que paga · Liquidez: sus cuentas · Fondos y bolsa: los suyos · ROCE: su flujo previsto (sin las hipotecas que pagan otros) × 12 ÷ dinero propio de estos pisos (precio + inversiones en ellos − préstamos); los fondos no entran en el ROCE.</div>'
     :F.pid?'<div style="font-size:11px;color:var(--ink3);line-height:1.55;margin:-4px 0 10px;">Valor, hipotecas y ROCE de este piso. La liquidez no se suma: las cuentas son de cada persona, no de un piso.</div>':'';
   el.innerHTML='<div class="card-title">📊 Resumen · '+v4Esc(tv)+' · '+props.length+' inmueble'+(props.length!==1?'s':'')+'</div>'+nota
     +v17Cajas(o)
@@ -21265,6 +21272,454 @@ v17Render=(function(prev){ return function(){
   const r=prev.apply(this,arguments);
   try{ const n=$i('v23-gnota'), F=v26Fil(); if(n&&v26Activo(F)) n.innerHTML='🔎 Toda la gráfica es de <strong>'+v4Esc(v26TxtVista(F))+'</strong>'+(F.own?': patrimonio con su parte del valor, deuda de las hipotecas que paga, liquidez de sus cuentas, ocupación de los pisos de los que cobra e ingresos y gastos suyos.':': valor, hipotecas, ocupación, ingresos y gastos de este piso (la liquidez no es de un piso).')+' <button type="button" class="btn btn-ghost btn-xs" onclick="v23Quitar()">✕ Quitar filtro</button>'; }catch(e){ console.warn(e); }
   return r; }; })(v17Render);
+
+// ══════════════════════════════════════════════════════════════
+// v4.27 · 📈 Inversiones: fondos (también monetarios), fondos indexados, ETF, acciones, renta fija y planes de pensiones
+// ──────────────────────────────────────────────────────────────
+// Cada inversión: nombre, ISIN (se comprueba el dígito de control, ISO 6166), tipo, titular, entidad y cuenta.
+// Sus movimientos: compra (aportación), actualización del valor (como fijar el saldo de una cuenta: día y hora), venta
+// (reembolso), dividendo o cupón y traspaso entre fondos. Compras, ventas y dividendos mueven el saldo de la cuenta elegida.
+//
+// Cálculos:
+//  · Valor: el último valor que escribiste + lo que compraste − lo que vendiste o traspasaste después.
+//  · Rendimiento de un periodo = valor al final − valor al principio − compras + ventas + dividendos (± traspasos).
+//    Es lo que ha ganado o perdido la inversión, sin contar el dinero que has metido o sacado.
+//  · Coste fiscal por FIFO (art. 37.2 y 94 LIRPF: se venden primero las participaciones más antiguas). Sin participaciones
+//    apuntadas, coste medio proporcional (se avisa: para FIFO exacto, apunta las participaciones).
+//  · Ganancia al vender = importe del reembolso (valor liquidativo) − gastos − coste FIFO → base del ahorro
+//    (19 % hasta 6.000 €, 21 % hasta 50.000 €, 23 % hasta 200.000 €, 27 % hasta 300.000 €, 30 % desde ahí; Ley 7/2024).
+//  · Traspaso entre fondos (art. 94 LIRPF): no tributa; las participaciones nuevas conservan el coste y la fecha de las
+//    antiguas. No vale para ETF ni acciones.
+//  · Pérdida con recompra de lo mismo (mismo ISIN): no se computa aún si recompras en 2 meses (cotizados: ETF y acciones)
+//    o en 1 año (fondos no cotizados) antes o después (art. 33.5 f y g LIRPF).
+//  · Valor a 31 de diciembre: el del Impuesto sobre el Patrimonio (art. 15 Ley 19/1991) y el del modelo 720.
+// ══════════════════════════════════════════════════════════════
+if(!COLS.includes('inversiones')) COLS.push('inversiones');
+const V28_TIPOS=[['monetario','Fondo monetario'],['fondo','Fondo de inversión'],['indexado','Fondo indexado'],['etf','ETF (fondo cotizado)'],['accion','Acciones'],['rf','Renta fija (bonos, letras)'],['pension','Plan de pensiones'],['otro','Otro']];
+const V28_IIC=['monetario','fondo','indexado'];   // fondos de inversión: traspaso sin tributar (art. 94 LIRPF)
+const V28_COTIZA=['etf','accion'];               // cotizados: regla de recompra de 2 meses
+const V28_PAIS={ES:'España',IE:'Irlanda',LU:'Luxemburgo',FR:'Francia',DE:'Alemania',NL:'Países Bajos',BE:'Bélgica',IT:'Italia',PT:'Portugal',AT:'Austria',FI:'Finlandia',SE:'Suecia',DK:'Dinamarca',NO:'Noruega',CH:'Suiza',GB:'Reino Unido',US:'Estados Unidos',CA:'Canadá',JP:'Japón',XS:'Internacional (euromercado)',EU:'Unión Europea',LI:'Liechtenstein',JE:'Jersey',GG:'Guernsey',KY:'Islas Caimán'};
+function v28Inv(){ return D&&Array.isArray(D.inversiones)?D.inversiones:[]; }
+function v28Pos(id){ return v28Inv().find(p=>String(p.id)===String(id)); }
+function v28TipoNom(t){ const x=V28_TIPOS.find(y=>y[0]===t); return x?x[1]:'Otro'; }
+function v28Num(v){ if(v===undefined||v===null||v==='') return NaN; if(typeof v==='number') return v; return v9Num(String(v)); }
+function v28R(x,d){ const k=Math.pow(10,d===undefined?2:d); return Math.round((+x||0)*k)/k; }
+function v28E(x){ return v4E2(x)+' €'; }
+function v28Sig(x){ return (x>0?'+':'')+v4E2(x)+' €'; }
+function v28Part(x){ return isFinite(x)?(+x).toLocaleString('es-ES',{maximumFractionDigits:6}):'—'; }
+// ISIN (ISO 6166): 2 letras de país, 9 caracteres y un dígito de control (Luhn sobre las letras pasadas a número)
+function v28IsinNorm(s){ return String(s||'').toUpperCase().replace(/[\s-]/g,''); }
+function v28IsinOk(s){ s=v28IsinNorm(s); if(!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(s)) return false;
+  const dig=s.slice(0,11).split('').map(ch=>/[A-Z]/.test(ch)?String(ch.charCodeAt(0)-55):ch).join(''); let sum=0, dbl=true;
+  for(let i=dig.length-1;i>=0;i--){ let d=+dig[i]; if(dbl){ d*=2; if(d>9) d-=9; } sum+=d; dbl=!dbl; } return (10-sum%10)%10===+s[11]; }
+function v28Pais(isin){ const c=v28IsinNorm(isin).slice(0,2); return c?(V28_PAIS[c]||c):''; }
+function v28MomMov(m){ return v26Mom({fecha:m.fecha, hora:m.hora, ts:v15TsId(m.id)}); }
+
+// ══ Motor: estado de todas las inversiones hasta un momento ══
+function v28Calc(hasta){
+  hasta=hasta===undefined?Date.now():hasta; const P=v28Inv(), S=new Map(), ev=[];
+  P.forEach(p=>S.set(String(p.id),{p, V:0, lotes:[], aport:0, reemb:0, div:0, trE:0, trS:0, gan:0, part:0, partOk:true, ult:null, avisos:[], ops:{}, anio:{}, aprox:false, primera:null}));
+  P.forEach(p=>(p.movs||[]).forEach(m=>{ if(m&&m.fecha&&m.tipo) ev.push({p, m, ms:v28MomMov(m), ts:v15TsId(m.id)}); }));
+  ev.sort((a,b)=>(a.ms-b.ms)||((a.m.tipo==='valor'?1:0)-(b.m.tipo==='valor'?1:0))||(a.ts-b.ts));
+  const A=(s,y)=>s.anio[y]||(s.anio[y]={gan:0, ret:0, trans:0, adq:0, n:0, div:0, retDiv:0, ventas:[]});
+  // Consumir participaciones (FIFO) o una fracción (coste medio) de los lotes
+  const consumir=(s,imp,part)=>{ const V0=s.V, out=[]; let coste=0, aprox=false;
+    if(s.partOk&&part>0&&s.part>0&&s.lotes.every(l=>l.part>0)){ let q=Math.min(part,s.part);
+      if(part>s.part+1e-6) s.avisos.push('Se venden '+v28Part(part)+' participaciones y solo había '+v28Part(s.part));
+      for(const l of s.lotes){ if(q<=1e-9) break; const t=Math.min(l.part,q), c=l.coste*t/l.part; coste+=c; l.coste-=c; l.part-=t; q-=t; out.push({fecha:l.fecha, part:t, coste:c, mid:l.mid, resto:l.part>1e-9?l.coste:0}); }
+      s.lotes=s.lotes.filter(l=>l.part>1e-9); s.part=Math.max(0,s.part-part); s.V=Math.max(0,v28R(V0-imp)); return {coste:v28R(coste), lotes:out, aprox:false, vl:imp/part}; }
+    else { const f=V0>0?Math.min(1,imp/V0):1; aprox=s.lotes.length>1||!(part>0); s.lotes.forEach(l=>{ const c=l.coste*f, pv=l.part>0?l.part*f:null; coste+=c; l.coste-=c; if(l.part>0) l.part-=pv; out.push({fecha:l.fecha, part:pv, coste:c, mid:l.mid, resto:l.coste>0.0049?l.coste:0}); });
+      s.lotes=s.lotes.filter(l=>l.coste>0.0049); if(part>0&&s.partOk) s.part=Math.max(0,s.part-part); else if(s.partOk&&s.part>0) s.part*=(1-f); if(aprox) s.aprox=true; }
+    s.V=Math.max(0,v28R(V0-imp)); return {coste:v28R(coste), lotes:out, aprox}; };
+  for(const e of ev){
+    if(e.ms>hasta) break; const s=S.get(String(e.p.id)), m=e.m; if(!s) continue; const y=m.fecha.slice(0,4), imp=v28Num(m.imp), part=v28Num(m.part);
+    if(!s.primera) s.primera=m.fecha;
+    if(m.tipo==='compra'){ if(!(imp>0)) continue; const com=Math.min(imp,v28Num(m.com)||0); s.V=v28R(s.V+imp-com); s.aport+=imp;
+      // Coste de adquisición = importe pagado con los gastos inherentes (art. 35.1 LIRPF)
+      s.lotes.push({fecha:m.fecha, part:part>0?part:null, coste:imp, mid:m.id}); if(part>0) s.part+=part; else s.partOk=false; A(s,y).adq+=imp;
+      // Con las participaciones sabemos el valor liquidativo de ese momento: todo lo que tienes vale eso
+      if(part>0&&s.partOk&&s.lotes.every(l=>l.part>0)) s.V=v28R(s.part*(imp-com)/part);
+      s.ops[m.id]={tipo:'compra', vl:part>0?(imp-com)/part:null}; }
+    else if(m.tipo==='venta'){ if(!(imp>0)) continue; const com=v28Num(m.com)||0, ret=v28Num(m.ret)||0, r=consumir(s,imp,part), g=v28R(imp-com-r.coste);
+      if(r.vl) s.V=v28R(s.part*r.vl);   // lo que queda, al valor liquidativo de la venta
+      // Valor de transmisión = valor liquidativo del reembolso; se restan los gastos inherentes (art. 35.2 y 37.1.a LIRPF)
+      s.reemb+=imp-com; s.gan+=g; const a=A(s,y); a.gan+=g; a.ret+=ret; a.trans+=imp-com; a.n++; a.ventas.push({m, g, coste:r.coste, lotes:r.lotes, aprox:r.aprox});
+      s.ops[m.id]={tipo:'venta', coste:r.coste, gan:g, lotes:r.lotes, aprox:r.aprox}; }
+    else if(m.tipo==='traspaso'){ const d=S.get(String(m.dest)); if(!(imp>0)||!d) { s.avisos.push('Traspaso sin fondo de destino válido'); continue; }
+      const r=consumir(s,imp,part), pd=v28Num(m.partDest); if(r.vl) s.V=v28R(s.part*r.vl); s.trS+=imp; d.V=v28R(d.V+imp); d.trE+=imp; if(!d.primera) d.primera=m.fecha;
+      // Art. 94 LIRPF: las nuevas participaciones conservan el valor y la fecha de adquisición de las antiguas
+      const tp=r.lotes.reduce((a,l)=>a+(l.part||0),0);
+      r.lotes.forEach(l=>d.lotes.push({fecha:l.fecha, part:pd>0&&tp>0&&l.part>0?pd*l.part/tp:(pd>0&&r.lotes.length===1?pd:null), coste:l.coste, mid:l.mid}));
+      if(pd>0) d.part+=pd; else d.partOk=false; d.lotes.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+      s.ops[m.id]={tipo:'traspaso', coste:r.coste, lotes:r.lotes, aprox:r.aprox}; d.ops[m.id]={tipo:'traspasoEnt', coste:r.coste, de:e.p.id}; }
+    else if(m.tipo==='valor'){ let v=v28Num(m.val); const vl=v28Num(m.vl);
+      if(!(v>=0)&&vl>0&&(part>0||(s.partOk&&s.part>0))) v=v28R((part>0?part:s.part)*vl);
+      if(!(v>=0)) continue; const antes=s.V; s.V=v28R(v);
+      if(part>0){ if(s.partOk&&Math.abs(s.part-part)>1e-4) s.avisos.push('El '+v4F2(m.fecha)+' tenías '+v28Part(part)+' participaciones y por las compras y ventas salen '+v28Part(s.part)); }
+      s.ult={fecha:m.fecha, hora:m.hora||v26HoraFila({fecha:m.fecha, ts:e.ts, mom:e.ms}), ms:e.ms, val:s.V, vl:vl>0?vl:null}; s.ops[m.id]={tipo:'valor', dif:v28R(s.V-antes)}; }
+    else if(m.tipo==='dividendo'){ if(!(imp>0)) continue; const ret=v28Num(m.ret)||0; s.div+=imp; const a=A(s,y); a.div+=imp; a.retDiv+=ret; s.ops[m.id]={tipo:'dividendo'}; }
+  }
+  S.forEach(s=>{ s.coste=v28R(s.lotes.reduce((a,l)=>a+l.coste,0)); s.latente=v28R(s.V-s.coste); s.rend=v28R(s.V+s.reemb+s.div+s.trS-s.aport-s.trE); s.neto=v28R(s.aport+s.trE-s.reemb-s.trS); });
+  return S;
+}
+function v28Filtra(F){ F=F||{own:'',pid:''}; return p=>!F.own||String(p.titularId)===String(F.own); }
+// Totales de lo que entra en el filtro a un momento
+function v28Tot(F,hasta){ const S=v28Calc(hasta), ok=v28Filtra(F); const t={n:0, V:0, coste:0, rend:0, aport:0, neto:0, latente:0, lista:[]};
+  S.forEach(s=>{ if(!ok(s.p)) return; if(!s.primera&&!(s.V>0)) return; t.n++; t.V+=s.V; t.coste+=s.coste; t.rend+=s.rend; t.aport+=s.aport; t.neto+=s.neto; t.latente+=s.latente; t.lista.push(s); });
+  ['V','coste','rend','aport','neto','latente'].forEach(k=>t[k]=v28R(t[k])); return t; }
+// Rendimiento de un periodo (de un momento a otro)
+function v28Rend(F,ini,fin){ const a=v28Tot(F,ini), b=v28Tot(F,fin); return v28R(b.rend-a.rend); }
+function v28Realizado(F,ini,fin){ const ok=v28Filtra(F), S=v28Calc(fin); let g=0; S.forEach(s=>{ if(!ok(s.p)) return; Object.values(s.anio).forEach(a=>a.ventas.forEach(v=>{ const ms=v28MomMov(v.m); if(ms>ini&&ms<=fin) g+=v.g; })); }); return v28R(g); }
+function v28IniMes(k){ return v26Ms(k+'-01','00:00',false)-1; }
+function v28FinMes(k){ const y=+k.slice(0,4), m=+k.slice(5,7), d=new Date(y,m,0).getDate(); return v26Ms(k+'-'+String(d).padStart(2,'0'),'',true); }
+// TIR anualizada (ponderada por el dinero, XIRR) de una inversión: flujos = compras (−), ventas y dividendos (+) y el valor de hoy
+function v28Tir(s,hasta){
+  hasta=hasta||Date.now(); const fl=[]; (s.p.movs||[]).forEach(m=>{ const ms=v28MomMov(m); if(ms>hasta) return; const imp=v28Num(m.imp)||0;
+    if(m.tipo==='compra') fl.push([ms,-imp]); else if(m.tipo==='venta') fl.push([ms,imp-(v28Num(m.com)||0)]); else if(m.tipo==='dividendo') fl.push([ms,imp]); else if(m.tipo==='traspaso') fl.push([ms,imp]); });
+  v28Inv().forEach(p=>(p.movs||[]).forEach(m=>{ if(m.tipo==='traspaso'&&String(m.dest)===String(s.p.id)){ const ms=v28MomMov(m); if(ms<=hasta) fl.push([ms,-(v28Num(m.imp)||0)]); } }));
+  if(!fl.length) return null; fl.push([hasta,s.V]); fl.sort((a,b)=>a[0]-b[0]); const t0=fl[0][0], anos=(hasta-t0)/(365.25*864e5); if(anos<30/365.25) return null;
+  const npv=r=>fl.reduce((a,[t,v])=>a+v/Math.pow(1+r,(t-t0)/(365.25*864e5)),0); let lo=-0.99, hi=10, flo=npv(lo), fhi=npv(hi); if(!isFinite(flo)||!isFinite(fhi)||flo*fhi>0) return null;
+  for(let i=0;i<200;i++){ const mid=(lo+hi)/2, fm=npv(mid); if(Math.abs(fm)<1e-7) return mid; if(flo*fm<0){ hi=mid; fhi=fm; } else { lo=mid; flo=fm; } } return (lo+hi)/2;
+}
+// Base del ahorro: cuota orientativa de una cantidad (escala estatal + autonómica, art. 66 y 76 LIRPF tras la Ley 7/2024)
+// Integración y compensación en la base del ahorro (art. 49 LIRPF): las ganancias y pérdidas se compensan entre sí; si el saldo
+// es negativo, compensa hasta el 25 % de los rendimientos del capital mobiliario (dividendos, cupones) y el resto, 4 años siguientes
+function v28BaseAhorro(gan,rcm){ let gp=v28R(gan), rc=v28R(Math.max(0,rcm)), comp=0; if(gp<0&&rc>0){ comp=v28R(Math.min(-gp,rc*0.25)); gp=v28R(gp+comp); rc=v28R(rc-comp); }
+  return {base:v28R(Math.max(0,gp)+rc), pendiente:gp<0?v28R(-gp):0, comp}; }
+function v28CuotaAhorro(b){ if(!(b>0)) return 0; const T=[[6000,.19],[50000,.21],[200000,.23],[300000,.27],[Infinity,.30]]; let c=0, prev=0; for(const [h,t] of T){ if(b<=prev) break; c+=(Math.min(b,h)-prev)*t; prev=h; } return v28R(c); }
+// Regla de recompra (art. 33.5 f y g LIRPF): pérdidas con compras del mismo ISIN cerca
+function v28Recompra(p,m,lotes){
+  const isin=v28IsinNorm(p.isin); if(!isin) return null; const cot=V28_COTIZA.includes(p.tipo), meses=cot?2:12, f=m.fecha;
+  const ini=v28MasMeses(f,-meses), fin=v28MasMeses(f,meses);
+  if(!lotes){ try{ const s=v28Calc(Infinity).get(String(p.id)), o=s&&s.ops[m.id]; lotes=o&&o.lotes||[]; }catch(e){ lotes=[]; } }
+  const vendidas=new Set((lotes||[]).filter(l=>l.mid&&!(l.resto>0.0049)).map(l=>String(l.mid)));
+  const hay=[]; v28Inv().forEach(q=>{ if(v28IsinNorm(q.isin)!==isin) return; (q.movs||[]).forEach(x=>{ if(x.id!==m.id&&x.tipo==='compra'&&x.fecha>=ini&&x.fecha<=fin&&!vendidas.has(String(x.id))) hay.push(x.fecha); }); });
+  return hay.length?{meses, fechas:hay.sort()}:null;
+}
+// Misma fecha N meses antes o después (los plazos de meses se cuentan de fecha a fecha)
+function v28MasMeses(iso,n){ const y=+iso.slice(0,4), mo=+iso.slice(5,7)-1+n, d=+iso.slice(8,10), Y=y+Math.floor(mo/12), M=((mo%12)+12)%12, ult=new Date(Y,M+1,0).getDate();
+  return Y+'-'+String(M+1).padStart(2,'0')+'-'+String(Math.min(d,ult)).padStart(2,'0'); }
+
+// ══ Cuentas: compras, ventas y dividendos mueven el saldo de la cuenta (antes de calcular los saldos fijados) ══
+function v28Flujos(out){
+  (D.inversiones||[]).forEach(p=>(p.movs||[]).forEach(m=>{ const cta=m.ctaId; if(!cta||!m.fecha) return; const imp=v28Num(m.imp)||0; let x=0, txt='';
+    if(m.tipo==='compra'){ x=-imp; txt='📈 Compra · '+(p.nom||'inversión'); }
+    else if(m.tipo==='venta'){ x=imp-(v28Num(m.com)||0)-(v28Num(m.ret)||0); txt='📈 Venta · '+(p.nom||'inversión')+((v28Num(m.ret)||0)>0?' (retención '+v4E2(v28Num(m.ret))+' €)':''); }
+    else if(m.tipo==='dividendo'){ x=imp-(v28Num(m.ret)||0); txt='📈 '+(p.tipo==='rf'?'Cupón':'Dividendo')+' · '+(p.nom||'inversión')+((v28Num(m.ret)||0)>0?' (retención '+v4E2(v28Num(m.ret))+' €)':''); }
+    else return;
+    if(!x) return; const fin=v9Final(cta)||cta, f={cta:fin, orig:cta, fecha:m.fecha, imp:v9R2(x), tipo:x<0?'pago':'cobro', txt, src:'inv', id:m.id, pid:p.id, auto:false, ts:v15TsId(m.id)};
+    if(v26HoraOk(m.hora)) f.hora=m.hora; out.push(f); }));
+}
+
+// ══ Apartado «📈 Inversiones» (menú de la izquierda, RentaControl) ══
+(function v28Montar(){
+  const go_=()=>{ try{
+    if(!$i('sec-inversiones')){ const ref=$i('sec-ctasbanc'); if(ref){ const s=document.createElement('section'); s.className='sec'; s.dataset.ws='gentaury'; s.id='sec-inversiones';
+      s.innerHTML='<div class="ph"><div><div class="ph-title">📈 Fondos y bolsa</div><div style="font-size:12px;color:var(--ink3);margin-top:3px;">Fondos (también monetarios), ETF, acciones, renta fija y planes de pensiones. Actualiza el valor cuando quieras: queda fijado con día y hora.</div></div>'
+        +'<div class="ph-acts" style="display:flex;gap:8px;flex-wrap:wrap;"><select id="iv28-fil" onchange="v28Render()" style="padding:8px 10px;border:1.5px solid var(--line2);border-radius:var(--r2);background:var(--card);font-size:12px;color:var(--ink);"></select><button class="btn btn-primary" onclick="v28FormPos()">+ Nueva inversión</button></div></div>'
+        +'<div id="iv28-kpis" class="mb"></div><div id="iv28-lista" class="g2 mb"></div><div id="iv28-fiscal"></div>';
+      ref.parentNode.insertBefore(s,ref.nextSibling); } }
+    if(!document.querySelector('.nav-item[data-s="inversiones"]')){ const n=document.querySelector('.nav-item[data-s="ctasbanc"]'); if(n){ n.insertAdjacentHTML('afterend','<div class="nav-item" data-ws="gentaury" data-s="inversiones" onclick="go(this)"><span class="nav-icon">📈</span> Fondos y bolsa</div>');
+      // En el móvil, como el resto del menú: al elegirlo se cierra el menú
+      const it=n.nextElementSibling; if(it) it.addEventListener('click',()=>{ try{ if(window.innerWidth<=768) closeSb(); }catch(e){} }); } }
+  }catch(e){ console.warn('v28Montar',e); } };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go_,{once:true}); else go_(); go_();
+})();
+function v28OptsTit(sel){ return (D.propietarios||[]).map(o=>'<option value="'+v4Esc(o.id)+'"'+(String(o.id)===String(sel)?' selected':'')+'>'+v4Esc(o.alias||o.nom)+'</option>').join(''); }
+function v28OptsCta(sel,vacio){ return (vacio?'<option value="">'+vacio+'</option>':'')+v9Ctas().filter(c=>(c.tipo||'cuenta')!=='tarjeta').map(c=>'<option value="'+v4Esc(c.id)+'"'+(String(c.id)===String(sel)?' selected':'')+'>'+v4Esc(c.nom+(c.titularId?' ('+nombreC(c.titularId)+')':''))+'</option>').join(''); }
+function v28Yo(){ try{ const y=v20Yo(D); if(y) return y; }catch(e){} const o=(D.propietarios||[]).find(x=>/^yo\b/i.test(String(x.rel||''))); return o?String(o.id):((D.propietarios||[])[0]||{}).id||''; }
+function v28FilSec(){ const e=$i('iv28-fil'); return {own:e?e.value:'', pid:''}; }
+
+function v28Render(){
+  const sec=$i('sec-inversiones'); if(!sec) return; const fe=$i('iv28-fil');
+  if(fe){ const v=fe.value; fe.innerHTML='<option value="">👤 Todos los titulares</option>'+v28OptsTit(''); fe.value=v; }
+  const F=v28FilSec(), now=Date.now(), hoy=v4Hoy(), k=hoy.slice(0,7), T=v28Tot(F,now), rMes=v28Rend(F,v28IniMes(k),now), y=hoy.slice(0,4), rAno=v28Rend(F,v26Ms(y+'-01-01','00:00',false)-1,now);
+  const kpi=(c,l,v,s)=>'<div class="kpi" style="--kc:'+c+';flex:1;min-width:150px;"><div class="kpi-accent"></div><div class="kpi-label">'+l+'</div><div class="kpi-value">'+v+'</div>'+(s?'<div class="kpi-sub">'+s+'</div>':'')+'</div>';
+  const col=v=>v>=0?'var(--gn)':'var(--rd)';
+  $i('iv28-kpis').innerHTML='<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+    +kpi('var(--bl)','Valor actual',v28E(T.V),T.n+' inversi'+(T.n===1?'ón':'ones'))
+    +kpi('var(--ink2)','Dinero metido (neto)',v28E(T.neto),'compras − ventas')
+    +kpi(col(T.rend),'Rendimiento total',(T.rend>0?'+':'')+v28E(T.rend),T.neto>0?(T.rend>=0?'+':'')+v17Num(T.rend/T.neto*100,2)+' % sobre lo metido':'')
+    +kpi(col(rMes),'Este mes',(rMes>0?'+':'')+v28E(rMes),'en '+v17MesTxt(k,true)+' · '+(rAno>=0?'+':'')+v28E(rAno)+' en '+y)
+    +kpi(col(T.latente),'Plusvalía latente',(T.latente>0?'+':'')+v28E(T.latente),'valor − coste fiscal (FIFO) · tributa al vender')+'</div>';
+  const L=T.lista.slice().sort((a,b)=>b.V-a.V);
+  $i('iv28-lista').innerHTML=L.length?L.map(s=>v28Tarjeta(s,now)).join('')
+    :'<div class="card" style="grid-column:1/-1;"><div class="empty"><div class="empty-icon">📈</div><p>Añade tu fondo monetario (o cualquier inversión) con «+ Nueva inversión». Pon el nombre, el ISIN y la primera compra; después, «Actualizar valor» con lo que te diga tu banco o bróker.</p></div></div>';
+  $i('iv28-fiscal').innerHTML=v28HtmlFiscal(F);
+}
+function v28Tarjeta(s,now){
+  const p=s.p, isin=v28IsinNorm(p.isin), tir=v28Tir(s,now), k=v4Hoy().slice(0,7), ok=v28Filtra({own:String(p.titularId||'')}), rMes=(()=>{ const a=v28Calc(v28IniMes(k)).get(String(p.id)); return v28R(s.rend-(a?a.rend:0)); })();
+  const c=v9Cta(p.ctaId), u=s.ult, col=v=>v>=0?'var(--gn)':'var(--rd)', cerrada=!(s.V>0.004)&&s.primera;
+  const fila=(l,v,st)=>'<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12px;"><span style="color:var(--ink2);">'+l+'</span><span class="mono" style="font-weight:600;'+(st||'')+'">'+v+'</span></div>';
+  return '<div class="card" id="iv28-c-'+v4Esc(p.id)+'"'+(cerrada?' style="opacity:.7;"':'')+'><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+    +'<div style="min-width:0;"><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;line-height:1.3;">'+v4Esc(p.nom||'Inversión')+'</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-top:3px;line-height:1.5;"><span class="badge badge-b">'+v4Esc(v28TipoNom(p.tipo))+'</span> '+(isin?'<span class="mono">'+v4Esc(isin)+'</span>'+(v28Pais(isin)?' · '+v4Esc(v28Pais(isin)):'')+(v28IsinOk(isin)?'':' <span style="color:var(--rd);">(ISIN no válido)</span>'):'<span style="color:var(--ye);">sin ISIN</span>')
+    +'<br>'+v4Esc(nombreC(p.titularId)||'—')+(p.entidad?' · '+v4Esc(p.entidad):'')+(p.gestora?' · gestora '+v4Esc(p.gestora):'')+(c?' · cuenta '+v4Esc(c.nom):'')+'</div></div>'
+    +'<div style="text-align:right;flex-shrink:0;"><div class="mono" style="font-size:20px;font-weight:800;">'+v28E(s.V)+'</div><div style="font-size:10.5px;color:var(--ink3);">'+(u?'valor del '+v4F2(u.fecha)+(u.hora?' '+u.hora:''):'sin actualizar (= lo comprado)')+'</div></div></div>'
+    +'<div style="margin-top:10px;">'
+    +fila('Dinero metido (neto)',v28E(s.neto))
+    +fila('Rendimiento total',v28Sig(s.rend)+(s.neto>0?' ('+(s.rend>=0?'+':'')+v17Num(s.rend/s.neto*100,2)+' %)':''),'color:'+col(s.rend)+';')
+    +fila('Este mes',v28Sig(rMes),'color:'+col(rMes)+';')
+    +fila('TIR anual (ponderada por el dinero)',tir===null?'<span style="color:var(--ink3);font-weight:400;">con 30 días o más</span>':(tir>=0?'+':'')+v17Num(tir*100,2)+' %','color:'+(tir===null?'inherit':col(tir))+';')
+    +fila('Coste fiscal (FIFO)'+(s.aprox?' ≈':''),v28E(s.coste))
+    +fila('Plusvalía latente',v28Sig(s.latente),'color:'+col(s.latente)+';')
+    +(s.partOk&&s.part>0?fila('Participaciones',v28Part(s.part)+(u&&u.vl?' · VL '+v4E2(u.vl):'')):'')
+    +(s.gan?fila('Ganancias ya realizadas (ventas)',v28Sig(s.gan),'color:'+col(s.gan)+';'):'')
+    +(s.div?fila(p.tipo==='rf'?'Cupones cobrados':'Dividendos cobrados',v28E(s.div)):'')
+    +'</div>'
+    +(s.avisos.length?'<div style="font-size:11px;color:var(--rd);margin-top:6px;line-height:1.45;">⚠️ '+s.avisos.map(v4Esc).join(' · ')+'</div>':'')
+    +(s.aprox?'<div style="font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.45;">≈ Sin las participaciones de cada compra, el coste de lo vendido sale por coste medio. Para el FIFO exacto (art. 37.2 LIRPF), apunta las participaciones.</div>':'')
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"><button class="btn btn-primary btn-sm" onclick="v28FormMov(\''+p.id+'\',\'valor\')">↻ Actualizar valor</button><button class="btn btn-secondary btn-sm" onclick="v28FormMov(\''+p.id+'\',\'compra\')">+ Comprar</button>'
+    +'<button class="btn btn-secondary btn-sm" onclick="v28FormMov(\''+p.id+'\',\'venta\')">− Vender</button>'+(V28_IIC.includes(p.tipo)||p.tipo==='pension'?'<button class="btn btn-ghost btn-sm" onclick="v28FormMov(\''+p.id+'\',\'traspaso\')">⇄ Traspasar</button>':'')
+    +(['etf','accion','rf','fondo','otro'].includes(p.tipo)?'<button class="btn btn-ghost btn-sm" onclick="v28FormMov(\''+p.id+'\',\'dividendo\')">'+(p.tipo==='rf'?'Cupón':'Dividendo')+'</button>':'')
+    +'<button class="btn btn-ghost btn-sm" onclick="v28VerMovs(\''+p.id+'\')">📋 Movimientos</button><button class="btn btn-ghost btn-sm" onclick="v28FormPos(\''+p.id+'\')">✏️</button><button class="btn btn-ghost btn-sm" onclick="v28BorrarPos(\''+p.id+'\')">🗑</button></div>'
+    +'<div style="font-size:10.5px;color:var(--ink3);margin-top:8px;line-height:1.5;">'+v28NotaTipo(p.tipo)+'</div></div>';
+}
+function v28NotaTipo(t){
+  if(V28_IIC.includes(t)) return '⚖️ Tributa solo al vender (reembolso): la ganancia va a la base del ahorro con retención del 19 %. Si la traspasas a otro fondo no tributa y conserva el coste y la fecha (art. 94 LIRPF).';
+  if(t==='etf') return '⚖️ Es un fondo cotizado: no admite traspaso sin tributar (art. 94 LIRPF). Al vender, ganancia o pérdida en la base del ahorro; los dividendos son rendimientos del capital mobiliario (retención del 19 %).';
+  if(t==='accion') return '⚖️ Al vender, ganancia o pérdida en la base del ahorro; los dividendos, rendimientos del capital mobiliario (retención del 19 %). Pérdida con recompra en 2 meses: se aplaza (art. 33.5.f LIRPF).';
+  if(t==='rf') return '⚖️ Intereses, cupones y la diferencia al vencer o vender: rendimientos del capital mobiliario (base del ahorro).';
+  if(t==='pension') return '⚖️ Las aportaciones reducen la base general con límites (arts. 51 y 52 LIRPF); al rescatar tributa como rendimiento del trabajo. Se puede movilizar a otro plan sin tributar.';
+  return '⚖️ Revisa cómo tributa este activo: lo habitual es ganancia o pérdida patrimonial al venderlo (base del ahorro).';
+}
+// Fiscalidad del año: ventas, dividendos, retenciones, valor a 31/12 y aviso del 720
+function v28HtmlFiscal(F){
+  const hoy=v4Hoy(), y=+hoy.slice(0,4), S=v28Calc(Date.now()), ok=v28Filtra(F); const anos={};
+  S.forEach(s=>{ if(!ok(s.p)) return; Object.entries(s.anio).forEach(([a,x])=>{ if(!x.n&&!x.div) return; const t=anos[a]||(anos[a]={gan:0,ret:0,div:0,retDiv:0,ventas:[]}); t.gan+=x.gan; t.ret+=x.ret; t.div+=x.div; t.retDiv+=x.retDiv; x.ventas.forEach(v=>t.ventas.push(Object.assign({p:s.p},v))); }); });
+  const filas=Object.keys(anos).sort().reverse().map(a=>{ const t=anos[a], B=v28BaseAhorro(t.gan,t.div), base=B.base, cu=v28CuotaAhorro(base);
+    return '<tr><td style="font-weight:700;">'+a+'</td><td class="mono" style="text-align:right;color:'+(t.gan>=0?'var(--gn)':'var(--rd)')+';">'+v28Sig(v28R(t.gan))+'</td><td class="mono" style="text-align:right;">'+v28E(t.div)+'</td><td class="mono" style="text-align:right;">'+v28E(t.ret+t.retDiv)+'</td><td class="mono" style="text-align:right;">'+(base>0?v28E(cu):'—')+'</td><td class="mono" style="text-align:right;">'+(base>0||t.ret+t.retDiv>0?v28Sig(v28R(t.ret+t.retDiv-cu)):'—')+'</td></tr>'
+      +(B.pendiente||B.comp?'<tr style="font-size:11px;color:var(--ink2);"><td></td><td colspan="5">'+(B.comp?'Pérdidas compensadas con el 25 % de los dividendos y cupones: '+v28E(B.comp)+'. ':'')+(B.pendiente?'Pérdida pendiente: '+v28E(B.pendiente)+' (se compensa en los 4 años siguientes, art. 49 LIRPF).':'')+'</td></tr>':'')
+      +t.ventas.map(v=>{ const rc=v.g<0?v28Recompra(v.p,v.m,v.lotes):null; return '<tr style="font-size:11px;color:var(--ink2);"><td></td><td colspan="5">'+v4F2(v.m.fecha)+' · '+v4Esc(v.p.nom)+': '+v28E(v28Num(v.m.imp))+' de reembolso − '+v28E(v28Num(v.m.com)||0)+' de gastos − '+v28E(v.coste)+' de coste'+(v.aprox?' ≈':'')+' = <strong>'+v28Sig(v.g)+'</strong>'
+        +(v.lotes&&v.lotes.length?' · compras del '+v.lotes.map(l=>v4F2(l.fecha)).join(', '):'')+(rc?'<br><span style="color:var(--rd);">⚠️ Pérdida con compras del mismo ISIN a menos de '+(rc.meses===2?'2 meses':'1 año')+' ('+rc.fechas.map(v4F2).join(', ')+'): no se computa hasta vender esas participaciones (art. 33.5.'+(rc.meses===2?'f':'g')+' LIRPF).</span>':'')+'</td></tr>'; }).join(''); }).join('');
+  // Valor a 31 de diciembre del año pasado (Patrimonio y 720)
+  const f31=v26Ms((y-1)+'-12-31','',true), S31=v28Calc(f31); let v31=0, ext=0; const det31=[];
+  S31.forEach(s=>{ if(!ok(s.p)||!(s.V>0)) return; v31+=s.V; det31.push(v4Esc(s.p.nom)+' '+v28E(s.V)); if(v28IsinNorm(s.p.isin).slice(0,2)&&v28IsinNorm(s.p.isin).slice(0,2)!=='ES') ext+=s.V; });
+  return '<div class="card"><div class="card-title">⚖️ Fiscalidad de tus inversiones</div>'
+    +(filas?'<div class="tbl-wrap"><table><thead><tr><th>Año</th><th class="n">Ganancias y pérdidas (ventas)</th><th class="n">Dividendos y cupones</th><th class="n">Retenciones</th><th class="n">Cuota orientativa</th><th class="n">A devolver (+) o pagar (−)</th></tr></thead><tbody>'+filas+'</tbody></table></div>'
+      :'<div style="font-size:12px;color:var(--ink3);">Aún no hay ventas ni dividendos: mientras no vendas, un fondo no tributa (solo se declara su valor si haces la declaración del Impuesto sobre el Patrimonio).</div>')
+    +'<div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-top:8px;">Base del ahorro (arts. 46, 66 y 76 LIRPF; Ley 7/2024): 19 % hasta 6.000 €, 21 % hasta 50.000 €, 23 % hasta 200.000 €, 27 % hasta 300.000 € y 30 % desde ahí. '
+      +'La cuota es orientativa: cuenta solo estas inversiones; en tu declaración se suman los intereses de las cuentas y las demás rentas del ahorro, y se compensan como dice el art. 49 LIRPF. La ganancia de un fondo = valor liquidativo del reembolso − coste FIFO (art. 37.1 y 37.2 LIRPF).'
+      +(det31.length?'<br>Valor a 31/12/'+(y-1)+': <strong>'+v28E(v28R(v31))+'</strong> ('+det31.join(' · ')+'): es el que va en el Impuesto sobre el Patrimonio (valor liquidativo a 31/12, arts. 15 y 16 de la Ley 19/1991).':'')
+      +(ext>50000?'<br><span style="color:var(--rd);">⚠️ A 31/12/'+(y-1)+' tenías '+v28E(v28R(ext))+' en inversiones con ISIN extranjero: si están depositadas o gestionadas fuera de España, revisa el modelo 720 (más de 50.000 €, art. 42 ter RGAT). Las IIC extranjeras compradas a través de una comercializadora española no se declaran (criterio de la DGT).</span>':'')
+    +'</div></div>';
+}
+
+// ── Formularios ──
+function v28FormPos(id){
+  const p=id?v28Pos(id):null, nuevo=!p, yo=v28Yo(), tit=p?p.titularId:yo, cta=p?p.ctaId:((v9CtaDef&&v9CtaDef(tit))||{}).id||'';
+  v4Modal(nuevo?'📈 Nueva inversión':'✏️ '+v4Esc(p.nom),
+    '<div class="fg"><div class="fgrp fgf"><label>Nombre del fondo o activo *</label><input id="iv28-nom" value="'+v4Esc(p?p.nom:'')+'" placeholder="Ej.: Fondo monetario …"></div>'
+    +'<div class="fgrp"><label>ISIN</label><input id="iv28-isin" value="'+v4Esc(p?p.isin||'':'')+'" placeholder="Ej.: IE00B4L5Y983" style="text-transform:uppercase;" oninput="v28IsinPista()"><div id="iv28-isin-h" style="font-size:11px;margin-top:3px;"></div></div>'
+    +'<div class="fgrp"><label>Tipo *</label><select id="iv28-tipo">'+V28_TIPOS.map(([k,t])=>'<option value="'+k+'"'+((p?p.tipo:'monetario')===k?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'
+    +'<div class="fgrp"><label>Titular *</label><select id="iv28-tit">'+v28OptsTit(tit)+'</select></div>'
+    +'<div class="fgrp"><label>Dónde lo tienes (entidad o bróker)</label><input id="iv28-ent" value="'+v4Esc(p?p.entidad||'':'')+'" placeholder="Ej.: MyInvestor, Trade Republic…"></div>'
+    +'<div class="fgrp"><label>Gestora</label><input id="iv28-ges" value="'+v4Esc(p?p.gestora||'':'')+'"></div>'
+    +'<div class="fgrp"><label>Cuenta asociada (de ella sale y a ella vuelve el dinero)</label><select id="iv28-cta">'+v28OptsCta(cta,'— Sin cuenta —')+'</select></div>'
+    +'<div class="fgrp fgf"><label>Notas</label><input id="iv28-not" value="'+v4Esc(p?p.notas||'':'')+'"></div>'
+    +(nuevo?'<div class="fgrp fgf" style="margin-top:6px;"><div style="font:600 11px \'DM Mono\',monospace;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);">Primera compra</div></div>'+v28CamposMov('compra',null,{cta}):'')
+    +'</div>','<button class="btn btn-primary" onclick="v28GuardarPos(\''+(p?p.id:'')+'\')">Guardar</button>');
+  v28IsinPista(); if(nuevo){ v28HoraAuto();
+    // La primera compra sale de la cuenta asociada (y al cambiar de titular, se propone su cuenta principal)
+    const cs=$i('iv28-cta'), cm=$i('iv28-mcta'), ts=$i('iv28-tit');
+    if(cs&&cm) cs.addEventListener('change',()=>{ cm.value=cs.value; });
+    if(ts&&cs) ts.addEventListener('change',()=>{ const d=v9CtaDef(ts.value); cs.value=d?d.id:''; if(cm) cm.value=cs.value; }); }
+}
+function v28IsinPista(){ const e=$i('iv28-isin'), h=$i('iv28-isin-h'); if(!e||!h) return; const s=v28IsinNorm(e.value); if(!s){ h.innerHTML='<span style="color:var(--ink3);">12 caracteres; lo ves en la ficha del fondo.</span>'; return; }
+  h.innerHTML=v28IsinOk(s)?'<span style="color:var(--gn);">✓ ISIN válido · '+v4Esc(v28Pais(s))+'</span>':'<span style="color:var(--rd);">✗ No es un ISIN válido (revisa las letras y los números)</span>'; }
+function v28CamposMov(tipo,m,opt){
+  opt=opt||{}; m=m||{}; const hoy=v4Hoy(), val=x=>x===undefined||x===null||x===''?'':String(x).replace('.',',');
+  const f='<div class="fgrp"><label>Fecha</label><input id="iv28-f" type="date" value="'+(m.fecha||hoy)+'" max="'+hoy+'"></div>'
+    +'<div class="fgrp"><label>Hora</label><input id="iv28-h" type="time" value="'+(m.hora||'')+'" data-auto="'+(m.hora?'0':'1')+'" oninput="this.dataset.auto=\'0\'"></div>';
+  const cta=(lbl)=>'<div class="fgrp"><label>'+lbl+'</label><select id="iv28-mcta">'+v28OptsCta(m.id?m.ctaId:(opt.cta||''),'— No sale de ninguna cuenta de la app —')+'</select></div>';
+  const just='<div class="fgrp fgf"><label>Justificante (PDF o foto, opcional)</label>'+v27Zona('iv28','📎 Orden, extracto o certificado')+'</div>';
+  if(tipo==='valor') return f+'<div class="fgrp"><label>Valor total ahora (€) *</label><input id="iv28-val" inputmode="decimal" value="'+val(m.val)+'" placeholder="Lo que te dice el banco o bróker"></div>'
+    +'<div class="fgrp"><label>Participaciones (opcional)</label><input id="iv28-part" inputmode="decimal" value="'+val(m.part)+'"></div><div class="fgrp"><label>Valor liquidativo (opcional)</label><input id="iv28-vl" inputmode="decimal" value="'+val(m.vl)+'" placeholder="Precio de cada participación"></div>';
+  if(tipo==='compra') return f+'<div class="fgrp"><label>Importe pagado (€) *</label><input id="iv28-imp" inputmode="decimal" value="'+val(m.imp)+'" placeholder="Con comisiones"></div>'
+    +'<div class="fgrp"><label>Participaciones compradas</label><input id="iv28-part" inputmode="decimal" value="'+val(m.part)+'" placeholder="Para el FIFO exacto"></div><div class="fgrp"><label>Comisión incluida (€)</label><input id="iv28-com" inputmode="decimal" value="'+val(m.com)+'"></div>'+cta('Pagado desde')+just;
+  if(tipo==='venta') return f+'<div class="fgrp"><label>Importe del reembolso o venta (€) *</label><input id="iv28-imp" inputmode="decimal" value="'+val(m.imp)+'" placeholder="Antes de retenciones"></div>'
+    +'<div class="fgrp"><label>Participaciones vendidas</label><input id="iv28-part" inputmode="decimal" value="'+val(m.part)+'"></div><div class="fgrp"><label>Gastos de la venta (€)</label><input id="iv28-com" inputmode="decimal" value="'+val(m.com)+'"></div>'
+    +'<div class="fgrp"><label>Retención de IRPF (€)</label><input id="iv28-ret" inputmode="decimal" value="'+val(m.ret)+'" placeholder="La de la orden (19 % de la ganancia)"></div>'+cta('Cobrado en')+just;
+  if(tipo==='dividendo') return f+'<div class="fgrp"><label>Importe bruto (€) *</label><input id="iv28-imp" inputmode="decimal" value="'+val(m.imp)+'"></div><div class="fgrp"><label>Retención (€)</label><input id="iv28-ret" inputmode="decimal" value="'+val(m.ret)+'" placeholder="19 %"></div>'+cta('Cobrado en');
+  if(tipo==='traspaso'){ const p=v28Pos(opt.pid), ds=v28Inv().filter(q=>q.id!==opt.pid&&String(q.titularId)===String(p&&p.titularId)&&(p&&p.tipo==='pension'?q.tipo==='pension':V28_IIC.includes(q.tipo)));
+    return f+'<div class="fgrp"><label>Valor traspasado (€) *</label><input id="iv28-imp" inputmode="decimal" value="'+val(m.imp)+'"></div><div class="fgrp"><label>Participaciones que salen</label><input id="iv28-part" inputmode="decimal" value="'+val(m.part)+'"></div>'
+      +'<div class="fgrp"><label>Fondo de destino *</label><select id="iv28-dest">'+(ds.length?ds.map(q=>'<option value="'+v4Esc(q.id)+'"'+(String(q.id)===String(m.dest)?' selected':'')+'>'+v4Esc(q.nom)+'</option>').join(''):'<option value="">— Crea antes el fondo de destino —</option>')+'</select></div>'
+      +'<div class="fgrp"><label>Participaciones que entran</label><input id="iv28-pdest" inputmode="decimal" value="'+val(m.partDest)+'"></div>'; }
+  return f;
+}
+function v28HoraAuto(){ const h=$i('iv28-h'), f=$i('iv28-f'); if(!h||!f) return; if(h.dataset.auto==='1') h.value=f.value===v4Hoy()?v26Hhmm():''; f.addEventListener('input',()=>{ if(h.dataset.auto==='1') h.value=f.value===v4Hoy()?v26Hhmm():''; }); }
+const V28_TIT={valor:'↻ Actualizar valor', compra:'+ Comprar', venta:'− Vender (reembolso)', dividendo:'Dividendo o cupón', traspaso:'⇄ Traspaso a otro fondo'};
+function v28FormMov(pid,tipo,mid){
+  const p=v28Pos(pid); if(!p) return; const m=mid?(p.movs||[]).find(x=>x.id===mid):null; tipo=m?m.tipo:tipo;
+  const S=v28Calc(Date.now()).get(String(p.id))||{V:0,part:0,partOk:true};
+  const pre=tipo==='valor'?'<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;line-height:1.5;">Ahora la app tiene <strong>'+v28E(S.V)+'</strong>'+(S.ult?' (valor del '+v4F2(S.ult.fecha)+(S.ult.hora?' a las '+S.ult.hora:'')+' más lo comprado o vendido después)':' (lo comprado)')+'. Escribe lo que te dice tu banco o bróker: queda fijado en ese momento.</div>'
+    :tipo==='venta'?'<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;line-height:1.5;">Valor ahora: <strong>'+v28E(S.V)+'</strong>'+(S.partOk&&S.part>0?' · '+v28Part(S.part)+' participaciones':'')+'. Coste fiscal: '+v28E(S.coste||0)+'.</div>':'';
+  v4Modal(V28_TIT[tipo]+' · '+v4Esc(p.nom),pre+'<div class="fg">'+v28CamposMov(tipo,m,{pid:p.id,cta:p.ctaId})+'<div class="fgrp fgf"><label>Concepto o notas</label><input id="iv28-con" value="'+v4Esc(m&&m.notas||'')+'"></div><div class="fgrp fgf"><div id="iv28-prev" style="font-size:11.5px;color:var(--ink2);line-height:1.55;"></div></div></div>',
+    '<button class="btn btn-primary" onclick="v28GuardarMov(\''+p.id+'\',\''+tipo+'\',\''+(m?m.id:'')+'\')">Guardar</button>');
+  if(m&&m.pdfData){ const z=$i('iv28-pdf-zone'), d=$i('iv28-pdf-data'), n=$i('iv28-pdf-name'); if(d) d.value=m.pdfData; if(n) n.value=m.pdfName||''; if(z){ z.classList.add('has-file'); const l=z.querySelector('.pdf-upload-label'); if(l) l.textContent='📎 '+(m.pdfName||'justificante'); } }
+  v28HoraAuto(); const r=()=>{ try{ v28Previa(p,tipo,m); }catch(e){} }; ['iv28-val','iv28-imp','iv28-part','iv28-vl','iv28-com','iv28-ret','iv28-f','iv28-h'].forEach(id=>{ const e=$i(id); if(e) e.addEventListener('input',r); }); r();
+}
+function v28Previa(p,tipo,m){
+  const b=$i('iv28-prev'); if(!b) return; const f=gi('iv28-f'), h=v26HoraForm('iv28-h'), ms=h?v26Ms(f,h,false):(f===v4Hoy()?Date.now():v26Ms(f,'',true));
+  const S=v28Calc(ms-1).get(String(p.id))||{V:0}, n=id=>v28Num(gi(id));
+  if(tipo==='valor'){ let v=n('iv28-val'); if(!(v>=0)&&n('iv28-vl')>0&&(n('iv28-part')>0||S.part>0)) v=(n('iv28-part')>0?n('iv28-part'):S.part)*n('iv28-vl');
+    b.innerHTML=v>=0?'Rendimiento desde el valor anterior ('+v28E(S.V)+'): <strong style="color:'+(v-S.V>=0?'var(--gn)':'var(--rd)')+';">'+v28Sig(v28R(v-S.V))+'</strong>'+(S.V>0?' ('+(v>=S.V?'+':'')+v17Num((v-S.V)/S.V*100,3)+' %)':''):''; }
+  else if(tipo==='venta'){ const imp=n('iv28-imp'); if(!(imp>0)){ b.innerHTML=''; return; } const part=n('iv28-part'), com=n('iv28-com')||0;
+    // Simulación: lo mismo que hará el motor
+    const tmp={id:'__sim', tipo:'venta', fecha:f, hora:h||undefined, imp, part:part>0?part:undefined, com}; const P0=p.movs; p.movs=(P0||[]).filter(x=>!m||x.id!==m.id).concat([tmp]);
+    let r; try{ r=v28Calc(Date.now()+1).get(String(p.id)).ops.__sim; }finally{ p.movs=P0; }
+    if(r){ const g=r.gan, ret=g>0?v28R(g*0.19):0; b.innerHTML='Coste FIFO'+(r.aprox?' ≈':'')+': '+v28E(r.coste)+' → ganancia: <strong style="color:'+(g>=0?'var(--gn)':'var(--rd)')+';">'+v28Sig(g)+'</strong>'+(g>0?' · retención esperada (19 %): '+v28E(ret):'')+'<br><span style="color:var(--ink3);">En la cuenta entra: '+v28E(v28R(imp-com-(n('iv28-ret')||0)))+'</span>'; } }
+  else if(tipo==='compra'){ const c=v9Cta(gi('iv28-mcta')); b.innerHTML=c&&String(c.titularId)!==String(p.titularId)?'<span style="color:var(--rd);">⚠️ La cuenta es de '+v4Esc(nombreC(c.titularId))+' y la inversión de '+v4Esc(nombreC(p.titularId))+': sería una donación o un préstamo entre vosotros (revisa el ISD).</span>':''; }
+  else b.innerHTML='';
+}
+function v28LeerMov(tipo,pid){
+  const f=gi('iv28-f'), h=v26HoraForm('iv28-h'), n=id=>v28Num(gi(id)), hoy=v4Hoy();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(f||'')){ toast('Indica la fecha',false); return null; } if(f>hoy){ toast('La fecha no puede ser futura',false); return null; }
+  if(h&&!v26HoraOk(h)){ toast('La hora no es válida (HH:MM)',false); return null; } if(f===hoy&&h&&h>v26Hhmm()){ toast('La hora no puede ser posterior a ahora',false); return null; }
+  const m={tipo, fecha:f}; if(h) m.hora=h; const con=gi('iv28-con'); if(con) m.notas=con;
+  const pos=x=>isFinite(x)&&x>0;
+  if(tipo==='valor'){ const v=n('iv28-val'), part=n('iv28-part'), vl=n('iv28-vl'); if(isFinite(v)&&v>=0) m.val=v28R(v); if(pos(part)) m.part=part; if(pos(vl)) m.vl=vl;
+    if(m.val===undefined&&!(pos(vl))){ toast('Escribe el valor total (o el valor liquidativo)',false); return null; } }
+  else { const imp=n('iv28-imp'); if(!pos(imp)){ toast('Escribe el importe',false); return null; } m.imp=v28R(imp); const part=n('iv28-part'); if(pos(part)) m.part=part;
+    if(tipo==='compra'||tipo==='venta'){ const com=n('iv28-com'); if(pos(com)) m.com=v28R(com); if(m.com>m.imp){ toast('La comisión no puede ser mayor que el importe',false); return null; } }
+    if(tipo==='venta'||tipo==='dividendo'){ const ret=n('iv28-ret'); if(pos(ret)) m.ret=v28R(ret); if((m.ret||0)+(m.com||0)>m.imp){ toast('La retención y los gastos no pueden superar el importe',false); return null; } }
+    if(tipo!=='traspaso'){ const c=gi('iv28-mcta'); if(c) m.ctaId=c; }
+    if(tipo==='traspaso'){ m.dest=gi('iv28-dest'); if(!m.dest){ toast('Elige el fondo de destino (créalo antes)',false); return null; } if(m.dest===pid){ toast('El destino no puede ser el mismo fondo',false); return null; } const pd=n('iv28-pdest'); if(pos(pd)) m.partDest=pd; } }
+  const pdf=gi('iv28-pdf-data'), pn=gi('iv28-pdf-name'); if(pdf){ if(!v27Listo(pdf)){ toast('El justificante aún se está subiendo: espera un momento',false); return null; } m.pdfData=pdf; m.pdfName=pn||'justificante.pdf'; }
+  return m;
+}
+function v28ComprobarCta(m,que){ if(!m.ctaId) return true; const c=v9Cta(m.ctaId); if(!c) return true; return v26ComprobarMov(c,m.fecha,m.hora||'',que); }
+function v28GuardarPos(id){
+  const nom=gi('iv28-nom'), isin=v28IsinNorm(gi('iv28-isin')), tipo=$i('iv28-tipo').value, tit=$i('iv28-tit').value;
+  if(!nom){ toast('Pon el nombre del fondo o activo',false); return; } if(!tit){ toast('Elige el titular',false); return; }
+  if(isin&&!v28IsinOk(isin)){ if(!confirm('El ISIN «'+isin+'» no es válido (el dígito de control no cuadra). ¿Guardarlo igualmente?')) return; }
+  if(isin&&v28Inv().some(q=>q.id!==id&&v28IsinNorm(q.isin)===isin&&String(q.titularId)===String(tit))){ if(!confirm('Ya tienes una inversión con el ISIN '+isin+' de este titular. Mejor apunta la compra en esa. ¿Crear otra igualmente?')) return; }
+  const campos={nom, isin, tipo, titularId:tit, entidad:gi('iv28-ent'), gestora:gi('iv28-ges'), ctaId:$i('iv28-cta').value, notas:gi('iv28-not')};
+  if(id){ const p=v28Pos(id); if(!p) return; if(String(p.titularId)!==String(tit)&&(p.movs||[]).length&&!confirm('Cambiar el titular de una inversión con movimientos es, en realidad, una transmisión entre personas (donación o venta). ¿Cambiarlo igualmente?')) return;
+    Object.assign(p,campos); p._upd=Date.now(); }
+  else { const m=v28LeerMov('compra'); if(!m) return; if(!m.ctaId&&campos.ctaId) m.ctaId=campos.ctaId;
+    const c=v9Cta(m.ctaId); if(c&&String(c.titularId)!==String(tit)&&!confirm('La cuenta es de '+nombreC(c.titularId)+' y la inversión de '+nombreC(tit)+': sería una donación o un préstamo entre vosotros. ¿Seguir?')) return;
+    if(!v28ComprobarCta(m,'esta compra')) return;
+    if(!Array.isArray(D.inversiones)) D.inversiones=[]; D.inversiones.push(Object.assign({id:uid(), alta:m.fecha, movs:[Object.assign({id:uid()},m)]},campos)); }
+  saveAndSync(); closeM('m-v4'); v28Rerender(); toast(id?'Inversión guardada':'📈 '+nom+' añadida');
+}
+function v28GuardarMov(pid,tipo,mid){
+  const p=v28Pos(pid); if(!p) return; const m=v28LeerMov(tipo,pid); if(!m) return;
+  if(m.tipo==='compra'||m.tipo==='venta'||m.tipo==='dividendo'){ if(!v28ComprobarCta(m,m.tipo==='compra'?'esta compra':m.tipo==='venta'?'esta venta':'este cobro')) return; }
+  if(m.tipo==='venta'){ const S=v28Calc(Date.now()).get(String(p.id)); if(S&&!mid&&m.imp>S.V*1.5+1&&!confirm('Vendes '+v28E(m.imp)+' y la inversión vale '+v28E(S.V)+'. ¿Has actualizado el valor? ¿Guardar igualmente?')) return; }
+  if(m.tipo==='traspaso'){ const d=v28Pos(m.dest); if(!d||String(d.titularId)!==String(p.titularId)){ toast('El traspaso tiene que ser entre fondos del mismo titular (art. 94 LIRPF)',false); return; } }
+  p.movs=p.movs||[];
+  if(mid){ const i=p.movs.findIndex(x=>x.id===mid); if(i<0) return; p.movs[i]=Object.assign({id:mid},m); }
+  else p.movs.push(Object.assign({id:uid()},m));
+  p._upd=Date.now(); saveAndSync(); closeM('m-v4'); v28Rerender();
+  const S=v28Calc(Date.now()).get(String(p.id));
+  toast(m.tipo==='valor'?'📌 Valor de '+p.nom+' fijado: '+v28E(S?S.V:m.val)+' el '+v4F2(m.fecha)+(m.hora?' a las '+m.hora:''):'Guardado'+(m.ctaId&&v9Cta(m.ctaId)?' · '+v9Cta(m.ctaId).nom+' '+(m.tipo==='compra'?'−':'+')+v28E(m.tipo==='compra'?m.imp:m.imp-(m.com||0)-(m.ret||0)):''));
+}
+function v28BorrarMov(pid,mid){ const p=v28Pos(pid); if(!p) return; const m=(p.movs||[]).find(x=>x.id===mid); if(!m) return;
+  if(!confirm('¿Borrar este movimiento ('+(V28_TIT[m.tipo]||m.tipo)+' del '+v4F2(m.fecha)+')?'+(m.ctaId?' También deja de contar en la cuenta.':''))) return;
+  p.movs=p.movs.filter(x=>x.id!==mid); p._upd=Date.now(); saveAndSync(); v28VerMovs(pid); v28Rerender(); }
+function v28BorrarPos(id){ const p=v28Pos(id); if(!p) return; const n=(p.movs||[]).length;
+  if(v28Inv().some(q=>q.id!==id&&(q.movs||[]).some(m=>m.tipo==='traspaso'&&String(m.dest)===String(id)))){ toast('Recibe un traspaso de otro fondo: borra antes ese traspaso',false); return; }
+  if(!confirm('¿Borrar «'+p.nom+'»'+(n?' y sus '+n+' movimientos? Las compras, ventas y dividendos dejarán de contar en tus cuentas.':'?'))) return;
+  D.inversiones=v28Inv().filter(q=>q.id!==id); saveAndSync(); v28Rerender(); toast('Inversión borrada'); }
+function v28Rerender(){ try{ if($i('sec-inversiones')&&$i('sec-inversiones').classList.contains('on')) v28Render(); }catch(e){} try{ if($i('sec-ctasbanc')&&$i('sec-ctasbanc').classList.contains('on')) rCtasBanc(); }catch(e){} try{ if($i('sec-dash')&&$i('sec-dash').classList.contains('on')) RENDERS.dash(); }catch(e){} }
+// Movimientos de una inversión
+function v28VerMovs(pid){
+  const p=v28Pos(pid); if(!p) return; const S=v28Calc(Date.now()).get(String(p.id)), ops=S?S.ops:{};
+  const ent=[]; (p.movs||[]).forEach(m=>ent.push({m, ms:v28MomMov(m), propio:true}));
+  v28Inv().forEach(q=>(q.movs||[]).forEach(m=>{ if(m.tipo==='traspaso'&&String(m.dest)===String(p.id)) ent.push({m, ms:v28MomMov(m), propio:false, de:q}); }));
+  ent.sort((a,b)=>b.ms-a.ms);
+  const nom={valor:'📌 Valor', compra:'Compra', venta:'Venta', dividendo:p.tipo==='rf'?'Cupón':'Dividendo', traspaso:'Traspaso'};
+  const filas=ent.map(({m,propio,de})=>{ const o=ops[m.id]||{}, c=v9Cta(m.ctaId), imp=v28Num(m.imp);
+    const tx=!propio?'⇄ Traspaso desde '+v4Esc(de.nom):m.tipo==='traspaso'?'⇄ Traspaso a '+v4Esc((v28Pos(m.dest)||{}).nom||'?'):nom[m.tipo]||m.tipo;
+    const imps=m.tipo==='valor'?v28E(v28Num(m.val)||0):(m.tipo==='compra'||(!propio)?'+':'−')+v28E(imp||0);
+    const ef=m.tipo==='valor'&&o.dif!==undefined?'<span style="color:'+(o.dif>=0?'var(--gn)':'var(--rd)')+';">'+v28Sig(o.dif)+'</span>':m.tipo==='venta'&&o.gan!==undefined?'ganancia <strong style="color:'+(o.gan>=0?'var(--gn)':'var(--rd)')+';">'+v28Sig(o.gan)+'</strong>'+(o.aprox?' ≈':''):m.tipo==='traspaso'&&o.coste!==undefined?'coste '+v28E(o.coste)+' (sin tributar)':'';
+    return '<tr><td style="white-space:nowrap;">'+v4F2(m.fecha)+(m.hora?' <span style="color:var(--ink3);font-size:10.5px;">'+m.hora+'</span>':'')+'</td><td>'+tx+(m.notas?' · '+v4Esc(m.notas):'')+(m.pdfData?' <button class="btn btn-ghost btn-xs" onclick="v28VerJust(\''+p.id+'\',\''+m.id+'\')">📎</button>':'')+'</td><td class="mono" style="text-align:right;white-space:nowrap;">'+imps+'</td><td class="mono" style="text-align:right;">'+(m.part?v28Part(m.part):'')+'</td><td style="font-size:11px;">'+(c?v4Esc(c.nom):'')+'</td><td style="font-size:11px;">'+ef+'</td><td style="white-space:nowrap;">'+(propio?'<button class="btn btn-ghost btn-xs" onclick="closeDrw();v28FormMov(\''+p.id+'\',\''+m.tipo+'\',\''+m.id+'\')">✏️</button><button class="btn btn-ghost btn-xs" onclick="v28BorrarMov(\''+p.id+'\',\''+m.id+'\')">🗑</button>':'')+'</td></tr>'; }).join('');
+  $i('drw-c').innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;"><div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;">📋 '+v4Esc(p.nom)+'</div><button class="btn btn-ghost btn-sm" onclick="closeDrw()">✕</button></div>'
+    +'<div style="font-size:12px;color:var(--ink2);margin-bottom:8px;line-height:1.6;">Valor: <strong>'+v28E(S?S.V:0)+'</strong> · rendimiento total '+v28Sig(S?S.rend:0)+'. 📌 = valor que escribiste: lo comprado o vendido después se suma o se resta.</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th>Importe</th><th>Part.</th><th>Cuenta</th><th>Efecto</th><th></th></tr></thead><tbody>'+(filas||'<tr><td colspan="7" style="color:var(--ink3);">Sin movimientos.</td></tr>')+'</tbody></table></div>';
+  $i('drawer').classList.add('open'); $i('drawer-overlay').classList.add('show');
+}
+function v28VerJust(pid,mid){ const p=v28Pos(pid), m=p&&(p.movs||[]).find(x=>x.id===mid); if(!m||!m.pdfData){ toast('Sin justificante adjunto',false); return; } openPdf(m.pdfData,m.pdfName||'justificante.pdf'); }
+RENDERS.inversiones=v28Render;
+
+// ══ Cuentas y tarjetas: resumen de inversiones arriba ══
+rCtasBanc=(function(prev){ return function(){ const r=prev.apply(this,arguments);
+  try{ const l=$i('ctab-lista'); if(!l) return r; let c=$i('ctab-inv'); const T=v28Tot({own:'',pid:''},Date.now());
+    if(!T.n){ if(c) c.remove(); return r; }
+    if(!c){ c=document.createElement('div'); c.id='ctab-inv'; c.className='card mb'; l.parentNode.insertBefore(c,l); }
+    c.style.cursor='pointer'; c.setAttribute('onclick',"v9Ir('inversiones')");
+    c.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;"><div><div class="card-title" style="margin:0;">📈 Fondos y bolsa</div><div style="font-size:12px;color:var(--ink3);margin-top:3px;">'+T.lista.map(s=>v4Esc(s.p.nom)+' '+v28E(s.V)).join(' · ')+'</div></div>'
+      +'<div style="text-align:right;"><div class="mono" style="font-size:18px;font-weight:800;">'+v28E(T.V)+'</div><div style="font-size:11px;color:'+(T.rend>=0?'var(--gn)':'var(--rd)')+';">rendimiento '+v28Sig(T.rend)+'</div></div></div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-top:6px;">No es liquidez: está invertido. Las compras y ventas salen en los movimientos de cada cuenta (📈). Pulsa para ver y actualizar.</div>';
+  }catch(e){ console.warn('ctab-inv',e); } return r; }; })(rCtasBanc);
+RENDERS.ctasbanc=rCtasBanc;
+
+// ══ Dashboard: patrimonio y resultados con las inversiones ══
+// Lo que entra con el filtro de arriba (propietario sí; un piso no tiene inversiones)
+function v28Pat(){ const F=v26Fil(); if(F.pid) return {on:false, piso:true}; const T=v28Tot(F,Date.now()); return {on:T.n>0, V:T.V, rend:T.rend, latente:T.latente, n:T.n, lista:T.lista, F}; }
+function v28TiraPat(IV){
+  const k=v4Hoy().slice(0,7), rm=v28Rend(IV.F,v28IniMes(k),Date.now());
+  return '<div class="v28-tira" style="grid-column:1/-1;display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:9px 14px;border:1px solid var(--line);border-radius:var(--r2);background:var(--card);cursor:pointer;font-size:12px;" onclick="v9Ir(\'inversiones\')">'
+    +'<span>📈 <strong>Fondos y bolsa</strong> '+v28E(IV.V)+'</span><span style="color:'+(IV.rend>=0?'var(--gn)':'var(--rd)')+';">rendimiento total '+v28Sig(IV.rend)+'</span><span style="color:'+(rm>=0?'var(--gn)':'var(--rd)')+';">este mes '+v28Sig(rm)+'</span><span style="color:var(--ink3);margin-left:auto;">ya sumadas al patrimonio · no son liquidez</span></div>';
+}
+function v28TiraRes(P,T){
+  const F=v26Fil(); if(F.pid) return ''; const T2=v28Tot(F,Date.now()); if(!T2.n) return '';
+  let ini, fin, cuando; if(P.men){ ini=v28IniMes(P.k); fin=Math.min(Date.now(),v28FinMes(P.k)); cuando='en '+v17MesTxt(P.k,true); } else { ini=v26Ms(P.y+'-01-01','00:00',false)-1; fin=Math.min(Date.now(),v26Ms(P.y+'-12-31','',true)); cuando='en '+P.y; }
+  const r=v28Rend(F,ini,fin), real=v28Realizado(F,ini,fin), tot=v28R((T.ben||0)+r);
+  return '<div class="v28-tira" style="grid-column:1/-1;display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:9px 14px;border:1px dashed var(--line2);border-radius:var(--r2);font-size:12px;cursor:pointer;" onclick="v9Ir(\'inversiones\')" title="Rendimiento = valor al final − valor al principio − compras + ventas y dividendos. Es lo que han ganado o perdido tus inversiones, sin contar el dinero que has metido o sacado. No es dinero cobrado: tributa al vender.">'
+    +'<span>📈 Fondos y bolsa '+cuando+': <strong style="color:'+(r>=0?'var(--gn)':'var(--rd)')+';">'+v28Sig(r)+'</strong></span>'+(real?'<span>(ventas: ganancia '+v28Sig(real)+')</span>':'')
+    +'<span>Beneficio de los pisos + fondos y bolsa: <strong style="color:'+(tot>=0?'var(--gn)':'var(--rd)')+';">'+v28E(tot)+'</strong></span><span style="color:var(--ink3);margin-left:auto;">no cambia «En el bolsillo»: no es dinero cobrado</span></div>';
+}
+
+// ══ Gráfica: patrimonio con inversiones, serie «Inversiones» y «Rendimiento de inversiones» ══
+try{ if(!V17_PAN.some(p=>p.id==='inv')) V17_PAN.splice(2,0,{id:'inv', nom:'Fondos y bolsa', u:'€', w:.8});
+  if(!V17_SER.some(s=>s.id==='inv')) V17_SER.splice(4,0,{id:'inv', nom:'Fondos y bolsa', pan:'inv', tipo:'line', col:'#a0499c', suave:true, bueno:1, desc:'Valor de tus fondos y demás inversiones (también suman al patrimonio)'});
+  if(!V17_SER.some(s=>s.id==='rinv')) V17_SER.splice(V17_SER.findIndex(s=>s.id==='ben')+1,0,{id:'rinv', nom:'Rendimiento fondos y bolsa', pan:'mes', tipo:'bar', col:'#a0499c', bueno:1, flujo:true, desc:'Lo que han ganado o perdido tus inversiones ese mes (sin el dinero metido o sacado)'});
+  V17_SER.forEach(s=>{ if(s.id==='patN') s.desc='Valor de los pisos − hipotecas + liquidez neta + fondos y bolsa'; if(s.id==='patB') s.desc='Valor de los pisos + liquidez + fondos y bolsa'; });
+  ['inv','rinv'].forEach(x=>{ if(!V17_HEROE.includes(x)) V17_HEROE.push(x); });
+}catch(e){ console.warn('v28 series',e); }
+v17Serie=(function(prev){ return function(){
+  const S=prev.apply(this,arguments); try{ const F=v26Fil(); if(!S||!S.rows||F.pid||!v28Inv().length) return S;
+    let p0=Infinity; v28Inv().forEach(p=>(p.movs||[]).forEach(m=>{ if(m&&m.fecha){ const ms=v28MomMov(m); if(ms<p0) p0=ms; } }));
+    let a=null; S.rows.forEach(r=>{ const fin=r.hoy?Date.now():v26Ms(r.t,'',true); if(fin<p0){ r.inv=null; r.rinv=null; a=null; return; }
+      if(!a) a=v28Tot(F,v28IniMes(r.k)); const b=v28Tot(F,fin);
+      r.inv=b.n?b.V:null; r.rinv=(a.n||b.n)?v28R(b.rend-a.rend):null; if(b.V){ r.patB=v17R((r.patB||0)+b.V); r.patN=v17R((r.patN||0)+b.V); } a=b; });
+  }catch(e){ console.warn('v28 serie',e); } return S; }; })(v17Serie);
+
+// ══ Fiscal / IRPF: base del ahorro de las inversiones del titular y año elegidos ══
+rFiscal=(function(prev){ return function(){ const r=prev.apply(this,arguments);
+  try{ const box=$i('fi-v2'); if(!box||!v28Inv().length) return r; const own=$i('fi-owner')?$i('fi-owner').value:'', y=$i('fy')?$i('fy').value:v4Hoy().slice(0,4);
+    const S=v28Calc(Date.now()); let g=0, ret=0, div=0, rd=0, n=0; S.forEach(s=>{ if(own&&own!=='TODAS'&&String(s.p.titularId)!==String(own)) return; const a=s.anio[y]; if(!a) return; g+=a.gan; ret+=a.ret; div+=a.div; rd+=a.retDiv; n+=a.n; });
+    let c=$i('fi-v28'); if(!c){ c=document.createElement('div'); c.id='fi-v28'; c.className='card mb'; box.appendChild(c); }
+    c.innerHTML='<div class="card-title">📈 Base del ahorro · fondos y bolsa '+v4Esc(y)+'</div><div style="font-size:12.5px;line-height:1.7;">'
+      +'Ganancias y pérdidas por ventas y reembolsos ('+n+'): <strong style="color:'+(g>=0?'var(--gn)':'var(--rd)')+';">'+v28Sig(v28R(g))+'</strong> · retenciones '+v28E(ret)+'<br>'
+      +'Dividendos y cupones (rendimientos del capital mobiliario): <strong>'+v28E(div)+'</strong> · retenciones '+v28E(rd)+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);line-height:1.55;margin-top:6px;">Van a la base del ahorro (art. 46 LIRPF), aparte de los alquileres. Ganancia = valor de reembolso − gastos − coste FIFO (art. 37 LIRPF). Detalle en «📈 Fondos y bolsa».</div>';
+  }catch(e){ console.warn('fi-v28',e); } return r; }; })(rFiscal);
+RENDERS.fiscal=rFiscal;
+
+// ══ Google Sheet: pestañas «InversionesRC» y «MovimientosInversion» ══
+function v28Hojas(){ const S=v28Calc(Date.now()), out=[];
+  out.push({sheet:'InversionesRC', h:['ID','Nombre','ISIN','Tipo','Titular','Entidad','Gestora','Cuenta','Valor','DineroMetido','Rendimiento','CosteFIFO','PlusvaliaLatente','Participaciones','UltimoValor'],
+    rows:v28Inv().map(p=>{ const s=S.get(String(p.id))||{}; const c=v9Cta(p.ctaId); return [p.id,p.nom,p.isin,v28TipoNom(p.tipo),nombreC(p.titularId),p.entidad,p.gestora,c?c.nom:'',s.V,s.neto,s.rend,s.coste,s.latente,s.partOk&&s.part?s.part:'',s.ult?s.ult.fecha+(s.ult.hora?' '+s.ult.hora:''):'']; })});
+  const rows=[]; v28Inv().forEach(p=>(p.movs||[]).forEach(m=>{ const o=(S.get(String(p.id))||{ops:{}}).ops[m.id]||{}; rows.push([m.id,p.nom,p.isin,m.tipo,m.fecha,m.hora||'',m.imp!==undefined?m.imp:m.val,m.part||'',m.vl||'',m.com||'',m.ret||'',(v9Cta(m.ctaId)||{}).nom||'',m.dest?(v28Pos(m.dest)||{}).nom||'':'',o.gan!==undefined?o.gan:'',m.notas||'',m.pdfName||'']); }));
+  out.push({sheet:'MovimientosInversion', h:['ID','Inversion','ISIN','Tipo','Fecha','Hora','Importe/Valor','Participaciones','VL','Comision','Retencion','Cuenta','Destino','Ganancia','Notas','Justificante'], rows});
+  return out; }
+
+// ══ Finanzas personales: tus inversiones de RentaControl también cuentan aquí ══
+function v28DeRC(){ if(WS!=='personal') return []; try{ return v20EnRC(R=>{ const yo=v20Yo(R); if(!yo) return []; const S=v28Calc(Date.now()), k=v4Hoy().slice(0,7), A=v28Calc(v28IniMes(k)); const out=[];
+  S.forEach(s=>{ if(String(s.p.titularId)!==String(yo)) return; if(!s.primera&&!(s.V>0)) return; const a=A.get(String(s.p.id)); out.push({id:'rc-inv-'+s.p.id, nom:s.p.nom+(s.p.isin?' · '+v28IsinNorm(s.p.isin):''), tipo:v28TipoNom(s.p.tipo), broker:s.p.entidad||'', inv:s.coste, val:s.V, fecha:s.p.alta||s.primera||'', apo:0, notas:'🏢 RentaControl → 📈 Fondos y bolsa (se actualiza allí)', _rc:true, rend:s.rend, rMes:v28R(s.rend-(a?a.rend:0))}); }); return out; })||[]; }catch(e){ return []; } }
+// (sin contar dos veces las que ya están puestas un momento en la lista mientras se pinta)
+totalInvertido=(function(prev){ return function(){ const b=prev.apply(this,arguments); try{ const ya=new Set((D.invers||[]).map(x=>String(x.id))); return v28R(b+v28DeRC().filter(x=>!ya.has(String(x.id))).reduce((s,x)=>s+(+x.val||0),0)); }catch(e){ return b; } }; })(totalInvertido);
+function v28ConVirtuales(fn){ return function(){ const xs=v28DeRC(); if(!xs.length) return fn.apply(this,arguments); const I0=D.invers; D.invers=(I0||[]).concat(xs);
+  try{ return fn.apply(this,arguments); } finally{ D.invers=I0; } }; }
+rInver=(function(prev){ const w=v28ConVirtuales(prev); return function(){ const r=w.apply(this,arguments);
+  try{ document.querySelectorAll('#pi-tb tr').forEach(tr=>{ const b=tr.querySelector('button[onclick^="editInver(\'rc-inv-"]'); if(b){ const td=b.parentNode; td.innerHTML='<span class="badge badge-b" title="Se apunta y actualiza en RentaControl → 📈 Fondos y bolsa">🏢 RentaControl</span>'; } }); }catch(e){} return r; }; })(rInver);
+RENDERS.pInver=rInver;
+rPatrimonio=v28ConVirtuales(rPatrimonio); RENDERS.pPatrimonio=rPatrimonio;
+v20HtmlCajas=(function(prev){ return function(){ const h=prev.apply(this,arguments); try{ const xs=v28DeRC(); if(!xs.length) return h; const V=xs.reduce((s,x)=>s+x.val,0), rM=xs.reduce((s,x)=>s+x.rMes,0), rT=xs.reduce((s,x)=>s+x.rend,0);
+  return h+'<div class="mb" style="display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:9px 14px;border:1px dashed var(--line2);border-radius:var(--r2);font-size:12px;cursor:pointer;" onclick="v20Ir(\'pInver\')">📈 <strong>Tus inversiones</strong> '+v28E(v28R(V))+'<span style="color:'+(rM>=0?'var(--gn)':'var(--rd)')+';">este mes '+v28Sig(v28R(rM))+'</span><span style="color:'+(rT>=0?'var(--gn)':'var(--rd)')+';">total '+v28Sig(v28R(rT))+'</span><span style="color:var(--ink3);margin-left:auto;">aparte del ahorro: no es dinero cobrado · suman al patrimonio</span></div>'; }catch(e){ return h; } }; })(v20HtmlCajas);
 
 </script>
 </body>
