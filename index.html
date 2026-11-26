@@ -20983,7 +20983,7 @@ async function v26Copias(){
 // ── Descargar una copia completa (las dos partes) a tu dispositivo ──
 function v26DescargarCopia(){
   const leer=k=>{ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
-  const o={app:'RentaControl · Gentaury', version:'4.27', fecha:new Date().toISOString(), rentacontrol:WS==='gentaury'?D:leer(WS_CFG.gentaury.key), personal:WS==='personal'?D:leer(WS_CFG.personal.key)};
+  const o={app:'RentaControl · Gentaury', version:'4.28', fecha:new Date().toISOString(), rentacontrol:WS==='gentaury'?D:leer(WS_CFG.gentaury.key), personal:WS==='personal'?D:leer(WS_CFG.personal.key)};
   const blob=new Blob([JSON.stringify(o)],{type:'application/json'}), a=document.createElement('a'), d=new Date();
   a.href=URL.createObjectURL(blob); a.download='rentacontrol_copia_completa_'+d.v12Dia()+'_'+v26Hhmm(d).replace(':','')+'.json'; document.body.appendChild(a); a.click();
   setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(e){} },2000);
@@ -21720,6 +21720,67 @@ RENDERS.pInver=rInver;
 rPatrimonio=v28ConVirtuales(rPatrimonio); RENDERS.pPatrimonio=rPatrimonio;
 v20HtmlCajas=(function(prev){ return function(){ const h=prev.apply(this,arguments); try{ const xs=v28DeRC(); if(!xs.length) return h; const V=xs.reduce((s,x)=>s+x.val,0), rM=xs.reduce((s,x)=>s+x.rMes,0), rT=xs.reduce((s,x)=>s+x.rend,0);
   return h+'<div class="mb" style="display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:9px 14px;border:1px dashed var(--line2);border-radius:var(--r2);font-size:12px;cursor:pointer;" onclick="v20Ir(\'pInver\')">📈 <strong>Tus inversiones</strong> '+v28E(v28R(V))+'<span style="color:'+(rM>=0?'var(--gn)':'var(--rd)')+';">este mes '+v28Sig(v28R(rM))+'</span><span style="color:'+(rT>=0?'var(--gn)':'var(--rd)')+';">total '+v28Sig(v28R(rT))+'</span><span style="color:var(--ink3);margin-left:auto;">aparte del ahorro: no es dinero cobrado · suman al patrimonio</span></div>'; }catch(e){ return h; } }; })(v20HtmlCajas);
+
+// ══════════════════════════════════════════════════════════════
+// v4.28 · ✏️ Editar los datos de un inquilino (nombre, apellidos, DNI/NIE, email, teléfono…)
+// ──────────────────────────────────────────────────────────────
+// Antes no había forma de corregir un nombre: solo crear, marcar pasado o borrar. Ahora «✏️» en Inquilinos Activos,
+// en Pasados / BBDD y en la ficha del inquilino. Todo lo demás (pagos, mensajes, contratos que se generen, reservas,
+// Fiscal, Personal, Google Sheet) lee el nombre de la ficha, así que el cambio sale en todas partes.
+// Lo que guarda el nombre escrito (el concepto de la factura del ITP pagado en su nombre) se actualiza también.
+// Los documentos ya generados o firmados no cambian. Habitación, renta y fechas siguen saliendo de su contrato.
+// ══════════════════════════════════════════════════════════════
+function v29Inq(id){ return (D.inqs||[]).find(x=>String(x.id)===String(id)); }
+function v29EditarInq(id){
+  const i=v29Inq(id); if(!i){ toast('No encuentro ese inquilino',false); return; }
+  const f=(k,l,v,o)=>{ o=o||{}; return '<div class="fgrp'+(o.full?' fgf':'')+'"><label>'+l+'</label><input id="v29-'+k+'" value="'+v4Esc(v||'')+'"'+(o.type?' type="'+o.type+'"':'')+(o.ph?' placeholder="'+v4Esc(o.ph)+'"':'')+(o.on?' oninput="'+o.on+'"':'')+'></div>'; };
+  v4Modal('✏️ Datos de '+v4Esc(v12NomInq(i)),
+    '<div class="fg">'+f('nom','Nombre *',i.nom)+f('ap','Apellidos',i.ap)
+    +'<div class="fgrp"><label>DNI / NIE</label><input id="v29-dni" value="'+v4Esc(i.dni||'')+'" placeholder="12345678Z" oninput="v29PistaDni()"><div id="v29-dni-h" style="font-size:11px;margin-top:3px;"></div></div>'+f('nac','Nacionalidad',i.nac)
+    +f('fnac','Fecha de nacimiento',i.fnac,{type:'date'})+f('email','Email',i.email,{type:'email'})
+    +f('tel','Teléfono',i.tel)+f('wa','WhatsApp',i.wa)
+    +'<div class="fgrp fgf"><label>Notas</label><textarea id="v29-notas" rows="2">'+v4Esc(i.notas||'')+'</textarea></div>'
+    +'<div class="fgrp fgf" style="font-size:11px;color:var(--ink3);line-height:1.55;">El cambio sale en todas partes: pagos, mensajes del pago, reservas, contratos que generes desde ahora, Fiscal, Personal y el Google Sheet. Los documentos ya generados o firmados no cambian. La habitación, la renta y las fechas se cambian en su contrato.</div></div>',
+    '<button class="btn btn-primary" onclick="v29GuardarInq(\''+i.id+'\')">Guardar</button>');
+  v29PistaDni();
+}
+function v29PistaDni(){ const e=$i('v29-dni'), h=$i('v29-dni-h'); if(!e||!h) return; const t=String(e.value||'').toUpperCase().replace(/[\s-]/g,'');
+  if(!t){ h.innerHTML=''; return; }
+  if(/^\d{8}[A-Z]$/.test(t)||/^[XYZ]\d{7}[A-Z]$/.test(t)) h.innerHTML=v19DniOk(t)?'<span style="color:var(--gn);">✓ DNI/NIE con la letra correcta</span>':'<span style="color:var(--rd);">✗ La letra del DNI/NIE no cuadra</span>';
+  else h.innerHTML='<span style="color:var(--ink3);">No es un DNI/NIE español (pasaporte u otro documento): no se comprueba</span>'; }
+function v29GuardarInq(id){
+  const i=v29Inq(id); if(!i) return; const g=k=>String(gi('v29-'+k)||'').trim();
+  const nom=g('nom'); if(!nom){ toast('Escribe el nombre',false); return; }
+  const dni=g('dni').toUpperCase().replace(/[\s-]/g,''), email=g('email');
+  if(dni&&(/^\d{8}[A-Z]$/.test(dni)||/^[XYZ]\d{7}[A-Z]$/.test(dni))&&!v19DniOk(dni)&&!confirm('La letra del DNI/NIE «'+dni+'» no cuadra. ¿Guardarlo igualmente?')) return;
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('El email no parece válido',false); return; }
+  const vet=buscarVetado(nom,g('ap'),dni,email,g('tel')||g('wa'));
+  if(vet&&String(vet.id)!==String(i.id)&&!confirm('🚫 Estos datos coinciden con «'+((vet.nom||'')+' '+(vet.ap||'')).trim()+'», que está en tu lista de NO APTOS. ¿Guardar igualmente?')) return;
+  const antes=v12NomInq(i);
+  Object.assign(i,{nom, ap:g('ap'), dni, nac:g('nac'), fnac:g('fnac'), email, tel:g('tel'), wa:g('wa'), notas:String(($i('v29-notas')||{}).value||'').trim()}); i._upd=Date.now();
+  const despues=v12NomInq(i);
+  // Lo que guarda el nombre escrito: la factura del ITP (modelo 600) pagado en su nombre
+  if(antes!==despues) (D.compras||[]).forEach(x=>{ if(!x.itpPagoId) return; const pg=(D.pagos||[]).find(p=>String(p.id)===String(x.itpPagoId)); if(!pg||String(pg.inqId)!==String(i.id)) return;
+    let c=false; ['con','notas'].forEach(k=>{ if(typeof x[k]==='string'&&x[k].includes(antes)){ x[k]=x[k].split(antes).join(despues); c=true; } }); if(c) x._upd=Date.now(); });
+  saveAndSync(); closeM('m-v4');
+  try{ if($i('drawer')&&$i('drawer').classList.contains('open')&&$i('drw-c')&&$i('drw-c').querySelector('[data-v29-inq="'+i.id+'"]')) openPerfil(i.id); }catch(e){}
+  try{ const on=document.querySelector('.sec.on'); const s=on&&on.id.replace(/^sec-/,''); if(s&&RENDERS[s]) RENDERS[s](); }catch(e){}
+  toast(antes!==despues?'✓ '+antes+' → '+despues:'✓ Datos de '+despues+' guardados');
+}
+// Botón ✏️ en las listas (junto a 🗑) y en la ficha
+function v29BotonesLista(){ ['sec-activos','sec-pasados'].forEach(sid=>{ const s=$i(sid); if(!s) return;
+  // Junto al botón 👤 de cada fila (en Activos queda entre 👤 y 🗑)
+  s.querySelectorAll('button[onclick^="openPerfil("]').forEach(b=>{ const m=String(b.getAttribute('onclick')).match(/openPerfil\('([^']+)'\)/); if(!m) return;
+    if(b.nextElementSibling&&b.nextElementSibling.classList.contains('v29-ed')) return;
+    b.insertAdjacentHTML('afterend','<button class="btn btn-ghost btn-xs v29-ed" title="Editar nombre y datos" onclick="event.stopPropagation();v29EditarInq(\''+m[1]+'\')">✏️</button>'); }); }); }
+rActivos=(function(prev){ return function(){ const r=prev.apply(this,arguments); try{ v29BotonesLista(); }catch(e){} return r; }; })(rActivos);
+rPasados=(function(prev){ return function(){ const r=prev.apply(this,arguments); try{ v29BotonesLista(); }catch(e){} return r; }; })(rPasados);
+RENDERS.activos=rActivos; RENDERS.pasados=rPasados;
+openPerfil=(function(prev){ return function(id){ const r=prev.apply(this,arguments);
+  try{ const c=$i('drw-c'); if(c&&!c.querySelector('.v29-ed')){ const b=c.querySelector('button[onclick^="mkPasado("]')||c.querySelector('button[onclick^="delInq("]');
+      const h='<button class="btn btn-secondary btn-sm v29-ed" data-v29-inq="'+v4Esc(String(id))+'" onclick="v29EditarInq(\''+String(id).replace(/'/g,'')+'\')">✏️ Editar datos</button>';
+      if(b) b.insertAdjacentHTML('beforebegin',h); else { const x=c.querySelector('button[onclick="closeDrw()"]'); if(x) x.insertAdjacentHTML('beforebegin',h); } } }catch(e){ console.warn('v29 perfil',e); }
+  return r; }; })(openPerfil);
 
 </script>
 </body>
