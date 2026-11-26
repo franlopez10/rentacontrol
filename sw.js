@@ -1,4 +1,4 @@
-const CACHE = 'gentaury-v48';
+const CACHE = 'gentaury-v49';
 // v4.26 · Abrir rápido y con la última versión:
 //  · La página se pide a GitHub preguntando «¿ha cambiado?» (revalidación con ETag: si no cambió, la respuesta es mínima).
 //  · Si la red tarda más de 3,5 s, se abre al momento la copia guardada y la nueva se guarda por detrás; si era distinta,
